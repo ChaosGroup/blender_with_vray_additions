@@ -375,6 +375,9 @@ mark_as_advanced(WITH_CYCLES_LOGGING)
 mark_as_advanced(WITH_CYCLES_DEBUG)
 mark_as_advanced(WITH_CYCLES_WERROR)
 
+# V-Ray For Blender
+option(WITH_VRAY_FOR_BLENDER		"Enable V-Ray For Blender extentions" OFF)
+
 # LLVM
 option(WITH_LLVM					"Use LLVM" OFF)
 if(APPLE)
@@ -701,6 +704,12 @@ TEST_STDBOOL_SUPPORT()
 if(HAVE_STDBOOL_H)
 	add_definitions(-DHAVE_STDBOOL_H)
 endif()
+
+if(WITH_VRAY_FOR_BLENDER)
+	# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++0x")
+	add_definitions(-DWITH_VRAY_FOR_BLENDER)
+endif()
+
 
 #-----------------------------------------------------------------------------
 # Check for valid directories
@@ -2802,6 +2811,7 @@ if(FIRST_RUN)
 	info_cfg_option(WITH_INPUT_NDOF)
 	info_cfg_option(WITH_CYCLES)
 	info_cfg_option(WITH_FREESTYLE)
+	info_cfg_option(WITH_VRAY_FOR_BLENDER)
 	info_cfg_option(WITH_OPENCOLORIO)
 
 	info_cfg_text("Compiler Options:")

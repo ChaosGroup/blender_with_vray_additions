@@ -61,6 +61,8 @@ static PyStructSequence_Field app_cb_info_fields[] = {
 	{(char *)"save_post",         (char *)"on saving a blend file (after)"},
 	{(char *)"scene_update_pre",  (char *)"on updating the scenes data (before)"},
 	{(char *)"scene_update_post", (char *)"on updating the scenes data (after)"},
+	{(char *)"object_update",     (char *)"on updating an object"},
+	{(char *)"object_data_update", (char *)"on updating an object's data"},
 	{(char *)"game_pre",          (char *)"on starting the game engine"},
 	{(char *)"game_post",         (char *)"on ending the game engine"},
 	{(char *)"version_update",    (char *)"on ending the versioning code"},
