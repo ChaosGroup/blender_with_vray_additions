@@ -1,0 +1,50 @@
+#!/usr/bin/python
+
+Import('env')
+
+sources = [
+    './python/vray_python_ext.cpp',
+    './utils/CGR_data.c',
+    './utils/CGR_rna.cpp',
+    './utils/CGR_string.c',
+    './vrscene_exporter/geom.c',
+    './vrscene_exporter/hair.c',
+    './vrscene_exporter/node.c',
+    './vrscene_exporter/smoke.cpp',
+]
+
+includes = [
+    '../../../intern/guardedalloc',
+    '../../../intern/smoke/extern',
+    '../../../intern/smoke/extern',
+    '../blenkernel',
+    '../blenlib',
+    '../blenloader',
+    '../makesdna',
+    '../makesrna',
+    '../render/extern/include',
+    '../render/intern/include',
+    '../windowmanager',
+    '../python',
+    '../python/intern',
+    './common',
+    './python',
+    './utils',
+    './vrscene_exporter',
+    './',
+]
+
+includes.extend(env['BF_PYTHON_INC'].split())
+includes.append(env['BF_BOOST_INC'])
+
+if env['OURPLATFORM'] in ('win32-vc', 'win32-mingw', 'linuxcross', 'win64-vc'):
+    includes.append(env['BF_PTHREADS_INC'])
+
+env.BlenderLib(
+    libname  = 'vray_for_blender',
+    sources  = sources,
+    includes = includes,
+    defines  = [],
+    libtype  = ['core'],
+    priority = [600]
+)

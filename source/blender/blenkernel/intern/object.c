@@ -66,6 +66,7 @@
 #include "BLI_utildefines.h"
 #include "BLI_linklist.h"
 #include "BLI_kdtree.h"
+#include "BLI_callbacks.h"
 
 #include "BLF_translation.h"
 
@@ -3101,9 +3102,16 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 						psys_get_modifier(ob, psys)->flag &= ~eParticleSystemFlag_psys_updated;
 				}
 			}
-			
+
 			/* quick cache removed */
+
+            if(bmain)
+                BLI_callback_exec(bmain, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
 		}
+        else {
+            if(bmain)
+                BLI_callback_exec(bmain, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
+        }
 
 		ob->recalc &= ~OB_RECALC_ALL;
 	}

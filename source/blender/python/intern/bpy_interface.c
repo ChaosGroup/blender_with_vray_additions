@@ -82,6 +82,10 @@
 #include "../bmesh/bmesh_py_api.h"
 #include "../mathutils/mathutils.h"
 
+#ifdef WITH_VRAY_FOR_BLENDER
+#include "CGR_vray_for_blender.h"
+#endif
+
 
 /* for internal use, when starting and ending python scripts */
 
@@ -211,6 +215,13 @@ static PyObject *CCL_initPython(void)
 }
 #endif
 
+#ifdef WITH_VRAY_FOR_BLENDER
+static PyObject *CGR_initPython(void)
+{
+	return (PyObject*)VRayForBlender_initPython();
+}
+#endif
+
 static struct _inittab bpy_internal_modules[] = {
 	{"mathutils", PyInit_mathutils},
 #if 0
@@ -233,10 +244,14 @@ static struct _inittab bpy_internal_modules[] = {
 #ifdef WITH_CYCLES
 	{"_cycles", CCL_initPython},
 #endif
+#ifdef WITH_VRAY_FOR_BLENDER
+	{"_vray_for_blender", CGR_initPython},
+#endif
 	{"gpu", GPU_initPython},
 	{"idprop", BPyInit_idprop},
 	{NULL, NULL}
 };
+
 
 /* call BPY_context_set first */
 void BPY_python_start(int argc, const char **argv)

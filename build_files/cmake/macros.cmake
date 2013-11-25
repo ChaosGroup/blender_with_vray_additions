@@ -629,6 +629,10 @@ macro(SETUP_BLENDER_SORTED_LIBS)
 		list_insert_after(BLENDER_SORTED_LIBS "ge_logic_ngnetwork" "extern_bullet")
 	endif()
 
+	if(WITH_VRAY_FOR_BLENDER)
+		list_insert_after(BLENDER_SORTED_LIBS "bf_python_bmesh" "vray_for_blender")
+	endif()
+
 	foreach(SORTLIB ${BLENDER_SORTED_LIBS})
 		set(REMLIB ${SORTLIB})
 		foreach(SEARCHLIB ${BLENDER_LINK_LIBS})

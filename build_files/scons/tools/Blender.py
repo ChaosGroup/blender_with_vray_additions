@@ -400,6 +400,9 @@ def creator(env):
         incs.append('#/source/blender/freestyle')
         defs.append('WITH_FREESTYLE')
 
+    if env['WITH_VRAY_FOR_BLENDER']:
+        defs.append('WITH_VRAY_FOR_BLENDER')
+
     if env['OURPLATFORM'] in ('win32-vc', 'win32-mingw', 'linuxcross', 'win64-vc', 'win64-mingw'):
         incs.append(env['BF_PTHREADS_INC'])
         incs.append('#/intern/utfconv')
