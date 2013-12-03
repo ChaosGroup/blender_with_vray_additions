@@ -150,8 +150,8 @@ void write_SmokeDomain(PyObject          *outputFile,
 
 	// Topology is always the same:
 	//   2.0 x 2.0 x 2.0 box
-	//     pmin = -1.0, -1.0, 1.0
-	//     pmax =  1.0,  1.0, 1.0
+	//     pmin = -1.0, -1.0, -1.0
+	//     pmax =  1.0,  1.0,  1.0
 	//
 	WRITE_PYOBJECT(outputFile, "\nGeomStaticMesh %s {", geomteryPluginName);
 	WRITE_PYOBJECT(outputFile,
