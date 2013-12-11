@@ -68,6 +68,8 @@
 #include "ED_mask.h"
 #include "ED_sequencer.h"
 
+#include "ED_exporter.h"
+
 #include "io_ops.h"
 
 /* only call once on startup, storage is global in BKE kernel listbase */
@@ -101,6 +103,7 @@ void ED_spacetypes_init(void)
 //	...
 	
 	/* register operator types for screen and all spaces */
+	ED_operatortypes_exporter();
 	ED_operatortypes_screen();
 	ED_operatortypes_anim();
 	ED_operatortypes_animchannels();

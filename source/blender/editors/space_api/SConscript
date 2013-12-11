@@ -39,6 +39,7 @@ incs = [
     '../../makesdna',
     '../../makesrna',
     '../../windowmanager',
+    '../../exporter'
     ]
 incs = ' '.join(incs)
 

@@ -302,6 +302,7 @@ typedef struct ColorMapping {
 /* **************** TEX ********************* */
 
 /* type */
+#define TEX_VRAY		200
 #define TEX_CLOUDS		1
 #define TEX_WOOD		2
 #define TEX_MARBLE		3
