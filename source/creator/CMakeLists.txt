@@ -1023,6 +1023,7 @@ unset(BLENDER_TEXT_FILES_DESTINATION)
 add_dependencies(blender makesdna)
 
 setup_blender_sorted_libs()
+
 target_link_libraries(blender ${BLENDER_SORTED_LIBS})
 
 setup_liblinks(blender)
