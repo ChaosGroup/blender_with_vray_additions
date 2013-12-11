@@ -68,7 +68,9 @@
 #include "ED_mask.h"
 #include "ED_sequencer.h"
 
+#ifdef WITH_VRAY_FOR_BLENDER
 #include "ED_exporter.h"
+#endif
 
 #include "io_ops.h"
 
@@ -103,7 +105,6 @@ void ED_spacetypes_init(void)
 //	...
 	
 	/* register operator types for screen and all spaces */
-	ED_operatortypes_exporter();
 	ED_operatortypes_screen();
 	ED_operatortypes_anim();
 	ED_operatortypes_animchannels();
@@ -145,6 +146,9 @@ void ED_spacemacros_init(void)
 
 	/* Macros's must go last since they reference other operators.
 	 * We need to have them go after python operators too */
+#ifdef WITH_VRAY_FOR_BLENDER
+	ED_operatortypes_exporter();
+#endif
 	ED_operatormacros_armature();
 	ED_operatormacros_mesh();
 	ED_operatormacros_metaball();
