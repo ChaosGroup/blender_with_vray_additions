@@ -27,6 +27,7 @@ set(INC
 	../../makesrna
 	../../windowmanager
 	../../../../intern/guardedalloc
+	../../exporter
 )
 
 set(INC_SYS
