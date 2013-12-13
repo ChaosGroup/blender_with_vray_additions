@@ -25,6 +25,10 @@
 
 #include "vrscene.h"
 
+#ifdef _WIN32
+typedef unsigned char u_int8_t;
+#endif
+
 
 static char sbuf[MAX_PLUGIN_NAME];
 
