@@ -28,7 +28,7 @@
 
 #include "CGR_config.h"
 
-#include <Python.h>
+#include <math.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +39,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#include <Python.h>
 
 #define MAX_PLUGIN_NAME  1024
 
