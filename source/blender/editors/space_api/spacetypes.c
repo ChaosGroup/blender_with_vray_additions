@@ -68,9 +68,7 @@
 #include "ED_mask.h"
 #include "ED_sequencer.h"
 
-#ifdef WITH_VRAY_FOR_BLENDER
 #include "ED_exporter.h"
-#endif
 
 #include "io_ops.h"
 
