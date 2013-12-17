@@ -63,9 +63,7 @@ static EnumPropertyItem texture_filter_items[] = {
 
 EnumPropertyItem texture_type_items[] = {
 	{0, "NONE", 0, "None", ""},
-#ifdef WITH_VRAY_FOR_BLENDER
 	{TEX_VRAY, "VRAY", ICON_VRAY_LOGO_MONO, "V-Ray", "V-Ray procedural textures"},
-#endif
 	{TEX_BLEND, "BLEND", ICON_TEXTURE, "Blend", "Procedural - create a ramp texture"},
 	{TEX_CLOUDS, "CLOUDS", ICON_TEXTURE, "Clouds", "Procedural - create a cloud-like fractal noise texture"},
 	{TEX_DISTNOISE, "DISTORTED_NOISE", ICON_TEXTURE,
