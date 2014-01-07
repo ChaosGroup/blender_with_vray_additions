@@ -452,6 +452,8 @@ static void write_GeomMayaHair(FILE *gfile, Scene *sce, Main *bmain, Object *ob)
     float  f;
     float  t;
 
+    EvaluationContext eval_ctx = {0};
+
     ParticleSystem             *psys = NULL;
     ParticleSettings           *pset = NULL;
     ParticleSystemModifierData *psmd = NULL;
@@ -499,6 +501,8 @@ static void write_GeomMayaHair(FILE *gfile, Scene *sce, Main *bmain, Object *ob)
 
     int  display_percentage;
     int  display_percentage_child;
+
+    eval_ctx.for_render = true;
 
     for(psys = ob->particlesystem.first; psys; psys = psys->next)
     {
@@ -566,7 +570,7 @@ static void write_GeomMayaHair(FILE *gfile, Scene *sce, Main *bmain, Object *ob)
         // Recalc hair with render settings
         if(need_recalc) {
             ob->recalc |= OB_RECALC_ALL;
-            BKE_scene_update_tagged(bmain, sce);
+            BKE_scene_update_tagged(&eval_ctx, bmain, sce);
         }
 
         // Get new child data pointers
@@ -851,7 +855,7 @@ static void write_GeomMayaHair(FILE *gfile, Scene *sce, Main *bmain, Object *ob)
         // Recalc hair back with viewport settings
         if(need_recalc) {
             ob->recalc |= OB_RECALC_ALL;
-            BKE_scene_update_tagged(bmain, sce);
+            BKE_scene_update_tagged(&eval_ctx, bmain, sce);
         }
     }
 }
@@ -867,11 +871,14 @@ static Mesh *get_render_mesh(Scene *sce, Main *bmain, Object *ob)
     Object *tmpobj = NULL;
     Object *basis_ob = NULL;
     ListBase disp = {NULL, NULL};
+	EvaluationContext eval_ctx = {0};
 
     /* Make a dummy mesh, saves copying */
     DerivedMesh *dm;
 
     CustomDataMask mask = CD_MASK_MESH;
+
+	eval_ctx.for_render = true;
 
     /* perform the mesh extraction based on type */
     switch (ob->type) {
@@ -919,7 +926,7 @@ static Mesh *get_render_mesh(Scene *sce, Main *bmain, Object *ob)
 
         tmpmesh = BKE_mesh_add(bmain, "Mesh");
 
-        BKE_displist_make_mball_forRender(sce, ob, &disp);
+		BKE_displist_make_mball_forRender(&eval_ctx, sce, ob, &disp);
         BKE_mesh_from_metaball(&disp, tmpmesh);
         BKE_displist_free(&disp);
 
@@ -1849,6 +1856,8 @@ static int export_scene_exec(bContext *C, wmOperator *op)
 {
     Main   *bmain = CTX_data_main(C);
 
+    EvaluationContext eval_ctx = {0};
+
     Scene  *sce     = NULL;
     char   *sce_ptr = NULL;
 
@@ -1905,6 +1914,8 @@ static int export_scene_exec(bContext *C, wmOperator *op)
         debug = RNA_boolean_get(op->ptr, "debug");
     }
 
+    eval_ctx.for_render = true;
+
     time = PIL_check_seconds_timer();
 
     if(filepath) {
@@ -1919,7 +1930,7 @@ static int export_scene_exec(bContext *C, wmOperator *op)
             /* Export meshes for the start frame */
             sce->r.cfra = fra;
             CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
-            BKE_scene_update_for_newframe(bmain, sce, (1<<20) - 1);
+            BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
             export_meshes_threaded(filepath, sce, bmain, active_layers, instances, 0, 0);
             fra += sce->r.frame_step;
 
@@ -1936,7 +1947,7 @@ static int export_scene_exec(bContext *C, wmOperator *op)
 
                 sce->r.cfra = fra;
                 CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
-                BKE_scene_update_for_newframe(bmain, sce, (1<<20) - 1);
+                BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
                 export_meshes_threaded(filepath, sce, bmain, active_layers, instances, check_animated, 1);
 
                 if(!debug) {
@@ -1949,7 +1960,7 @@ static int export_scene_exec(bContext *C, wmOperator *op)
 
             sce->r.cfra = cfra;
             CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
-            BKE_scene_update_for_newframe(bmain, sce, (1<<20) - 1);
+            BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
         } else {
             export_meshes_threaded(filepath, sce, bmain, active_layers, instances, check_animated, 0);
         }

@@ -3053,11 +3053,11 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 		
 		if (ob->recalc & OB_RECALC_DATA) {
 			BKE_object_handle_data_update(eval_ctx, scene, ob);
+			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
 		}
-        else {
-            if(bmain)
-                BLI_callback_exec(bmain, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
-        }
+		else {
+			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
+		}
 
 		ob->recalc &= ~OB_RECALC_ALL;
 	}
