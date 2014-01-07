@@ -317,6 +317,8 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 	float  f;
 	float  t;
 
+	EvaluationContext eval_ctx = {0};
+
 	ParticleSettings           *pset = NULL;
 	ParticleSystemModifierData *psmd = NULL;
 
@@ -365,6 +367,8 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 	int  display_percentage_child;
 
 	int  debug = false;
+
+	eval_ctx.for_render = true;
 
 	need_recalc = 0;
 
@@ -430,7 +434,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 	// Recalc hair with render settings
 	if(need_recalc) {
 		ob->recalc |= OB_RECALC_ALL;
-		BKE_scene_update_tagged(bmain, sce);
+		BKE_scene_update_tagged(&eval_ctx, bmain, sce);
 	}
 
 	// Get new child data pointers
@@ -707,7 +711,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 	// Recalc hair back with viewport settings
 	if(need_recalc) {
 		ob->recalc |= OB_RECALC_ALL;
-		BKE_scene_update_tagged(bmain, sce);
+		BKE_scene_update_tagged(&eval_ctx, bmain, sce);
 	}
 
 	return 0;

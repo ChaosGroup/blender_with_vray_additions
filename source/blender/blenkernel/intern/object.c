@@ -3105,13 +3105,11 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 
 			/* quick cache removed */
 
-            if(bmain)
-                BLI_callback_exec(bmain, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
+			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
 		}
-        else {
-            if(bmain)
-                BLI_callback_exec(bmain, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
-        }
+		else {
+			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
+		}
 
 		ob->recalc &= ~OB_RECALC_ALL;
 	}

@@ -104,15 +104,19 @@ void write_Dupli(PyObject   *nodeFile,
 				 Main       *main,
 				 Object     *ob)
 {
+	EvaluationContext eval_ctx = {0};
+
 	DupliObject *dob;
 	char         pluginName[MAX_PLUGIN_NAME];
+
+	eval_ctx.for_render = true;
 
 	exportedMeshes.clear();
 
 	// Free duplilist if a user forgets to
 	free_duplilist(ob);
 
-	ob->duplilist = object_duplilist(sce, ob, TRUE);
+	ob->duplilist = object_duplilist(&eval_ctx, sce, ob);
 
 	for(dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
 		sprintf(pluginName, "%s_%.5i", dob->ob->id.name, dob->persistent_id[0]);

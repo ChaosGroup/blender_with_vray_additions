@@ -33,11 +33,14 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
     Object *tmpobj = NULL;
     Object *basis_ob = NULL;
     ListBase disp = {NULL, NULL};
+    EvaluationContext eval_ctx = {0};
 
     /* Make a dummy mesh, saves copying */
     DerivedMesh *dm;
 
     CustomDataMask mask = CD_MASK_MESH;
+
+    eval_ctx.for_render = true;
 
     /* perform the mesh extraction based on type */
     switch (ob->type) {
@@ -86,7 +89,7 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
 
         tmpmesh = BKE_mesh_add(bmain, "Mesh");
 
-        BKE_displist_make_mball_forRender(sce, ob, &disp);
+        BKE_displist_make_mball_forRender(&eval_ctx, sce, ob, &disp);
         BKE_mesh_from_metaball(&disp, tmpmesh);
         BKE_displist_free(&disp);
 
