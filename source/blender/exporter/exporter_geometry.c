@@ -26,6 +26,8 @@
 
 #include "exporter_geometry.h"
 
+#include "../vray_for_blender/CGR_config.h"
+
 #define WRITE_HEX_QUADFACE(f, face) fprintf(gfile, "%08X%08X%08X%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3), HEX(face->v3), HEX(face->v4), HEX(face->v1))
 #define WRITE_HEX_TRIFACE(f, face)  fprintf(gfile, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3))
 
@@ -1507,7 +1509,7 @@ static void *export_meshes_thread(void *ptr)
 
     if(debug) {
         time= PIL_check_seconds_timer();
-        printf("V-Ray/Blender: Mesh export thread [%d]\n", td->id + 1);
+        PRINT_INFO("Mesh export thread [%d]\n", td->id + 1);
     }
     sprintf(filepath, "%s_%.2d.vrscene", td->filepath, td->id);
     if(td->animation) {
@@ -1571,7 +1573,7 @@ static void *export_meshes_thread(void *ptr)
 
     if(debug) {
         BLI_timestr(PIL_check_seconds_timer() - time, time_str, sizeof(time_str));
-        printf("V-Ray/Blender: Mesh export thread [%d] done [%s]\n", td->id + 1, time_str);
+        PRINT_INFO("Mesh export thread [%d] done [%s]\n", td->id + 1, time_str);
     }
 
     return NULL;
@@ -1919,31 +1921,29 @@ static int export_scene_exec(bContext *C, wmOperator *op)
     time = PIL_check_seconds_timer();
 
     if(filepath) {
-        printf("V-Ray/Blender: Exporting meshes...\n");
+        PRINT_INFO("Exporting meshes...");
 
         if(animation) {
             cfra = sce->r.cfra;
             fra  = sce->r.sfra;
 
-            printf("V-Ray/Blender: Exporting meshes for the first frame %-32i\n", fra);
+            PRINT_INFO_LB("Exporting meshes for the first frame %i...%s", fra, debug ? "\n" : "");
 
             /* Export meshes for the start frame */
+            frame_time = PIL_check_seconds_timer();
             sce->r.cfra = fra;
             CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
             BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
             export_meshes_threaded(filepath, sce, bmain, active_layers, instances, 0, 0);
             fra += sce->r.frame_step;
+            BLI_timestr(PIL_check_seconds_timer()-frame_time, time_str, sizeof(time_str));
+            printf(" done [%s]\n", time_str);
 
             /* Export meshes for the rest frames */
             while(fra <= sce->r.efra) {
                 frame_time = PIL_check_seconds_timer();
 
-                if(debug) {
-                    printf("V-Ray/Blender: Exporting meshes for frame %-32i\n", fra);
-                } else {
-                    printf("V-Ray/Blender: Exporting meshes for frame %i...", fra);
-                    fflush(stdout);
-                }
+                PRINT_INFO_LB("Exporting meshes for frame %i...%s", fra, debug ? "\n" : "");
 
                 sce->r.cfra = fra;
                 CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
@@ -1966,7 +1966,7 @@ static int export_scene_exec(bContext *C, wmOperator *op)
         }
 
         BLI_timestr(PIL_check_seconds_timer()-time, time_str, sizeof(time_str));
-        printf("V-Ray/Blender: Exporting meshes done [%s]%-32s\n", time_str, " ");
+        PRINT_INFO("Exporting meshes done [%s]%-32s\n", time_str, " ");
 
         free(filepath);
 
