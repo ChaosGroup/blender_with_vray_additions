@@ -121,6 +121,13 @@ void  write_SmokeDomain(PyObject *outputFile, Scene *sce, Object *ob, SmokeModif
 void  write_TexVoxelData(PyObject *outputFile, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, short interp_type);
 
 void  write_Dupli(PyObject *nodeFile, PyObject *geomFile, Scene *sce, Main *main, Object *ob);
+void  write_ObjectNode(PyObject   *nodeFile,
+					   PyObject   *geomFile,
+					   Scene      *sce,
+					   Main       *main,
+					   Object     *ob,
+					   float       tm[4][4],
+					   const char *pluginName);
 void  write_Node(PyObject *outputFile, Scene *sce, Object *ob, const char *pluginName,
 				 const char *transform,
 				 const char *geometry,
