@@ -32,13 +32,13 @@
 static std::set<std::string> exportedMeshes;
 
 
-static void  write_ObjectNode(PyObject   *nodeFile,
-							  PyObject   *geomFile,
-							  Scene      *sce,
-							  Main       *main,
-							  Object     *ob,
-							  float       tm[4][4],
-							  const char *pluginName)
+void  write_ObjectNode(PyObject   *nodeFile,
+					   PyObject   *geomFile,
+					   Scene      *sce,
+					   Main       *main,
+					   Object     *ob,
+					   float       tm[4][4],
+					   const char *pluginName)
 {
 	static char buf[MAX_PLUGIN_NAME];
 
