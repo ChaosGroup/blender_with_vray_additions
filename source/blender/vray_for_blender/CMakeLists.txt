@@ -20,6 +20,7 @@ set(INC
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
 	../../../intern/guardedalloc
 	../../../intern/smoke/extern
+	../python
 )
 
 set(SRC
