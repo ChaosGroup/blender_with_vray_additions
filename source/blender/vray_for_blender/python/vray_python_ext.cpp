@@ -30,8 +30,9 @@ extern "C" {
 }
 
 #include "vrscene_exporter/vrscene.h"
+#include "utils/CGR_string.h"
 #include "CGR_vray_for_blender.h"
-
+#include "mathutils/mathutils.h"
 #include <Python.h>
 
 
@@ -139,6 +140,28 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 
 static PyObject* mExportNode(PyObject *self, PyObject *args)
 {
+	int       contextPtr;
+	int       objectPtr;
+	PyObject *nodeFile;
+	PyObject *geomFile;
+
+	char      pluginName[MAX_PLUGIN_NAME];
+
+	if(NOT(PyArg_ParseTuple(args, "iiOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
+		return NULL;
+	}
+
+	bContext *C = (bContext*)(intptr_t)contextPtr;
+	Object *ob  = (Object*)(intptr_t)objectPtr;
+
+	Scene *sce  = CTX_data_scene(C);
+	Main  *main = CTX_data_main(C);
+
+	sprintf(pluginName, "%s", ob->id.name);
+	StripString(pluginName);
+
+	write_ObjectNode(nodeFile, geomFile, sce, main, ob, ob->obmat, pluginName);
+
 	Py_RETURN_NONE;
 }
 
@@ -166,6 +189,28 @@ static PyObject* mExportDupli(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
+{
+	if (MatrixObject_Check(value)) {
+		MatrixObject *transform = (MatrixObject*)value;
+
+		float tm[4][4];
+		char  buf[512];
+
+		copy_v3_v3(tm[0], MATRIX_COL_PTR(transform, 0));
+		copy_v3_v3(tm[1], MATRIX_COL_PTR(transform, 1));
+		copy_v3_v3(tm[2], MATRIX_COL_PTR(transform, 2));
+		copy_v3_v3(tm[3], MATRIX_COL_PTR(transform, 3));
+
+		sprintf(buf, "TransformHex(\"%s\")", GetTransformHex(tm));
+
+		return PyUnicode_FromString(buf);
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
 	{"exportDupli",       mExportDupli,       METH_VARARGS, "Export dupli / particles"},
 	{"exportMesh",        mExportMesh,        METH_VARARGS, "Export mesh"},
@@ -173,6 +218,7 @@ static PyMethodDef methods[] = {
 	{"exportSmokeDomain", mExportSmokeDomain, METH_VARARGS, "Export domain data"},
 	{"exportHair",        mExportHair,        METH_VARARGS, "Export hair"},
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export Node description"},
+	{"getTransformHex",   mGetTransformHex,   METH_O,       "Get transform hex string"},
 	{NULL, NULL, 0, NULL},
 };
 
