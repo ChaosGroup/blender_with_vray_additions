@@ -25,6 +25,7 @@
 */
 
 #include "exporter_geometry.h"
+#include "exporter_geometry_ng.h"
 
 #include "../vray_for_blender/CGR_config.h"
 
@@ -1412,6 +1413,10 @@ static int mesh_animated(Object *ob)
 {
     ModifierData *mod;
 
+    // TODO: Go through the adt and check if there is smth,
+    // adt could be not NULL, but contain no actual data...
+    // ob.animation_data_clear() will actually clear the adt pointer.
+
     switch(ob->type) {
     case OB_CURVE:
     case OB_SURF:
@@ -1450,7 +1455,7 @@ static int mesh_animated(Object *ob)
         case eModifierType_ShapeKey:
         case eModifierType_Screw:
         case eModifierType_Warp:
-            return 1;
+            return ob->adt != NULL;
         default:
             mod= mod->next;
         }
@@ -1924,49 +1929,54 @@ static int export_scene_exec(bContext *C, wmOperator *op)
         PRINT_INFO("Exporting meshes...");
 
         if(animation) {
-            cfra = sce->r.cfra;
-            fra  = sce->r.sfra;
+            if(check_animated) {
+                ExportGeometryAnimation(sce, bmain, filepath, active_layers, instances);
+            }
+            else {
+                cfra = sce->r.cfra;
+                fra  = sce->r.sfra;
 
-            PRINT_INFO_LB("Exporting meshes for the first frame %i...%s", fra, debug ? "\n" : "");
+                PRINT_INFO_LB("Exporting meshes for the first frame %i...%s", fra, debug ? "\n" : "");
 
-            /* Export meshes for the start frame */
-            frame_time = PIL_check_seconds_timer();
-            sce->r.cfra = fra;
-            CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
-            BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
-            export_meshes_threaded(filepath, sce, bmain, active_layers, instances, 0, 0);
-            fra += sce->r.frame_step;
-            BLI_timestr(PIL_check_seconds_timer()-frame_time, time_str, sizeof(time_str));
-            printf(" done [%s]\n", time_str);
-
-            /* Export meshes for the rest frames */
-            while(fra <= sce->r.efra) {
+                /* Export meshes for the start frame */
                 frame_time = PIL_check_seconds_timer();
-
-                PRINT_INFO_LB("Exporting meshes for frame %i...%s", fra, debug ? "\n" : "");
-
                 sce->r.cfra = fra;
                 CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
                 BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
-                export_meshes_threaded(filepath, sce, bmain, active_layers, instances, check_animated, 1);
+                export_meshes_threaded(filepath, sce, bmain, active_layers, instances, 0, 0);
+                fra += sce->r.frame_step;
+                BLI_timestr(PIL_check_seconds_timer()-frame_time, time_str, sizeof(time_str));
+                printf(" done [%s]\n", time_str);
 
-                if(!debug) {
-                    BLI_timestr(PIL_check_seconds_timer()-frame_time, time_str, sizeof(time_str));
-                    printf(" done [%s]\n", time_str);
+                /* Export meshes for the rest frames */
+                while(fra <= sce->r.efra) {
+                    frame_time = PIL_check_seconds_timer();
+
+                    PRINT_INFO_LB("Exporting meshes for frame %i...%s", fra, debug ? "\n" : "");
+
+                    sce->r.cfra = fra;
+                    CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
+                    BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
+                    export_meshes_threaded(filepath, sce, bmain, active_layers, instances, check_animated, 1);
+
+                    if(!debug) {
+                        BLI_timestr(PIL_check_seconds_timer()-frame_time, time_str, sizeof(time_str));
+                        printf(" done [%s]\n", time_str);
+                    }
+
+                    fra += sce->r.frame_step;
                 }
 
-                fra += sce->r.frame_step;
+                sce->r.cfra = cfra;
+                CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
+                BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
             }
-
-            sce->r.cfra = cfra;
-            CLAMP(sce->r.cfra, MINAFRAME, MAXFRAME);
-            BKE_scene_update_for_newframe(&eval_ctx, bmain, sce, (1<<20) - 1);
         } else {
             export_meshes_threaded(filepath, sce, bmain, active_layers, instances, check_animated, 0);
         }
 
         BLI_timestr(PIL_check_seconds_timer()-time, time_str, sizeof(time_str));
-        PRINT_INFO("Exporting meshes done [%s]%-32s\n", time_str, " ");
+        PRINT_INFO("Exporting meshes done [%s]%-32s", time_str, " ");
 
         free(filepath);
 
