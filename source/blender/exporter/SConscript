@@ -2,7 +2,7 @@
 
 Import('env')
 
-sources = env.Glob('*.c')
+sources = env.Glob('*.c') + env.Glob('*.cpp')
 
 incs  = '../blenlib ../blenkernel ../blenloader'
 incs += ' ../makesdna ../makesrna'

@@ -11,6 +11,12 @@ set(INC
 )
 
 set(SRC
+    MurmurHash2.h
+    MurmurHash2.cpp
+
+    exporter_geometry_ng.h
+    exporter_geometry_ng.cpp
+
     exporter_geometry.c
     exporter_nodes.c
     exporter_socket.c
