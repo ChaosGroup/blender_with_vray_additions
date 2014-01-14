@@ -25,6 +25,22 @@
 
 #include "CGR_data.h"
 
+#include "DNA_curve_types.h"
+#include "DNA_customdata_types.h"
+#include "DNA_meshdata_types.h"
+
+#include "BKE_global.h"
+#include "BKE_mball.h"
+#include "BKE_library.h"
+#include "BKE_depsgraph.h"
+#include "BKE_object.h"
+#include "BKE_curve.h"
+#include "BKE_mesh.h"
+#include "BKE_DerivedMesh.h"
+#include "BKE_displist.h"
+
+#include <string.h>
+
 
 Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
 {
@@ -49,12 +65,12 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
     case OB_SURF:
         /* copies object and modifiers (but not the data) */
         tmpobj = BKE_object_copy(ob);
-        tmpcu = (Curve*)tmpobj->data;
+        tmpcu = (Curve *)tmpobj->data;
         tmpcu->id.us--;
 
         /* copies the data */
-        tmpobj->data = BKE_curve_copy((Curve*)ob->data);
-        copycu = (Curve*)tmpobj->data;
+        tmpobj->data = BKE_curve_copy( (Curve *) ob->data );
+        copycu = (Curve *)tmpobj->data;
 
         /* temporarily set edit so we get updates from edit mode, but
          * also because for text datablocks copying it while in edit
