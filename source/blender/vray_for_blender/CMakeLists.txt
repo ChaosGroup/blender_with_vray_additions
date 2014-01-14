@@ -28,12 +28,16 @@ set(SRC
 
 	# Common stuff
 	common/blender_includes.h
+	utils/CGR_base64.h
+	utils/CGR_base64.cpp
 	utils/CGR_rna.h
 	utils/CGR_rna.cpp
 	utils/CGR_data.h
 	utils/CGR_data.c
 	utils/CGR_string.h
 	utils/CGR_string.c
+	utils/CGR_vrscene.h
+	utils/CGR_vrscene.cpp
 
 	# vrscene export
 	vrscene_exporter/vrscene.h

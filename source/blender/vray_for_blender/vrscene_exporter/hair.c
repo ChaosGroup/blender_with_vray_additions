@@ -451,7 +451,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 
 	DEBUG_PRINT(debug, "interp_points_count = %i", interp_points_count);
 
-	WRITE_PYOBJECT(outputFile, "GeomMayaHair %s {", pluginName);
+    WRITE_PYOBJECT(outputFile, "\nGeomMayaHair %s {", pluginName);
 	WRITE_PYOBJECT(outputFile, "\n\tnum_hair_vertices=interpolate((%d,ListIntHex(\"", sce->r.cfra);
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {

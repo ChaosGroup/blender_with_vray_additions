@@ -24,7 +24,7 @@
  */
 
 #include "vrscene.h"
-
+#include "utils/CGR_vrscene.h"
 #include "smoke_API.h"
 
 #define USE_HEAT           0

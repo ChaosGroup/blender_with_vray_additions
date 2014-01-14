@@ -26,14 +26,28 @@
 #ifndef CGR_BLENDER_UTILS_H
 #define CGR_BLENDER_UTILS_H
 
-#include "blender_includes.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "DNA_mesh_types.h"
+#include "DNA_scene_types.h"
+#include "DNA_object_types.h"
+#include "BKE_main.h"
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#define CGR_USE_COMPRESSION 1
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// Taken from: source/blender/makesrna/intern/rna_object_api.c
+// with a slight modifications
 Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-bool  IsGeometryType(Object *ob);
 
 #ifdef __cplusplus
 } // extern "C"

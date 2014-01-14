@@ -23,9 +23,9 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#include "utils/CGR_data.h"
-
 #include "vrscene.h"
+#include "utils/CGR_data.h"
+#include "utils/CGR_vrscene.h"
 
 
 static void WritePythonAttribute(PyObject *outputFile, PyObject *propGroup, const char *attrName)
@@ -72,6 +72,10 @@ void write_GeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Mesh *me
 	MVert  *vert;
 	MEdge  *edge;
 
+    float *vertsArray     = NULL;
+    int    vertsArraySize = 0;
+    char  *vertsBuf       = NULL;
+
 	CustomData *fdata;
 
 	int    verts;
@@ -108,10 +112,30 @@ void write_GeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Mesh *me
 	WRITE_PYOBJECT(outputFile, "\nGeomStaticMesh %s {", pluginName);
 
 	WRITE_PYOBJECT(outputFile, "\n\tvertices=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
-	vert = mesh->mvert;
-	for(f = 0; f < mesh->totvert; ++vert, ++f) {
-		WRITE_PYOBJECT_HEX_VECTOR(outputFile, vert->co);
-	}
+#if CGR_USE_COMPRESSION
+    vertsArraySize = 3 * mesh->totvert * sizeof(float);
+    vertsArray = (float*)malloc(vertsArraySize);
+
+    vert = mesh->mvert;
+    j = 0;
+    for(f = 0; f < mesh->totvert; ++vert, ++f) {
+        vertsArray[j+0] = vert->co[0];
+        vertsArray[j+1] = vert->co[1];
+        vertsArray[j+2] = vert->co[2];
+        j += 3;
+    }
+
+    vertsBuf = GetStringZip((u_int8_t*)vertsArray, vertsArraySize);
+    PYTHON_WRITE(outputFile, vertsBuf);
+
+    free(vertsBuf);
+    free(vertsArray);
+#else
+    vert = mesh->mvert;
+    for(f = 0; f < mesh->totvert; ++vert, ++f) {
+        WRITE_PYOBJECT_HEX_VECTOR(outputFile, vert->co);
+    }
+#endif
 	WRITE_PYOBJECT(outputFile, "\")));");
 
 	// TODO: velocities (?)

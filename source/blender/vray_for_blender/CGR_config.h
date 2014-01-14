@@ -38,6 +38,9 @@
 #define CGR_USE_JOBS     0
 #define CGR_USE_RNA      0
 #define CGR_USE_HEX      1
+#define CGR_USE_BASE64   0
+
+#define MAX_PLUGIN_NAME  1024
 
 #if USE_COLOR
 #  define COLOR_RED      "\033[0;31m"

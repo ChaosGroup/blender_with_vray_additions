@@ -31,6 +31,7 @@ extern "C" {
 
 #include "vrscene_exporter/vrscene.h"
 #include "utils/CGR_string.h"
+#include "utils/CGR_vrscene.h"
 #include "CGR_vray_for_blender.h"
 #include "mathutils/mathutils.h"
 #include <Python.h>
