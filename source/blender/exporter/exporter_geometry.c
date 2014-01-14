@@ -28,12 +28,15 @@
 #include "exporter_geometry_ng.h"
 
 #include "../vray_for_blender/CGR_config.h"
+#include "../vray_for_blender/utils/CGR_vrscene.h"
+#include "../vray_for_blender/utils/CGR_data.h"
 
 #define WRITE_HEX_QUADFACE(f, face) fprintf(gfile, "%08X%08X%08X%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3), HEX(face->v3), HEX(face->v4), HEX(face->v1))
 #define WRITE_HEX_TRIFACE(f, face)  fprintf(gfile, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3))
 
 #define MAX_MESH_THREADS    16
 #define USE_STRING_POINTER  1
+#define CGR_USE_COMPRESSION 0
 
 struct Material;
 struct MTex;
@@ -864,101 +867,6 @@ static void write_GeomMayaHair(FILE *gfile, Scene *sce, Main *bmain, Object *ob)
 }
 
 
-// Taken from: source/blender/makesrna/intern/rna_object_api.c
-// with a slight modifications
-//
-static Mesh *get_render_mesh(Scene *sce, Main *bmain, Object *ob)
-{
-    Mesh *tmpmesh;
-    Curve *tmpcu = NULL, *copycu;
-    Object *tmpobj = NULL;
-    Object *basis_ob = NULL;
-    ListBase disp = {NULL, NULL};
-    EvaluationContext eval_ctx = {0};
-
-    /* Make a dummy mesh, saves copying */
-    DerivedMesh *dm;
-
-    CustomDataMask mask = CD_MASK_MESH;
-
-    eval_ctx.for_render = true;
-
-    /* perform the mesh extraction based on type */
-    switch (ob->type) {
-    case OB_FONT:
-    case OB_CURVE:
-    case OB_SURF:
-        /* copies object and modifiers (but not the data) */
-        tmpobj = BKE_object_copy(ob);
-        tmpcu = (Curve *)tmpobj->data;
-        tmpcu->id.us--;
-
-        /* copies the data */
-        copycu = tmpobj->data = BKE_curve_copy( (Curve *) ob->data );
-
-        /* temporarily set edit so we get updates from edit mode, but
-         * also because for text datablocks copying it while in edit
-         * mode gives invalid data structures */
-        copycu->editfont = tmpcu->editfont;
-        copycu->editnurb = tmpcu->editnurb;
-
-        /* get updated display list, and convert to a mesh */
-        BKE_displist_make_curveTypes( sce, tmpobj, 0 );
-
-        copycu->editfont = NULL;
-        copycu->editnurb = NULL;
-
-        BKE_mesh_from_nurbs( tmpobj );
-
-        /* nurbs_to_mesh changes the type to a mesh, check it worked */
-        if (tmpobj->type != OB_MESH) {
-            BKE_libblock_free_us( &(G.main->object), tmpobj );
-            return NULL;
-        }
-        tmpmesh = tmpobj->data;
-        BKE_libblock_free_us( &G.main->object, tmpobj );
-
-        break;
-
-    case OB_MBALL:
-        /* metaballs don't have modifiers, so just convert to mesh */
-        basis_ob = BKE_mball_basis_find(sce, ob);
-
-        if (ob != basis_ob)
-            return NULL; /* only do basis metaball */
-
-        tmpmesh = BKE_mesh_add(bmain, "Mesh");
-
-        BKE_displist_make_mball_forRender(&eval_ctx, sce, ob, &disp);
-        BKE_mesh_from_metaball(&disp, tmpmesh);
-        BKE_displist_free(&disp);
-
-        break;
-
-    case OB_MESH:
-        /* Write the render mesh into the dummy mesh */
-        dm = mesh_create_derived_render(sce, ob, mask);
-
-        tmpmesh = BKE_mesh_add(bmain, "Mesh");
-        DM_to_mesh(dm, tmpmesh, ob, mask);
-        dm->release(dm);
-
-        break;
-
-    default:
-        return NULL;
-    }
-
-    /* cycles and exporters rely on this still */
-    BKE_mesh_tessface_ensure(tmpmesh);
-
-    /* we don't assign it to anything */
-    tmpmesh->id.us--;
-
-    return tmpmesh;
-}
-
-
 static void write_GeomStaticMesh(FILE *gfile,
                                  Scene *sce, Object *ob, Mesh *mesh,
                                  LinkNode *uv_list, int instances)
@@ -970,6 +878,10 @@ static void write_GeomStaticMesh(FILE *gfile,
     MVert  *vert;
 
     CustomData *fdata;
+
+    float *vertsArray     = NULL;
+    int    vertsArraySize = 0;
+    char  *vertsBuf       = NULL;
 
     int    verts;
     int    fve[4];
@@ -1034,15 +946,35 @@ static void write_GeomStaticMesh(FILE *gfile,
 
 
 	fprintf(gfile,"\tvertices=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
+#if CGR_USE_COMPRESSION
+    vertsArraySize = 3 * mesh->totvert * sizeof(float);
+    vertsArray = (float*)malloc(vertsArraySize);
+
+    vert = mesh->mvert;
+    j = 0;
+    for(f = 0; f < mesh->totvert; ++vert, ++f) {
+        vertsArray[j+0] = vert->co[0];
+        vertsArray[j+1] = vert->co[1];
+        vertsArray[j+2] = vert->co[2];
+        j += 3;
+    }
+
+    vertsBuf = GetStringZip((u_int8_t*)vertsArray, vertsArraySize);
+    fprintf(gfile, "%s", vertsBuf);
+
+    free(vertsBuf);
+    free(vertsArray);
+#else
     vert= mesh->mvert;
     for(f= 0; f < mesh->totvert; ++vert, ++f) {
         WRITE_HEX_VECTOR(gfile, vert->co);
     }
+#endif
     fprintf(gfile,"\")));\n");
 
     // TODO: velocities (?)
 
-	fprintf(gfile,"\tfaces=interpolate((%d,ListIntHex(\"", sce->r.cfra);
+    fprintf(gfile,"\tfaces=interpolate((%d,ListIntHex(\"", sce->r.cfra);
     face= mesh->mface;
     for(f= 0; f < mesh->totface; ++face, ++f) {
         if(face->v4)
@@ -1553,7 +1485,7 @@ static void *export_meshes_thread(void *ptr)
             // Export mesh
             pthread_mutex_lock(&mtx);
 
-            mesh = get_render_mesh(sce, bmain, ob);
+            mesh = GetRenderMesh(sce, bmain, ob);
 
             pthread_mutex_unlock(&mtx);
 

@@ -42,8 +42,6 @@ extern "C" {
 
 #include <Python.h>
 
-#define MAX_PLUGIN_NAME  1024
-
 #define COPY_VECTOR_3_3(a, b) \
 	a[0] = b[0];\
 	a[1] = b[1];\
@@ -65,6 +63,9 @@ extern "C" {
 
 #define WRITE_HEX_QUADFACE(f, face) fprintf(gfile, "%08X%08X%08X%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3), HEX(face->v3), HEX(face->v4), HEX(face->v1))
 #define WRITE_HEX_TRIFACE(f, face)  fprintf(gfile, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3))
+
+#define PYTHON_WRITE(pyObject, buf) \
+    PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
 
 #define WRITE_PYOBJECT_BUF(pyObject) \
 	PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
@@ -107,10 +108,6 @@ extern "C" {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void  GetDoubleHex(float f, char *str);
-void  GetFloatHex(float f, char *buf);
-char* GetTransformHex(float m[4][4]);
 
 int   write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
 
