@@ -1,23 +1,18 @@
 #ifndef CGR_VRSCENE_H
 #define CGR_VRSCENE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "BLI_sys_types.h"
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void  GetDoubleHex(float f, char *str);
+#define IND                 "\n\t"
+#define TRANSFORM_HEX_SIZE  129
+
+void  GetDoubleHex(float f, char *buf);
 void  GetFloatHex(float f, char *buf);
-char* GetTransformHex(float m[4][4]);
+void  GetTransformHex(float m[4][4], char *buf);
 
 char* GetStringZip(const u_int8_t *buf, unsigned bufLen);
 

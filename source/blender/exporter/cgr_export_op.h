@@ -23,32 +23,13 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_BLENDER_UTILS_H
-#define CGR_BLENDER_UTILS_H
+#ifndef CGR_EXPORT_OP_H
+#define CGR_EXPORT_OP_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "WM_types.h"
 
-#include "DNA_mesh_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_object_types.h"
-#include "BKE_main.h"
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+void VRAY_OT_export_meshes(wmOperatorType *ot);
+void VRAY_OT_export_nodes(wmOperatorType *ot);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-void  FreeRenderMesh(Main *main, Mesh *mesh);
-void  FreeDupliList(Object *ob);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#endif // CGR_BLENDER_UTILS_H
+#endif // CGR_EXPORT_OP_H
