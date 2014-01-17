@@ -23,8 +23,8 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#include "vrscene.h"
-#include "utils/CGR_vrscene.h"
+#include "vrscene_api.h"
+#include "CGR_vrscene.h"
 #include "smoke_API.h"
 
 #define USE_HEAT           0

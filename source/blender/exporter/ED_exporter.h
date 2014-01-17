@@ -27,7 +27,6 @@
 #ifndef ED_EXPORTER_H
 #define ED_EXPORTER_H
 
-struct wmOperatorType;
 
 void ED_operatortypes_exporter(void);
 

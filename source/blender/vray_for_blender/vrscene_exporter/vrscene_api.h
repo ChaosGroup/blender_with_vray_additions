@@ -30,15 +30,7 @@
 
 #include <math.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "blender_includes.h"
-
-#ifdef __cplusplus
-}
-#endif
 
 #include <Python.h>
 
@@ -50,25 +42,22 @@ extern "C" {
 #define HEX(x) htonl(*(int*)&(x))
 #define WRITE_HEX_VALUE(f, v) fprintf(f, "%08X", HEX(v));
 #define WRITE_HEX_VECTOR(f, v) fprintf(f, "%08X%08X%08X", HEX(v[0]), HEX(v[1]), HEX(v[2]))
-
-#if CGR_USE_HEX
 #define WRITE_TRANSFORM(f, m) fprintf(f, "TransformHex(\"%s\")", GetTransformHex(m));
-#else
-#define WRITE_TRANSFORM(f, m) fprintf(f, "Transform(Matrix(Vector(%f, %f, %f),Vector(%f, %f, %f),Vector(%f, %f, %f)),Vector(%f, %f, %f))", \
-	m[0][0], m[0][1], m[0][2],\
-	m[1][0], m[1][1], m[1][2],\
-	m[2][0], m[2][1], m[2][2],\
-	m[3][0], m[3][1], m[3][2]);
-#endif
 
 #define WRITE_HEX_QUADFACE(f, face) fprintf(gfile, "%08X%08X%08X%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3), HEX(face->v3), HEX(face->v4), HEX(face->v1))
 #define WRITE_HEX_TRIFACE(f, face)  fprintf(gfile, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3))
 
-#define PYTHON_WRITE(pyObject, buf) \
+#define PYTHON_PRINT_BUF char buf[2048]
+
+#define PYTHON_PRINT(pyObject, buf) \
     PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
 
 #define WRITE_PYOBJECT_BUF(pyObject) \
 	PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
+
+#define PYTHON_PRINTF(pyObject, ...) \
+    sprintf(buf, __VA_ARGS__); \
+    WRITE_PYOBJECT_BUF(pyObject);
 
 #define WRITE_PYOBJECT(pyObject, ...) \
 	sprintf(buf, __VA_ARGS__); \
@@ -90,19 +79,10 @@ extern "C" {
 	sprintf(buf, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3)); \
 	WRITE_PYOBJECT_BUF(pyObject);
 
-#if CGR_USE_HEX
 #define WRITE_PYOBJECT_TRANSFORM(pyObject, m) \
-	sprintf(buf, "TransformHex(\"%s\")", GetTransformHex(m));\
+    GetTransformHex(m, buf); \
+    sprintf(buf, "TransformHex(\"%s\")", buf);\
 	WRITE_PYOBJECT_BUF(pyObject);
-#else
-#define WRITE_PYOBJECT_TRANSFORM(pyObject, m) \
-	sprintf(buf, "Transform(Matrix(Vector(%f, %f, %f),Vector(%f, %f, %f),Vector(%f, %f, %f)),Vector(%f, %f, %f))", \
-		m[0][0], m[0][1], m[0][2],\
-		m[1][0], m[1][1], m[1][2],\
-		m[2][0], m[2][1], m[2][2],\
-		m[3][0], m[3][1], m[3][2]); \
-	WRITE_PYOBJECT_BUF(pyObject);
-#endif
 
 
 #ifdef __cplusplus
@@ -112,6 +92,7 @@ extern "C" {
 int   write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
 
 void  write_Mesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup);
+void  write_MeshFile(FILE *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName);
 void  write_GeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Mesh *mesh, const char *pluginName, PyObject *propGroup);
 
 void  write_SmokeDomain(PyObject *outputFile, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, const char *lights);

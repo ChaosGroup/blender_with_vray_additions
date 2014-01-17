@@ -22,3 +22,22 @@
  *
  * ***** END GPL LICENSE BLOCK *****
  */
+
+#ifndef CGR_EXPORT_GEOM_H
+#define CGR_EXPORT_GEOM_H
+
+#include "common/blender_includes.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+void ExportGeometry(FILE *outputFile, Scene *sce, Main *main, int activeLayers, int altDInstances);
+void ExportGeometryAnimation(const char *outputFilepath, Scene *sce, Main *main, int activeLayers, int altDInstances, int checkAnimated);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#endif // CGR_EXPORT_GEOM_H

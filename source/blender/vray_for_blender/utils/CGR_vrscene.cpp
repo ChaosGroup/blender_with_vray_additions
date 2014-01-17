@@ -12,9 +12,6 @@ typedef unsigned char u_int8_t;
 #endif
 
 
-static char sbuf[MAX_PLUGIN_NAME];
-
-
 struct TraceTransform {
     float  m[3][3];
     double v[3];
@@ -47,7 +44,7 @@ inline void word2str(u_int16_t w, char *str)
 }
 
 
-inline int hex2str(const u_int8_t *bytes, unsigned numBytes, char *str, unsigned strMaxLen)
+static int hex2str(const u_int8_t *bytes, unsigned numBytes, char *str, unsigned strMaxLen)
 {
     if (strMaxLen<numBytes*2/3+1)
         return -1;
@@ -77,7 +74,7 @@ static void int2hex(u_int32_t i, char *hex)
 {
     u_int8_t f[4];
     *((u_int32_t*)&f)=i;
-    for(int i = 0; i < 4; i++) {
+    for (int i=0; i<4; i++) {
         char val0=int2hexValue((f[i]>>4)&0xF);
         char val1=int2hexValue((f[i])&0xF);
         hex[i*2+0]=val0;
@@ -98,67 +95,37 @@ static void getStringHex(const u_int8_t *buf, unsigned nBytes, char *pstr)
 }
 
 
-// Checks if we should write the buffers in base64 or using the old format.
-// By default it returns that base64 should be used.
-#if CGR_USE_BASE64
-static bool shouldWriteBase64Buffers() {
-    static bool initialized=false;
-    static bool flag=true;
-    if (!initialized) {
-        if (getenv("VRAY_WRITE_OLD_STYLE_BUFFERS")!=NULL)
-            flag=false;
-        initialized=true;
-    }
-    return flag;
-}
-#endif
-
-
 char* GetStringZip(const u_int8_t *buf, unsigned bufLen)
 {
     // First compress the data into a temporary buffer
-    uLongf tempLen = bufLen+bufLen/10+12;
-    char  *temp = (char*)malloc(tempLen);
+    //
+    uLongf  tempLen = bufLen+bufLen/10+12;
+    char   *temp = new char[tempLen];
 
-    int res = compress((Bytef*)temp, &tempLen, (Bytef*)buf, bufLen);
-    if(res == Z_MEM_ERROR) {
-        free(temp);
+    int err = compress((Bytef*)temp, &tempLen, (Bytef*)buf, bufLen);
+    if(err == Z_MEM_ERROR) {
+        delete [] temp;
         return NULL;
     }
-    if(res == Z_BUF_ERROR) {
-        free(temp);
+    if(err == Z_BUF_ERROR) {
+        delete [] temp;
         return NULL;
     }
 
-    unsigned  offset=4+8+8;
-    char     *pstr=NULL;
+    // Convert the zipped buffer into an ASCII string
+    //
+    char     *pstr = NULL;
+    unsigned  offset = 4+8+8;
+    unsigned  strLen = (tempLen/2+1)*3+offset+1;
 
-#if CGR_USE_BASE64
-    if(!shouldWriteBase64Buffers()) {
-#endif
-        // Convert the zipped buffer into an ASCII string
-        unsigned strLen=(tempLen/2+1)*3+offset;
-        pstr = (char*)malloc(strLen);
+    pstr = new char[strLen];
 
-        hex2str((u_int8_t*)temp, tempLen, &pstr[offset], strLen-offset);
+    hex2str((u_int8_t*)temp, tempLen, &pstr[offset], strLen-offset);
+    delete [] temp;
 
-        // Add the Zip header
-        pstr[0]='Z'; pstr[1]='I'; pstr[2]='P'; pstr[3]='B';
-#if CGR_USE_BASE64
-    }
-    else {
-        // Convert the zipped buffer into a base64 encoded string
-        unsigned strLen=base64_getEncodedBufferMaxSize(tempLen)+offset;
-        pstr = (char*)malloc(strLen);
-
-        base64_encode((const u_int8_t*)temp, tempLen, (u_int8_t*)&pstr[offset]);
-
-        // Add the Zip header
-        pstr[0]='Z'; pstr[1]='I'; pstr[2]='P'; pstr[3]='C';
-    }
-#endif
-
-    free(temp);
+    // Add the Zip header
+    pstr[0]='Z'; pstr[1]='I'; pstr[2]='P'; pstr[3]='B';
+    pstr[strLen-1] = '\0';
 
     int2hex(bufLen, &pstr[4]);
     int2hex(tempLen, &pstr[8+4]);
@@ -167,31 +134,28 @@ char* GetStringZip(const u_int8_t *buf, unsigned bufLen)
 }
 
 
-void GetDoubleHex(float f, char *str)
+void GetDoubleHex(float f, char *buf)
 {
     double d = double(f);
-    const u_int8_t *buf = (const u_int8_t*)&d;
-    getStringHex(buf, sizeof(d), str);
+    const u_int8_t *d8 = (const u_int8_t*)&d;
+    getStringHex(d8, sizeof(d), buf);
 }
 
 
-void GetFloatHex(float f, char *str)
+void GetFloatHex(float f, char *buf)
 {
     float d = f;
-    const u_int8_t *buf = (const u_int8_t*)&d;
-    getStringHex(buf, sizeof(d), str);
+    const u_int8_t *d8 = (const u_int8_t*)&d;
+    getStringHex(d8, sizeof(d), buf);
 }
 
 
-char* GetTransformHex(float m[4][4])
+void GetTransformHex(float m[4][4], char *buf)
 {
     TraceTransform tm;
     copy_m3_m4(tm.m, m);
     copy_v3db_v3fl(tm.v, m[3]);
 
-    const u_int8_t *buf = (const u_int8_t*)&tm;
-    getStringHex(buf, sizeof(tm), sbuf);
-
-    return sbuf;
+    const u_int8_t *tm8 = (const u_int8_t*)&tm;
+    getStringHex(tm8, sizeof(tm), buf);
 }
-

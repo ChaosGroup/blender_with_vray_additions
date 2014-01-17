@@ -23,32 +23,58 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_BLENDER_UTILS_H
-#define CGR_BLENDER_UTILS_H
+#include "CGR_config.h"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
+#  include "DNA_modifier_types.h"
+#  include "BKE_depsgraph.h"
+#  include "BKE_scene.h"
+#  include "BLI_math.h"
+#  include "MEM_guardedalloc.h"
+#  include "RNA_access.h"
+}
 
-#include "DNA_mesh_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_object_types.h"
-#include "BKE_main.h"
+#include "Node.h"
+#include "CGR_blender_data.h"
+#include "CGR_vrscene.h"
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+VRScene::Node::Node()
+{
+}
 
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-void  FreeRenderMesh(Main *main, Mesh *mesh);
-void  FreeDupliList(Object *ob);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+void VRScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
+{
+    float tm[4][4];
 
-#endif // CGR_BLENDER_UTILS_H
+    if(dOb) {
+        object = dOb->ob;
+        copy_m4_m4(tm, dOb->mat);
+    }
+    else {
+        object = ob;
+        copy_m4_m4(tm, ob->obmat);
+    }
+
+    GetTransformHex(tm, transform);
+
+    objectID = object->index;
+}
+
+
+void VRScene::Node::freeData()
+{
+}
+
+
+char* VRScene::Node::getTransform() const
+{
+    return const_cast<char*>(transform);
+}
+
+
+int VRScene::Node::getObjectID() const
+{
+    return objectID;
+}

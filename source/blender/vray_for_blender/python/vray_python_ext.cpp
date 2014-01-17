@@ -29,11 +29,14 @@ extern "C" {
 #include "blender_includes.h"
 }
 
-#include "vrscene_exporter/vrscene.h"
-#include "utils/CGR_string.h"
-#include "utils/CGR_vrscene.h"
+#include "CGR_string.h"
+#include "CGR_vrscene.h"
 #include "CGR_vray_for_blender.h"
+
+#include "vrscene_api.h"
+
 #include "mathutils/mathutils.h"
+
 #include <Python.h>
 
 
@@ -203,7 +206,8 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 		copy_v3_v3(tm[2], MATRIX_COL_PTR(transform, 2));
 		copy_v3_v3(tm[3], MATRIX_COL_PTR(transform, 3));
 
-		sprintf(buf, "TransformHex(\"%s\")", GetTransformHex(tm));
+        GetTransformHex(tm, buf);
+        sprintf(buf, "TransformHex(\"%s\")", buf);
 
 		return PyUnicode_FromString(buf);
 	}

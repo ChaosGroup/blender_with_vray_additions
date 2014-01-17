@@ -24,7 +24,10 @@
  */
 
 #include "CGR_string.h"
+
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 void StripString(char *str)

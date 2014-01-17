@@ -25,7 +25,7 @@
 
 #include "utils/CGR_string.h"
 #include "utils/CGR_vrscene.h"
-#include "vrscene.h"
+#include "vrscene_api.h"
 #include <set>
 #include <string>
 
