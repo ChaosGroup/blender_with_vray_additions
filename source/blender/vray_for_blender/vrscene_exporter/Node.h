@@ -23,32 +23,48 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_BLENDER_UTILS_H
-#define CGR_BLENDER_UTILS_H
+#ifndef CGR_NODE_H
+#define CGR_NODE_H
 
-#ifdef __cplusplus
 extern "C" {
-#endif
+#  include "DNA_mesh_types.h"
+#  include "DNA_scene_types.h"
+#  include "DNA_object_types.h"
+#  include "BKE_main.h"
+}
 
-#include "DNA_mesh_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_object_types.h"
-#include "BKE_main.h"
+#include "utils/CGR_vrscene.h"
+#include "utils/murmur3.h"
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include <string>
+#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-void  FreeRenderMesh(Main *main, Mesh *mesh);
-void  FreeDupliList(Object *ob);
+namespace VRScene {
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+struct Node {
+    Node();
+    ~Node() { freeData(); }
 
-#endif // CGR_BLENDER_UTILS_H
+    void          init(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
+    void          freeData();
+
+    MHash         getHash() const { return hash; }
+
+    char*         getTransform() const;
+
+public:
+    int           getObjectID() const;
+
+private:
+    MHash         hash;
+    Object       *object;
+
+    int           objectID;
+    char          transform[TRANSFORM_HEX_SIZE];
+
+};
+
+}
+
+#endif // CGR_NODE_H

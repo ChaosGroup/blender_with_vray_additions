@@ -23,27 +23,18 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef EXPORTER_GEOMETRY_NG_H
-#define EXPORTER_GEOMETRY_NG_H
+#ifndef CGR_JSON_PLUGINS_H
+#define CGR_JSON_PLUGINS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "exporter_includes.h"
+int ReadPluginDesc(const char *pluginIDName);
 
 #ifdef __cplusplus
-}
+} // extern "C"
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#endif // CGR_JSON_PLUGINS_H
 
-void ExportGeometryAnimation(Scene *sce, Main *bmain, const char *filepath, int activeLayers, int altDInstances);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif //EXPORTER_GEOMETRY_NG_H

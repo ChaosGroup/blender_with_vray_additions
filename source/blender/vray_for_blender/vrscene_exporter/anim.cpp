@@ -23,32 +23,5 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_BLENDER_UTILS_H
-#define CGR_BLENDER_UTILS_H
+#include "anim.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "DNA_mesh_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_object_types.h"
-#include "BKE_main.h"
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-void  FreeRenderMesh(Main *main, Mesh *mesh);
-void  FreeDupliList(Object *ob);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#endif // CGR_BLENDER_UTILS_H

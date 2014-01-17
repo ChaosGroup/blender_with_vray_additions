@@ -26,6 +26,10 @@
 #ifndef BLENDER_INCLUDES_H
 #define BLENDER_INCLUDES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -103,6 +107,11 @@
 #include "RNA_access.h"
 #include "RNA_define.h"
 
+#include "WM_api.h"
+#include "WM_types.h"
+
+#include "MEM_guardedalloc.h"
+
 #ifdef WIN32
 #  ifdef htonl
 #    undef htonl
@@ -116,9 +125,8 @@
 #  include <netinet/in.h>
 #endif
 
-#include "WM_api.h"
-#include "WM_types.h"
-
-#include "MEM_guardedalloc.h"
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // BLENDER_INCLUDES_H

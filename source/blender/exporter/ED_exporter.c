@@ -24,15 +24,13 @@
 
 */
 
-#include "exporter_geometry.h"
-#include "exporter_nodes.h"
-#include "exporter_socket.h"
-
+#include "cgr_export_op.h"
 #include "ED_exporter.h"
+#include "WM_api.h"
+
 
 void ED_operatortypes_exporter(void)
 {
-    WM_operatortype_append(VRAY_OT_export_nodes);
     WM_operatortype_append(VRAY_OT_export_meshes);
-    WM_operatortype_append(VRAY_OT_transfer);
+    WM_operatortype_append(VRAY_OT_export_nodes);
 }

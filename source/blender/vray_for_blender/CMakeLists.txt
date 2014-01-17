@@ -7,6 +7,8 @@ set(INC_SYS
 set(INC
 	.
 	./common
+	./utils
+	./vrscene_exporter
 	../blenlib
 	../blenkernel
 	../blenloader
@@ -34,22 +36,32 @@ set(SRC
 	utils/CGR_base64.cpp
 	utils/CGR_rna.h
 	utils/CGR_rna.cpp
+	utils/cgr_json_plugins.h
+	utils/cgr_json_plugins.cpp
 	utils/CGR_blender_data.h
 	utils/CGR_blender_data.c
 	utils/CGR_string.h
-	utils/CGR_string.c
+	utils/CGR_string.cpp
 	utils/CGR_vrscene.h
 	utils/CGR_vrscene.cpp
-	utils/MurmurHash2.h
-	utils/MurmurHash2.cpp
+	utils/murmur3.h
+	utils/murmur3.cpp
 
 	# vrscene export
-	vrscene_exporter/vrscene.h
-	vrscene_exporter/vrscene.cpp
-	vrscene_exporter/geom.c
-	vrscene_exporter/hair.c
-	vrscene_exporter/node.cpp
-	vrscene_exporter/smoke.cpp
+	vrscene_exporter/Node.h
+	vrscene_exporter/Node.cpp
+	vrscene_exporter/GeomMayaHair.h
+	vrscene_exporter/GeomMayaHair.cpp
+	vrscene_exporter/GeomStaticMesh.h
+	vrscene_exporter/GeomStaticMesh.cpp
+	vrscene_exporter/anim.h
+	vrscene_exporter/anim.cpp
+	vrscene_exporter/exp_geom.cpp
+	vrscene_exporter/exp_hair.c
+	vrscene_exporter/exp_nodes.cpp
+	vrscene_exporter/exp_smoke.cpp
+
+	vrscene_exporter/vrscene_api.h
 
 	python/vray_python_ext.cpp
 

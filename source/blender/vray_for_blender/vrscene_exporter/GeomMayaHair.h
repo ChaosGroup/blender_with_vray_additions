@@ -23,32 +23,52 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_BLENDER_UTILS_H
-#define CGR_BLENDER_UTILS_H
+#ifndef GEOM_MAYA_HAIR_H
+#define GEOM_MAYA_HAIR_H
 
-#ifdef __cplusplus
 extern "C" {
-#endif
-
 #include "DNA_mesh_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_object_types.h"
 #include "BKE_main.h"
+}
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include "utils/murmur3.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string>
+#include <vector>
 
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-void  FreeRenderMesh(Main *main, Mesh *mesh);
-void  FreeDupliList(Object *ob);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+class GeomMayaHair {
+public:
+    GeomMayaHair();
+    ~GeomMayaHair() { freeData(); }
 
-#endif // CGR_BLENDER_UTILS_H
+    void          init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);
+    void          freeData();
+
+    MHash         getHash() const            { return hash; }
+
+    char*         getHairVertices() const    { return hair_vertices; }
+    char*         getNumHairVertices() const { return num_hair_vertices;}
+    char*         getWidths() const          { return widths; }
+    char*         getTransparency() const    { return transparency; }
+
+private:
+    void          initHash();
+
+    MHash         hash;
+
+    char         *hair_vertices;
+    char         *num_hair_vertices;
+    char         *widths;
+    char         *transparency;
+
+    int           use_global_hair_tree;
+
+    int           geom_splines;
+    float         geom_tesselation_mult;
+
+};
+
+#endif // GEOM_MAYA_HAIR_H

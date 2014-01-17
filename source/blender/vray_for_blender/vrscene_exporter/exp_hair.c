@@ -23,7 +23,7 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#include "vrscene.h"
+#include "vrscene_api.h"
 
 
 typedef struct ParticleStrandData {
