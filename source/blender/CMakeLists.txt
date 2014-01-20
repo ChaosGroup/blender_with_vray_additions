@@ -150,6 +150,5 @@ if(WITH_FREESTYLE)
 endif()
 
 if(WITH_VRAY_FOR_BLENDER)
-	add_subdirectory(exporter)
 	add_subdirectory(vray_for_blender)
 endif()
