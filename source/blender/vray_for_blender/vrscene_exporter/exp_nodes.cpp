@@ -25,7 +25,12 @@
 
 #include "utils/CGR_string.h"
 #include "utils/CGR_vrscene.h"
+
+#include "exp_defines.h"
 #include "vrscene_api.h"
+
+#include "RNA_blender_cpp.h"
+
 #include <set>
 #include <string>
 

@@ -35,6 +35,8 @@ extern "C" {
 }
 
 #include "Node.h"
+#include "CGR_json_plugins.h"
+#include "CGR_rna.h"
 #include "CGR_blender_data.h"
 #include "CGR_vrscene.h"
 
@@ -60,6 +62,8 @@ void VRScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
     GetTransformHex(tm, transform);
 
     objectID = object->index;
+
+//    initWrappers();
 }
 
 
@@ -77,4 +81,32 @@ char* VRScene::Node::getTransform() const
 int VRScene::Node::getObjectID() const
 {
     return objectID;
+}
+
+
+void VRScene::Node::initWrappers()
+{
+    boost::property_tree::ptree mtlRenderStatsTree;
+
+    ReadPluginDesc("MtlRenderStats", mtlRenderStatsTree);
+
+    RnaAccess::RnaValue rnaValueAccess(&object->id, "vray.MtlRenderStats");
+
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &v, mtlRenderStatsTree.get_child("Parameters")) {
+        std::string attrName = v.second.get_child("attr").data();
+        std::string attrType = v.second.get_child("type").data();
+
+        std::cout << "Name: " << attrName << std::endl;
+        std::cout << "  Type: " << attrType << std::endl;
+
+        if(attrType == "BOOL") {
+            bool defaultValue = v.second.get<bool>("default");
+
+            bool value;
+            rnaValueAccess.GetValue(attrName.c_str(), value);
+
+            std::cout << "  Default: " << defaultValue << std::endl;
+            std::cout << "  Value: "   << value << std::endl;
+        }
+    }
 }

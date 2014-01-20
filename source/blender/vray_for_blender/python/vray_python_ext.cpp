@@ -25,19 +25,45 @@
 
 #include "CGR_config.h"
 
-extern "C" {
 #include "blender_includes.h"
-}
 
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
 #include "CGR_vray_for_blender.h"
 
-#include "vrscene_api.h"
+#include "vrscene_exporter/exp_scene.h"
+#include "vrscene_exporter/vrscene_api.h"
 
 #include "mathutils/mathutils.h"
 
 #include <Python.h>
+
+
+static PyObject* mExportScene(PyObject *self, PyObject *args)
+{
+	int       contextPtr;
+
+	PyObject *obFile;
+	PyObject *geomFile;
+	PyObject *lightsFile;
+
+	if(NOT(PyArg_ParseTuple(args, "iOOO", &contextPtr, &obFile, &geomFile, &lightsFile)))
+		return NULL;
+
+	int activeLayers  = 1;
+	int altDInstances = 0;
+	int checkAnimated = ANIM_CHECK_BOTH;
+
+	bContext *C = (bContext*)(intptr_t)contextPtr;
+
+	Scene *sce  = CTX_data_scene(C);
+	Main  *main = CTX_data_main(C);
+
+	VRsceneExporter exporter(sce, main, obFile, geomFile, lightsFile);
+	exporter.exportScene();
+
+	Py_RETURN_NONE;
+}
 
 
 static PyObject* mExportSmokeDomain(PyObject *self, PyObject *args)
@@ -217,13 +243,17 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 
 
 static PyMethodDef methods[] = {
+	{"exportScene",       mExportScene,       METH_VARARGS, "Export scene to the *.vrscene file"},
+
 	{"exportDupli",       mExportDupli,       METH_VARARGS, "Export dupli / particles"},
 	{"exportMesh",        mExportMesh,        METH_VARARGS, "Export mesh"},
 	{"exportSmoke",       mExportSmoke,       METH_VARARGS, "Export voxel data"},
 	{"exportSmokeDomain", mExportSmokeDomain, METH_VARARGS, "Export domain data"},
 	{"exportHair",        mExportHair,        METH_VARARGS, "Export hair"},
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export Node description"},
+
 	{"getTransformHex",   mGetTransformHex,   METH_O,       "Get transform hex string"},
+
 	{NULL, NULL, 0, NULL},
 };
 
