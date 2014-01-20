@@ -52,11 +52,11 @@ struct Node {
     MHash         getHash() const { return hash; }
 
     char*         getTransform() const;
-
-public:
     int           getObjectID() const;
 
 private:
+    void          initWrappers();
+
     MHash         hash;
     Object       *object;
 

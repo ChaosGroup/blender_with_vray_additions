@@ -2,16 +2,7 @@
 
 Import('env')
 
-sources = [
-    './python/vray_python_ext.cpp',
-    './utils/CGR_data.c',
-    './utils/CGR_rna.cpp',
-    './utils/CGR_string.c',
-    './vrscene_exporter/geom.c',
-    './vrscene_exporter/hair.c',
-    './vrscene_exporter/node.c',
-    './vrscene_exporter/smoke.cpp',
-]
+sources = env.Glob('*/*.c') + env.Glob('*/*.cpp')
 
 includes = [
     '../../../intern/guardedalloc',

@@ -23,9 +23,9 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#include "vrscene_api.h"
-
+#include "exp_defines.h"
 #include "GeomStaticMesh.h"
+#include "vrscene_api.h"
 
 
 static void WritePythonAttribute(PyObject *outputFile, PyObject *propGroup, const char *attrName)

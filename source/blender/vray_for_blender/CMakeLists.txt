@@ -36,8 +36,8 @@ set(SRC
 	utils/CGR_base64.cpp
 	utils/CGR_rna.h
 	utils/CGR_rna.cpp
-	utils/cgr_json_plugins.h
-	utils/cgr_json_plugins.cpp
+	utils/CGR_json_plugins.h
+	utils/CGR_json_plugins.cpp
 	utils/CGR_blender_data.h
 	utils/CGR_blender_data.c
 	utils/CGR_string.h
@@ -54,12 +54,14 @@ set(SRC
 	vrscene_exporter/GeomMayaHair.cpp
 	vrscene_exporter/GeomStaticMesh.h
 	vrscene_exporter/GeomStaticMesh.cpp
-	vrscene_exporter/anim.h
-	vrscene_exporter/anim.cpp
+	vrscene_exporter/exp_defines.h
+	vrscene_exporter/exp_anim.h
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.c
 	vrscene_exporter/exp_nodes.cpp
 	vrscene_exporter/exp_smoke.cpp
+	vrscene_exporter/exp_scene.h
+	vrscene_exporter/exp_scene.cpp
 
 	vrscene_exporter/vrscene_api.h
 

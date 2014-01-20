@@ -28,6 +28,8 @@
 #include "DNA_curve_types.h"
 #include "DNA_customdata_types.h"
 #include "DNA_meshdata_types.h"
+#include "DNA_meta_types.h"
+#include "DNA_modifier_types.h"
 
 #include "BKE_global.h"
 #include "BKE_mball.h"
@@ -154,4 +156,73 @@ void FreeDupliList(Object *ob)
         free_object_duplilist(ob->duplilist);
         ob->duplilist = NULL;
     }
+}
+
+
+// We are checking only 'transform' and visibility here
+//
+int IsNodeAnimated(Object *ob)
+{
+	if(ob->adt) {
+		// ...
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int IsMeshAnimated(Object *ob)
+{
+	ModifierData *mod = NULL;
+
+	// TODO: Go through the adt and check if there is smth,
+	// adt could be not NULL, but contain no actual data...
+	// ob.animation_data_clear() will actually clear the adt pointer.
+
+	switch(ob->type) {
+		case OB_CURVE:
+		case OB_SURF:
+		case OB_FONT: {
+			Curve *cu = (Curve*)ob->data;
+			if(cu->adt)
+				return 1;
+		}
+			break;
+		case OB_MBALL: {
+			MetaBall *mb = (MetaBall*)ob->data;
+			if(mb->adt)
+				return 1;
+		}
+			break;
+		case OB_MESH: {
+			Mesh *me = (Mesh*)ob->data;
+			if(me->adt)
+				return 1;
+		}
+			break;
+		default:
+			break;
+	}
+
+	mod = (ModifierData*)ob->modifiers.first;
+	while(mod) {
+		switch(mod->type) {
+			case eModifierType_Armature:
+			case eModifierType_Array:
+			case eModifierType_Displace:
+			case eModifierType_Softbody:
+			case eModifierType_Explode:
+			case eModifierType_MeshDeform:
+			case eModifierType_SimpleDeform:
+			case eModifierType_ShapeKey:
+			case eModifierType_Screw:
+			case eModifierType_Warp:
+				return ob->adt != NULL;
+			default:
+				mod = mod->next;
+		}
+	}
+
+	return 0;
 }

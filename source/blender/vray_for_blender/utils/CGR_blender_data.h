@@ -47,6 +47,9 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
 void  FreeDupliList(Object *ob);
 
+int   IsNodeAnimated(Object *ob);
+int   IsMeshAnimated(Object *ob);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

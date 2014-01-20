@@ -1,0 +1,90 @@
+/*
+ * ***** BEGIN GPL LICENSE BLOCK *****
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *
+ * The Original Code is Copyright (C) 2010 Blender Foundation.
+ * All rights reserved.
+ *
+ * Contributor(s): Andrei Izrantcev <andrei.izrantcev@chaosgroup.com>
+ *
+ * ***** END GPL LICENSE BLOCK *****
+ */
+
+#ifndef CGR_EXPORT_SCENE_H
+#define CGR_EXPORT_SCENE_H
+
+// TODO: #include "RNA_blender_cpp.h"
+
+#include "blender_includes.h"
+
+#include "vrscene_exporter/exp_defines.h"
+#include "vrscene_exporter/exp_anim.h"
+#include "vrscene_exporter/GeomMayaHair.h"
+#include "vrscene_exporter/GeomStaticMesh.h"
+#include "vrscene_exporter/Node.h"
+
+#include <string>
+#include <vector>
+
+#include <Python.h>
+
+
+typedef std::vector<std::string>       StringVector;
+typedef AnimationCache<VRScene::Node>  NodesCache;
+typedef AnimationCache<GeomStaticMesh> MeshesCache;
+
+
+class VRsceneExporter {
+public:
+	VRsceneExporter(Scene *sce, Main *main, PyObject *obFile, PyObject *geomFile, PyObject *lightsFile);
+	~VRsceneExporter();
+
+	void               exportScene();
+	void               exportNodes();
+	void               exportGeometry();
+
+private:
+	void               exportGeomStaticMesh();
+	void               exportGeomMayaHair();
+
+	void               exportSmoke();
+
+	void               exportLightLinker(); // Or return 'dict' back to Python
+
+	void               WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, const char *pluginName, int useAnimation=false, int frame=0);
+	void               WriteNode(Object *ob, const VRScene::Node *node, const char *pluginName, int useAnimation=false, int frame=0);
+	std::string        WriteMtlMulti(Object *ob);
+
+	MeshesCache        m_meshCache;
+	EvaluationContext  m_eval_ctx;
+
+	Scene             *m_sce;
+	Main              *m_main;
+
+	PyObject          *m_fileObject;
+	PyObject          *m_fileGeom;
+	PyObject          *m_fileLights;
+
+	int                m_animation;
+	int                m_activeLayers;
+	int                m_altDInstances;
+	int                m_checkAnimated;
+
+	PYTHON_PRINT_BUF;
+
+};
+
+#endif // CGR_EXPORT_SCENE_H

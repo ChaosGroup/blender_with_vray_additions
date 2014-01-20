@@ -30,7 +30,6 @@
 
 #include <string>
 #include <map>
-#include <vector>
 
 
 template<typename T>
@@ -79,7 +78,7 @@ public:
     int getFrame(const std::string &name) {
         if(cache.count(name))
             return cache[name].frame;
-        return 0;
+		return -1;
     }
 
     const T* getData(const std::string &name) {
