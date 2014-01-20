@@ -68,8 +68,6 @@
 #include "ED_mask.h"
 #include "ED_sequencer.h"
 
-#include "ED_exporter.h"
-
 #include "io_ops.h"
 
 /* only call once on startup, storage is global in BKE kernel listbase */
