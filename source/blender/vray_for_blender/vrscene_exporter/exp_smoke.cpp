@@ -305,3 +305,4 @@ void write_TexVoxelData(PyObject          *outputFile,
 
 	WRITE_PYOBJECT(outputFile, "\n}\n");
 }
+
