@@ -29,8 +29,6 @@
 #include "exp_defines.h"
 #include "vrscene_api.h"
 
-#include "RNA_blender_cpp.h"
-
 #include <set>
 #include <string>
 

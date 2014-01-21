@@ -25,6 +25,14 @@
 
 #include "CGR_config.h"
 
+#include "Node.h"
+
+#include "CGR_json_plugins.h"
+#include "CGR_rna.h"
+#include "CGR_blender_data.h"
+#include "CGR_string.h"
+#include "CGR_vrscene.h"
+
 extern "C" {
 #  include "DNA_modifier_types.h"
 #  include "BKE_depsgraph.h"
@@ -32,17 +40,20 @@ extern "C" {
 #  include "BLI_math.h"
 #  include "MEM_guardedalloc.h"
 #  include "RNA_access.h"
+#  include "BLI_sys_types.h"
+#  include "BLI_string.h"
+#  include "BLI_path_util.h"
 }
-
-#include "Node.h"
-#include "CGR_json_plugins.h"
-#include "CGR_rna.h"
-#include "CGR_blender_data.h"
-#include "CGR_vrscene.h"
 
 
 VRScene::Node::Node()
 {
+	name.clear();
+	dataName.clear();
+
+	hash = 0;
+
+	object = NULL;
 }
 
 
@@ -63,7 +74,8 @@ void VRScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
 
     objectID = object->index;
 
-//    initWrappers();
+	initName();
+	// initWrappers();
 }
 
 
@@ -80,7 +92,56 @@ char* VRScene::Node::getTransform() const
 
 int VRScene::Node::getObjectID() const
 {
-    return objectID;
+	return objectID;
+}
+
+
+void VRScene::Node::initName()
+{
+	char obName[MAX_ID_NAME] = "";
+
+	// Get object name with 'OB' prefix (+2)
+	//
+	BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
+	StripString(obName);
+
+	// Construct object (Node) name
+	//
+	name.clear();
+	name.append("OB");
+	name.append(obName);
+
+	// Check if object is linked
+	if(object->id.lib) {
+		char libFilename[FILE_MAX] = "";
+
+		BLI_split_file_part(object->id.lib->name+2, libFilename, FILE_MAX);
+		BLI_replace_extension(libFilename, FILE_MAX, "");
+
+		StripString(libFilename);
+
+		name.append("LI");
+		name.append(libFilename);
+	}
+
+	// Construct data (geometry) name
+	//
+	dataName.clear();
+	dataName.append("ME");
+	dataName.append(obName);
+
+	// Check if object's data is linked
+	const ID *dataID = (ID*)object->data;
+	if(dataID->lib) {
+		char libFilename[FILE_MAX] = "";
+		BLI_split_file_part(dataID->lib->name+2, libFilename, FILE_MAX);
+		BLI_replace_extension(libFilename, FILE_MAX, "");
+
+		StripString(libFilename);
+
+		dataName.append("LI");
+		dataName.append(libFilename);
+	}
 }
 
 

@@ -49,15 +49,22 @@ struct Node {
     void          init(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
     void          freeData();
 
-    MHash         getHash() const { return hash; }
+	const char*   getName() const     { return name.c_str(); }
+	const char*   getDataName() const { return dataName.c_str(); }
+	MHash         getHash() const     { return hash; }
 
     char*         getTransform() const;
     int           getObjectID() const;
 
 private:
+	void          initName();
+
     void          initWrappers();
 
+	std::string   name;
+	std::string   dataName;
     MHash         hash;
+
     Object       *object;
 
     int           objectID;

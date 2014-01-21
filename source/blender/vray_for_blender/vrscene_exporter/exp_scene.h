@@ -64,8 +64,8 @@ private:
 
 	void               exportLightLinker(); // Or return 'dict' back to Python
 
-	void               WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, const char *pluginName, int useAnimation=false, int frame=0);
-	void               WriteNode(Object *ob, const VRScene::Node *node, const char *pluginName, int useAnimation=false, int frame=0);
+	void               WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame=0);
+	void               WriteNode(Object *ob, const VRScene::Node *node, int frame=0);
 	std::string        WriteMtlMulti(Object *ob);
 
 	MeshesCache        m_meshCache;
@@ -78,10 +78,16 @@ private:
 	PyObject          *m_fileGeom;
 	PyObject          *m_fileLights;
 
+	int                m_exportNodes;
+	int                m_exportGeometry;
+
 	int                m_animation;
 	int                m_activeLayers;
 	int                m_altDInstances;
 	int                m_checkAnimated;
+
+	char               m_interpStart[32];
+	char               m_interpEnd[3];
 
 	PYTHON_PRINT_BUF;
 
