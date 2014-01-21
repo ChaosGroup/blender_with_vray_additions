@@ -30,78 +30,47 @@
 #include "utils/CGR_blender_data.h"
 #include "utils/CGR_json_plugins.h"
 
+#include "vrscene_api.h"
 #include "exp_scene.h"
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
 
 
-void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, const char *pluginName, int useAnimation, int frame)
+void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame)
 {
-	std::string plugName;
-
-	char obName[MAX_ID_NAME] = "";
-	char libFilename[FILENAME_MAX] = "";
-
-	char interpStart[32] = "";
-	char interpEnd[3]    = "";
-
-	if(useAnimation) {
-		sprintf(interpStart, "interpolate((%d,", frame);
-		sprintf(interpEnd,   "))");
-	}
-
-	if(pluginName) {
-		plugName = pluginName;
-	}
-	else {
-		// Construct plugin name
-		//
-		BLI_strncpy(obName, ob->id.name+2, MAX_ID_NAME);
-		StripString(obName);
-
-		plugName.append("ME");
-		plugName.append(obName);
-
-		const Mesh *me = (Mesh*)ob->data;
-		if(me->id.lib) {
-			BLI_split_file_part(me->id.lib->name+2, libFilename, FILE_MAX);
-			BLI_replace_extension(libFilename, FILE_MAX, "");
-
-			StripString(libFilename);
-
-			plugName.append("LI");
-			plugName.append(libFilename);
-		}
+	if(m_animation) {
+		sprintf(m_interpStart, "interpolate((%d,", frame);
+		sprintf(m_interpEnd,   "))");
 	}
 
 	// Plugin name
-	PYTHON_PRINTF(m_fileGeom, "\nGeomStaticMesh %s {", plugName.c_str());
+	PYTHON_PRINTF(m_fileGeom, "\nGeomStaticMesh %s {", geomStaticMesh->getName());
 
 	// Mesh components
-	PYTHON_PRINTF(m_fileGeom, "\n\tvertices=%sListVectorHex(\"", interpStart);
+	PYTHON_PRINTF(m_fileGeom, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
 	PYTHON_PRINT(m_fileGeom, geomStaticMesh->getVertices());
-	PYTHON_PRINTF(m_fileGeom, "\")%s;", interpEnd);
+	PYTHON_PRINTF(m_fileGeom, "\")%s;", m_interpEnd);
 
-	PYTHON_PRINTF(m_fileGeom, "\n\tfaces=%sListIntHex(\"", interpStart);
+	PYTHON_PRINTF(m_fileGeom, "\n\tfaces=%sListIntHex(\"", m_interpStart);
 	PYTHON_PRINT(m_fileGeom, geomStaticMesh->getFaces());
-	PYTHON_PRINTF(m_fileGeom, "\")%s;", interpEnd);
+	PYTHON_PRINTF(m_fileGeom, "\")%s;", m_interpEnd);
 
-	PYTHON_PRINTF(m_fileGeom, "\n\tnormals=%sListVectorHex(\"", interpStart);
+	PYTHON_PRINTF(m_fileGeom, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
 	PYTHON_PRINT(m_fileGeom, geomStaticMesh->getNormals());
-	PYTHON_PRINTF(m_fileGeom, "\")%s;", interpEnd);
+	PYTHON_PRINTF(m_fileGeom, "\")%s;", m_interpEnd);
 
-	PYTHON_PRINTF(m_fileGeom, "\n\tfaceNormals=%sListIntHex(\"", interpStart);
+	PYTHON_PRINTF(m_fileGeom, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
 	PYTHON_PRINT(m_fileGeom, geomStaticMesh->getFaceNormals());
-	PYTHON_PRINTF(m_fileGeom, "\")%s;", interpEnd);
+	PYTHON_PRINTF(m_fileGeom, "\")%s;", m_interpEnd);
 
-	PYTHON_PRINTF(m_fileGeom, "\n\tface_mtlIDs=%sListIntHex(\"", interpStart);
+	PYTHON_PRINTF(m_fileGeom, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
 	PYTHON_PRINT(m_fileGeom, geomStaticMesh->getFace_mtlIDs());
-	PYTHON_PRINTF(m_fileGeom, "\")%s;", interpEnd);
+	PYTHON_PRINTF(m_fileGeom, "\")%s;", m_interpEnd);
 
-	PYTHON_PRINTF(m_fileGeom, "\n\tedge_visibility=%sListIntHex(\"", interpStart);
+	PYTHON_PRINTF(m_fileGeom, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
 	PYTHON_PRINT(m_fileGeom, geomStaticMesh->getEdge_visibility());
-	PYTHON_PRINTF(m_fileGeom, "\")%s;", interpEnd);
+	PYTHON_PRINTF(m_fileGeom, "\")%s;", m_interpEnd);
 
 	size_t mapChannelCount = geomStaticMesh->getMapChannelCount();
 	if(mapChannelCount) {
@@ -117,7 +86,7 @@ void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geom
 		}
 		PYTHON_PRINT(m_fileGeom, ");");
 
-		PYTHON_PRINTF(m_fileGeom, "\n\tmap_channels=%sList(", interpStart);
+		PYTHON_PRINTF(m_fileGeom, "\n\tmap_channels=%sList(", m_interpStart);
 		for(size_t i = 0; i < mapChannelCount; ++i) {
 			const MChan *mapChannel = geomStaticMesh->getMapChannel(i);
 			if(NOT(mapChannel))
@@ -132,7 +101,7 @@ void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geom
 			if(i < mapChannelCount-1)
 				PYTHON_PRINT(m_fileGeom, ",");
 		}
-		PYTHON_PRINTF(m_fileGeom, ")%s;", interpEnd);
+		PYTHON_PRINTF(m_fileGeom, ")%s;", m_interpEnd);
 	}
 
 	PYTHON_PRINT(m_fileGeom, "\n}\n");
@@ -174,57 +143,22 @@ std::string VRsceneExporter::WriteMtlMulti(Object *ob)
 }
 
 
-void VRsceneExporter::WriteNode(Object *ob, const VRScene::Node *node, const char *pluginName, int useAnimation, int frame)
+void VRsceneExporter::WriteNode(Object *ob, const VRScene::Node *node, int frame)
 {
-	std::string plugName;
-
-	char obName[MAX_ID_NAME] = "";
-	char libFilename[FILENAME_MAX] = "";
-
-	char interpStart[32] = "";
-	char interpEnd[3]    = "";
-
-	if(useAnimation) {
-		sprintf(interpStart, "interpolate((%d,", frame);
-		sprintf(interpEnd,   "))");
-	}
-
-	if(pluginName) {
-		plugName = pluginName;
-	}
-	else {
-		// Construct Node name
-		//
-		BLI_strncpy(obName, ob->id.name+2, MAX_ID_NAME);
-		StripString(obName);
-
-		plugName.append("OB");
-		plugName.append(obName);
-
-		if(ob->id.lib) {
-			BLI_split_file_part(ob->id.lib->name+2, libFilename, FILE_MAX);
-			BLI_replace_extension(libFilename, FILE_MAX, "");
-
-			StripString(libFilename);
-
-			plugName.append("LI");
-			plugName.append(libFilename);
-		}
+	if(m_animation) {
+		sprintf(m_interpStart, "interpolate((%d,", frame);
+		sprintf(m_interpEnd,   "))");
 	}
 
 	// Move to Node.{h,cpp}
 	//
 	std::string materialName = WriteMtlMulti(ob);
 
-	std::string geomName;
-	geomName.append("ME");
-	geomName.append(ob->id.name+2);
-
-	PYTHON_PRINTF(m_fileObject, "\nNode %s {", plugName.c_str());
-	PYTHON_PRINTF(m_fileObject, IND"objectID=%i;", node->getObjectID());
-	PYTHON_PRINTF(m_fileObject, IND"geometry=%s;", geomName.c_str());
+	PYTHON_PRINTF(m_fileObject, "\nNode %s {", node->getName());
+	PYTHON_PRINTF(m_fileObject, IND"geometry=%s;", node->getDataName());
 	PYTHON_PRINTF(m_fileObject, IND"material=%s;", materialName.c_str());
-	PYTHON_PRINTF(m_fileObject, IND"transform=%sTransformHex(\"%s\")%s;", interpStart, node->getTransform(), interpEnd);
+	PYTHON_PRINTF(m_fileObject, IND"objectID=%i;", node->getObjectID());
+	PYTHON_PRINTF(m_fileObject, IND"transform=%sTransformHex(\"%s\")%s;", m_interpStart, node->getTransform(), m_interpEnd);
 	PYTHON_PRINT(m_fileObject, "\n}\n");
 }
 
@@ -240,9 +174,17 @@ VRsceneExporter::VRsceneExporter(Scene *sce, Main *main, PyObject *obFile, PyObj
 
 	m_eval_ctx.for_render = true;
 
+	m_exportNodes = false;
+	m_exportGeometry = true;
+
+	m_animation = false;
+
 	m_activeLayers = true;
 	m_altDInstances = false;
 	m_checkAnimated = ANIM_CHECK_BOTH;
+
+	sprintf(m_interpStart, "%s", "");
+	sprintf(m_interpEnd,   "%s", "");
 }
 
 
@@ -269,7 +211,7 @@ void VRsceneExporter::exportScene()
 		Object *ob = base->object;
 		base = base->next;
 
-		// PRINT_INFO("Processgin '%s'...", ob->id.name);
+		// PRINT_INFO("Processing '%s'...", ob->id.name);
 
 		// Skip object here, but not in dupli!
 		// Dupli could be particles and it's better to
@@ -282,93 +224,99 @@ void VRsceneExporter::exportScene()
 			if(NOT(ob->lay & m_sce->lay))
 				continue;
 
-		if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
-			// Free duplilist if there is some for some reason
-			FreeDupliList(ob);
+		// Export objects
+		//
+		if(m_exportNodes) {
+			if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
+				// Free duplilist if there is some for some reason
+				FreeDupliList(ob);
 
-			ob->duplilist = object_duplilist(&m_eval_ctx, m_sce, ob);
+				ob->duplilist = object_duplilist(&m_eval_ctx, m_sce, ob);
 
-			for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
-				VRScene::Node *node = new VRScene::Node();
-				node->init(m_sce, m_main, ob, dob);
+				for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
+					VRScene::Node *node = new VRScene::Node();
+					node->init(m_sce, m_main, ob, dob);
 
-				WriteNode(ob, node, NULL, m_animation, m_sce->r.cfra);
+					WriteNode(ob, node, m_sce->r.cfra);
+				}
+
+				FreeDupliList(ob);
+
+				// TODO: Check particle systems for 'Render Emitter' prop
+
+				if(NOT(EMPTY_TYPE(ob))) {
+					VRScene::Node *node = new VRScene::Node();
+					node->init(m_sce, m_main, ob, NULL);
+
+					WriteNode(ob, node, m_sce->r.cfra);
+				}
 			}
-
-			FreeDupliList(ob);
-
-			// TODO: Check particle systems for 'Render Emitter' prop
-
-			if(NOT(EMPTY_TYPE(ob))) {
-				VRScene::Node *node = new VRScene::Node();
-				node->init(m_sce, m_main, ob, NULL);
-
-				WriteNode(ob, node, NULL, m_animation, m_sce->r.cfra);
+			else if(ob->type == OB_LAMP) {
 			}
-		}
-		else if(ob->type == OB_LAMP) {
 		}
 
 		// Export geometry
 		//
-		if(NOT(m_animation)) {
-			GeomStaticMesh geomStaticMesh;
-			geomStaticMesh.init(m_sce, m_main, ob);
-			if(geomStaticMesh.getHash())
-				WriteGeomStaticMesh(ob, &geomStaticMesh, NULL);
-		}
-		else {
-			if(m_checkAnimated == ANIM_CHECK_NONE) {
+		if(m_exportGeometry) {
+			if(NOT(m_animation)) {
 				GeomStaticMesh geomStaticMesh;
 				geomStaticMesh.init(m_sce, m_main, ob);
 				if(geomStaticMesh.getHash())
-					WriteGeomStaticMesh(ob, &geomStaticMesh, NULL, m_animation, m_sce->r.cfra);
+					WriteGeomStaticMesh(ob, &geomStaticMesh);
 			}
-			else if(m_checkAnimated == ANIM_CHECK_HASH || m_checkAnimated == ANIM_CHECK_BOTH) {
-				std::string obName(ob->id.name);
-
-				if(m_checkAnimated == ANIM_CHECK_BOTH)
-					if(NOT(IsMeshAnimated(ob)))
-						continue;
-
-				GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
-				geomStaticMesh->init(m_sce, m_main, ob);
-
-				MHash curHash  = geomStaticMesh->getHash();
-				MHash prevHash = m_meshCache.getHash(obName);
-
-				// TODO: add to cache for new pipeline
-				//
-				if(NOT(curHash == prevHash)) {
-					// Write previous frame if hash is more then 'frame_step' back
-					// If 'prevHash' is 0 than previous call was for the first frame
-					// and no need to export
-					if(prevHash) {
-						int cacheFrame = m_meshCache.getFrame(obName);
-						int prevFrame  = m_sce->r.cfra - m_sce->r.frame_step;
-
-						if(cacheFrame < prevFrame) {
-							WriteGeomStaticMesh(ob, m_meshCache.getData(obName), NULL, m_animation, prevFrame);
-						}
-					}
-
-					// Write current frame data
-					WriteGeomStaticMesh(ob, geomStaticMesh, NULL, m_animation, m_sce->r.cfra);
-
-					// This will free previous data and store new pointer
-					m_meshCache.update(obName, curHash, m_sce->r.cfra, geomStaticMesh);
-				}
-			}
-			else if(m_checkAnimated == ANIM_CHECK_SIMPLE) {
-				if(IsMeshAnimated(ob)) {
+			else {
+				if(m_checkAnimated == ANIM_CHECK_NONE) {
 					GeomStaticMesh geomStaticMesh;
 					geomStaticMesh.init(m_sce, m_main, ob);
-					if(geomStaticMesh.getHash()) {
-						WriteGeomStaticMesh(ob, &geomStaticMesh, NULL, m_animation, m_sce->r.cfra);
+					if(geomStaticMesh.getHash())
+						WriteGeomStaticMesh(ob, &geomStaticMesh, m_sce->r.cfra);
+				}
+				else if(m_checkAnimated == ANIM_CHECK_HASH || m_checkAnimated == ANIM_CHECK_BOTH) {
+					std::string obName(ob->id.name);
+
+					if(m_checkAnimated == ANIM_CHECK_BOTH)
+						if(NOT(IsMeshAnimated(ob)))
+							continue;
+
+					GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
+					geomStaticMesh->init(m_sce, m_main, ob);
+
+					MHash curHash  = geomStaticMesh->getHash();
+					MHash prevHash = m_meshCache.getHash(obName);
+
+					// TODO: add to cache for new pipeline
+					//
+					if(NOT(curHash == prevHash)) {
+						// Write previous frame if hash is more then 'frame_step' back
+						// If 'prevHash' is 0 than previous call was for the first frame
+						// and no need to export
+						if(prevHash) {
+							int cacheFrame = m_meshCache.getFrame(obName);
+							int prevFrame  = m_sce->r.cfra - m_sce->r.frame_step;
+
+							if(cacheFrame < prevFrame) {
+								WriteGeomStaticMesh(ob, m_meshCache.getData(obName), prevFrame);
+							}
+						}
+
+						// Write current frame data
+						WriteGeomStaticMesh(ob, geomStaticMesh, m_sce->r.cfra);
+
+						// This will free previous data and store new pointer
+						m_meshCache.update(obName, curHash, m_sce->r.cfra, geomStaticMesh);
 					}
 				}
-			} // ANIM_CHECK_SIMPLE
-		} // animated
+				else if(m_checkAnimated == ANIM_CHECK_SIMPLE) {
+					if(IsMeshAnimated(ob)) {
+						GeomStaticMesh geomStaticMesh;
+						geomStaticMesh.init(m_sce, m_main, ob);
+						if(geomStaticMesh.getHash()) {
+							WriteGeomStaticMesh(ob, &geomStaticMesh, m_sce->r.cfra);
+						}
+					}
+				} // ANIM_CHECK_SIMPLE
+			} // animated
+		} // m_exportGeometry
 	} // while(base)
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));

@@ -27,10 +27,10 @@
 #define GEOM_STATIC_MESH_H
 
 extern "C" {
-#include "DNA_mesh_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_object_types.h"
-#include "BKE_main.h"
+#  include "DNA_mesh_types.h"
+#  include "DNA_scene_types.h"
+#  include "DNA_object_types.h"
+#  include "BKE_main.h"
 }
 
 #include "utils/murmur3.h"
@@ -64,6 +64,8 @@ public:
     void          init(Scene *sce, Main *main, Object *ob);
     void          freeData();
 
+	const char*   getName() const            { return name.c_str(); }
+
     MHash         getHash() const            { return hash; }
 
     char*         getVertices() const        { return vertices; }
@@ -81,8 +83,10 @@ private:
     void          initFaces();
     void          initMapChannels();
 
-    void          initHash();
+	void          initName();
+	void          initHash();
 
+	std::string   name;
     MHash         hash;
 
     Mesh         *mesh;

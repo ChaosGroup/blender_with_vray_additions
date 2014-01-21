@@ -225,17 +225,18 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 		MatrixObject *transform = (MatrixObject*)value;
 
 		float tm[4][4];
-		char  buf[512];
+		char  tmBuf[TRANSFORM_HEX_SIZE]  = "";
+		char  buf[TRANSFORM_HEX_SIZE+20] = "";
 
 		copy_v3_v3(tm[0], MATRIX_COL_PTR(transform, 0));
 		copy_v3_v3(tm[1], MATRIX_COL_PTR(transform, 1));
 		copy_v3_v3(tm[2], MATRIX_COL_PTR(transform, 2));
 		copy_v3_v3(tm[3], MATRIX_COL_PTR(transform, 3));
 
-        GetTransformHex(tm, buf);
-        sprintf(buf, "TransformHex(\"%s\")", buf);
+		GetTransformHex(tm, tmBuf);
+		sprintf(buf, "TransformHex(\"%s\")", tmBuf);
 
-		return PyUnicode_FromString(buf);
+		return _PyUnicode_FromASCII(buf, strlen(buf));
 	}
 
 	Py_RETURN_NONE;
