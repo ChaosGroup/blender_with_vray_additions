@@ -55,6 +55,7 @@ set(SRC
 	vrscene_exporter/GeomStaticMesh.h
 	vrscene_exporter/GeomStaticMesh.cpp
 	vrscene_exporter/exp_defines.h
+	vrscene_exporter/exp_types.h
 	vrscene_exporter/exp_anim.h
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.c
