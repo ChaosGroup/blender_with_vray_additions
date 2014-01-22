@@ -192,9 +192,6 @@ VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 
 	sprintf(m_interpStart, "%s", "");
 	sprintf(m_interpEnd,   "%s", "");
-
-	PRINT_INFO("ExpoterSettings:");
-	PRINT_INFO("check_animated = %i", m_settings->m_checkAnimated);
 }
 
 
@@ -235,6 +232,9 @@ void VRsceneExporter::exportScene()
 		if(m_settings->m_activeLayers)
 			if(NOT(ob->lay & m_settings->m_sce->lay))
 				continue;
+
+		if(shouldSkip(ob))
+			continue;
 
 		// Export objects
 		//
@@ -331,4 +331,19 @@ void VRsceneExporter::exportScene()
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	printf(" done [%s]\n", timeMeasureBuf);
+}
+
+
+int VRsceneExporter::shouldSkip(Object *ob)
+{
+	// We should skip smoke domain object
+	//
+	ModifierData *mod = (ModifierData*)ob->modifiers.first;
+	while(mod) {
+		if(mod->type == eModifierType_Smoke)
+			return 1;
+		mod = mod->next;
+	}
+
+	return 0;
 }
