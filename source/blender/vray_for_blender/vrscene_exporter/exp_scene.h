@@ -98,10 +98,10 @@ public:
 private:
 	void               exportGeomStaticMesh();
 	void               exportGeomMayaHair();
-
 	void               exportSmoke();
-
 	void               exportLightLinker(); // Or return 'dict' back to Python
+
+	int                shouldSkip(Object *ob);
 
 	void               WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame=0);
 	void               WriteNode(Object *ob, const VRScene::Node *node, int frame=0);
