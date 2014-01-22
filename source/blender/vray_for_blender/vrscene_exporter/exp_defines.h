@@ -32,12 +32,6 @@
 	a[2] = b[2];
 
 #define HEX(x) htonl(*(int*)&(x))
-#define WRITE_HEX_VALUE(f, v) fprintf(f, "%08X", HEX(v));
-#define WRITE_HEX_VECTOR(f, v) fprintf(f, "%08X%08X%08X", HEX(v[0]), HEX(v[1]), HEX(v[2]))
-#define WRITE_TRANSFORM(f, m) fprintf(f, "TransformHex(\"%s\")", GetTransformHex(m));
-
-#define WRITE_HEX_QUADFACE(f, face) fprintf(gfile, "%08X%08X%08X%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3), HEX(face->v3), HEX(face->v4), HEX(face->v1))
-#define WRITE_HEX_TRIFACE(f, face)  fprintf(gfile, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3))
 
 #define PYTHON_PRINT_BUF char buf[2048]
 
@@ -63,17 +57,10 @@
 	sprintf(buf, "%08X%08X%08X", HEX(v[0]), HEX(v[1]), HEX(v[2])); \
 	WRITE_PYOBJECT_BUF(pyObject);
 
-#define WRITE_PYOBJECT_HEX_QUADFACE(pyObject, face) \
-	sprintf(buf, "%08X%08X%08X%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3), HEX(face->v3), HEX(face->v4), HEX(face->v1));\
-	WRITE_PYOBJECT_BUF(pyObject);
-
-#define WRITE_PYOBJECT_HEX_TRIFACE(pyObject, face) \
-	sprintf(buf, "%08X%08X%08X", HEX(face->v1), HEX(face->v2), HEX(face->v3)); \
-	WRITE_PYOBJECT_BUF(pyObject);
-
 #define WRITE_PYOBJECT_TRANSFORM(pyObject, m) \
-	GetTransformHex(m, buf); \
-	sprintf(buf, "TransformHex(\"%s\")", buf);\
+	char tmBuf[129]; \
+	GetTransformHex(m, tmBuf); \
+	sprintf(buf, "TransformHex(\"%s\")", tmBuf);\
 	WRITE_PYOBJECT_BUF(pyObject);
 
 #endif // CGR_EXP_DEFINES_H
