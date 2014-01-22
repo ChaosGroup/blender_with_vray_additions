@@ -33,21 +33,21 @@ extern "C" {
 #include "BKE_main.h"
 }
 
-#include "utils/murmur3.h"
+#include "exp_types.h"
 
 #include <string>
 #include <vector>
 
 
-class GeomMayaHair {
+class GeomMayaHair : public VRayExportable {
 public:
     GeomMayaHair();
-    ~GeomMayaHair() { freeData(); }
+	virtual      ~GeomMayaHair() { freeData(); }
 
     void          init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);
     void          freeData();
 
-    MHash         getHash() const            { return hash; }
+	virtual void  buildHash();
 
     char*         getHairVertices() const    { return hair_vertices; }
     char*         getNumHairVertices() const { return num_hair_vertices;}
@@ -55,9 +55,6 @@ public:
     char*         getTransparency() const    { return transparency; }
 
 private:
-    void          initHash();
-
-    MHash         hash;
 
     char         *hair_vertices;
     char         *num_hair_vertices;
