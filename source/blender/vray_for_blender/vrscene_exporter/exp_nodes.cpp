@@ -64,14 +64,14 @@ void  write_ObjectNode(PyObject   *nodeFile,
 		write_Mesh(geomFile, sce, ob, main, geometry, NULL);
 	}
 
-	WRITE_PYOBJECT(nodeFile, "\nNode %s {", pluginName);
-	WRITE_PYOBJECT(nodeFile, "\n\tobjectID=%i;", ob->index);
-	WRITE_PYOBJECT(nodeFile, "\n\tmaterial=%s;", material);
-	WRITE_PYOBJECT(nodeFile, "\n\tgeometry=%s;", geometry);
-	WRITE_PYOBJECT(nodeFile, "\n\ttransform=interpolate((%d,", sce->r.cfra);
+	PYTHON_PRINTF(nodeFile, "\nNode %s {", pluginName);
+	PYTHON_PRINTF(nodeFile, "\n\tobjectID=%i;", ob->index);
+	PYTHON_PRINTF(nodeFile, "\n\tmaterial=%s;", material);
+	PYTHON_PRINTF(nodeFile, "\n\tgeometry=%s;", geometry);
+	PYTHON_PRINTF(nodeFile, "\n\ttransform=interpolate((%d,", sce->r.cfra);
 	WRITE_PYOBJECT_TRANSFORM(nodeFile, tm);
-	WRITE_PYOBJECT(nodeFile, "));");
-	WRITE_PYOBJECT(nodeFile, "\n}\n");
+	PYTHON_PRINTF(nodeFile, "));");
+	PYTHON_PRINTF(nodeFile, "\n}\n");
 }
 
 
