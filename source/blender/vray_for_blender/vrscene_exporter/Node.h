@@ -52,13 +52,13 @@ struct Node {
 	const char*   getName() const     { return name.c_str(); }
 	const char*   getDataName() const { return dataName.c_str(); }
 	MHash         getHash() const     { return hash; }
+	Object       *getObject() const   { return object; }
 
     char*         getTransform() const;
     int           getObjectID() const;
 
 private:
 	void          initName();
-
     void          initWrappers();
 
 	std::string   name;
@@ -66,6 +66,7 @@ private:
     MHash         hash;
 
     Object       *object;
+	DupliObject  *dupliObject;
 
     int           objectID;
     char          transform[TRANSFORM_HEX_SIZE];

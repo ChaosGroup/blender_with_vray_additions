@@ -33,6 +33,8 @@
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
 
+#include <boost/lexical_cast.hpp>
+
 extern "C" {
 #  include "DNA_modifier_types.h"
 #  include "BKE_depsgraph.h"
@@ -53,7 +55,8 @@ VRScene::Node::Node()
 
 	hash = 0;
 
-	object = NULL;
+	object      = NULL;
+	dupliObject = NULL;
 }
 
 
@@ -61,16 +64,17 @@ void VRScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
 {
     float tm[4][4];
 
-    if(dOb) {
-        object = dOb->ob;
-        copy_m4_m4(tm, dOb->mat);
-    }
-    else {
-        object = ob;
-        copy_m4_m4(tm, ob->obmat);
-    }
+	object = ob;
+	dupliObject = dOb;
 
-    GetTransformHex(tm, transform);
+	if(dupliObject) {
+		object = dupliObject->ob;
+		copy_m4_m4(tm, dupliObject->mat);
+	}
+	else
+		copy_m4_m4(tm, object->obmat);
+
+	GetTransformHex(tm, transform);
 
     objectID = object->index;
 
@@ -110,6 +114,10 @@ void VRScene::Node::initName()
 	name.clear();
 	name.append("OB");
 	name.append(obName);
+
+	if(dupliObject) {
+		name.append(boost::lexical_cast<std::string>(dupliObject->persistent_id[0]));
+	}
 
 	// Check if object is linked
 	if(object->id.lib) {
