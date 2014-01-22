@@ -28,6 +28,8 @@
 
 // TODO: #include "RNA_blender_cpp.h"
 
+#include "CGR_config.h"
+
 #include "blender_includes.h"
 
 #include "vrscene_exporter/exp_defines.h"
@@ -47,9 +49,46 @@ typedef AnimationCache<VRScene::Node>  NodesCache;
 typedef AnimationCache<GeomStaticMesh> MeshesCache;
 
 
+struct ExpoterSettings {
+	ExpoterSettings() {
+		m_sce  = NULL;
+		m_main = NULL;
+
+		m_fileObject = NULL;
+		m_fileGeom   = NULL;
+		m_fileLights = NULL;
+
+		m_exportNodes    = true;
+		m_exportGeometry = true;
+
+		m_animation = false;
+		m_checkAnimated = ANIM_CHECK_BOTH;
+
+		m_activeLayers = true;
+		m_altDInstances = false;
+	}
+
+	Scene    *m_sce;
+	Main     *m_main;
+
+	PyObject *m_fileObject;
+	PyObject *m_fileGeom;
+	PyObject *m_fileLights;
+
+	int       m_exportNodes;
+	int       m_exportGeometry;
+
+	int       m_animation;
+	int       m_checkAnimated;
+
+	int       m_activeLayers;
+	int       m_altDInstances;
+};
+
+
 class VRsceneExporter {
 public:
-	VRsceneExporter(Scene *sce, Main *main, PyObject *obFile, PyObject *geomFile, PyObject *lightsFile);
+	VRsceneExporter(ExpoterSettings *settings);
 	~VRsceneExporter();
 
 	void               exportScene();
@@ -71,20 +110,7 @@ private:
 	MeshesCache        m_meshCache;
 	EvaluationContext  m_eval_ctx;
 
-	Scene             *m_sce;
-	Main              *m_main;
-
-	PyObject          *m_fileObject;
-	PyObject          *m_fileGeom;
-	PyObject          *m_fileLights;
-
-	int                m_exportNodes;
-	int                m_exportGeometry;
-
-	int                m_animation;
-	int                m_activeLayers;
-	int                m_altDInstances;
-	int                m_checkAnimated;
+	ExpoterSettings   *m_settings;
 
 	char               m_interpStart[32];
 	char               m_interpEnd[3];
