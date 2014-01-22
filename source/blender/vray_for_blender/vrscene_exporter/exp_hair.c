@@ -452,8 +452,8 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 
 	DEBUG_PRINT(debug, "interp_points_count = %i", interp_points_count);
 
-    WRITE_PYOBJECT(outputFile, "\nGeomMayaHair %s {", pluginName);
-	WRITE_PYOBJECT(outputFile, "\n\tnum_hair_vertices=interpolate((%d,ListIntHex(\"", sce->r.cfra);
+    PYTHON_PRINTF(outputFile, "\nGeomMayaHair %s {", pluginName);
+	PYTHON_PRINTF(outputFile, "\n\tnum_hair_vertices=interpolate((%d,ListIntHex(\"", sce->r.cfra);
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {
 			WRITE_PYOBJECT_HEX_VALUE(outputFile, interp_points_count);
@@ -464,9 +464,9 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			WRITE_PYOBJECT_HEX_VALUE(outputFile, interp_points_count);
 		}
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
-	WRITE_PYOBJECT(outputFile, "\n\thair_vertices=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\thair_vertices=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {
 			child_key   = child_cache[p];
@@ -561,7 +561,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			}
 		}
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
 	memset(&sd, 0, sizeof(ParticleStrandData));
 
@@ -579,7 +579,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			}
 
 			if(sd.uvco) {
-				WRITE_PYOBJECT(outputFile, "\n\tstrand_uvw=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
+				PYTHON_PRINTF(outputFile, "\n\tstrand_uvw=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
 
 				for(p = 0; p < child_total; ++p) {
 					cpa = psys->child + p;
@@ -605,7 +605,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 
 					WRITE_PYOBJECT_HEX_VECTOR(outputFile, segment);
 				}
-				WRITE_PYOBJECT(outputFile, "\")));");
+				PYTHON_PRINTF(outputFile, "\")));");
 
 				MEM_freeN(sd.uvco);
 			}
@@ -621,7 +621,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			}
 
 			if(sd.uvco) {
-				WRITE_PYOBJECT(outputFile, "\n\tstrand_uvw=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
+				PYTHON_PRINTF(outputFile, "\n\tstrand_uvw=interpolate((%d,ListVectorHex(\"", sce->r.cfra);
 				LOOP_PARTICLES {
 					/* get uvco & mcol */
 					num = pa->num_dmcache;
@@ -642,14 +642,14 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 
 					WRITE_PYOBJECT_HEX_VECTOR(outputFile, segment);
 				}
-				WRITE_PYOBJECT(outputFile, "\")));");
+				PYTHON_PRINTF(outputFile, "\")));");
 
 				MEM_freeN(sd.uvco);
 			}
 		}
 	}
 
-	WRITE_PYOBJECT(outputFile, "\n\twidths=interpolate((%d,ListFloatHex(\"", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\twidths=interpolate((%d,ListFloatHex(\"", sce->r.cfra);
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {
 			cone_width = width;
@@ -672,9 +672,9 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			}
 		}
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
-	WRITE_PYOBJECT(outputFile, "\n\tcolors=interpolate((%d,ListColorHex(\"", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\tcolors=interpolate((%d,ListColorHex(\"", sce->r.cfra);
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {
 			for(s = 0; s < interp_points_count; ++s) {
@@ -689,14 +689,14 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			}
 		}
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
-	WRITE_PYOBJECT(outputFile, "\n\topacity=1.0;");
+	PYTHON_PRINTF(outputFile, "\n\topacity=1.0;");
 	if(psys->part->flag & PART_HAIR_BSPLINE) {
-		WRITE_PYOBJECT(outputFile, "\n\tgeom_splines=1;");
-		WRITE_PYOBJECT(outputFile, "\n\tgeom_tesselation_mult=1.0;");
+		PYTHON_PRINTF(outputFile, "\n\tgeom_splines=1;");
+		PYTHON_PRINTF(outputFile, "\n\tgeom_tesselation_mult=1.0;");
 	}
-	WRITE_PYOBJECT(outputFile, "\n}\n\n");
+	PYTHON_PRINTF(outputFile, "\n}\n\n");
 
 	// Restore "Display percentage" setting
 	pset->disp      = display_percentage;
