@@ -135,7 +135,7 @@ void GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 	FreeRenderMesh(main, mesh);
 
 	initName();
-	initHash();
+	buildHash();
 }
 
 
@@ -456,7 +456,7 @@ void GeomStaticMesh::initMapChannels()
 }
 
 
-void GeomStaticMesh::initHash()
+void GeomStaticMesh::buildHash()
 {
 #if 0
 	u_int32_t vertexHash[4];
