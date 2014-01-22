@@ -118,11 +118,9 @@
 #define GEOM_TYPE(ob) ob->type == OB_MESH || ob->type == OB_CURVE || ob->type == OB_SURF  || ob->type == OB_FONT  || ob->type == OB_MBALL
 #define EMPTY_TYPE(ob) ob->type == OB_EMPTY
 
-enum {
-    ANIM_CHECK_NONE,
-    ANIM_CHECK_SIMPLE,
-    ANIM_CHECK_HASH,
-    ANIM_CHECK_BOTH
-};
+#define	ANIM_CHECK_NONE    0
+#define	ANIM_CHECK_SIMPLE  1
+#define	ANIM_CHECK_HASH    2
+#define	ANIM_CHECK_BOTH    3
 
 #endif // CGR_CONFIG
