@@ -39,28 +39,53 @@
 #include <Python.h>
 
 
-static PyObject* mExportScene(PyObject *self, PyObject *args)
+static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
-	int       contextPtr;
+	int       contextPtr    = 0;
+	int       isAnimation   = false;
+	int       checkAnimated = ANIM_CHECK_NONE;
 
-	PyObject *obFile;
-	PyObject *geomFile;
-	PyObject *lightsFile;
+	PyObject *obFile     = NULL;
+	PyObject *geomFile   = NULL;
+	PyObject *lightsFile = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "iOOO", &contextPtr, &obFile, &geomFile, &lightsFile)))
+	static char *kwlist[] = { "context", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
+
+	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, "i|iiOOO", kwlist,
+									   &contextPtr, &isAnimation, &checkAnimated, &obFile, &geomFile, &lightsFile)))
 		return NULL;
-
-	int activeLayers  = 1;
-	int altDInstances = 0;
-	int checkAnimated = ANIM_CHECK_BOTH;
 
 	bContext *C = (bContext*)(intptr_t)contextPtr;
 
-	Scene *sce  = CTX_data_scene(C);
-	Main  *main = CTX_data_main(C);
+	ExpoterSettings *settings = new ExpoterSettings();
+	settings->m_sce  = CTX_data_scene(C);
+	settings->m_main = CTX_data_main(C);
 
-	VRsceneExporter exporter(sce, main, obFile, geomFile, lightsFile);
-	exporter.exportScene();
+	settings->m_animation     = isAnimation;
+	settings->m_checkAnimated = checkAnimated;
+
+	settings->m_fileObject = obFile;
+	settings->m_fileGeom   = geomFile;
+	settings->m_fileLights = lightsFile;
+
+	VRsceneExporter *exporter = new VRsceneExporter(settings);
+
+	return PyLong_FromVoidPtr(exporter);
+}
+
+
+static PyObject* mExportExit(PyObject *self, PyObject *value)
+{
+	delete (VRsceneExporter*)PyLong_AsVoidPtr(value);
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* mExportScene(PyObject *self, PyObject *value)
+{
+	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(value);
+	exporter->exportScene();
 
 	Py_RETURN_NONE;
 }
@@ -244,7 +269,10 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 
 
 static PyMethodDef methods[] = {
-	{"exportScene",       mExportScene,       METH_VARARGS, "Export scene to the *.vrscene file"},
+	{"exportInit", (PyCFunction)mExportInit , METH_VARARGS|METH_KEYWORDS, "Init vrscene exporter"},
+
+	{"exportScene",       mExportScene,       METH_O,                     "Export scene to the *.vrscene file"},
+	{"exportExit",        mExportExit ,       METH_O,                     "Shutdown vrscene exporter"},
 
 	{"exportDupli",       mExportDupli,       METH_VARARGS, "Export dupli / particles"},
 	{"exportMesh",        mExportMesh,        METH_VARARGS, "Export mesh"},
