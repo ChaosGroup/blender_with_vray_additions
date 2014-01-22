@@ -38,29 +38,22 @@
 #define PYTHON_PRINT(pyObject, buf) \
 	PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
 
-#define WRITE_PYOBJECT_BUF(pyObject) \
-	PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
-
 #define PYTHON_PRINTF(pyObject, ...) \
 	sprintf(buf, __VA_ARGS__); \
-	WRITE_PYOBJECT_BUF(pyObject);
-
-#define WRITE_PYOBJECT(pyObject, ...) \
-	sprintf(buf, __VA_ARGS__); \
-	WRITE_PYOBJECT_BUF(pyObject);
+	PYTHON_PRINT(pyObject, buf);
 
 #define WRITE_PYOBJECT_HEX_VALUE(pyObject, v) \
 	sprintf(buf, "%08X", HEX(v)); \
-	WRITE_PYOBJECT_BUF(pyObject);
+	PYTHON_PRINT(pyObject, buf);
 
 #define WRITE_PYOBJECT_HEX_VECTOR(pyObject, v) \
 	sprintf(buf, "%08X%08X%08X", HEX(v[0]), HEX(v[1]), HEX(v[2])); \
-	WRITE_PYOBJECT_BUF(pyObject);
+	PYTHON_PRINT(pyObject, buf);
 
 #define WRITE_PYOBJECT_TRANSFORM(pyObject, m) \
 	char tmBuf[129]; \
 	GetTransformHex(m, tmBuf); \
 	sprintf(buf, "TransformHex(\"%s\")", tmBuf);\
-	WRITE_PYOBJECT_BUF(pyObject);
+	PYTHON_PRINT(pyObject, buf);
 
 #endif // CGR_EXP_DEFINES_H

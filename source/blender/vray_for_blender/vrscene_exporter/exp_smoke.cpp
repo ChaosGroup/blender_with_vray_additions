@@ -29,7 +29,6 @@
 #include "smoke_API.h"
 
 #define USE_HEAT           0
-#define USE_LOCAL_DOMAIN   1
 
 #define DEBUG_GIZMO_SHAPE  0
 
@@ -108,22 +107,22 @@ static void write_SmokeGizmo(PyObject          *outputFile,
 							 const char        *geometryName,
 							 const char        *lights)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	PYTHON_PRINT_BUF;
 
 	SmokeDomainSettings *sds = smd->domain;
 
 	float domainTM[4][4];
 	GetDomainTransform(ob, sds, domainTM);
 
-	WRITE_PYOBJECT(outputFile, "\nEnvFogMeshGizmo %s {", pluginName);
-	WRITE_PYOBJECT(outputFile, "\n\tgeometry=%s;", geometryName);
+	PYTHON_PRINTF(outputFile, "\nEnvFogMeshGizmo %s {", pluginName);
+	PYTHON_PRINTF(outputFile, "\n\tgeometry=%s;", geometryName);
 	if(strlen(lights)) {
-		WRITE_PYOBJECT(outputFile, "\n\tlights=%s;", lights);
+		PYTHON_PRINTF(outputFile, "\n\tlights=%s;", lights);
 	}
-	WRITE_PYOBJECT(outputFile, "\n\ttransform=interpolate((%d,", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\ttransform=interpolate((%d,", sce->r.cfra);
 	WRITE_PYOBJECT_TRANSFORM(outputFile, domainTM);
-	WRITE_PYOBJECT(outputFile, "));");
-	WRITE_PYOBJECT(outputFile, "\n}\n");
+	PYTHON_PRINTF(outputFile, "));");
+	PYTHON_PRINTF(outputFile, "\n}\n");
 
 #if DEBUG_GIZMO_SHAPE
 	WRITE_PYOBJECT(outputFile, "\nNode Node%s {", geometryName);
@@ -144,7 +143,7 @@ void write_SmokeDomain(PyObject          *outputFile,
 					   const char        *pluginName,
 					   const char        *lights)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	PYTHON_PRINT_BUF;
 
 	char geomteryPluginName[MAX_PLUGIN_NAME];
 	sprintf(geomteryPluginName, "Geom%s", pluginName);
@@ -152,17 +151,17 @@ void write_SmokeDomain(PyObject          *outputFile,
 	// Topology is always the same:
 	//   2.0 x 2.0 x 2.0 box
 	//
-	WRITE_PYOBJECT(outputFile, "\nGeomStaticMesh %s {", geomteryPluginName);
-	WRITE_PYOBJECT(outputFile,
+	PYTHON_PRINTF(outputFile, "\nGeomStaticMesh %s {", geomteryPluginName);
+	PYTHON_PRINTF(outputFile,
 				   "\n\tvertices=ListVectorHex(\""
 				   "000080BF000080BF000080BF000080BF000080BF0000803F000080BF0000803F0000803F000080BF0000803F000080BF"
 				   "0000803F000080BF000080BF0000803F000080BF0000803F0000803F0000803F0000803F0000803F0000803F000080BF\");");
-	WRITE_PYOBJECT(outputFile,
+	PYTHON_PRINTF(outputFile,
 				   "\n\tfaces=ListIntHex(\""
 				   "000000000100000002000000020000000300000000000000020000000100000005000000050000000600000002000000"
 				   "070000000600000005000000050000000400000007000000000000000300000007000000070000000400000000000000"
 				   "030000000200000006000000060000000700000003000000010000000000000004000000040000000500000001000000\");");
-	WRITE_PYOBJECT(outputFile, "\n}\n");
+	PYTHON_PRINTF(outputFile, "\n}\n");
 
 	write_SmokeGizmo(outputFile, sce, ob, smd, pluginName, geomteryPluginName, lights);
 }
@@ -177,7 +176,7 @@ static void write_SmokeUVWGen(PyObject          *outputFile,
 							  SmokeModifierData *smd,
 							  const char        *pluginName)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	PYTHON_PRINT_BUF;
 
 	SmokeDomainSettings *sds = smd->domain;
 
@@ -193,11 +192,11 @@ static void write_SmokeUVWGen(PyObject          *outputFile,
 	float uvw_transform[4][4];
 	mul_m4_m4m4(uvw_transform, uvwTm, domainTm);
 
-	WRITE_PYOBJECT(outputFile, "\nUVWGenPlanarWorld %s {", pluginName);
-	WRITE_PYOBJECT(outputFile, "\n\tuvw_transform=interpolate((%d,", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\nUVWGenPlanarWorld %s {", pluginName);
+	PYTHON_PRINTF(outputFile, "\n\tuvw_transform=interpolate((%d,", sce->r.cfra);
 	WRITE_PYOBJECT_TRANSFORM(outputFile, uvw_transform);
-	WRITE_PYOBJECT(outputFile, "));");
-	WRITE_PYOBJECT(outputFile, "\n}\n");
+	PYTHON_PRINTF(outputFile, "));");
+	PYTHON_PRINTF(outputFile, "\n}\n");
 }
 
 
@@ -208,7 +207,7 @@ void write_TexVoxelData(PyObject          *outputFile,
 						const char        *pluginName,
 						short              interpolation)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	PYTHON_PRINT_BUF;
 
 	SmokeDomainSettings *sds = smd->domain;
 
@@ -217,10 +216,12 @@ void write_TexVoxelData(PyObject          *outputFile,
 
 	size_t i;
 	size_t tot_res_high;
-	size_t tot_res_low;
-
 	int    res_high[3];
+
+#if USE_HEAT
+	size_t tot_res_low;
 	int    res_low[3];
+#endif
 
 	float  ob_imat[4][4];
 
@@ -242,14 +243,16 @@ void write_TexVoxelData(PyObject          *outputFile,
 
 	if(sds->flags & MOD_SMOKE_HIGHRES) {
 		COPY_VECTOR_3_3(res_high, sds->res_wt);
+#if USE_HEAT
 		COPY_VECTOR_3_3(res_low,  sds->res);
-
+#endif
 		smoke_turbulence_export(sds->wt, &dens, &react, &flame, &fuel, &r, &g, &b, &tcu, &tcv, &tcw);
 	}
 	else {
 		COPY_VECTOR_3_3(res_high, sds->res);
+#if USE_HEAT
 		COPY_VECTOR_3_3(res_low,  sds->res);
-
+#endif
 		smoke_export(sds->fluid, &dt, &dx, &dens, &react, &flame, &fuel, &heat, &heatold, &vx, &vy, &vz, &r, &g, &b, &obstacles);
 	}
 
@@ -258,51 +261,53 @@ void write_TexVoxelData(PyObject          *outputFile,
 	// PRINT_INFO("sds->base_res = %i %i %i", sds->base_res[0], sds->base_res[1], sds->base_res[2]);
 
 	tot_res_high = (size_t)res_high[0] * (size_t)res_high[1] * (size_t)res_high[2];
+#if USE_HEAT
 	tot_res_low  = (size_t)res_low[0]  * (size_t)res_low[1]  * (size_t)res_low[2];
+#endif
 
 	write_SmokeUVWGen(outputFile, sce, ob, smd, uvwPluginName);
 
-	WRITE_PYOBJECT(outputFile, "\nTexVoxelData %s {", pluginName);
-	WRITE_PYOBJECT(outputFile, "\n\tuvwgen=%s;", uvwPluginName);
-	WRITE_PYOBJECT(outputFile, "\n\tinterpolation=%i;", interpolation);
-	WRITE_PYOBJECT(outputFile, "\n\tresolution=Vector(%i,%i,%i);", res_high[0], res_high[1], res_high[2]);
+	PYTHON_PRINTF(outputFile, "\nTexVoxelData %s {", pluginName);
+	PYTHON_PRINTF(outputFile, "\n\tuvwgen=%s;", uvwPluginName);
+	PYTHON_PRINTF(outputFile, "\n\tinterpolation=%i;", interpolation);
+	PYTHON_PRINTF(outputFile, "\n\tresolution=Vector(%i,%i,%i);", res_high[0], res_high[1], res_high[2]);
 #if USE_HEAT
-	WRITE_PYOBJECT(outputFile, "\n\tresolution_low=Vector(%i,%i,%i);", res_low[0], res_low[1], res_low[2]);
+	PYTHON_PRINTF(outputFile, "\n\tresolution_low=Vector(%i,%i,%i);", res_low[0], res_low[1], res_low[2]);
 #endif
 
-	WRITE_PYOBJECT(outputFile, "\n\tdensity=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\tdensity=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
 	for(i = 0; i < tot_res_high; ++i) {
 		_d = dens ? dens[i] : 0.0f;
 		WRITE_PYOBJECT_HEX_VALUE(outputFile, _d);
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
-	WRITE_PYOBJECT(outputFile, "\n\tflame=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\tflame=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
 	for(i = 0; i < tot_res_high; ++i) {
 		_fl = flame ? flame[i] : 0.0f;
 		WRITE_PYOBJECT_HEX_VALUE(outputFile, _fl);
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
-	WRITE_PYOBJECT(outputFile, "\n\tfuel=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
+	PYTHON_PRINTF(outputFile, "\n\tfuel=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
 	for(i = 0; i < tot_res_high; ++i) {
 		_fu = fuel ? fuel[i] : 0.0f;
 		WRITE_PYOBJECT_HEX_VALUE(outputFile, _fu);
 	}
-	WRITE_PYOBJECT(outputFile, "\")));");
+	PYTHON_PRINTF(outputFile, "\")));");
 
 #if USE_HEAT
 	if(NOT(sds->flags & MOD_SMOKE_HIGHRES)) {
-		WRITE_PYOBJECT(outputFile, "\n\theat=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
+		PYTHON_PRINTF(outputFile, "\n\theat=interpolate((%d, ListFloatHex(\"", sce->r.cfra);
 		// Heat is somehow always low res
 		for(i = 0; i < tot_res_low; ++i) {
 			_h = heat ? heat[i] : 0.0f;
 			WRITE_PYOBJECT_HEX_VALUE(outputFile, _h);
 		}
-		WRITE_PYOBJECT(outputFile, "\")));");
+		PYTHON_PRINTF(outputFile, "\")));");
 	}
 #endif
 
-	WRITE_PYOBJECT(outputFile, "\n}\n");
+	PYTHON_PRINTF(outputFile, "\n}\n");
 }
 
