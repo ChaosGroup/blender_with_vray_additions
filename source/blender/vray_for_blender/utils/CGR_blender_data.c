@@ -23,6 +23,8 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
+#include "CGR_config.h"
+
 #include "CGR_blender_data.h"
 
 #include "DNA_curve_types.h"
@@ -96,12 +98,12 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
 			BKE_mesh_from_nurbs( tmpobj );
 
 			/* nurbs_to_mesh changes the type to a mesh, check it worked */
-			if (tmpobj->type != OB_MESH) {
-				BKE_libblock_free_us( &(G.main->object), tmpobj );
+			if(tmpobj->type != OB_MESH) {
+				BKE_libblock_free_us(bmain, tmpobj );
 				return NULL;
 			}
 			tmpmesh = (Mesh*)tmpobj->data;
-			BKE_libblock_free_us( &G.main->object, tmpobj );
+			BKE_libblock_free_us(bmain, tmpobj );
 
 			break;
 
@@ -146,7 +148,7 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
 
 void FreeRenderMesh(Main *main, Mesh *mesh)
 {
-	BKE_libblock_free(&main->mesh, mesh);
+	BKE_libblock_free(main, mesh);
 }
 
 
