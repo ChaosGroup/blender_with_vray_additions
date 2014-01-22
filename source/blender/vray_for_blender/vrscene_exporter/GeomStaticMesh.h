@@ -33,7 +33,7 @@ extern "C" {
 #  include "BKE_main.h"
 }
 
-#include "utils/murmur3.h"
+#include "exp_types.h"
 
 #include <string>
 #include <vector>
@@ -56,17 +56,15 @@ public:
 typedef std::vector<MChan*> MChans;
 
 
-class GeomStaticMesh {
+class GeomStaticMesh : public VRayExportable {
 public:
     GeomStaticMesh();
-    ~GeomStaticMesh() { freeData(); }
+	virtual      ~GeomStaticMesh() { freeData(); }
 
     void          init(Scene *sce, Main *main, Object *ob);
     void          freeData();
 
-	const char*   getName() const            { return name.c_str(); }
-
-    MHash         getHash() const            { return hash; }
+	virtual void  buildHash();
 
     char*         getVertices() const        { return vertices; }
     char*         getFaces() const           { return faces;}
@@ -84,10 +82,6 @@ private:
     void          initMapChannels();
 
 	void          initName();
-	void          initHash();
-
-	std::string   name;
-    MHash         hash;
 
     Mesh         *mesh;
     Object       *object;

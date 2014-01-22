@@ -106,7 +106,12 @@ void GeomMayaHair::freeData()
     if(transparency) {
         delete [] transparency;
         transparency = NULL;
-    }
+	}
+}
+
+
+void GeomMayaHair::buildHash()
+{
 }
 
 
