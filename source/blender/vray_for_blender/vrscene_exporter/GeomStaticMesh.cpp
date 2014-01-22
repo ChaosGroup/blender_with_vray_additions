@@ -90,6 +90,7 @@ void MChan::freeData()
 
 GeomStaticMesh::GeomStaticMesh()
 {
+	name = "";
 	hash = 0;
 
 	mesh = NULL;
@@ -116,6 +117,8 @@ GeomStaticMesh::GeomStaticMesh()
 
 void GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 {
+	object = ob;
+
 	mesh = GetRenderMesh(sce, main, ob);
 	if(NOT(mesh))
 		return;
@@ -125,16 +128,14 @@ void GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 		return;
 	}
 
-	object = ob;
-
 	initVertices();
 	initFaces();
 	initMapChannels();
 
+	FreeRenderMesh(main, mesh);
+
 	initName();
 	initHash();
-
-	FreeRenderMesh(main, mesh);
 }
 
 
