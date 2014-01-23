@@ -29,9 +29,10 @@
 #include "CGR_vrscene.h"
 #include "vrscene_api.h"
 
+#include "BLI_math.h"
+#include "BLI_utildefines.h"
+
 extern "C" {
-#  include "BLI_utildefines.h"
-#  include "BLI_math.h"
 #  include "BKE_depsgraph.h"
 #  include "BKE_particle.h"
 #  include "BKE_DerivedMesh.h"
