@@ -30,6 +30,8 @@
 
 #include "CGR_config.h"
 
+#include <Python.h>
+
 #include "blender_includes.h"
 
 #include "vrscene_exporter/exp_defines.h"
@@ -40,8 +42,6 @@
 
 #include <string>
 #include <vector>
-
-#include <Python.h>
 
 
 typedef std::vector<std::string>       StringVector;
