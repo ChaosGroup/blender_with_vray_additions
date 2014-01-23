@@ -30,7 +30,7 @@
 
 static void WritePythonAttribute(PyObject *outputFile, PyObject *propGroup, const char *attrName)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	static char buf[CGR_MAX_PLUGIN_NAME];
 
 	PyObject *attr      = NULL;
 	PyObject *attrValue = NULL;

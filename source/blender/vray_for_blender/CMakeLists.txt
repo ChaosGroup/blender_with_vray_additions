@@ -20,6 +20,7 @@ set(INC
 	../render/extern/include
 	../render/intern/include
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
+	${ZLIB_INCLUDE_DIRS}
 	../../../intern/guardedalloc
 	../../../intern/smoke/extern
 	../python

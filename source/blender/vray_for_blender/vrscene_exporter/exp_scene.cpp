@@ -155,8 +155,8 @@ std::string VRsceneExporter::WriteMtlMulti(Object *ob)
 	plugName.append(obMtlName);
 
 	PYTHON_PRINTF(m_settings->m_fileObject, "\nMtlMulti %s {", plugName.c_str());
-	PYTHON_PRINTF(m_settings->m_fileObject, IND"mtls_list=List(%s);", boost::algorithm::join(mtls_list, ",").c_str());
-	PYTHON_PRINTF(m_settings->m_fileObject, IND"ids_list=ListInt(%s);", boost::algorithm::join(ids_list, ",").c_str());
+	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tmtls_list=List(%s);", boost::algorithm::join(mtls_list, ",").c_str());
+	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tids_list=ListInt(%s);", boost::algorithm::join(ids_list, ",").c_str());
 	PYTHON_PRINT(m_settings->m_fileObject, "\n}\n");
 
 	return plugName;
@@ -175,10 +175,10 @@ void VRsceneExporter::WriteNode(Object *ob, const VRScene::Node *node, int frame
 	std::string materialName = WriteMtlMulti(node->getObject());
 
 	PYTHON_PRINTF(m_settings->m_fileObject, "\nNode %s {", node->getName());
-	PYTHON_PRINTF(m_settings->m_fileObject, IND"geometry=%s;", node->getDataName());
-	PYTHON_PRINTF(m_settings->m_fileObject, IND"material=%s;", materialName.c_str());
-	PYTHON_PRINTF(m_settings->m_fileObject, IND"objectID=%i;", node->getObjectID());
-	PYTHON_PRINTF(m_settings->m_fileObject, IND"transform=%sTransformHex(\"%s\")%s;", m_interpStart, node->getTransform(), m_interpEnd);
+	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tgeometry=%s;", node->getDataName());
+	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tmaterial=%s;", materialName.c_str());
+	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tobjectID=%i;", node->getObjectID());
+	PYTHON_PRINTF(m_settings->m_fileObject, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, node->getTransform(), m_interpEnd);
 	PYTHON_PRINT(m_settings->m_fileObject, "\n}\n");
 }
 

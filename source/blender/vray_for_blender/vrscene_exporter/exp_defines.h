@@ -26,12 +26,12 @@
 #ifndef CGR_EXP_DEFINES_H
 #define CGR_EXP_DEFINES_H
 
+#include "CGR_config.h"
+
 #define COPY_VECTOR_3_3(a, b) \
 	a[0] = b[0];\
 	a[1] = b[1];\
 	a[2] = b[2];
-
-#define HEX(x) htonl(*(int*)&(x))
 
 #define PYTHON_PRINT_BUF char buf[2048]
 
@@ -42,18 +42,20 @@
 	sprintf(buf, __VA_ARGS__); \
 	PYTHON_PRINT(pyObject, buf);
 
-#define WRITE_PYOBJECT_HEX_VALUE(pyObject, v) \
-	sprintf(buf, "%08X", HEX(v)); \
-	PYTHON_PRINT(pyObject, buf);
-
-#define WRITE_PYOBJECT_HEX_VECTOR(pyObject, v) \
-	sprintf(buf, "%08X%08X%08X", HEX(v[0]), HEX(v[1]), HEX(v[2])); \
-	PYTHON_PRINT(pyObject, buf);
-
-#define WRITE_PYOBJECT_TRANSFORM(pyObject, m) \
+#define PYTHON_PRINT_TRANSFORM(o, m) \
 	char tmBuf[129]; \
 	GetTransformHex(m, tmBuf); \
 	sprintf(buf, "TransformHex(\"%s\")", tmBuf);\
-	PYTHON_PRINT(pyObject, buf);
+	PYTHON_PRINT(o, buf);
+
+#define WRITE_PYOBJECT_HEX_VALUE(o, v) \
+	char vBuf[129]; \
+	GetFloatHex(v, vBuf); \
+	PYTHON_PRINTF(o, "%s", vBuf);
+
+#define WRITE_PYOBJECT_HEX_VECTOR(o, v) \
+	char vBuf[129]; \
+	GetVectorHex(v, vBuf); \
+	PYTHON_PRINTF(o, "%s", vBuf);
 
 #endif // CGR_EXP_DEFINES_H

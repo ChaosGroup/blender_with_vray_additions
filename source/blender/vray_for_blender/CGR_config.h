@@ -26,14 +26,17 @@
 #ifndef CGR_CONFIG
 #define CGR_CONFIG
 
-#define PLUGIN_NAME V-Ray For Blender
+// For int types on POSIX systems
+#include <stdlib.h>
 
-#define USE_DEBUG        1
-#define USE_CALL_DEBUG  (1 && USE_DEBUG)
-#define USE_TIME_DEBUG  (1 && USE_DEBUG)
-#define USE_DRAW_DEBUG  (0 && USE_DEBUG)
+#define CGR_PLUGIN_NAME V-Ray For Blender
 
-#define MAX_PLUGIN_NAME  1024
+#define CGR_USE_DEBUG        1
+#define CGR_USE_CALL_DEBUG  (1 && CGR_USE_DEBUG)
+#define CGR_USE_TIME_DEBUG  (1 && CGR_USE_DEBUG)
+#define CGR_USE_DRAW_DEBUG  (0 && CGR_USE_DEBUG)
+
+#define CGR_MAX_PLUGIN_NAME  1024
 
 #ifndef WIN32
 #  define COLOR_RED      "\033[0;31m"
@@ -56,21 +59,21 @@
 #define STRINGIZE_NX(A) #A
 #define STRINGIZE(A) STRINGIZE_NX(A)
 
-#ifdef PLUGIN_NAME
+#ifdef CGR_PLUGIN_NAME
 #  define _OUTPUT_PROMPT(P) COLOR_MAGENTA STRINGIZE(P) COLOR_DEFAULT ": "
-#  define OUTPUT_PROMPT _OUTPUT_PROMPT(PLUGIN_NAME)
+#  define OUTPUT_PROMPT _OUTPUT_PROMPT(CGR_PLUGIN_NAME)
 #else
 #  define OUTPUT_PROMPT COLOR_MAGENTA "Info" COLOR_DEFAULT ": "
 #endif
 
-#ifdef PLUGIN_NAME
+#ifdef CGR_PLUGIN_NAME
 #  define _OUTPUT_ERROR_PROMPT(P) COLOR_RED STRINGIZE(P) " Error" COLOR_DEFAULT ": "
-#  define OUTPUT_ERROR_PROMPT _OUTPUT_ERROR_PROMPT(PLUGIN_NAME)
+#  define OUTPUT_ERROR_PROMPT _OUTPUT_ERROR_PROMPT(CGR_PLUGIN_NAME)
 #else
 #  define OUTPUT_ERROR_PROMPT COLOR_RED "Error" COLOR_DEFAULT ": "
 #endif
 
-#if USE_DEBUG == 0
+#if CGR_USE_DEBUG == 0
 #  define DEBUG_PRINT(use_debug, ...)
 #else
 #  define DEBUG_PRINT(use_debug, ...) \
@@ -98,7 +101,7 @@
 	fprintf(stdout, __VA_ARGS__); \
 	fflush(stdout);
 
-#if USE_DEBUG == 0
+#if CGR_USE_DEBUG == 0
 #  define PRINT_TM4(label, tm) ()
 #else
 #  define PRINT_TM4(label, tm) \
@@ -122,5 +125,12 @@
 #define	ANIM_CHECK_SIMPLE  1
 #define	ANIM_CHECK_HASH    2
 #define	ANIM_CHECK_BOTH    3
+
+#ifdef _WIN32
+typedef unsigned __int8  u_int8_t;
+typedef unsigned __int16 u_int16_t;
+typedef unsigned __int32 u_int32_t;
+typedef unsigned __int64 u_int64_t;
+#endif
 
 #endif // CGR_CONFIG
