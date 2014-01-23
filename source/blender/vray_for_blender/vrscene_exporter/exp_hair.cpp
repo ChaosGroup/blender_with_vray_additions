@@ -295,7 +295,7 @@ static void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, int 
 	if (sd->uvco && ELEM(from, PART_FROM_FACE, PART_FROM_VOLUME)) {
 		for (i=0; i<sd->totuv; i++) {
 			if (num != DMCACHE_NOTFOUND) {
-				MFace  *mface  = dm->getTessFaceData(dm, num, CD_MFACE);
+				MFace  *mface  = (MFace*)dm->getTessFaceData(dm, num, CD_MFACE);
 				MTFace *mtface = (MTFace*)CustomData_get_layer_n(&dm->faceData, CD_MTFACE, i);
 				mtface += num;
 
@@ -572,7 +572,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			sd.totuv = CustomData_number_of_layers(&psmd->dm->faceData, CD_MTFACE);
 
 			if(sd.totuv) {
-				sd.uvco = MEM_callocN(sd.totuv * 2 * sizeof(float), "particle_uvs");
+				sd.uvco = (float*)MEM_callocN(sd.totuv * 2 * sizeof(float), "particle_uvs");
 			}
 			else {
 				sd.uvco = NULL;
@@ -614,7 +614,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 			sd.totuv = CustomData_number_of_layers(&psmd->dm->faceData, CD_MTFACE);
 
 			if(sd.totuv) {
-				sd.uvco = MEM_callocN(sd.totuv * 2 * sizeof(float), "particle_uvs");
+				sd.uvco = (float*)MEM_callocN(sd.totuv * 2 * sizeof(float), "particle_uvs");
 			}
 			else {
 				sd.uvco = NULL;
