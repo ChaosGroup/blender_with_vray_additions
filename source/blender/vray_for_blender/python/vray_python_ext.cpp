@@ -34,11 +34,13 @@
 #include "vrscene_exporter/exp_scene.h"
 #include "vrscene_exporter/vrscene_api.h"
 
-#include "mathutils/mathutils.h"
-
 #include "DNA_material_types.h"
 #include "BLI_math.h"
 #include "BKE_context.h"
+
+extern "C" {
+#  include "mathutils/mathutils.h"
+}
 
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
