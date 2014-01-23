@@ -56,6 +56,8 @@ public:
 	char           *getWidths() const          { return widths; }
 	char           *getTransparency() const    { return transparency; }
 
+	Material       *getHairMaterial() const;
+
 private:
 	void            initData();
 	void            initAttributes();

@@ -27,11 +27,9 @@
 #include "vrscene_api.h"
 #include "CGR_vrscene.h"
 
-extern "C" {
-#  include "DNA_smoke_types.h"
-#  include "BLI_math.h"
-#  include "BLI_utildefines.h"
-}
+#include "BLI_math.h"
+#include "DNA_smoke_types.h"
+#include "BLI_utildefines.h"
 
 #include "smoke_API.h"
 
