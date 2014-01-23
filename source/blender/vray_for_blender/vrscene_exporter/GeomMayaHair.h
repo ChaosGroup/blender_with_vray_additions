@@ -41,31 +41,42 @@ extern "C" {
 
 class GeomMayaHair : public VRayExportable {
 public:
-    GeomMayaHair();
-	virtual      ~GeomMayaHair() { freeData(); }
+	GeomMayaHair();
+	virtual        ~GeomMayaHair() { freeData(); }
 
-    void          init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);
-    void          freeData();
+	void            init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);
+	void            freeData();
 
-	virtual void  buildHash();
+	virtual void    buildHash();
 
-    char*         getHairVertices() const    { return hair_vertices; }
-    char*         getNumHairVertices() const { return num_hair_vertices;}
-    char*         getWidths() const          { return widths; }
-    char*         getTransparency() const    { return transparency; }
+	char           *getHairVertices() const    { return hair_vertices; }
+	char           *getNumHairVertices() const { return num_hair_vertices;}
+	char           *getWidths() const          { return widths; }
+	char           *getTransparency() const    { return transparency; }
 
 private:
+	void            initData();
+	void            initAttributes();
 
-    char         *hair_vertices;
-    char         *num_hair_vertices;
-    char         *widths;
-    char         *transparency;
+	Main           *m_main;
+	Scene          *m_sce;
+	Object         *m_ob;
+	ParticleSystem *m_psys;
 
-    int           use_global_hair_tree;
+	int             use_width_fade;
 
-    int           geom_splines;
-    float         geom_tesselation_mult;
+	char           *hair_vertices;
+	char           *num_hair_vertices;
+	char           *widths;
+	char           *transparency;
+	char           *strand_uvw;
 
+	float           opacity;
+
+	int             use_global_hair_tree;
+
+	int             geom_splines;
+	float           geom_tesselation_mult;
 };
 
 #endif // GEOM_MAYA_HAIR_H
