@@ -1,15 +1,12 @@
+#include "CGR_config.h"
+
 #include "BLI_math.h"
 #include "MEM_guardedalloc.h"
 
-#include "CGR_config.h"
 #include "CGR_base64.h"
 #include "CGR_vrscene.h"
 
 #include <zlib.h>
-
-#ifdef _WIN32
-typedef unsigned char u_int8_t;
-#endif
 
 
 struct TraceTransform {
@@ -147,6 +144,15 @@ void GetFloatHex(float f, char *buf)
     float d = f;
     const u_int8_t *d8 = (const u_int8_t*)&d;
     getStringHex(d8, sizeof(d), buf);
+}
+
+
+void GetVectorHex(float f[3], char *buf)
+{
+	float d[3];
+	copy_v3_v3(d, f);
+	const u_int8_t *d8 = (const u_int8_t*)&d;
+	getStringHex(d8, sizeof(d), buf);
 }
 
 
