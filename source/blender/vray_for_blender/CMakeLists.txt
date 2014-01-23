@@ -29,9 +29,6 @@ set(INC
 set(SRC
 	CGR_config.h
 
-	# Common stuff
-	common/blender_includes.h
-
 	# Utilities
 	utils/CGR_base64.h
 	utils/CGR_base64.cpp
