@@ -6,7 +6,6 @@ set(INC_SYS
 
 set(INC
 	.
-	./common
 	./utils
 	./vrscene_exporter
 	../blenlib
