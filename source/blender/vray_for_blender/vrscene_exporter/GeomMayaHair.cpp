@@ -122,6 +122,11 @@ void GeomMayaHair::buildHash()
 }
 
 
+Material *GeomMayaHair::getHairMaterial() const
+{
+}
+
+
 void GeomMayaHair::init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys)
 {
 	m_sce  = sce;
