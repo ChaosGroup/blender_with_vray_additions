@@ -33,6 +33,14 @@
 #include "vrscene_api.h"
 #include "exp_scene.h"
 
+extern "C" {
+#  include "DNA_material_types.h"
+#  include "BKE_material.h"
+#  include "BKE_anim.h"
+#  include "BLI_string.h"
+#  include "PIL_time.h"
+}
+
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
 
