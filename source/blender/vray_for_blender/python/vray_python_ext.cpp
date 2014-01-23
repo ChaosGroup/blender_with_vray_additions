@@ -200,7 +200,7 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 	PyObject *nodeFile;
 	PyObject *geomFile;
 
-	char      pluginName[MAX_PLUGIN_NAME];
+	char      pluginName[CGR_MAX_PLUGIN_NAME];
 
 	if(NOT(PyArg_ParseTuple(args, "iiOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
 		return NULL;

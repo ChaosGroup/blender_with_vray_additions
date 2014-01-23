@@ -44,10 +44,10 @@ void  write_ObjectNode(PyObject   *nodeFile,
 					   float       tm[4][4],
 					   const char *pluginName)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	static char buf[CGR_MAX_PLUGIN_NAME];
 
-	char material[MAX_PLUGIN_NAME];
-	char geometry[MAX_PLUGIN_NAME];
+	char material[CGR_MAX_PLUGIN_NAME];
+	char geometry[CGR_MAX_PLUGIN_NAME];
 
 	// TODO:
 	//   [ ] Add type checking and sync with Python naming
@@ -69,7 +69,7 @@ void  write_ObjectNode(PyObject   *nodeFile,
 	PYTHON_PRINTF(nodeFile, "\n\tmaterial=%s;", material);
 	PYTHON_PRINTF(nodeFile, "\n\tgeometry=%s;", geometry);
 	PYTHON_PRINTF(nodeFile, "\n\ttransform=interpolate((%d,", sce->r.cfra);
-	WRITE_PYOBJECT_TRANSFORM(nodeFile, tm);
+	PYTHON_PRINT_TRANSFORM(nodeFile, tm);
 	PYTHON_PRINTF(nodeFile, "));");
 	PYTHON_PRINTF(nodeFile, "\n}\n");
 }
@@ -111,7 +111,7 @@ void write_Dupli(PyObject   *nodeFile,
 	EvaluationContext eval_ctx = {0};
 
 	DupliObject *dob;
-	char         pluginName[MAX_PLUGIN_NAME];
+	char         pluginName[CGR_MAX_PLUGIN_NAME];
 
 	eval_ctx.for_render = true;
 

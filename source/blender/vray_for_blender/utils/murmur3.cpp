@@ -7,31 +7,39 @@
 // compile and run any of them on any platform, but your performance with the
 // non-native version will be less than optimal.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-
 #include "murmur3.h"
-
-#include "BLI_utildefines.h"
 
 //-----------------------------------------------------------------------------
 // Platform-specific functions and macros
+// Microsoft Visual Studio
 
-BLI_INLINE u_int32_t rotl32 ( u_int32_t x, int8_t r )
+#if defined(_MSC_VER)
+#define FORCE_INLINE    __forceinline
+
+#include <stdlib.h>
+
+#define ROTL32(x,y)     _rotl(x,y)
+#define ROTL64(x,y)     _rotl64(x,y)
+
+#define BIG_CONSTANT(x) (x)
+
+#else // Other compilers
+#define FORCE_INLINE inline __attribute__((always_inline))
+
+FORCE_INLINE u_int32_t rotl32 ( u_int32_t x, int8_t r )
 {
-  return (x << r) | (x >> (32 - r));
+	return (x << r) | (x >> (32 - r));
 }
 
-BLI_INLINE u_int64_t rotl64 ( u_int64_t x, int8_t r )
+FORCE_INLINE u_int64_t rotl64 ( u_int64_t x, int8_t r )
 {
-  return (x << r) | (x >> (64 - r));
+	return (x << r) | (x >> (64 - r));
 }
 
 #define	ROTL32(x,y)	rotl32(x,y)
 #define ROTL64(x,y)	rotl64(x,y)
-
 #define BIG_CONSTANT(x) (x##LLU)
+#endif
 
 //-----------------------------------------------------------------------------
 // Block read - if your platform needs to do endian-swapping or can only
@@ -42,7 +50,7 @@ BLI_INLINE u_int64_t rotl64 ( u_int64_t x, int8_t r )
 //-----------------------------------------------------------------------------
 // Finalization mix - force all bits of a hash block to avalanche
 
-BLI_INLINE u_int32_t fmix32 ( u_int32_t h )
+FORCE_INLINE u_int32_t fmix32 ( u_int32_t h )
 {
   h ^= h >> 16;
   h *= 0x85ebca6b;
@@ -55,7 +63,7 @@ BLI_INLINE u_int32_t fmix32 ( u_int32_t h )
 
 //----------
 
-BLI_INLINE u_int64_t fmix64 ( u_int64_t k )
+FORCE_INLINE u_int64_t fmix64 ( u_int64_t k )
 {
   k ^= k >> 33;
   k *= BIG_CONSTANT(0xff51afd7ed558ccd);

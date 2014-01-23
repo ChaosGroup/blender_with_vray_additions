@@ -24,6 +24,7 @@
  */
 
 #include "exp_defines.h"
+#include "CGR_vrscene.h"
 #include "vrscene_api.h"
 
 
@@ -107,9 +108,9 @@ typedef struct ParticleStrandData {
 //       c[n-1] and d[n-1] are set to continue the last segment
 //       past x[n-1].
 //
-static int c_spline_init(const int n, const int end1, const int end2, const float slope1, const float slope2,
-						 const float x[], const float y[],
-						 float b[], float c[], float d[], int *iflag)
+BLI_INLINE int c_spline_init(const int n, const int end1, const int end2, const float slope1, const float slope2,
+							 const float x[], const float y[],
+							 float b[], float c[], float d[], int *iflag)
 {
 	int     nm1, ib, i;
 	float  t;
@@ -250,7 +251,7 @@ LeaveSpline:
 //  (1) If u is not in the same interval as the previous call then a
 //      binary search is performed to determine the proper interval.
 //
-static float c_spline_eval(int n, float u, float x[], float y[],
+BLI_INLINE float c_spline_eval(int n, float u, float x[], float y[],
 						   float b[], float c[], float d[], int *last)
 {
 	int    i, j, k;
@@ -287,7 +288,7 @@ static float c_spline_eval(int n, float u, float x[], float y[],
 // Taken from "source/blender/render/intern/source/convertblender.c"
 // and slightly modified
 //
-static void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, int num, ParticleStrandData *sd)
+BLI_INLINE void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, int num, ParticleStrandData *sd)
 {
 	int i;
 
@@ -312,7 +313,7 @@ static void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, int 
 
 int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob, ParticleSystem *psys, const char *pluginName)
 {
-	static char buf[MAX_PLUGIN_NAME];
+	PYTHON_PRINT_BUF;
 
 	int    i, c, p, s;
 	float  f;
@@ -394,7 +395,7 @@ int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob
 	RNA_id_pointer_create(&pset->id, &rna_pset);
 
 	if(RNA_struct_find_property(&rna_pset, "vray")) {
-		VRayParticleSettings= RNA_pointer_get(&rna_pset, "vray");
+		VRayParticleSettings = RNA_pointer_get(&rna_pset, "vray");
 
 		if(RNA_struct_find_property(&VRayParticleSettings, "VRayFur")) {
 			VRayFur = RNA_pointer_get(&VRayParticleSettings, "VRayFur");

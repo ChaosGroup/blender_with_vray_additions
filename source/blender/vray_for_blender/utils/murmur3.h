@@ -8,7 +8,7 @@
 #ifndef _MURMURHASH3_H_
 #define _MURMURHASH3_H_
 
-#include "BLI_sys_types.h"
+#include "CGR_config.h"
 
 typedef u_int32_t MHash;
 
