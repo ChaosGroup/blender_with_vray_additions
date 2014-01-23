@@ -29,6 +29,11 @@
 #include "exp_defines.h"
 #include "vrscene_api.h"
 
+extern "C" {
+#  include "BKE_anim.h"
+#  include "BKE_depsgraph.h"
+}
+
 #include <set>
 #include <string>
 

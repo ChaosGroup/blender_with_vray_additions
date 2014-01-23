@@ -28,9 +28,21 @@
 
 #include "CGR_config.h"
 
-#include <math.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "blender_includes.h"
+#include "DNA_scene_types.h"
+#include "DNA_object_types.h"
+#include "DNA_particle_types.h"
+#include "DNA_mesh_types.h"
+#include "DNA_modifier_types.h"
+#include "smoke_API.h"
+#include "BKE_main.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #include <Python.h>
 

@@ -26,10 +26,17 @@
 #include "exp_defines.h"
 #include "vrscene_api.h"
 #include "CGR_vrscene.h"
+
+extern "C" {
+#  include "DNA_smoke_types.h"
+#  include "BLI_math.h"
+#  include "BLI_utildefines.h"
+}
+
 #include "smoke_API.h"
 
-#define USE_HEAT           0
 
+#define USE_HEAT           0
 #define DEBUG_GIZMO_SHAPE  0
 
 

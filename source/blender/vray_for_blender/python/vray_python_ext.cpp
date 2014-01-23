@@ -25,7 +25,7 @@
 
 #include "CGR_config.h"
 
-#include "blender_includes.h"
+#include <Python.h>
 
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
@@ -36,7 +36,9 @@
 
 #include "mathutils/mathutils.h"
 
-#include <Python.h>
+#include "DNA_material_types.h"
+#include "BLI_math.h"
+#include "BKE_context.h"
 
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)

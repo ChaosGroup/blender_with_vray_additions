@@ -23,9 +23,22 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
+#include "CGR_config.h"
 #include "exp_defines.h"
+
 #include "CGR_vrscene.h"
 #include "vrscene_api.h"
+
+extern "C" {
+#  include "BLI_utildefines.h"
+#  include "BLI_math.h"
+#  include "BKE_depsgraph.h"
+#  include "BKE_particle.h"
+#  include "BKE_DerivedMesh.h"
+#  include "BKE_scene.h"
+#  include "MEM_guardedalloc.h"
+#  include "RNA_access.h"
+}
 
 
 typedef struct ParticleStrandData {
