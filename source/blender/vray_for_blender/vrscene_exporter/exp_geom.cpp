@@ -28,6 +28,9 @@
 #include "vrscene_api.h"
 
 
+using namespace VRayScene;
+
+
 static void WritePythonAttribute(PyObject *outputFile, PyObject *propGroup, const char *attrName)
 {
 	static char buf[CGR_MAX_PLUGIN_NAME];

@@ -39,6 +39,8 @@ extern "C" {
 #include <vector>
 
 
+namespace VRayScene {
+
 class MChan {
 public:
     MChan();
@@ -109,5 +111,6 @@ private:
     float         weld_threshold;
 };
 
+}
 
 #endif // GEOM_STATIC_MESH_H
