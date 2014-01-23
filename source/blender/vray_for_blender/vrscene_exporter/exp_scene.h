@@ -44,6 +44,9 @@
 #include <vector>
 
 
+using namespace VRayScene;
+
+
 typedef std::vector<std::string>       StringVector;
 typedef AnimationCache<VRScene::Node>  NodesCache;
 typedef AnimationCache<GeomStaticMesh> MeshesCache;

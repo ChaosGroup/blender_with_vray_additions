@@ -43,6 +43,9 @@ extern "C" {
 }
 
 
+using namespace VRayScene;
+
+
 BLI_INLINE MHash HashCode(const char* s)
 {
 	int h = 0;

@@ -39,6 +39,8 @@ extern "C" {
 #include <vector>
 
 
+namespace VRayScene {
+
 class GeomMayaHair : public VRayExportable {
 public:
 	GeomMayaHair();
@@ -78,5 +80,7 @@ private:
 	int             geom_splines;
 	float           geom_tesselation_mult;
 };
+
+}
 
 #endif // GEOM_MAYA_HAIR_H

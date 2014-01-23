@@ -41,6 +41,9 @@ extern "C" {
 }
 
 
+using namespace VRayScene;
+
+
 // Taken from "source/blender/render/intern/source/convertblender.c"
 // and slightly modified
 //
@@ -49,6 +52,7 @@ typedef struct ParticleStrandData {
 	float *uvco;
 	int    totuv;
 } ParticleStrandData;
+
 
 BLI_INLINE void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, int num, ParticleStrandData *sd)
 {

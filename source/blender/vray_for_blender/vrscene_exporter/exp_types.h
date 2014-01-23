@@ -30,6 +30,8 @@
 #include <string>
 
 
+namespace VRayScene {
+
 class VRayExportable {
 public:
 	virtual      ~VRayExportable() {}
@@ -44,5 +46,7 @@ protected:
 	MHash         hash;
 
 };
+
+}
 
 #endif // CGR_EXP_TYPES_H
