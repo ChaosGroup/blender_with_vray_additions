@@ -112,6 +112,10 @@ extern "C" {
 
 #include "MEM_guardedalloc.h"
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
 #ifdef WIN32
 #  ifdef htonl
 #    undef htonl
@@ -123,10 +127,6 @@ extern "C" {
 #  include <winsock.h>
 #else
 #  include <netinet/in.h>
-#endif
-
-#ifdef __cplusplus
-} // extern "C"
 #endif
 
 #endif // BLENDER_INCLUDES_H
