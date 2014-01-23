@@ -116,17 +116,4 @@ extern "C" {
 } // extern "C"
 #endif
 
-#ifdef WIN32
-#  ifdef htonl
-#    undef htonl
-#    undef htons
-#    undef ntohl
-#    undef ntohs
-#    define correctByteOrder(x) htonl(x)
-#  endif
-#  include <winsock.h>
-#else
-#  include <netinet/in.h>
-#endif
-
 #endif // BLENDER_INCLUDES_H

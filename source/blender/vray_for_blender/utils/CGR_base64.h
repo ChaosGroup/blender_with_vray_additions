@@ -1,7 +1,8 @@
 #ifndef CGR_BASE64_H
 #define CGR_BASE64_H
 
-#include "BLI_sys_types.h"
+#include "CGR_config.h"
+
 
 /// Helper function that calculates encoded buffer size based on the size of input binary data.
 /// @return Returned decoded buffer size is large enought to hold encoded string plus padding characters if required.
