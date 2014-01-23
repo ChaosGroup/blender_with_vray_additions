@@ -124,6 +124,7 @@ void GeomMayaHair::buildHash()
 
 Material *GeomMayaHair::getHairMaterial() const
 {
+	return NULL;
 }
 
 
