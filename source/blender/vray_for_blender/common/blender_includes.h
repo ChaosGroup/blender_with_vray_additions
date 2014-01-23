@@ -26,10 +26,6 @@
 #ifndef BLENDER_INCLUDES_H
 #define BLENDER_INCLUDES_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,6 +33,10 @@ extern "C" {
 #include <pthread.h>
 #include <time.h>
 #include <ctype.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "BLI_linklist.h"
 #include "BLI_listbase.h"
