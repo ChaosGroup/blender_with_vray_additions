@@ -33,17 +33,21 @@
 #include "vrscene_api.h"
 #include "exp_scene.h"
 
+#include "PIL_time.h"
+#include "BLI_string.h"
+#include "BKE_material.h"
+
 extern "C" {
 #  include "DNA_material_types.h"
-#  include "BKE_material.h"
 #  include "BKE_anim.h"
-#  include "BLI_string.h"
-#  include "PIL_time.h"
-#  include "WM_types.h"
+#  include "DNA_windowmanager_types.h"
 }
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
+
+
+struct SceneStats;
 
 
 void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame)
@@ -222,12 +226,24 @@ void VRsceneExporter::exportScene()
 	PRINT_INFO_LB("VRsceneExporter: Exporting scene for frame %i...", m_settings->m_sce->r.cfra);
 	timeMeasure = PIL_check_seconds_timer();
 
-	// Export stuff
+	Base *base = NULL;
 
-	Base *base = (Base*)m_settings->m_sce->base.first;
+	size_t nObjects = 0;
+	base = (Base*)m_settings->m_sce->base.first;
+	while(base) {
+		nObjects++;
+		base = base->next;
+	}
+
+	float  expProgress = 0.0f;
+	float  expProgStep = 1.0f / nObjects;
+
+	// Export stuff
+	base = (Base*)m_settings->m_sce->base.first;
+	nObjects = 0;
 	while(base) {
 		if(m_settings->m_engine.test_break()) {
-			m_settings->m_engine.report(WM_LOG_WARNING, "Export interrupted!");
+			m_settings->m_engine.report(RPT_WARNING, "Export interrupted!");
 			break;
 		}
 
@@ -341,7 +357,15 @@ void VRsceneExporter::exportScene()
 				} // ANIM_CHECK_SIMPLE
 			} // animated
 		} // m_exportGeometry
+
+		expProgress += expProgStep;
+		nObjects++;
+		if((nObjects % 1000) == 0) {
+			m_settings->m_engine.update_progress(expProgress);
+		}
 	} // while(base)
+
+	m_settings->m_engine.update_progress(1.0f);
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	printf(" done [%s]\n", timeMeasureBuf);
