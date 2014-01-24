@@ -32,15 +32,16 @@
 #include "CGR_vrscene.h"
 
 extern "C" {
-#  include "BKE_mesh.h"
-#  include "BKE_customdata.h"
 #  include "BLI_math.h"
 #  include "DNA_meshdata_types.h"
-#  include "MEM_guardedalloc.h"
-#  include "BLI_sys_types.h"
-#  include "BLI_string.h"
-#  include "BLI_path_util.h"
 }
+
+#include "BKE_mesh.h"
+#include "BKE_customdata.h"
+#include "MEM_guardedalloc.h"
+#include "BLI_sys_types.h"
+#include "BLI_string.h"
+#include "BLI_path_util.h"
 
 
 using namespace VRayScene;
