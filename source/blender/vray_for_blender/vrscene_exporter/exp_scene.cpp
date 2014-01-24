@@ -151,7 +151,7 @@ std::string VRsceneExporter::WriteMtlMulti(Object *ob)
 		StripString(mtlName);
 
 		mtls_list.push_back(mtlName);
-		ids_list.push_back(boost::lexical_cast<std::string>(a-1));
+		ids_list.push_back(boost::lexical_cast<std::string>(a));
 	}
 
 	// No need for multi-material if only one slot
