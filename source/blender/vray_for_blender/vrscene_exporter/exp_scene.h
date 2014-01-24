@@ -26,8 +26,6 @@
 #ifndef CGR_EXPORT_SCENE_H
 #define CGR_EXPORT_SCENE_H
 
-// TODO: #include "RNA_blender_cpp.h"
-
 #include "CGR_config.h"
 
 #include <Python.h>
@@ -39,6 +37,8 @@
 #include "vrscene_exporter/Node.h"
 
 #include "BKE_depsgraph.h"
+#include "MEM_guardedalloc.h"
+#include "RNA_blender_cpp.h"
 
 #include <string>
 #include <vector>
@@ -53,7 +53,7 @@ typedef AnimationCache<GeomStaticMesh> MeshesCache;
 
 
 struct ExpoterSettings {
-	ExpoterSettings() {
+	ExpoterSettings(BL::RenderEngine engine):m_engine(engine) {
 		m_sce  = NULL;
 		m_main = NULL;
 
@@ -71,21 +71,22 @@ struct ExpoterSettings {
 		m_altDInstances = false;
 	}
 
-	Scene    *m_sce;
-	Main     *m_main;
+	Scene            *m_sce;
+	Main             *m_main;
+	BL::RenderEngine  m_engine;
 
-	PyObject *m_fileObject;
-	PyObject *m_fileGeom;
-	PyObject *m_fileLights;
+	PyObject         *m_fileObject;
+	PyObject         *m_fileGeom;
+	PyObject         *m_fileLights;
 
-	int       m_exportNodes;
-	int       m_exportGeometry;
+	int               m_exportNodes;
+	int               m_exportGeometry;
 
-	int       m_animation;
-	int       m_checkAnimated;
+	int               m_animation;
+	int               m_checkAnimated;
 
-	int       m_activeLayers;
-	int       m_altDInstances;
+	int               m_activeLayers;
+	int               m_altDInstances;
 };
 
 

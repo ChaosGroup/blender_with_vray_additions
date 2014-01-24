@@ -39,6 +39,7 @@ extern "C" {
 #  include "BKE_anim.h"
 #  include "BLI_string.h"
 #  include "PIL_time.h"
+#  include "WM_types.h"
 }
 
 #include <boost/lexical_cast.hpp>
@@ -225,6 +226,11 @@ void VRsceneExporter::exportScene()
 
 	Base *base = (Base*)m_settings->m_sce->base.first;
 	while(base) {
+		if(m_settings->m_engine.test_break()) {
+			m_settings->m_engine.report(WM_LOG_WARNING, "Export interrupted!");
+			break;
+		}
+
 		Object *ob = base->object;
 		base = base->next;
 
