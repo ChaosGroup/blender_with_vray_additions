@@ -54,9 +54,10 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *geomFile   = NULL;
 	PyObject *lightsFile = NULL;
 
-	static char *kwlist[] = { "context", "engine", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
+	static       char *kwlist[] = { "context", "engine", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
+	static const char  kwlistTypes[] = "i|OiiOOO";
 
-	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, "i|OiiOOO", kwlist,
+	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &contextPtr, &engine, &isAnimation, &checkAnimated, &obFile, &geomFile, &lightsFile)))
 		return NULL;
 
