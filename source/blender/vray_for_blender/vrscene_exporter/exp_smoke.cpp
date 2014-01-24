@@ -33,7 +33,6 @@
 
 #include "smoke_API.h"
 
-
 #define USE_HEAT           0
 #define DEBUG_GIZMO_SHAPE  0
 

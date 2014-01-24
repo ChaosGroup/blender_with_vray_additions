@@ -49,19 +49,24 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	int       isAnimation   = false;
 	int       checkAnimated = ANIM_CHECK_NONE;
 
+	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
 	PyObject *geomFile   = NULL;
 	PyObject *lightsFile = NULL;
 
-	static char *kwlist[] = { "context", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
+	static char *kwlist[] = { "context", "engine", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
 
-	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, "i|iiOOO", kwlist,
-									   &contextPtr, &isAnimation, &checkAnimated, &obFile, &geomFile, &lightsFile)))
+	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, "i|OiiOOO", kwlist,
+									   &contextPtr, &engine, &isAnimation, &checkAnimated, &obFile, &geomFile, &lightsFile)))
 		return NULL;
+
+	PointerRNA engineRnaPtr;
+	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(engine), &engineRnaPtr);
+	BL::RenderEngine renderEngine(engineRnaPtr);
 
 	bContext *C = (bContext*)(intptr_t)contextPtr;
 
-	ExpoterSettings *settings = new ExpoterSettings();
+	ExpoterSettings *settings = new ExpoterSettings(renderEngine);
 	settings->m_sce  = CTX_data_scene(C);
 	settings->m_main = CTX_data_main(C);
 
