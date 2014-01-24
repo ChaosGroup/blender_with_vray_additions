@@ -13,6 +13,7 @@ includes = [
     '../blenloader',
     '../makesdna',
     '../makesrna',
+    '../makesrna/intern',
     '../render/extern/include',
     '../render/intern/include',
     '../windowmanager',
