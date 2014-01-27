@@ -382,23 +382,12 @@ int VRsceneExporter::hasDisplace(Object *ob)
 	if(RNA_struct_find_property(&rnaOb, "vray")) {
 		PointerRNA VRayObject = RNA_pointer_get(&rnaOb, "vray");
 
-		if(RNA_struct_find_property(&VRayObject, "ntree__enum__")) {
-			int ntreePtr = RNA_enum_get(&VRayObject, "ntree__enum__");
+		// 17:19:43    lukas_t | bdancer: hmm yes, that one is slightly involved: you need to look up the driver fcurve for
+		//                     | <name> by data path "<name>__driver_storage__", then use the first variable's target ID pointer
+		// 17:20:20    lukas_t | bdancer: similar to this py code: https://www.gitorious.org/blender-trunk/pynodes_framework/sou
+		//                     | rce/396198c7b6b913f81faf07c9e18a369b4d7ed4ff:idref_driver.py#L32
 
-			if(ntreePtr != -1) {
-				bNodeTree *obNtree = (bNodeTree*)(intptr_t)ntreePtr;
-
-				PRINT_INFO("ob.vray.ntree = %i\n", ntreePtr);
-				PRINT_INFO("ob.vray.ntree = %i\n", ntreePtr);
-			}
-
-			// 17:19:43    lukas_t | bdancer: hmm yes, that one is slightly involved: you need to look up the driver fcurve for
-			//                     | <name> by data path "<name>__driver_storage__", then use the first variable's target ID pointer
-			// 17:20:20    lukas_t | bdancer: similar to this py code: https://www.gitorious.org/blender-trunk/pynodes_framework/sou
-			//                     | rce/396198c7b6b913f81faf07c9e18a369b4d7ed4ff:idref_driver.py#L32
-
-			return 1;
-		}
+		return 1;
 	}
 
 	return 0;
