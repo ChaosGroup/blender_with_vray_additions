@@ -28,8 +28,6 @@
 
 #include "CGR_config.h"
 
-#include <Python.h>
-
 #include "vrscene_exporter/exp_defines.h"
 #include "vrscene_exporter/exp_anim.h"
 #include "vrscene_exporter/GeomMayaHair.h"
@@ -38,10 +36,9 @@
 
 #include "BKE_depsgraph.h"
 #include "MEM_guardedalloc.h"
-
-#include "RNA_types.h"
-#include "RNA_access.h"
 #include "RNA_blender_cpp.h"
+
+#include <Python.h>
 
 #include <string>
 #include <vector>
