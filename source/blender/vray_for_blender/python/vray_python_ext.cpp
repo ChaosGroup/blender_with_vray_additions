@@ -45,9 +45,9 @@ extern "C" {
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
-	int       contextPtr    = 0;
-	int       isAnimation   = false;
-	int       checkAnimated = ANIM_CHECK_NONE;
+	long      contextPtr    = 0;
+	long      isAnimation   = false;
+	long      checkAnimated = ANIM_CHECK_NONE;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
@@ -55,7 +55,7 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *lightsFile = NULL;
 
 	static       char *kwlist[] = { "context", "engine", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
-	static const char  kwlistTypes[] = "i|OiiOOO";
+	static const char  kwlistTypes[] = "lOllOOO";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &contextPtr, &engine, &isAnimation, &checkAnimated, &obFile, &geomFile, &lightsFile)))
