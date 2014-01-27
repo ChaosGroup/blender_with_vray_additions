@@ -48,17 +48,34 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	long      contextPtr    = 0;
 	long      isAnimation   = false;
 	long      checkAnimated = ANIM_CHECK_NONE;
+	long      exportNodes    = true;
+	long      exportGeometry = true;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
 	PyObject *geomFile   = NULL;
 	PyObject *lightsFile = NULL;
 
-	static       char *kwlist[] = { "context", "engine", "isAnimation", "checkAnimated", "objectFile", "geometryFile", "lightsFile", NULL };
-	static const char  kwlistTypes[] = "lOllOOO";
+	static char *kwlist[] = {
+		"context",
+		"engine",
+		"isAnimation",
+		"checkAnimated",
+		"exportNodes",
+		"exportGeometry",
+		"objectFile",
+		"geometryFile",
+		"lightsFile",
+		NULL
+	};
+
+	static const char  kwlistTypes[] = "lOllllOOO";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
-									   &contextPtr, &engine, &isAnimation, &checkAnimated, &obFile, &geomFile, &lightsFile)))
+									   &contextPtr,
+									   &engine,
+									   &isAnimation, &checkAnimated, &exportNodes, &exportGeometry,
+									   &obFile, &geomFile, &lightsFile)))
 		return NULL;
 
 	PointerRNA engineRnaPtr;
@@ -71,8 +88,10 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	settings->m_sce  = CTX_data_scene(C);
 	settings->m_main = CTX_data_main(C);
 
-	settings->m_animation     = isAnimation;
-	settings->m_checkAnimated = checkAnimated;
+	settings->m_animation      = isAnimation;
+	settings->m_checkAnimated  = checkAnimated;
+	settings->m_exportNodes    = exportNodes;
+	settings->m_exportGeometry = exportGeometry;
 
 	settings->m_fileObject = obFile;
 	settings->m_fileGeom   = geomFile;
