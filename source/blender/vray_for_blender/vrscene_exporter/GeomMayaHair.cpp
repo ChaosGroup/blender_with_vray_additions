@@ -29,15 +29,17 @@
 #include "CGR_blender_data.h"
 #include "CGR_vrscene.h"
 
+#include "BKE_material.h"
+#include "BKE_depsgraph.h"
+#include "BKE_scene.h"
+#include "MEM_guardedalloc.h"
+#include "RNA_access.h"
+
 extern "C" {
 #  include "DNA_modifier_types.h"
-#  include "BKE_depsgraph.h"
 #  include "BKE_DerivedMesh.h"
 #  include "BKE_particle.h"
-#  include "BKE_scene.h"
 #  include "BLI_math.h"
-#  include "MEM_guardedalloc.h"
-#  include "RNA_access.h"
 }
 
 
@@ -124,7 +126,7 @@ void GeomMayaHair::buildHash()
 
 Material *GeomMayaHair::getHairMaterial() const
 {
-	return NULL;
+	return give_current_material(m_ob, m_psys->part->omat);
 }
 
 
