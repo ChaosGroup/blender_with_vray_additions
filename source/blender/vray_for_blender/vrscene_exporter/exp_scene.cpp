@@ -30,7 +30,6 @@
 #include "utils/CGR_blender_data.h"
 #include "utils/CGR_json_plugins.h"
 
-#include "vrscene_api.h"
 #include "exp_scene.h"
 
 #include "PIL_time.h"
@@ -38,6 +37,7 @@
 #include "BKE_material.h"
 
 extern "C" {
+#  include "DNA_modifier_types.h"
 #  include "DNA_material_types.h"
 #  include "BKE_anim.h"
 #  include "DNA_windowmanager_types.h"
@@ -45,9 +45,6 @@ extern "C" {
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
-
-
-struct SceneStats;
 
 
 void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame)
