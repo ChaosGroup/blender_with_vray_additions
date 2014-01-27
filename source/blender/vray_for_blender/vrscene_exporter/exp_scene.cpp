@@ -277,6 +277,8 @@ void VRsceneExporter::exportScene()
 					node->init(m_settings->m_sce, m_settings->m_main, ob, dob);
 
 					WriteNode(ob, node, m_settings->m_sce->r.cfra);
+
+					// TODO: Export dupli geometry checking if its already exported
 				}
 
 				FreeDupliList(ob);
@@ -300,6 +302,10 @@ void VRsceneExporter::exportScene()
 				geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
 				if(geomStaticMesh.getHash())
 					WriteGeomStaticMesh(ob, &geomStaticMesh);
+
+				if(hasDisplace(ob)) {
+					// ...
+				}
 			}
 			else {
 				if(m_settings->m_checkAnimated == ANIM_CHECK_NONE) {
@@ -366,6 +372,36 @@ void VRsceneExporter::exportScene()
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	printf(" done [%s]\n", timeMeasureBuf);
+}
+
+
+int VRsceneExporter::hasDisplace(Object *ob)
+{
+	PointerRNA  rnaOb;
+	RNA_id_pointer_create(&ob->id, &rnaOb);
+	if(RNA_struct_find_property(&rnaOb, "vray")) {
+		PointerRNA VRayObject = RNA_pointer_get(&rnaOb, "vray");
+
+		if(RNA_struct_find_property(&VRayObject, "ntree__enum__")) {
+			int ntreePtr = RNA_enum_get(&VRayObject, "ntree__enum__");
+
+			if(ntreePtr != -1) {
+				bNodeTree *obNtree = (bNodeTree*)(intptr_t)ntreePtr;
+
+				PRINT_INFO("ob.vray.ntree = %i\n", ntreePtr);
+				PRINT_INFO("ob.vray.ntree = %i\n", ntreePtr);
+			}
+
+			// 17:19:43    lukas_t | bdancer: hmm yes, that one is slightly involved: you need to look up the driver fcurve for
+			//                     | <name> by data path "<name>__driver_storage__", then use the first variable's target ID pointer
+			// 17:20:20    lukas_t | bdancer: similar to this py code: https://www.gitorious.org/blender-trunk/pynodes_framework/sou
+			//                     | rce/396198c7b6b913f81faf07c9e18a369b4d7ed4ff:idref_driver.py#L32
+
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 
