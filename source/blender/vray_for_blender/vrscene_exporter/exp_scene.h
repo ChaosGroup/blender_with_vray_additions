@@ -105,6 +105,7 @@ private:
 	void               exportSmoke();
 	void               exportLightLinker(); // Or return 'dict' back to Python
 
+	int                hasDisplace(Object *ob);
 	int                shouldSkip(Object *ob);
 
 	void               WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame=0);
