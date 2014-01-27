@@ -25,8 +25,6 @@
 
 #include "CGR_config.h"
 
-#include <Python.h>
-
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
 #include "CGR_vray_for_blender.h"
@@ -41,6 +39,8 @@
 extern "C" {
 #  include "mathutils/mathutils.h"
 }
+
+#include <Python.h>
 
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
