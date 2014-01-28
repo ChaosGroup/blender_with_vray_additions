@@ -44,12 +44,13 @@ namespace VRayScene {
 class GeomMayaHair : public VRayExportable {
 public:
 	GeomMayaHair();
+
 	virtual        ~GeomMayaHair() { freeData(); }
+	virtual void    buildHash();
+	virtual void    write(PyObject *output, int frame=0);
 
 	void            init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);
 	void            freeData();
-
-	virtual void    buildHash();
 
 	char           *getHairVertices() const    { return hair_vertices; }
 	char           *getNumHairVertices() const { return num_hair_vertices;}

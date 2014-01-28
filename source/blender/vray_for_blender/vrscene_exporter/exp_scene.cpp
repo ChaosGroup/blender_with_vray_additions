@@ -47,152 +47,6 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
-void VRsceneExporter::WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame)
-{
-	if(m_settings->m_animation) {
-		sprintf(m_interpStart, "interpolate((%d,", frame);
-		sprintf(m_interpEnd,   "))");
-	}
-
-	// Plugin name
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\nGeomStaticMesh %s {", geomStaticMesh->getName());
-
-	// Mesh components
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(m_settings->m_fileGeom, geomStaticMesh->getVertices());
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\")%s;", m_interpEnd);
-
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tfaces=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(m_settings->m_fileGeom, geomStaticMesh->getFaces());
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\")%s;", m_interpEnd);
-
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(m_settings->m_fileGeom, geomStaticMesh->getNormals());
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\")%s;", m_interpEnd);
-
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(m_settings->m_fileGeom, geomStaticMesh->getFaceNormals());
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\")%s;", m_interpEnd);
-
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(m_settings->m_fileGeom, geomStaticMesh->getFace_mtlIDs());
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\")%s;", m_interpEnd);
-
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(m_settings->m_fileGeom, geomStaticMesh->getEdge_visibility());
-	PYTHON_PRINTF(m_settings->m_fileGeom, "\")%s;", m_interpEnd);
-
-	size_t mapChannelCount = geomStaticMesh->getMapChannelCount();
-	if(mapChannelCount) {
-		PYTHON_PRINT(m_settings->m_fileGeom, "\n\tmap_channels_names=List(");
-		for(size_t i = 0; i < mapChannelCount; ++i) {
-			const MChan *mapChannel = geomStaticMesh->getMapChannel(i);
-			if(NOT(mapChannel))
-				continue;
-
-			PYTHON_PRINTF(m_settings->m_fileGeom, "\"%s\"", mapChannel->name.c_str());
-			if(i < mapChannelCount-1)
-				PYTHON_PRINT(m_settings->m_fileGeom, ",");
-		}
-		PYTHON_PRINT(m_settings->m_fileGeom, ");");
-
-		PYTHON_PRINTF(m_settings->m_fileGeom, "\n\tmap_channels=%sList(", m_interpStart);
-		for(size_t i = 0; i < mapChannelCount; ++i) {
-			const MChan *mapChannel = geomStaticMesh->getMapChannel(i);
-			if(NOT(mapChannel))
-				continue;
-
-			PYTHON_PRINTF(m_settings->m_fileGeom, "List(%i,ListVectorHex(\"", mapChannel->index);
-			PYTHON_PRINT(m_settings->m_fileGeom, mapChannel->uv_vertices);
-			PYTHON_PRINT(m_settings->m_fileGeom, "\"),ListIntHex(\"");
-			PYTHON_PRINT(m_settings->m_fileGeom, mapChannel->uv_faces);
-			PYTHON_PRINT(m_settings->m_fileGeom, "\"))");
-
-			if(i < mapChannelCount-1)
-				PYTHON_PRINT(m_settings->m_fileGeom, ",");
-		}
-		PYTHON_PRINTF(m_settings->m_fileGeom, ")%s;", m_interpEnd);
-	}
-
-	PYTHON_PRINT(m_settings->m_fileGeom, "\n}\n");
-}
-
-
-std::string VRsceneExporter::WriteMtlMulti(Object *ob)
-{
-	if(NOT(ob->totcol))
-		return "MANOMATERIALISSET";
-
-	StringVector mtls_list;
-	StringVector ids_list;
-
-	for(int a = 1; a <= ob->totcol; ++a) {
-		Material *ma = give_current_material(ob, a);
-		if(NOT(ma))
-			continue;
-
-//		PointerRNA rna_ma;
-//		RNA_id_pointer_create(&ma->id, &rna_ma);
-//		if(RNA_struct_find_property(&rna_ma, "vray")) {
-//			PointerRNA VRayMaterial = RNA_pointer_get(&rna_ma, "vray");
-//			if(RNA_struct_find_property(&VRayMaterial, "ntree")) {
-//				int ntree_ptr = RNA_int_get(&VRayMaterial, "ntree");
-//				int ntree_eptr = RNA_enum_get(&VRayMaterial, "ntree");
-//				PRINT_INFO("Ntree %i", ntree_ptr);
-//				PRINT_INFO("Ntree_ %i", ntree_eptr);
-//			}
-//		}
-
-		char mtlName[MAX_ID_NAME];
-		BLI_strncpy(mtlName, ma->id.name, MAX_ID_NAME);
-		StripString(mtlName);
-
-		mtls_list.push_back(mtlName);
-		ids_list.push_back(boost::lexical_cast<std::string>(a));
-	}
-
-	// No need for multi-material if only one slot
-	// is used
-	//
-	if(mtls_list.size() == 1)
-		return mtls_list[0];
-
-	char obMtlName[MAX_ID_NAME];
-	BLI_strncpy(obMtlName, ob->id.name+2, MAX_ID_NAME);
-	StripString(obMtlName);
-
-	std::string plugName("MM");
-	plugName.append(obMtlName);
-
-	PYTHON_PRINTF(m_settings->m_fileObject, "\nMtlMulti %s {", plugName.c_str());
-	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tmtls_list=List(%s);", boost::algorithm::join(mtls_list, ",").c_str());
-	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tids_list=ListInt(%s);", boost::algorithm::join(ids_list, ",").c_str());
-	PYTHON_PRINT(m_settings->m_fileObject, "\n}\n");
-
-	return plugName;
-}
-
-
-void VRsceneExporter::WriteNode(Object *ob, const VRScene::Node *node, int frame)
-{
-	if(m_settings->m_animation) {
-		sprintf(m_interpStart, "interpolate((%d,", frame);
-		sprintf(m_interpEnd,   "))");
-	}
-
-	// Move to Node.{h,cpp}
-	//
-	std::string materialName = WriteMtlMulti(node->getObject());
-
-	PYTHON_PRINTF(m_settings->m_fileObject, "\nNode %s {", node->getName());
-	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tgeometry=%s;", node->getDataName());
-	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tmaterial=%s;", materialName.c_str());
-	PYTHON_PRINTF(m_settings->m_fileObject, "\n\tobjectID=%i;", node->getObjectID());
-	PYTHON_PRINTF(m_settings->m_fileObject, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, node->getTransform(), m_interpEnd);
-	PYTHON_PRINT(m_settings->m_fileObject, "\n}\n");
-}
-
-
 VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 	m_settings(settings)
 {
@@ -273,10 +127,9 @@ void VRsceneExporter::exportScene()
 				ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
 
 				for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
-					VRScene::Node *node = new VRScene::Node();
+					VRayScene::Node *node = new VRayScene::Node();
 					node->init(m_settings->m_sce, m_settings->m_main, ob, dob);
-
-					WriteNode(ob, node, m_settings->m_sce->r.cfra);
+					node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 
 					// TODO: Export dupli geometry checking if its already exported
 				}
@@ -286,10 +139,9 @@ void VRsceneExporter::exportScene()
 				// TODO: Check particle systems for 'Render Emitter' prop
 
 				if(NOT(EMPTY_TYPE(ob))) {
-					VRScene::Node *node = new VRScene::Node();
+					VRayScene::Node *node = new VRayScene::Node();
 					node->init(m_settings->m_sce, m_settings->m_main, ob, NULL);
-
-					WriteNode(ob, node, m_settings->m_sce->r.cfra);
+					node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 				}
 			}
 		} // m_exportNodes
@@ -300,19 +152,17 @@ void VRsceneExporter::exportScene()
 			if(NOT(m_settings->m_animation)) {
 				GeomStaticMesh geomStaticMesh;
 				geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
-				if(geomStaticMesh.getHash())
-					WriteGeomStaticMesh(ob, &geomStaticMesh);
-
-				if(hasDisplace(ob)) {
-					// ...
+				if(geomStaticMesh.getHash()) {
+					geomStaticMesh.write(m_settings->m_fileGeom);
 				}
 			}
 			else {
 				if(m_settings->m_checkAnimated == ANIM_CHECK_NONE) {
 					GeomStaticMesh geomStaticMesh;
 					geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
-					if(geomStaticMesh.getHash())
-						WriteGeomStaticMesh(ob, &geomStaticMesh, m_settings->m_sce->r.cfra);
+					if(geomStaticMesh.getHash()) {
+						geomStaticMesh.write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+					}
 				}
 				else if(m_settings->m_checkAnimated == ANIM_CHECK_HASH || m_settings->m_checkAnimated == ANIM_CHECK_BOTH) {
 					std::string obName(ob->id.name);
@@ -338,12 +188,12 @@ void VRsceneExporter::exportScene()
 							int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
 
 							if(cacheFrame < prevFrame) {
-								WriteGeomStaticMesh(ob, m_meshCache.getData(obName), prevFrame);
+								m_meshCache.getData(obName)->write(m_settings->m_fileGeom, prevFrame);
 							}
 						}
 
 						// Write current frame data
-						WriteGeomStaticMesh(ob, geomStaticMesh, m_settings->m_sce->r.cfra);
+						geomStaticMesh->write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 
 						// This will free previous data and store new pointer
 						m_meshCache.update(obName, curHash, m_settings->m_sce->r.cfra, geomStaticMesh);
@@ -354,7 +204,7 @@ void VRsceneExporter::exportScene()
 						GeomStaticMesh geomStaticMesh;
 						geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
 						if(geomStaticMesh.getHash()) {
-							WriteGeomStaticMesh(ob, &geomStaticMesh, m_settings->m_sce->r.cfra);
+							geomStaticMesh.write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 						}
 					}
 				} // ANIM_CHECK_SIMPLE
@@ -372,25 +222,6 @@ void VRsceneExporter::exportScene()
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	printf(" done [%s]\n", timeMeasureBuf);
-}
-
-
-int VRsceneExporter::hasDisplace(Object *ob)
-{
-	PointerRNA  rnaOb;
-	RNA_id_pointer_create(&ob->id, &rnaOb);
-	if(RNA_struct_find_property(&rnaOb, "vray")) {
-		PointerRNA VRayObject = RNA_pointer_get(&rnaOb, "vray");
-
-		// 17:19:43    lukas_t | bdancer: hmm yes, that one is slightly involved: you need to look up the driver fcurve for
-		//                     | <name> by data path "<name>__driver_storage__", then use the first variable's target ID pointer
-		// 17:20:20    lukas_t | bdancer: similar to this py code: https://www.gitorious.org/blender-trunk/pynodes_framework/sou
-		//                     | rce/396198c7b6b913f81faf07c9e18a369b4d7ed4ff:idref_driver.py#L32
-
-		return 1;
-	}
-
-	return 0;
 }
 
 

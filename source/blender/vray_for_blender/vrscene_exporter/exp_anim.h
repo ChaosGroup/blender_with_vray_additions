@@ -42,7 +42,7 @@ struct AnimationFrame {
 
     MHash    hash;
     int      frame;
-    const T* data;
+	T*       data;
 };
 
 
@@ -61,7 +61,7 @@ public:
         }
     }
 
-    void update(const std::string &name, const MHash &hash, const int &frame, const T *data) {
+	void update(const std::string &name, const MHash &hash, const int &frame, T *data) {
         if(cache.count(name))
             delete cache[name].data;
         cache[name].data  = data;
@@ -81,7 +81,7 @@ public:
 		return -1;
     }
 
-    const T* getData(const std::string &name) {
+	T* getData(const std::string &name) {
         if(cache.count(name))
             return cache[name].data;
         return NULL;

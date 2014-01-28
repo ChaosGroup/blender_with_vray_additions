@@ -124,6 +124,11 @@ void GeomMayaHair::buildHash()
 }
 
 
+void GeomMayaHair::write(PyObject *output, int frame)
+{
+}
+
+
 Material *GeomMayaHair::getHairMaterial() const
 {
 	return give_current_material(m_ob, m_psys->part->omat);
