@@ -28,7 +28,9 @@
 
 #include "RNA_access.h"
 #include "CGR_json_plugins.h"
+
 #include <string>
+#include <sstream>
 
 
 namespace RnaAccess {
@@ -37,11 +39,11 @@ class RnaValue {
 public:
 	RnaValue(ID *id, const char *rnaPointerPath, const char *pluginID=NULL);
 
-    int          GetValue(const char *propName, int   &value);
-    int          GetValue(const char *propName, bool  &value);
-    int          GetValue(const char *propName, float &value);
-    int          GetValue(const char *propName, char  *value);
-    int          GetValue(const char *propName, float  value[3]);
+	int          GetValue(const char *propName, int   &value);
+	int          GetValue(const char *propName, bool  &value);
+	int          GetValue(const char *propName, float &value);
+	int          GetValue(const char *propName, char  *value);
+	int          GetValue(const char *propName, float  value[3]);
 
 	int          getInt(const char *propName);
 	int          getEnum(const char *propName);
@@ -51,11 +53,15 @@ public:
 	void         getChar(const char *propName, char *buf);
 	std::string  getPath(const char *propName);
 
+	int          hasProperty(const char *propName);
+
+	void         writePlugin(std::stringstream &ss);
+
 private:
 	int          checkProperty(const char *propName);
 
-    std::string  m_path;
-    PointerRNA   m_pointer;
+	std::string  m_path;
+	PointerRNA   m_pointer;
 
 	boost::property_tree::ptree m_pluginDesc;
 
