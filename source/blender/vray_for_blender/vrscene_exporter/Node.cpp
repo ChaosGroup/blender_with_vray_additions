@@ -33,22 +33,26 @@
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
 
-#include <boost/lexical_cast.hpp>
-
 extern "C" {
 #  include "DNA_modifier_types.h"
-#  include "BKE_depsgraph.h"
-#  include "BKE_scene.h"
+#  include "DNA_material_types.h"
 #  include "BLI_math.h"
-#  include "MEM_guardedalloc.h"
-#  include "RNA_access.h"
-#  include "BLI_sys_types.h"
-#  include "BLI_string.h"
-#  include "BLI_path_util.h"
 }
 
+#include "BKE_depsgraph.h"
+#include "BKE_scene.h"
+#include "BKE_material.h"
+#include "MEM_guardedalloc.h"
+#include "BLI_sys_types.h"
+#include "BLI_string.h"
+#include "BLI_path_util.h"
 
-VRScene::Node::Node()
+#include <boost/lexical_cast.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/join.hpp>
+
+
+VRayScene::Node::Node()
 {
 	name.clear();
 	dataName.clear();
@@ -60,9 +64,40 @@ VRScene::Node::Node()
 }
 
 
-void VRScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
+void VRayScene::Node::buildHash()
 {
-    float tm[4][4];
+}
+
+
+void VRayScene::Node::write(PyObject *output, int frame)
+{
+	if(frame) {
+		sprintf(m_interpStart, "interpolate((%d,", frame);
+		sprintf(m_interpEnd,   "))");
+	}
+
+	std::string material = writeMtlMulti(output);
+	material = writeMtlOverride(output, material);
+	material = writeMtlWrapper(output, material);
+	material = writeMtlRenderStats(output, material);
+
+	PYTHON_PRINTF(output, "\nNode %s {", this->getName());
+	PYTHON_PRINTF(output, "\n\tobjectID=%i;", this->getObjectID());
+	PYTHON_PRINTF(output, "\n\tgeometry=%s;", this->getDataName());
+	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
+	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, this->getTransform(), m_interpEnd);
+	PYTHON_PRINT (output, "\n}\n");
+}
+
+
+void VRayScene::Node::writeGeometry(PyObject *output, int frame)
+{
+}
+
+
+void VRayScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
+{
+	float tm[4][4];
 
 	object = ob;
 	dupliObject = dOb;
@@ -76,31 +111,32 @@ void VRScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
 
 	GetTransformHex(tm, transform);
 
-    objectID = object->index;
+	objectID = object->index;
+
+	initOverride();
 
 	initName();
-	// initWrappers();
 }
 
 
-void VRScene::Node::freeData()
+void VRayScene::Node::freeData()
 {
 }
 
 
-char* VRScene::Node::getTransform() const
+char* VRayScene::Node::getTransform() const
 {
-    return const_cast<char*>(transform);
+	return const_cast<char*>(transform);
 }
 
 
-int VRScene::Node::getObjectID() const
+int VRayScene::Node::getObjectID() const
 {
 	return objectID;
 }
 
 
-void VRScene::Node::initName()
+void VRayScene::Node::initName()
 {
 	char obName[MAX_ID_NAME] = "";
 
@@ -153,29 +189,138 @@ void VRScene::Node::initName()
 }
 
 
-void VRScene::Node::initWrappers()
+void VRayScene::Node::initOverride()
 {
-    boost::property_tree::ptree mtlRenderStatsTree;
+	RnaAccess::RnaValue rna((ID*)object->data, "vray");
 
-    ReadPluginDesc("MtlRenderStats", mtlRenderStatsTree);
+	if(NOT(rna.getBool("override")))
+		useGeomOverride = eOverideNode;
+	else {
+		int overrideType = rna.getEnum("override_type");
 
-    RnaAccess::RnaValue rnaValueAccess(&object->id, "vray.MtlRenderStats");
+		if(overrideType == 0)
+			useGeomOverride = eOverideProxy;
+		else
+			useGeomOverride = eOveridePlane;
+	}
+}
 
-    BOOST_FOREACH(boost::property_tree::ptree::value_type &v, mtlRenderStatsTree.get_child("Parameters")) {
-        std::string attrName = v.second.get_child("attr").data();
-        std::string attrType = v.second.get_child("type").data();
 
-        std::cout << "Name: " << attrName << std::endl;
-        std::cout << "  Type: " << attrType << std::endl;
+std::string VRayScene::Node::writeGeomMeshFile(PyObject *output)
+{
+	RnaAccess::RnaValue rna((ID*)object->data, "vray.GeomMeshFile");
 
-        if(attrType == "BOOL") {
-            bool defaultValue = v.second.get<bool>("default");
+	std::string pluginName = "GeomMeshFile";
 
-            bool value;
-            rnaValueAccess.GetValue(attrName.c_str(), value);
+	PYTHON_PRINTF(output, "\nGeomMeshFile %s {", pluginName.c_str());
+	PYTHON_PRINTF(output, "\n\tfile=\"%s\";", rna.getPath("file").c_str());
+	PYTHON_PRINTF(output, "\n\tanim_type=%i;", rna.getEnum("anim_type"));
+	PYTHON_PRINTF(output, "\n\tanim_speed=%.3f;", rna.getFloat("anim_speed"));
+	PYTHON_PRINTF(output, "\n\tanim_offset=%.3f;", rna.getFloat("anim_offset"));
+	PYTHON_PRINT (output, "\n}\n");
 
-            std::cout << "  Default: " << defaultValue << std::endl;
-            std::cout << "  Value: "   << value << std::endl;
-        }
-    }
+	return pluginName;
+}
+
+
+std::string VRayScene::Node::writeMtlMulti(PyObject *output)
+{
+	if(NOT(object->totcol))
+		return "MANOMATERIALISSET";
+
+	StringVector mtls_list;
+	StringVector ids_list;
+
+	for(int a = 1; a <= object->totcol; ++a) {
+		Material *ma = give_current_material(object, a);
+		if(NOT(ma))
+			continue;
+
+		char mtlName[MAX_ID_NAME];
+		BLI_strncpy(mtlName, ma->id.name, MAX_ID_NAME);
+		StripString(mtlName);
+
+		mtls_list.push_back(mtlName);
+		ids_list.push_back(boost::lexical_cast<std::string>(a));
+	}
+
+	// No need for multi-material if only one slot
+	// is used
+	//
+	if(mtls_list.size() == 1)
+		return mtls_list[0];
+
+	char obMtlName[MAX_ID_NAME];
+	BLI_strncpy(obMtlName, object->id.name+2, MAX_ID_NAME);
+	StripString(obMtlName);
+
+	std::string plugName("MM");
+	plugName.append(obMtlName);
+
+	PYTHON_PRINTF(output, "\nMtlMulti %s {", plugName.c_str());
+	PYTHON_PRINTF(output, "\n\tmtls_list=List(%s);",   boost::algorithm::join(mtls_list, ",").c_str());
+	PYTHON_PRINTF(output, "\n\tids_list=ListInt(%s);", boost::algorithm::join(ids_list, ",").c_str());
+	PYTHON_PRINT (output, "\n}\n");
+
+	return plugName;
+}
+
+
+std::string VRayScene::Node::writeMtlWrapper(PyObject *output, const std::string &baseMtl)
+{
+	RnaAccess::RnaValue rna(&object->id, "vray.MtlWrapper", "MtlWrapper");
+	if(NOT(rna.getBool("use")))
+		return baseMtl;
+
+	std::string pluginName = "MtlWrapper" + baseMtl;
+
+	std::stringstream ss;
+	ss << "\n" << "MtlWrapper" << " " << pluginName << " {";
+	ss << "\n\t" << "base_material=" << baseMtl << ";";
+	rna.writePlugin(ss);
+	ss << "\n}\n";
+
+	PYTHON_PRINT(output, ss.str().c_str());
+
+	return pluginName;
+}
+
+
+std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::string &baseMtl)
+{
+	RnaAccess::RnaValue rna(&object->id, "vray.MtlOverride", "MtlOverride");
+	if(NOT(rna.getBool("use")))
+		return baseMtl;
+
+	std::string pluginName = "MtlOverride" + baseMtl;
+
+	std::stringstream ss;
+	ss << "\n" << "MtlOverride" << " " << pluginName << " {";
+	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
+	rna.writePlugin(ss);
+	ss << "\n}\n";
+
+	PYTHON_PRINT(output, ss.str().c_str());
+
+	return pluginName;
+}
+
+
+std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::string &baseMtl)
+{
+	RnaAccess::RnaValue rna(&object->id, "vray.MtlRenderStats", "MtlRenderStats");
+	if(NOT(rna.getBool("use")))
+		return baseMtl;
+
+	std::string pluginName = "MtlRenderStats" + baseMtl;
+
+	std::stringstream ss;
+	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
+	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
+	rna.writePlugin(ss);
+	ss << "\n}\n";
+
+	PYTHON_PRINT(output, ss.str().c_str());
+
+	return pluginName;
 }

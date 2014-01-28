@@ -26,11 +26,19 @@
 #ifndef CGR_EXP_TYPES_H
 #define CGR_EXP_TYPES_H
 
+#include "exp_defines.h"
 #include "murmur3.h"
+
 #include <string>
+#include <vector>
+#include <Python.h>
 
 
 namespace VRayScene {
+
+
+typedef std::vector<std::string> StringVector;
+
 
 class VRayExportable {
 public:
@@ -40,10 +48,16 @@ public:
 	const char   *getName() const { return name.c_str(); }
 
 	virtual void  buildHash()=0;
+	virtual void  write(PyObject *output, int frame=0)=0;
 
 protected:
 	std::string   name;
 	MHash         hash;
+
+	char          m_interpStart[32];
+	char          m_interpEnd[3];
+
+	PYTHON_PRINT_BUF;
 
 };
 
