@@ -47,8 +47,7 @@
 using namespace VRayScene;
 
 
-typedef AnimationCache<VRayScene::Node>  NodesCache;
-typedef AnimationCache<GeomStaticMesh>   MeshesCache;
+typedef AnimationCache<VRayExportable>  ExportCache;
 
 
 struct ExpoterSettings {
@@ -95,18 +94,16 @@ public:
 	~VRsceneExporter();
 
 	void               exportScene();
-	void               exportNodes();
-	void               exportGeometry();
 
 private:
-	void               exportGeomStaticMesh();
-	void               exportGeomMayaHair();
-	void               exportSmoke();
-	void               exportLightLinker(); // Or return 'dict' back to Python
+	void               exportObjectBase(Object *ob);
+	void               exportObject(Object *ob, DupliObject *dOb=NULL);
 
-	int                shouldSkip(Object *ob);
+	int                isSmokeDomain(Object *ob);
+	int                doRenderEmitter(Object *ob);
 
-	MeshesCache        m_meshCache;
+	ExportCache        m_nodeCache;
+	ExportCache        m_meshCache;
 	EvaluationContext  m_eval_ctx;
 
 	ExpoterSettings   *m_settings;
