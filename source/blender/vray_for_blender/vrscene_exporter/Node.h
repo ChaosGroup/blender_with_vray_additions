@@ -55,13 +55,14 @@ enum GeomOverride {
 
 class Node : public VRayExportable {
 public:
-	Node();
+	Node(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
+
 	virtual      ~Node() { freeData(); }
 	virtual void  buildHash();
 	virtual void  write(PyObject *output, int frame=0);
 	void          writeGeometry(PyObject *output, int frame=0);
 
-	void          init(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
+	void          init();
 	void          freeData();
 
 	const char   *getName() const     { return name.c_str(); }
@@ -75,6 +76,8 @@ public:
 private:
 	void          initName();
 	void          initOverride();
+	void          initTransform();
+	void          initProperties();
 
 	std::string   writeGeomStaticMesh(PyObject *output);
 	std::string   writeGeomDisplacedMesh(PyObject *output, const std::string &meshName);
@@ -92,6 +95,8 @@ private:
 	std::string   dataName;
 	MHash         hash;
 
+	Scene        *m_sce;
+	Main         *m_main;
 	Object       *object;
 	DupliObject  *dupliObject;
 
