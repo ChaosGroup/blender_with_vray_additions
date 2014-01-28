@@ -46,6 +46,7 @@ extern "C" {
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
 	long      contextPtr    = 0;
+	long      scenePtr      = 0;
 	long      isAnimation   = false;
 	long      checkAnimated = ANIM_CHECK_NONE;
 	long      exportNodes    = true;
@@ -57,8 +58,9 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *lightsFile = NULL;
 
 	static char *kwlist[] = {
-		"context",
 		"engine",
+		"context",
+		"scene",
 		"isAnimation",
 		"checkAnimated",
 		"exportNodes",
@@ -69,11 +71,12 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		NULL
 	};
 
-	static const char  kwlistTypes[] = "lOllllOOO";
+	static const char  kwlistTypes[] = "OllllllOOO";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
-									   &contextPtr,
 									   &engine,
+									   &contextPtr,
+									   &scenePtr,
 									   &isAnimation, &checkAnimated, &exportNodes, &exportGeometry,
 									   &obFile, &geomFile, &lightsFile)))
 		return NULL;
@@ -84,8 +87,10 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 	bContext *C = (bContext*)(intptr_t)contextPtr;
 
+	Scene *sce = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
+
 	ExpoterSettings *settings = new ExpoterSettings(renderEngine);
-	settings->m_sce  = CTX_data_scene(C);
+	settings->m_sce  = sce;
 	settings->m_main = CTX_data_main(C);
 
 	settings->m_animation      = isAnimation;
