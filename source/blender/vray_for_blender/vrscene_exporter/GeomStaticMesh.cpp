@@ -30,13 +30,16 @@
 #include "CGR_blender_data.h"
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
+#include "CGR_rna.h"
 
 extern "C" {
 #  include "BLI_math.h"
 #  include "DNA_meshdata_types.h"
+#  include "DNA_material_types.h"
 }
 
 #include "BKE_mesh.h"
+#include "BKE_material.h"
 #include "BKE_customdata.h"
 #include "MEM_guardedalloc.h"
 #include "BLI_sys_types.h"
@@ -116,6 +119,14 @@ GeomStaticMesh::GeomStaticMesh()
 	osd_subdiv_level = 0;
 	osd_subdiv_type = 0;
 	osd_subdiv_uvs = 0;
+
+	useDisplace = false;
+	useSmooth   = false;
+
+	displaceTextureName = "";
+
+	sprintf(m_interpStart, "%s", "");
+	sprintf(m_interpEnd,   "%s", "");
 }
 
 
@@ -140,6 +151,9 @@ void GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 
 	initName();
 	buildHash();
+
+	initDisplace();
+	initSmooth();
 }
 
 
@@ -199,6 +213,51 @@ void GeomStaticMesh::initName()
 		name.append("LI");
 		name.append(libFilename);
 	}
+}
+
+
+void GeomStaticMesh::initDisplace()
+{
+	for(int a = 1; a <= object->totcol; ++a) {
+		Material *ma = give_current_material(object, a);
+		if(NOT(ma))
+			continue;
+
+		for(int t = 0; t < MAX_MTEX; ++t) {
+			if(ma->mtex[t] && ma->mtex[t]->tex) {
+				Tex *tex = ma->mtex[t]->tex;
+
+				PointerRNA texRNA;
+				RNA_id_pointer_create(&tex->id, &texRNA);
+				if(RNA_struct_find_property(&texRNA, "vray_slot")) {
+					PointerRNA VRayTextureSlot = RNA_pointer_get(&texRNA, "vray_slot");
+					if(RNA_struct_find_property(&VRayTextureSlot, "map_displacement")) {
+						int mapDisplacement = RNA_boolean_get(&VRayTextureSlot, "map_displacement");
+
+						if(mapDisplacement) {
+							useDisplace = true;
+							displaceTextureName = tex->id.name; // XXX: texture blend?
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void GeomStaticMesh::initSmooth()
+{
+	// vray.GeomStaticSmoothedMesh.use
+
+	PointerRNA obRNA;
+	RNA_id_pointer_create(&object->id, &obRNA);
+
+	PointerRNA VRayObject             = RNA_pointer_get(&obRNA, "vray");
+	PointerRNA GeomStaticSmoothedMesh = RNA_pointer_get(&VRayObject, "GeomStaticSmoothedMesh");
+
+	useSmooth = RNA_boolean_get(&GeomStaticSmoothedMesh, "use");
 }
 
 
@@ -473,4 +532,75 @@ void GeomStaticMesh::buildHash()
 #else
 	hash = HashCode(vertices);
 #endif
+}
+
+
+void GeomStaticMesh::write(PyObject *output, int frame)
+{
+	if(frame) {
+		sprintf(m_interpStart, "interpolate((%d,", frame);
+		sprintf(m_interpEnd,   "))");
+	}
+
+	// Plugin name
+	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", this->getName());
+
+	// Mesh components
+	PYTHON_PRINTF(output, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
+	PYTHON_PRINT(output, this->getVertices());
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\tfaces=%sListIntHex(\"", m_interpStart);
+	PYTHON_PRINT(output, this->getFaces());
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
+	PYTHON_PRINT(output, this->getNormals());
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
+	PYTHON_PRINT(output, this->getFaceNormals());
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
+	PYTHON_PRINT(output, this->getFace_mtlIDs());
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
+	PYTHON_PRINT(output, this->getEdge_visibility());
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	size_t mapChannelCount = this->getMapChannelCount();
+	if(mapChannelCount) {
+		PYTHON_PRINT(output, "\n\tmap_channels_names=List(");
+		for(size_t i = 0; i < mapChannelCount; ++i) {
+			const MChan *mapChannel = this->getMapChannel(i);
+			if(NOT(mapChannel))
+				continue;
+
+			PYTHON_PRINTF(output, "\"%s\"", mapChannel->name.c_str());
+			if(i < mapChannelCount-1)
+				PYTHON_PRINT(output, ",");
+		}
+		PYTHON_PRINT(output, ");");
+
+		PYTHON_PRINTF(output, "\n\tmap_channels=%sList(", m_interpStart);
+		for(size_t i = 0; i < mapChannelCount; ++i) {
+			const MChan *mapChannel = this->getMapChannel(i);
+			if(NOT(mapChannel))
+				continue;
+
+			PYTHON_PRINTF(output, "List(%i,ListVectorHex(\"", mapChannel->index);
+			PYTHON_PRINT(output, mapChannel->uv_vertices);
+			PYTHON_PRINT(output, "\"),ListIntHex(\"");
+			PYTHON_PRINT(output, mapChannel->uv_faces);
+			PYTHON_PRINT(output, "\"))");
+
+			if(i < mapChannelCount-1)
+				PYTHON_PRINT(output, ",");
+		}
+		PYTHON_PRINTF(output, ")%s;", m_interpEnd);
+	}
+
+	PYTHON_PRINT(output, "\n}\n");
 }

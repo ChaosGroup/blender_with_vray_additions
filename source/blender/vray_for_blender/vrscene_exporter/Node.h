@@ -28,10 +28,13 @@
 
 extern "C" {
 #  include "DNA_mesh_types.h"
-#  include "DNA_scene_types.h"
-#  include "DNA_object_types.h"
-#  include "BKE_main.h"
 }
+
+#include "BKE_main.h"
+#include "DNA_object_types.h"
+#include "DNA_scene_types.h"
+
+#include "exp_types.h"
 
 #include "utils/CGR_vrscene.h"
 #include "utils/murmur3.h"
@@ -40,36 +43,69 @@ extern "C" {
 #include <vector>
 
 
-namespace VRScene {
+namespace VRayScene {
 
-struct Node {
-    Node();
-    ~Node() { freeData(); }
 
-    void          init(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
-    void          freeData();
+enum GeomOverride {
+	eOverideNode,
+	eOverideProxy,
+	eOveridePlane
+};
 
-	const char*   getName() const     { return name.c_str(); }
-	const char*   getDataName() const { return dataName.c_str(); }
+
+class Node : public VRayExportable {
+public:
+	Node();
+	virtual      ~Node() { freeData(); }
+	virtual void  buildHash();
+	virtual void  write(PyObject *output, int frame=0);
+	void          writeGeometry(PyObject *output, int frame=0);
+
+	void          init(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
+	void          freeData();
+
+	const char   *getName() const     { return name.c_str(); }
+	const char   *getDataName() const { return dataName.c_str(); }
 	MHash         getHash() const     { return hash; }
 	Object       *getObject() const   { return object; }
 
-    char*         getTransform() const;
-    int           getObjectID() const;
+	char         *getTransform() const;
+	int           getObjectID() const;
 
 private:
 	void          initName();
-    void          initWrappers();
+	void          initOverride();
+
+	std::string   writeGeomStaticMesh(PyObject *output);
+	std::string   writeGeomDisplacedMesh(PyObject *output, const std::string &meshName);
+	std::string   writeGeomStaticSmoothedMesh(PyObject *output, const std::string &meshName);
+
+	std::string   writeGeomMeshFile(PyObject *output);
+	std::string   writeGeomPlane(PyObject *output);
+
+	std::string   writeMtlMulti(PyObject *output);
+	std::string   writeMtlWrapper(PyObject *output, const std::string &baseMtl);
+	std::string   writeMtlOverride(PyObject *output, const std::string &baseMtl);
+	std::string   writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 
 	std::string   name;
 	std::string   dataName;
-    MHash         hash;
+	MHash         hash;
 
-    Object       *object;
+	Object       *object;
 	DupliObject  *dupliObject;
 
-    int           objectID;
-    char          transform[TRANSFORM_HEX_SIZE];
+	// Node properties
+	int           objectID;
+	char          transform[TRANSFORM_HEX_SIZE];
+	std::string   material;
+
+	// Additional properties
+	GeomOverride  useGeomOverride;
+
+	int           useMtlWrapper;
+	int           useMtlOverride;
+	int           useMtlRenderStats;
 
 };
 

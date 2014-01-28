@@ -61,12 +61,13 @@ typedef std::vector<MChan*> MChans;
 class GeomStaticMesh : public VRayExportable {
 public:
     GeomStaticMesh();
+
 	virtual      ~GeomStaticMesh() { freeData(); }
+	virtual void  buildHash();
+	virtual void  write(PyObject *output, int frame=0);
 
     void          init(Scene *sce, Main *main, Object *ob);
     void          freeData();
-
-	virtual void  buildHash();
 
     char*         getVertices() const        { return vertices; }
     char*         getFaces() const           { return faces;}
@@ -79,11 +80,18 @@ public:
     const MChan*  getMapChannel(const size_t i) const;
 
 private:
+	void          writeGeomDisplacedMesh();
+
+	int           hasDisplace();
+
     void          initVertices();
     void          initFaces();
     void          initMapChannels();
 
 	void          initName();
+
+	void          initDisplace();
+	void          initSmooth();
 
     Mesh         *mesh;
     Object       *object;
@@ -101,6 +109,7 @@ private:
 
     MChans        map_channels;
 
+	// GeomStaticMesh properties
     int           dynamic_geometry;
     int           environment_geometry;
 
@@ -109,6 +118,14 @@ private:
     int           osd_subdiv_uvs;
 
     float         weld_threshold;
+
+	// Options
+	int           useDisplace;
+	int           useDisplaceOverride;
+	std::string   displaceTextureName;
+
+	int           useSmooth;
+
 };
 
 }

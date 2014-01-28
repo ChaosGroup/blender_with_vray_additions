@@ -47,9 +47,8 @@
 using namespace VRayScene;
 
 
-typedef std::vector<std::string>       StringVector;
-typedef AnimationCache<VRScene::Node>  NodesCache;
-typedef AnimationCache<GeomStaticMesh> MeshesCache;
+typedef AnimationCache<VRayScene::Node>  NodesCache;
+typedef AnimationCache<GeomStaticMesh>   MeshesCache;
 
 
 struct ExpoterSettings {
@@ -105,12 +104,7 @@ private:
 	void               exportSmoke();
 	void               exportLightLinker(); // Or return 'dict' back to Python
 
-	int                hasDisplace(Object *ob);
 	int                shouldSkip(Object *ob);
-
-	void               WriteGeomStaticMesh(Object *ob, const GeomStaticMesh *geomStaticMesh, int frame=0);
-	void               WriteNode(Object *ob, const VRScene::Node *node, int frame=0);
-	std::string        WriteMtlMulti(Object *ob);
 
 	MeshesCache        m_meshCache;
 	EvaluationContext  m_eval_ctx;
