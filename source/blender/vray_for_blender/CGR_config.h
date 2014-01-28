@@ -38,6 +38,7 @@
 
 // For int types on POSIX systems
 #include <stdlib.h>
+#include <stdio.h>
 
 #define CGR_PLUGIN_NAME V-Ray For Blender
 
