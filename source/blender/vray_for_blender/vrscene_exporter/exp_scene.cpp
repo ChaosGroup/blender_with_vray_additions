@@ -37,6 +37,7 @@
 #include "BKE_material.h"
 
 extern "C" {
+#  include "DNA_particle_types.h"
 #  include "DNA_modifier_types.h"
 #  include "DNA_material_types.h"
 #  include "BKE_anim.h"
@@ -114,109 +115,63 @@ void VRsceneExporter::exportScene()
 			if(NOT(ob->lay & m_settings->m_sce->lay))
 				continue;
 
-		if(shouldSkip(ob))
+		// Smoke domain will be exported when exporting Effects
+		//
+		if(isSmokeDomain(ob))
 			continue;
 
-		// Export objects
-		//
-		if(m_settings->m_exportNodes) {
-			if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
-				// Free duplilist if there is some for some reason
-				FreeDupliList(ob);
-
-				ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
-
-				for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
-					VRayScene::Node *node = new VRayScene::Node();
-					node->init(m_settings->m_sce, m_settings->m_main, ob, dob);
-					node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
-
-					// TODO: Export dupli geometry checking if its already exported
-				}
-
-				FreeDupliList(ob);
-
-				// TODO: Check particle systems for 'Render Emitter' prop
-
-				if(NOT(EMPTY_TYPE(ob))) {
-					VRayScene::Node *node = new VRayScene::Node();
-					node->init(m_settings->m_sce, m_settings->m_main, ob, NULL);
-					node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
-				}
+		if(NOT(m_settings->m_animation)) {
+			exportObjectBase(ob);
+		}
+		else {
+			if(m_settings->m_checkAnimated == ANIM_CHECK_NONE) {
+				exportObjectBase(ob);
 			}
-		} // m_exportNodes
-
-		// Export geometry
-		//
-		if(m_settings->m_exportGeometry) {
-			if(NOT(m_settings->m_animation)) {
-				GeomStaticMesh geomStaticMesh;
-				geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
-				if(geomStaticMesh.getHash()) {
-					geomStaticMesh.write(m_settings->m_fileGeom);
-				}
+			else if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE) {
+				if(IsMeshAnimated(ob))
+					exportObjectBase(ob);
 			}
-			else {
-				if(m_settings->m_checkAnimated == ANIM_CHECK_NONE) {
-					GeomStaticMesh geomStaticMesh;
-					geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
-					if(geomStaticMesh.getHash()) {
-						geomStaticMesh.write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-					}
-				}
-				else if(m_settings->m_checkAnimated == ANIM_CHECK_HASH || m_settings->m_checkAnimated == ANIM_CHECK_BOTH) {
-					std::string obName(ob->id.name);
+			else if(m_settings->m_checkAnimated == ANIM_CHECK_HASH || m_settings->m_checkAnimated == ANIM_CHECK_BOTH) {
+				if(m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
+					if(NOT(IsMeshAnimated(ob)))
+						continue;
 
-					if(m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
-						if(NOT(IsMeshAnimated(ob)))
-							continue;
+				std::string obName(ob->id.name);
 
-					GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
-					geomStaticMesh->init(m_settings->m_sce, m_settings->m_main, ob);
+				GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
+				geomStaticMesh->init(m_settings->m_sce, m_settings->m_main, ob);
 
-					MHash curHash  = geomStaticMesh->getHash();
-					MHash prevHash = m_meshCache.getHash(obName);
+				MHash curHash  = geomStaticMesh->getHash();
+				MHash prevHash = m_meshCache.getHash(obName);
 
-					// TODO: add to cache for new pipeline
+				if(NOT(curHash == prevHash)) {
+					// Write previous frame if hash is more then 'frame_step' back.
+					// If 'prevHash' is 0 then previous call was for the first frame
+					// and no need to reexport.
 					//
-					if(NOT(curHash == prevHash)) {
-						// Write previous frame if hash is more then 'frame_step' back
-						// If 'prevHash' is 0 than previous call was for the first frame
-						// and no need to export
-						if(prevHash) {
-							int cacheFrame = m_meshCache.getFrame(obName);
-							int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
+					if(prevHash) {
+						int cacheFrame = m_meshCache.getFrame(obName);
+						int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
 
-							if(cacheFrame < prevFrame) {
-								m_meshCache.getData(obName)->write(m_settings->m_fileGeom, prevFrame);
-							}
-						}
-
-						// Write current frame data
-						geomStaticMesh->write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-
-						// This will free previous data and store new pointer
-						m_meshCache.update(obName, curHash, m_settings->m_sce->r.cfra, geomStaticMesh);
+						if(cacheFrame < prevFrame)
+							m_meshCache.getData(obName)->write(m_settings->m_fileGeom, prevFrame);
 					}
+
+					// Write current frame data
+					geomStaticMesh->write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+
+					// This will free previous data and store new pointer
+					m_meshCache.update(obName, curHash, m_settings->m_sce->r.cfra, geomStaticMesh);
 				}
-				else if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE) {
-					if(IsMeshAnimated(ob)) {
-						GeomStaticMesh geomStaticMesh;
-						geomStaticMesh.init(m_settings->m_sce, m_settings->m_main, ob);
-						if(geomStaticMesh.getHash()) {
-							geomStaticMesh.write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-						}
-					}
-				} // ANIM_CHECK_SIMPLE
-			} // animated
-		} // m_exportGeometry
+			}
+		}
 
 		expProgress += expProgStep;
 		nObjects++;
 		if((nObjects % 1000) == 0) {
 			m_settings->m_engine.update_progress(expProgress);
 		}
-	} // while(base)
+	}
 
 	m_settings->m_engine.update_progress(1.0f);
 
@@ -225,16 +180,66 @@ void VRsceneExporter::exportScene()
 }
 
 
-int VRsceneExporter::shouldSkip(Object *ob)
+void VRsceneExporter::exportObjectBase(Object *ob)
 {
-	// We should skip smoke domain object
+	if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
+		FreeDupliList(ob); // Free duplilist if there is some for some reason
+
+		ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
+
+		for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next)
+			exportObject(ob, dob);
+
+		FreeDupliList(ob);
+
+		if(NOT(EMPTY_TYPE(ob))) {
+			if(NOT(doRenderEmitter(ob)))
+				return;
+
+			exportObject(ob);
+		}
+	}
+}
+
+
+void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
+{
+	// TODO: Cache nodes (?)
 	//
+
+	VRayScene::Node node(m_settings->m_sce, m_settings->m_main, ob, dOb);
+
+	if(m_settings->m_exportNodes) {
+		node.init();
+		node.write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+	}
+
+	if(m_settings->m_exportGeometry)
+		node.writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+}
+
+
+int VRsceneExporter::isSmokeDomain(Object *ob)
+{
 	ModifierData *mod = (ModifierData*)ob->modifiers.first;
 	while(mod) {
 		if(mod->type == eModifierType_Smoke)
 			return 1;
 		mod = mod->next;
 	}
-
 	return 0;
+}
+
+
+int VRsceneExporter::doRenderEmitter(Object *ob)
+{
+	if(ob->particlesystem.first) {
+		int show_emitter = 0;
+		for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next)
+			show_emitter += psys->part->draw & PART_DRAW_EMITTER;
+		/* if no psys has "show emitter" selected don't render emitter */
+		if (show_emitter == 0)
+			return 0;
+	}
+	return 1;
 }

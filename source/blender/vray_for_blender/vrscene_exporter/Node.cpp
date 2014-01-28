@@ -33,6 +33,8 @@
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
 
+#include "GeomStaticMesh.h"
+
 extern "C" {
 #  include "DNA_modifier_types.h"
 #  include "DNA_material_types.h"
@@ -52,15 +54,18 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
-VRayScene::Node::Node()
+VRayScene::Node::Node(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
 {
 	name.clear();
 	dataName.clear();
 
 	hash = 0;
 
-	object      = NULL;
-	dupliObject = NULL;
+	m_sce       = sce;
+	m_main      = main;
+
+	dupliObject = dOb;
+	object      = dupliObject ? dupliObject->ob : ob;
 }
 
 
@@ -92,30 +97,23 @@ void VRayScene::Node::write(PyObject *output, int frame)
 
 void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 {
+	GeomStaticMesh geomStaticMesh;
+	geomStaticMesh.init(m_sce, m_main, object);
+	if(geomStaticMesh.getHash()) {
+		geomStaticMesh.write(output);
+	}
 }
 
 
-void VRayScene::Node::init(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
+void VRayScene::Node::init()
 {
-	float tm[4][4];
-
-	object = ob;
-	dupliObject = dOb;
-
-	if(dupliObject) {
-		object = dupliObject->ob;
-		copy_m4_m4(tm, dupliObject->mat);
-	}
-	else
-		copy_m4_m4(tm, object->obmat);
-
-	GetTransformHex(tm, transform);
-
-	objectID = object->index;
-
 	initOverride();
+	initTransform();
+	initProperties();
 
 	initName();
+
+	buildHash();
 }
 
 
@@ -203,6 +201,25 @@ void VRayScene::Node::initOverride()
 		else
 			useGeomOverride = eOveridePlane;
 	}
+}
+
+
+void VRayScene::Node::initTransform()
+{
+	float tm[4][4];
+
+	if(dupliObject)
+		copy_m4_m4(tm, dupliObject->mat);
+	else
+		copy_m4_m4(tm, object->obmat);
+
+	GetTransformHex(tm, transform);
+}
+
+
+void VRayScene::Node::initProperties()
+{
+	objectID = object->index;
 }
 
 
