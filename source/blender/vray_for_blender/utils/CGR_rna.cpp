@@ -26,7 +26,8 @@
 #include "CGR_config.h"
 #include "CGR_rna.h"
 
-#include <stdio.h>
+#include "DNA_ID.h"
+#include "BLI_path_util.h"
 
 #include <string>
 #include <vector>
@@ -41,7 +42,7 @@ using namespace RnaAccess;
 typedef std::vector<std::string> PathRNA;
 
 
-RnaValue::RnaValue(ID *id, const char *rnaPointerPath)
+RnaValue::RnaValue(ID *id, const char *rnaPointerPath, const char *pluginID)
 {
     m_path = rnaPointerPath;
 
@@ -60,10 +61,13 @@ RnaValue::RnaValue(ID *id, const char *rnaPointerPath)
         }
         m_pointer = RNA_pointer_get(&m_pointer, rnaPath[t].c_str());
     }
+
+	if(pluginID)
+		ReadPluginDesc(pluginID, m_pluginDesc);
 }
 
 
-int RnaValue::CheckProperty(const char *propName)
+int RnaValue::checkProperty(const char *propName)
 {
     if(m_pointer.data == NULL) {
         PRINT_ERROR("Property pointer not found!");
@@ -81,7 +85,7 @@ int RnaValue::CheckProperty(const char *propName)
 
 int RnaValue::GetValue(const char *propName, int &value)
 {
-    if(CheckProperty(propName)) {
+	if(checkProperty(propName)) {
         return 1;
     }
 
@@ -97,7 +101,7 @@ int RnaValue::GetValue(const char *propName, int &value)
 
 int RnaValue::GetValue(const char *propName, bool &value)
 {
-    if(CheckProperty(propName)) {
+	if(checkProperty(propName)) {
         return 1;
     }
 
@@ -113,7 +117,7 @@ int RnaValue::GetValue(const char *propName, bool &value)
 
 int RnaValue::GetValue(const char *propName, float &value)
 {
-    if(CheckProperty(propName)) {
+	if(checkProperty(propName)) {
         return 1;
     }
 
@@ -132,7 +136,7 @@ int RnaValue::GetValue(const char *propName, float &value)
 //
 int RnaValue::GetValue(const char *propName, char *value)
 {
-    if(CheckProperty(propName)) {
+	if(checkProperty(propName)) {
         return 1;
     }
 
@@ -148,11 +152,78 @@ int RnaValue::GetValue(const char *propName, char *value)
 
 int RnaValue::GetValue(const char *propName, float value[])
 {
-    if(CheckProperty(propName)) {
+	if(checkProperty(propName)) {
         return 1;
     }
 
     RNA_float_get_array(&m_pointer, propName, value);
 
-    return 0;
+	return 0;
+}
+
+
+int RnaValue::getInt(const char *propName)
+{
+	if(checkProperty(propName))
+		return 0;
+	return RNA_int_get(&m_pointer, propName);
+}
+
+
+int RnaValue::getEnum(const char *propName)
+{
+	if(checkProperty(propName))
+		return 0;
+	return RNA_enum_get(&m_pointer, propName);
+}
+
+
+float RnaValue::getFloat(const char *propName)
+{
+	if(checkProperty(propName))
+		return 0.0f;
+	return RNA_float_get(&m_pointer, propName);
+}
+
+
+int RnaValue::getBool(const char *propName)
+{
+	if(checkProperty(propName))
+		return 0;
+	return RNA_boolean_get(&m_pointer, propName);
+}
+
+
+std::string RnaValue::getString(const char *propName)
+{
+	if(checkProperty(propName))
+		return "";
+
+	char value[MAX_ID_NAME];
+	RNA_string_get(&m_pointer, propName, value);
+
+	return std::string(value);
+}
+
+void RnaValue::getChar(const char *propName, char *buf)
+{
+	if(checkProperty(propName))
+		return;
+	RNA_string_get(&m_pointer, propName, buf);
+}
+
+
+std::string RnaValue::getPath(const char *propName)
+{
+	if(checkProperty(propName))
+		return "";
+
+	char resultPath[FILE_MAX] = "";
+	char buf[FILE_MAX] = "";
+
+	RNA_string_get(&m_pointer, propName, buf);
+
+	BLI_path_abs(resultPath, buf);
+
+	return std::string(resultPath);
 }
