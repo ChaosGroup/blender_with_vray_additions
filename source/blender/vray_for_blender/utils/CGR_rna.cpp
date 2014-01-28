@@ -67,16 +67,85 @@ RnaValue::RnaValue(ID *id, const char *rnaPointerPath, const char *pluginID)
 }
 
 
+int RnaValue::hasProperty(const char *propName)
+{
+	if(RNA_struct_find_property(&m_pointer, propName))
+		return 1;
+	return 0;
+}
+
+
+// TODO: Error checking
+//q
+void RnaValue::writePlugin(std::stringstream &ss)
+{
+	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, m_pluginDesc.get_child("Parameters")) {
+		std::string attrName = v.second.get_child("attr").data();
+		std::string attrType = v.second.get_child("type").data();
+
+		if(v.second.count("skip"))
+			if(v.second.get<bool>("skip"))
+				continue;
+
+		if(hasProperty(attrName.c_str())) {
+			if(attrType == "LIST"      ||
+			   attrType == "COLOR"     ||
+			   attrType == "VECTOR"    ||
+			   attrType == "TRANSFORM")
+				continue;
+
+			if(attrType == "STRING") {
+				std::string str = getString(attrName.c_str());
+				if(str.empty())
+					continue;
+
+				if(v.second.count("subtype")) {
+					std::string subType = v.second.get_child("subtype").data();
+					if(subType == "FILE_PATH" || subType == "DIR_PATH") {
+						str = getPath(attrName.c_str());
+					}
+				}
+
+				ss << "\"" << str << "\"";
+			}
+			else {
+				ss << "\n\t" << attrName << "=";
+
+				std::cout << attrName << ":" << attrType << std::endl;
+
+				if(attrType == "BOOL") {
+					ss << getBool(attrName.c_str());
+				}
+				else if(attrType == "INT") {
+					ss << getInt(attrName.c_str());
+				}
+				else if(attrType == "FLOAT") {
+					ss << std::setprecision(3) << getFloat(attrName.c_str());
+				}
+				else if(attrType == "MATERIAL") {
+					ss << "MA" << getString(attrName.c_str());
+				}
+				else if(attrType == "TEXTURE") {
+					ss << "TE" << getString(attrName.c_str());
+				}
+
+				ss << ";";
+			}
+		}
+	}
+}
+
+
 int RnaValue::checkProperty(const char *propName)
 {
     if(m_pointer.data == NULL) {
-        PRINT_ERROR("Property pointer not found!");
-        return 1;
+		PRINT_ERROR("Property pointer not found!");
+		return 1;
     }
 
     if(NOT(RNA_struct_find_property(&m_pointer, propName))) {
-        PRINT_ERROR("Property "COLOR_YELLOW"%s"COLOR_DEFAULT" not found!", propName);
-        return 2;
+		// PRINT_ERROR("Property "COLOR_YELLOW"%s"COLOR_DEFAULT" not found!", propName);
+		return 1;
     }
 
     return 0;
