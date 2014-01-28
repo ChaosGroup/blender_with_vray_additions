@@ -58,27 +58,33 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *lightsFile = NULL;
 
 	static char *kwlist[] = {
-		"engine",
-		"context",
-		"isAnimation",
-		"checkAnimated",
-		"exportNodes",
-		"exportGeometry",
-		"objectFile",
-		"geometryFile",
-		"lightsFile",
-		"scene",
+		"engine",         // 0
+		"context",        // 1
+		"isAnimation",    // 2
+		"checkAnimated",  // 3
+		"exportNodes",    // 4
+		"exportGeometry", // 5
+		"objectFile",     // 6
+		"geometryFile",   // 7
+		"lightsFile",     // 8
+		"scene",          // 9
 		NULL
 	};
 
+	//                                  012345678 9
 	static const char  kwlistTypes[] = "OlllllOOO|l";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
 									   &contextPtr,
-									   &scenePtr,
-									   &isAnimation, &checkAnimated, &exportNodes, &exportGeometry,
-									   &obFile, &geomFile, &lightsFile)))
+									   &isAnimation,
+									   &checkAnimated,
+									   &exportNodes,
+									   &exportGeometry,
+									   &obFile,
+									   &geomFile,
+									   &lightsFile,
+									   &scenePtr)))
 		return NULL;
 
 	PointerRNA engineRnaPtr;
