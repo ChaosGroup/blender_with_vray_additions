@@ -60,7 +60,6 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	static char *kwlist[] = {
 		"engine",
 		"context",
-		"scene",
 		"isAnimation",
 		"checkAnimated",
 		"exportNodes",
@@ -68,10 +67,11 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		"objectFile",
 		"geometryFile",
 		"lightsFile",
+		"scene",
 		NULL
 	};
 
-	static const char  kwlistTypes[] = "OllllllOOO";
+	static const char  kwlistTypes[] = "OlllllOOO|l";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
