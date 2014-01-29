@@ -184,13 +184,13 @@ static PyObject* mExportSmoke(PyObject *self, PyObject *args)
 
 static PyObject* mExportHair(PyObject *self, PyObject *args)
 {
-	int         contextPtr;
-	int         objectPtr;
-	int         psysPtr;
+	long        contextPtr;
+	long        objectPtr;
+	long        psysPtr;
 	const char *pluginName;
 	PyObject   *fileObject;
 
-	if(NOT(PyArg_ParseTuple(args, "iiisO", &contextPtr, &objectPtr, &psysPtr, &pluginName, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "lllsO", &contextPtr, &objectPtr, &psysPtr, &pluginName, &fileObject))) {
 		return NULL;
 	}
 
@@ -201,9 +201,15 @@ static PyObject* mExportHair(PyObject *self, PyObject *args)
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
 
+#if 0
+	if(write_GeomMayaHairInterpolate(fileObject, sce, main, ob, psys, pluginName)) {
+		return NULL;
+	}
+#else
 	if(write_GeomMayaHair(fileObject, sce, main, ob, psys, pluginName)) {
 		return NULL;
 	}
+#endif
 
 	Py_RETURN_NONE;
 }

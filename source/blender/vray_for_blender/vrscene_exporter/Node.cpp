@@ -34,6 +34,9 @@
 #include "CGR_vrscene.h"
 
 #include "GeomStaticMesh.h"
+#include "GeomMayaHair.h"
+#include "GeomMeshFile.h"
+#include "GeomPlane.h"
 
 extern "C" {
 #  include "DNA_modifier_types.h"
@@ -56,69 +59,33 @@ extern "C" {
 
 VRayScene::Node::Node(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
 {
-	name.clear();
-	dataName.clear();
-
-	hash = 0;
-
 	m_sce       = sce;
 	m_main      = main;
 
 	dupliObject = dOb;
 	object      = dupliObject ? dupliObject->ob : ob;
-}
 
-
-void VRayScene::Node::buildHash()
-{
-}
-
-
-void VRayScene::Node::write(PyObject *output, int frame)
-{
-	if(frame) {
-		sprintf(m_interpStart, "interpolate((%d,", frame);
-		sprintf(m_interpEnd,   "))");
-	}
-
-	std::string material = writeMtlMulti(output);
-	material = writeMtlOverride(output, material);
-	material = writeMtlWrapper(output, material);
-	material = writeMtlRenderStats(output, material);
-
-	PYTHON_PRINTF(output, "\nNode %s {", this->getName());
-	PYTHON_PRINTF(output, "\n\tobjectID=%i;", this->getObjectID());
-	PYTHON_PRINTF(output, "\n\tgeometry=%s;", this->getDataName());
-	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
-	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, this->getTransform(), m_interpEnd);
-	PYTHON_PRINT (output, "\n}\n");
-}
-
-
-void VRayScene::Node::writeGeometry(PyObject *output, int frame)
-{
-	GeomStaticMesh geomStaticMesh;
-	geomStaticMesh.init(m_sce, m_main, object);
-	if(geomStaticMesh.getHash()) {
-		geomStaticMesh.write(output);
-	}
+	geometry = NULL;
 }
 
 
 void VRayScene::Node::init()
 {
-	initOverride();
+	initGeometry();
 	initTransform();
 	initProperties();
 
 	initName();
-
-	buildHash();
+	initHash();
 }
 
 
 void VRayScene::Node::freeData()
 {
+	if(geometry) {
+		delete geometry;
+		geometry = NULL;
+	}
 }
 
 
@@ -134,72 +101,66 @@ int VRayScene::Node::getObjectID() const
 }
 
 
-void VRayScene::Node::initName()
+void VRayScene::Node::initName(const std::string &name)
 {
-	char obName[MAX_ID_NAME] = "";
-
-	// Get object name with 'OB' prefix (+2)
-	//
-	BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
-	StripString(obName);
-
-	// Construct object (Node) name
-	//
-	name.clear();
-	name.append("OB");
-	name.append(obName);
-
-	if(dupliObject) {
-		name.append(boost::lexical_cast<std::string>(dupliObject->persistent_id[0]));
+	if(NOT(name.empty())) {
+		m_name = name;
 	}
+	else {
+		char obName[MAX_ID_NAME] = "";
 
-	// Check if object is linked
-	if(object->id.lib) {
-		char libFilename[FILE_MAX] = "";
+		// Get object name with 'OB' prefix (+2)
+		//
+		BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
+		StripString(obName);
 
-		BLI_split_file_part(object->id.lib->name+2, libFilename, FILE_MAX);
-		BLI_replace_extension(libFilename, FILE_MAX, "");
+		// Construct object (Node) name
+		//
+		m_name.clear();
+		m_name.append("OB");
+		m_name.append(obName);
 
-		StripString(libFilename);
+		if(dupliObject) {
+			m_name.append(boost::lexical_cast<std::string>(dupliObject->persistent_id[0]));
+		}
 
-		name.append("LI");
-		name.append(libFilename);
-	}
+		// Check if object is linked
+		if(object->id.lib) {
+			char libFilename[FILE_MAX] = "";
 
-	// Construct data (geometry) name
-	//
-	dataName.clear();
-	dataName.append("ME");
-	dataName.append(obName);
+			BLI_split_file_part(object->id.lib->name+2, libFilename, FILE_MAX);
+			BLI_replace_extension(libFilename, FILE_MAX, "");
 
-	// Check if object's data is linked
-	const ID *dataID = (ID*)object->data;
-	if(dataID->lib) {
-		char libFilename[FILE_MAX] = "";
-		BLI_split_file_part(dataID->lib->name+2, libFilename, FILE_MAX);
-		BLI_replace_extension(libFilename, FILE_MAX, "");
+			StripString(libFilename);
 
-		StripString(libFilename);
-
-		dataName.append("LI");
-		dataName.append(libFilename);
+			m_name.append("LI");
+			m_name.append(libFilename);
+		}
 	}
 }
 
 
-void VRayScene::Node::initOverride()
+void VRayScene::Node::initGeometry()
 {
 	RnaAccess::RnaValue rna((ID*)object->data, "vray");
 
-	if(NOT(rna.getBool("override")))
-		useGeomOverride = eOverideNode;
-	else {
-		int overrideType = rna.getEnum("override_type");
+	if(NOT(rna.getBool("override"))) {
+		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
+		geomStaticMesh->init(m_sce, m_main, object);
 
-		if(overrideType == 0)
-			useGeomOverride = eOverideProxy;
-		else
-			useGeomOverride = eOveridePlane;
+		geometry = geomStaticMesh;
+	}
+	else {
+		if(rna.getEnum("override_type")) {
+			GeomPlane *geomPlane = new GeomPlane();
+			geomPlane->init();
+			geometry = geomPlane;
+		}
+		else {
+			GeomMeshFile *geomMeshFile = new GeomMeshFile();
+			geomMeshFile->init(m_sce, m_main, object);
+			geometry = geomMeshFile;
+		}
 	}
 }
 
@@ -223,20 +184,9 @@ void VRayScene::Node::initProperties()
 }
 
 
-std::string VRayScene::Node::writeGeomMeshFile(PyObject *output)
+void VRayScene::Node::initHash()
 {
-	RnaAccess::RnaValue rna((ID*)object->data, "vray.GeomMeshFile");
-
-	std::string pluginName = "GeomMeshFile";
-
-	PYTHON_PRINTF(output, "\nGeomMeshFile %s {", pluginName.c_str());
-	PYTHON_PRINTF(output, "\n\tfile=\"%s\";", rna.getPath("file").c_str());
-	PYTHON_PRINTF(output, "\n\tanim_type=%i;", rna.getEnum("anim_type"));
-	PYTHON_PRINTF(output, "\n\tanim_speed=%.3f;", rna.getFloat("anim_speed"));
-	PYTHON_PRINTF(output, "\n\tanim_offset=%.3f;", rna.getFloat("anim_offset"));
-	PYTHON_PRINT (output, "\n}\n");
-
-	return pluginName;
+	m_hash = 1;
 }
 
 
@@ -340,4 +290,31 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 	PYTHON_PRINT(output, ss.str().c_str());
 
 	return pluginName;
+}
+
+
+void VRayScene::Node::write(PyObject *output, int frame)
+{
+	if(frame) {
+		sprintf(m_interpStart, "interpolate((%d,", frame);
+		sprintf(m_interpEnd,   "))");
+	}
+
+	std::string material = writeMtlMulti(output);
+	material = writeMtlOverride(output, material);
+	material = writeMtlWrapper(output, material);
+	material = writeMtlRenderStats(output, material);
+
+	PYTHON_PRINTF(output, "\nNode %s {", this->getName());
+	PYTHON_PRINTF(output, "\n\tobjectID=%i;", this->getObjectID());
+	PYTHON_PRINTF(output, "\n\tgeometry=%s;", this->getDataName());
+	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
+	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, this->getTransform(), m_interpEnd);
+	PYTHON_PRINT (output, "\n}\n");
+}
+
+
+void VRayScene::Node::writeGeometry(PyObject *output, int frame)
+{
+	geometry->write(output, frame);
 }

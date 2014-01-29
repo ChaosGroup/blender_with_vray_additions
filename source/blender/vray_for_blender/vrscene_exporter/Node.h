@@ -47,7 +47,7 @@ namespace VRayScene {
 
 
 enum GeomOverride {
-	eOverideNode,
+	eOverideNone,
 	eOverideProxy,
 	eOveridePlane
 };
@@ -58,42 +58,35 @@ public:
 	Node(Scene *sce, Main *main, Object *ob, DupliObject *dOb=NULL);
 
 	virtual      ~Node() { freeData(); }
-	virtual void  buildHash();
+	virtual void  initHash();
+	virtual void  initName(const std::string &name="");
 	virtual void  write(PyObject *output, int frame=0);
 
 	void          init();
 	void          freeData();
 	void          writeGeometry(PyObject *output, int frame=0);
 
-	const char   *getName() const     { return name.c_str(); }
-	const char   *getDataName() const { return dataName.c_str(); }
-	MHash         getHash() const     { return hash; }
+	MHash         getGeometryHash();
+	const char   *getDataName() const { return geometry->getName(); }
 	Object       *getObject() const   { return object; }
 
 	char         *getTransform() const;
 	int           getObjectID() const;
 
 private:
-	void          initName();
-	void          initOverride();
+	void          initGeometry();
 	void          initTransform();
 	void          initProperties();
 
-	std::string   writeGeomStaticMesh(PyObject *output);
 	std::string   writeGeomDisplacedMesh(PyObject *output, const std::string &meshName);
 	std::string   writeGeomStaticSmoothedMesh(PyObject *output, const std::string &meshName);
-
-	std::string   writeGeomMeshFile(PyObject *output);
-	std::string   writeGeomPlane(PyObject *output);
 
 	std::string   writeMtlMulti(PyObject *output);
 	std::string   writeMtlWrapper(PyObject *output, const std::string &baseMtl);
 	std::string   writeMtlOverride(PyObject *output, const std::string &baseMtl);
 	std::string   writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 
-	std::string   name;
 	std::string   dataName;
-	MHash         hash;
 
 	Scene        *m_sce;
 	Main         *m_main;
@@ -106,7 +99,7 @@ private:
 	std::string   material;
 
 	// Additional properties
-	GeomOverride  useGeomOverride;
+	VRayExportable *geometry;
 
 	int           useMtlWrapper;
 	int           useMtlOverride;

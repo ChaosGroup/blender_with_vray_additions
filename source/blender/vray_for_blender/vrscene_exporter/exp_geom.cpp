@@ -45,95 +45,26 @@ static void WritePythonAttribute(PyObject *outputFile, PyObject *propGroup, cons
 	attrValue = PyNumber_Long(attr);
 
 	if(attrValue) {
-        PYTHON_PRINTF(outputFile, "\n\t%s=%li;", attrName, PyLong_AsLong(attrValue));
+		PYTHON_PRINTF(outputFile, "\n\t%s=%li;", attrName, PyLong_AsLong(attrValue));
 	}
 }
 
 
 void write_Mesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup)
 {
-    PYTHON_PRINT_BUF;
+	GeomStaticMesh geomStaticMesh;
+	geomStaticMesh.init(sce, main, ob);
+	geomStaticMesh.initName(pluginName);
 
-    char interpStart[64] = "";
-    char interpEnd[3] = "";
+	if(NOT(geomStaticMesh.getHash()))
+		return;
 
-    GeomStaticMesh geomStaticMesh;
-    geomStaticMesh.init(sce, main, ob);
+	geomStaticMesh.write(outputFile, sce->r.cfra);
 
-    if(NOT(geomStaticMesh.getHash()))
-        return;
+//	// Custom attibutes
+//	if(propGroup) {
+//		WritePythonAttribute(outputFile, propGroup, "dynamic_geometry");
+//		WritePythonAttribute(outputFile, propGroup, "osd_subdiv_level");
+//	}
 
-    int useAnimation = false;
-    if(useAnimation) {
-        sprintf(interpStart, "interpolate((%d,", sce->r.cfra);
-        sprintf(interpEnd, "))");
-    }
-
-    // Plugin name
-    PYTHON_PRINTF(outputFile, "\nGeomStaticMesh %s {", pluginName);
-
-    // Mesh components
-    PYTHON_PRINTF(outputFile, "\n\tvertices=%sListVectorHex(\"", interpStart);
-    PYTHON_PRINT(outputFile, geomStaticMesh.getVertices());
-    PYTHON_PRINTF(outputFile, "\")%s;", interpEnd);
-
-    PYTHON_PRINTF(outputFile, "\n\tfaces=%sListIntHex(\"", interpStart);
-    PYTHON_PRINT(outputFile, geomStaticMesh.getFaces());
-    PYTHON_PRINTF(outputFile, "\")%s;", interpEnd);
-
-    PYTHON_PRINTF(outputFile, "\n\tnormals=%sListVectorHex(\"", interpStart);
-    PYTHON_PRINT(outputFile, geomStaticMesh.getNormals());
-    PYTHON_PRINTF(outputFile, "\")%s;", interpEnd);
-
-    PYTHON_PRINTF(outputFile, "\n\tfaceNormals=%sListIntHex(\"", interpStart);
-    PYTHON_PRINT(outputFile, geomStaticMesh.getFaceNormals());
-    PYTHON_PRINTF(outputFile, "\")%s;", interpEnd);
-
-    PYTHON_PRINTF(outputFile, "\n\tface_mtlIDs=%sListIntHex(\"", interpStart);
-    PYTHON_PRINT(outputFile, geomStaticMesh.getFace_mtlIDs());
-    PYTHON_PRINTF(outputFile, "\")%s;", interpEnd);
-
-    PYTHON_PRINTF(outputFile, "\n\tedge_visibility=%sListIntHex(\"", interpStart);
-    PYTHON_PRINT(outputFile, geomStaticMesh.getEdge_visibility());
-    PYTHON_PRINTF(outputFile, "\")%s;", interpEnd);
-
-    size_t mapChannelCount = geomStaticMesh.getMapChannelCount();
-    if(mapChannelCount) {
-        PYTHON_PRINTF(outputFile, "\n\tmap_channels_names=List(");
-        for(size_t i = 0; i < mapChannelCount; ++i) {
-            const MChan *mapChannel = geomStaticMesh.getMapChannel(i);
-            if(NOT(mapChannel))
-                continue;
-
-            PYTHON_PRINTF(outputFile, "\"%s\"", mapChannel->name.c_str());
-            if(i < mapChannelCount-1)
-                PYTHON_PRINT(outputFile, ",");
-        }
-        PYTHON_PRINTF(outputFile, ");");
-
-        PYTHON_PRINTF(outputFile, "\n\tmap_channels=%sList(", interpStart);
-        for(size_t i = 0; i < mapChannelCount; ++i) {
-            const MChan *mapChannel = geomStaticMesh.getMapChannel(i);
-            if(NOT(mapChannel))
-                continue;
-
-            PYTHON_PRINTF(outputFile, "List(%i,ListVectorHex(\"", mapChannel->index);
-            PYTHON_PRINT(outputFile, mapChannel->uv_vertices);
-            PYTHON_PRINT(outputFile, "\"),ListIntHex(\"");
-            PYTHON_PRINT(outputFile, mapChannel->uv_faces);
-            PYTHON_PRINT(outputFile, "\"))");
-
-            if(i < mapChannelCount-1)
-                PYTHON_PRINT(outputFile, ",");
-        }
-        PYTHON_PRINTF(outputFile, ");");
-    }
-
-    // Custom attibutes
-    if(propGroup) {
-        WritePythonAttribute(outputFile, propGroup, "dynamic_geometry");
-        WritePythonAttribute(outputFile, propGroup, "osd_subdiv_level");
-    }
-
-    PYTHON_PRINT(outputFile, "\n}\n");
 }

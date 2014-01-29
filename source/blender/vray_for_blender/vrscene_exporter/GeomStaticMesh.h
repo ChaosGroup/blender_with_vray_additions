@@ -43,16 +43,16 @@ namespace VRayScene {
 
 class MChan {
 public:
-    MChan();
-    ~MChan() { freeData(); }
+	MChan();
+	~MChan() { freeData(); }
 
-    void         freeData();
+	void         freeData();
 
-    std::string  name;
-    int          index;
-    int          cloned;
-    char        *uv_vertices;
-    char        *uv_faces;
+	std::string  name;
+	int          index;
+	int          cloned;
+	char        *uv_vertices;
+	char        *uv_faces;
 };
 
 typedef std::vector<MChan*> MChans;
@@ -60,64 +60,63 @@ typedef std::vector<MChan*> MChans;
 
 class GeomStaticMesh : public VRayExportable {
 public:
-    GeomStaticMesh();
+	GeomStaticMesh();
 
 	virtual      ~GeomStaticMesh() { freeData(); }
-	virtual void  buildHash();
+	virtual void  initHash();
+	virtual void  initName(const std::string &name="");
 	virtual void  write(PyObject *output, int frame=0);
 
-    void          init(Scene *sce, Main *main, Object *ob);
-    void          freeData();
+	int           init(Scene *sce, Main *main, Object *ob);
+	void          freeData();
 
-    char*         getVertices() const        { return vertices; }
-    char*         getFaces() const           { return faces;}
-    char*         getNormals() const         { return normals; }
-    char*         getFaceNormals() const     { return faceNormals; }
-    char*         getFace_mtlIDs() const     { return face_mtlIDs; }
-    char*         getEdge_visibility() const { return edge_visibility; }
+	char*         getVertices() const        { return vertices; }
+	char*         getFaces() const           { return faces;}
+	char*         getNormals() const         { return normals; }
+	char*         getFaceNormals() const     { return faceNormals; }
+	char*         getFace_mtlIDs() const     { return face_mtlIDs; }
+	char*         getEdge_visibility() const { return edge_visibility; }
 
-    size_t        getMapChannelCount() const { return map_channels.size(); }
-    const MChan*  getMapChannel(const size_t i) const;
+	size_t        getMapChannelCount() const { return map_channels.size(); }
+	const MChan*  getMapChannel(const size_t i) const;
+
+	// GeomStaticMesh properties
+	int           dynamic_geometry;
+	int           environment_geometry;
+
+	int           osd_subdiv_level;
+	int           osd_subdiv_type;
+	int           osd_subdiv_uvs;
+
+	float         weld_threshold;
 
 private:
 	void          writeGeomDisplacedMesh();
 
 	int           hasDisplace();
 
-    void          initVertices();
-    void          initFaces();
-    void          initMapChannels();
-
-	void          initName();
+	void          initVertices();
+	void          initFaces();
+	void          initMapChannels();
 
 	void          initDisplace();
 	void          initSmooth();
 
-    Mesh         *mesh;
-    Object       *object;
+	Mesh         *mesh;
+	Object       *object;
 
-    char         *vertices;
-    size_t        coordIndex;
+	char         *vertices;
+	size_t        coordIndex;
 
-    char         *faces;
-    size_t        vertIndex;
+	char         *faces;
+	size_t        vertIndex;
 
-    char         *normals;
-    char         *faceNormals;
-    char         *face_mtlIDs;
-    char         *edge_visibility;
+	char         *normals;
+	char         *faceNormals;
+	char         *face_mtlIDs;
+	char         *edge_visibility;
 
-    MChans        map_channels;
-
-	// GeomStaticMesh properties
-    int           dynamic_geometry;
-    int           environment_geometry;
-
-    int           osd_subdiv_level;
-    int           osd_subdiv_type;
-    int           osd_subdiv_uvs;
-
-    float         weld_threshold;
+	MChans        map_channels;
 
 	// Options
 	int           useDisplace;

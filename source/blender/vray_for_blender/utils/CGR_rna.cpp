@@ -28,6 +28,8 @@
 
 #include "DNA_ID.h"
 #include "BLI_path_util.h"
+#include "BKE_global.h"
+#include "BKE_main.h"
 
 #include <string>
 #include <vector>
@@ -287,12 +289,11 @@ std::string RnaValue::getPath(const char *propName)
 	if(checkProperty(propName))
 		return "";
 
-	char resultPath[FILE_MAX] = "";
-	char buf[FILE_MAX] = "";
+	char filepath[FILE_MAX] = "";
 
-	RNA_string_get(&m_pointer, propName, buf);
+	RNA_string_get(&m_pointer, propName, filepath);
 
-	BLI_path_abs(resultPath, buf);
+	BLI_path_abs(filepath, G.main->name);
 
-	return std::string(resultPath);
+	return std::string(filepath);
 }
