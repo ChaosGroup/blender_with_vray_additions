@@ -50,16 +50,6 @@ extern "C" {
 using namespace VRayScene;
 
 
-BLI_INLINE MHash HashCode(const char* s)
-{
-	int h = 0;
-	while (*s) {
-		h = 31*h + (*s++);
-	}
-	return h;
-}
-
-
 BLI_INLINE int AddEdgeVisibility(int k, int *evArray, int &evIndex, int &ev)
 {
 	if(k == 9) {
@@ -97,9 +87,6 @@ void MChan::freeData()
 
 GeomStaticMesh::GeomStaticMesh()
 {
-	name = "";
-	hash = 0;
-
 	mesh = NULL;
 	object = NULL;
 
@@ -116,6 +103,7 @@ GeomStaticMesh::GeomStaticMesh()
 
 	map_channels.clear();
 
+	dynamic_geometry = 0;
 	osd_subdiv_level = 0;
 	osd_subdiv_type = 0;
 	osd_subdiv_uvs = 0;
@@ -124,23 +112,20 @@ GeomStaticMesh::GeomStaticMesh()
 	useSmooth   = false;
 
 	displaceTextureName = "";
-
-	sprintf(m_interpStart, "%s", "");
-	sprintf(m_interpEnd,   "%s", "");
 }
 
 
-void GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
+int GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 {
 	object = ob;
 
 	mesh = GetRenderMesh(sce, main, ob);
 	if(NOT(mesh))
-		return;
+		return 2;
 
 	if(NOT(mesh->totface)) {
 		FreeRenderMesh(main, mesh);
-		return;
+		return 1;
 	}
 
 	initVertices();
@@ -150,10 +135,14 @@ void GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 	FreeRenderMesh(main, mesh);
 
 	initName();
-	buildHash();
+	initHash();
 
+#if 0
 	initDisplace();
 	initSmooth();
+#endif
+
+	return 0;
 }
 
 
@@ -190,28 +179,33 @@ void GeomStaticMesh::freeData()
 }
 
 
-void GeomStaticMesh::initName()
+void GeomStaticMesh::initName(const std::string &name)
 {
-	char obName[MAX_ID_NAME] = "";
+	if(NOT(name.empty())) {
+		m_name = name;
+	}
+	else {
+		char obName[MAX_ID_NAME] = "";
 
-	BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
-	StripString(obName);
+		BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
+		StripString(obName);
 
-	name.clear();
-	name.append("ME");
-	name.append(obName);
+		m_name.clear();
+		m_name.append("ME");
+		m_name.append(obName);
 
-	const ID *dataID = (ID*)object->data;
-	if(dataID->lib) {
-		char libFilename[FILE_MAX] = "";
+		const ID *dataID = (ID*)object->data;
+		if(dataID->lib) {
+			char libFilename[FILE_MAX] = "";
 
-		BLI_split_file_part(dataID->lib->name+2, libFilename, FILE_MAX);
-		BLI_replace_extension(libFilename, FILE_MAX, "");
+			BLI_split_file_part(dataID->lib->name+2, libFilename, FILE_MAX);
+			BLI_replace_extension(libFilename, FILE_MAX, "");
 
-		StripString(libFilename);
+			StripString(libFilename);
 
-		name.append("LI");
-		name.append(libFilename);
+			m_name.append("LI");
+			m_name.append(libFilename);
+		}
 	}
 }
 
@@ -519,7 +513,7 @@ void GeomStaticMesh::initMapChannels()
 }
 
 
-void GeomStaticMesh::buildHash()
+void GeomStaticMesh::initHash()
 {
 #if 0
 	u_int32_t vertexHash[4];
@@ -530,7 +524,7 @@ void GeomStaticMesh::buildHash()
 
 	PRINT_INFO("Object: %s => hash = 0x%X", object->id.name+2, hash);
 #else
-	hash = HashCode(vertices);
+	m_hash = HashCode(vertices);
 #endif
 }
 
@@ -601,6 +595,12 @@ void GeomStaticMesh::write(PyObject *output, int frame)
 		}
 		PYTHON_PRINTF(output, ")%s;", m_interpEnd);
 	}
+
+	PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
+	PYTHON_PRINTF(output, "\n\tosd_subdiv_level=%i;", osd_subdiv_level);
+	PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);
+	PYTHON_PRINTF(output, "\n\tosd_subdiv_uvs=%i;",   osd_subdiv_uvs);
+	PYTHON_PRINTF(output, "\n\tweld_threshold=%.3f;", weld_threshold);
 
 	PYTHON_PRINT(output, "\n}\n");
 }

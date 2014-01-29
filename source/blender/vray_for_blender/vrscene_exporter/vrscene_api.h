@@ -53,6 +53,7 @@ extern "C" {
 
 void  ExportScene(FILE *file, Scene *sce, Main *main);
 
+int   write_GeomMayaHairInterpolate(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
 int   write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
 
 void  write_Mesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup);
@@ -87,4 +88,3 @@ void  write_Node(PyObject *outputFile, Scene *sce, Object *ob, const char *plugi
 #endif
 
 #endif // VRSCENE_H
-

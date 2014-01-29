@@ -23,55 +23,25 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_EXP_TYPES_H
-#define CGR_EXP_TYPES_H
+#ifndef GEOM_PLANE_H
+#define GEOM_PLANE_H
 
-#include "exp_defines.h"
-#include "murmur3.h"
-
-#include <string>
-#include <vector>
-#include <set>
-
-#include <Python.h>
+#include "exp_types.h"
 
 
 namespace VRayScene {
 
-
-typedef std::vector<std::string> StringVector;
-typedef std::set<std::string>    StrSet;
-
-class VRayExportable {
+class GeomPlane : public VRayExportable {
 public:
-	VRayExportable() {
-		m_name = "";
-		m_hash = 0;
+	virtual      ~GeomPlane() {}
+	virtual void  initHash();
+	virtual void  initName(const std::string &name="");
+	virtual void  write(PyObject *output, int frame=0);
 
-		sprintf(m_interpStart, "%s", "");
-		sprintf(m_interpEnd,   "%s", "");
-	}
-
-	virtual      ~VRayExportable() {}
-
-	MHash         getHash() const { return m_hash; }
-	const char   *getName() const { return m_name.c_str(); }
-
-	virtual void  initHash()=0;
-	virtual void  initName(const std::string &name="")=0;
-	virtual void  write(PyObject *output, int frame=0)=0;
-
-protected:
-	std::string   m_name;
-	MHash         m_hash;
-
-	char          m_interpStart[32];
-	char          m_interpEnd[3];
-
-	PYTHON_PRINT_BUF;
+	void          init();
 
 };
 
 }
 
-#endif // CGR_EXP_TYPES_H
+#endif // GEOM_PLANE_H
