@@ -60,10 +60,10 @@ public:
 	virtual      ~Node() { freeData(); }
 	virtual void  buildHash();
 	virtual void  write(PyObject *output, int frame=0);
-	void          writeGeometry(PyObject *output, int frame=0);
 
 	void          init();
 	void          freeData();
+	void          writeGeometry(PyObject *output, int frame=0);
 
 	const char   *getName() const     { return name.c_str(); }
 	const char   *getDataName() const { return dataName.c_str(); }
