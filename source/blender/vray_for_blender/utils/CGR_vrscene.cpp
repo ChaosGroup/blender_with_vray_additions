@@ -165,3 +165,13 @@ void GetTransformHex(float m[4][4], char *buf)
     const u_int8_t *tm8 = (const u_int8_t*)&tm;
     getStringHex(tm8, sizeof(tm), buf);
 }
+
+
+MHash HashCode(const char *s)
+{
+	int h = 0;
+	while (*s) {
+		h = 31*h + (*s++);
+	}
+	return h;
+}

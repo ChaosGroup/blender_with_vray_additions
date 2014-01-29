@@ -26,14 +26,17 @@
 #include "CGR_config.h"
 
 #include "GeomMayaHair.h"
+
 #include "CGR_blender_data.h"
 #include "CGR_vrscene.h"
+#include "CGR_string.h"
 
 #include "BKE_material.h"
 #include "BKE_depsgraph.h"
 #include "BKE_scene.h"
 #include "MEM_guardedalloc.h"
 #include "RNA_access.h"
+#include "BLI_string.h"
 
 extern "C" {
 #  include "DNA_modifier_types.h"
@@ -81,7 +84,7 @@ BLI_INLINE void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, 
 
 GeomMayaHair::GeomMayaHair()
 {
-	hash = 0;
+	m_hash = 0;
 
 	use_width_fade = 0;
 
@@ -119,13 +122,31 @@ void GeomMayaHair::freeData()
 }
 
 
-void GeomMayaHair::buildHash()
+void GeomMayaHair::initHash()
 {
+	m_hash = HashCode(hair_vertices);
 }
 
 
-void GeomMayaHair::write(PyObject *output, int frame)
+void GeomMayaHair::initName(const std::string &name)
 {
+	if(NOT(name.empty())) {
+		m_name = name;
+	}
+	else {
+		char nameBuf[MAX_ID_NAME] = "";
+
+		m_name.clear();
+		m_name.append("HAIR");
+
+		BLI_strncpy(nameBuf, m_psys->name, MAX_ID_NAME);
+		StripString(nameBuf);
+		m_name.append(nameBuf);
+
+		BLI_strncpy(nameBuf, m_psys->part->id.name, MAX_ID_NAME);
+		StripString(nameBuf);
+		m_name.append(nameBuf);
+	}
 }
 
 
@@ -145,7 +166,7 @@ void GeomMayaHair::init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys
 	initData();
 	initAttributes();
 
-	buildHash();
+	initHash();
 }
 
 
@@ -422,7 +443,41 @@ void GeomMayaHair::initData()
 
 void GeomMayaHair::initAttributes()
 {
-	opacity = 1.0;
-
+	opacity      = 1.0;
 	geom_splines = (m_psys->part->flag & PART_HAIR_BSPLINE);
+}
+
+
+void GeomMayaHair::write(PyObject *output, int frame)
+{
+	if(frame) {
+		sprintf(m_interpStart, "interpolate((%d,", frame);
+		sprintf(m_interpEnd,   "))");
+	}
+
+	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", this->getName());
+
+	PYTHON_PRINTF(output, "\n\tnum_hair_vertices=%sListIntHex(\"", m_interpStart);
+	PYTHON_PRINT(output, num_hair_vertices);
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\thair_vertices=%sListVectorHex(\"", m_interpStart);
+	PYTHON_PRINT(output, hair_vertices);
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	if(strand_uvw) {
+		PYTHON_PRINTF(output, "\n\tstrand_uvw=%sListVectorHex(\"", m_interpStart);
+		PYTHON_PRINT(output, strand_uvw);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	}
+
+	PYTHON_PRINTF(output, "\n\twidths=%sListFloatHex(\"", m_interpStart);
+	PYTHON_PRINT(output, widths);
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	PYTHON_PRINTF(output, "\n\topacity=%.3f;", opacity);
+	PYTHON_PRINTF(output, "\n\tgeom_splines=%i;", geom_splines);
+	PYTHON_PRINTF(output, "\n\tgeom_tesselation_mult=%.3f;",  geom_tesselation_mult);
+
+	PYTHON_PRINT(output, "\n}\n");
 }

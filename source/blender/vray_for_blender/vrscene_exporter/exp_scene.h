@@ -47,7 +47,7 @@
 using namespace VRayScene;
 
 
-typedef AnimationCache<VRayExportable>  ExportCache;
+typedef AnimationCache<VRayScene::Node>  NodesCache;
 
 
 struct ExpoterSettings {
@@ -102,8 +102,7 @@ private:
 	int                isSmokeDomain(Object *ob);
 	int                doRenderEmitter(Object *ob);
 
-	ExportCache        m_nodeCache;
-	ExportCache        m_meshCache;
+	NodesCache         m_nodeCache;
 	EvaluationContext  m_eval_ctx;
 
 	ExpoterSettings   *m_settings;

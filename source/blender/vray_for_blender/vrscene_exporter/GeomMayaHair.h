@@ -46,7 +46,8 @@ public:
 	GeomMayaHair();
 
 	virtual        ~GeomMayaHair() { freeData(); }
-	virtual void    buildHash();
+	virtual void    initHash();
+	virtual void    initName(const std::string &name="");
 	virtual void    write(PyObject *output, int frame=0);
 
 	void            init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);

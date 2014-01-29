@@ -80,6 +80,8 @@ void VRsceneExporter::exportScene()
 
 	Base *base = NULL;
 
+	m_settings->m_engine.update_progress(0.0f);
+
 	size_t nObjects = 0;
 	base = (Base*)m_settings->m_sce->base.first;
 	while(base) {
@@ -102,7 +104,7 @@ void VRsceneExporter::exportScene()
 		Object *ob = base->object;
 		base = base->next;
 
-		// PRINT_INFO("Processing '%s'...", ob->id.name);
+		PRINT_INFO("Processing '%s'...", ob->id.name);
 
 		// Skip object here, but not in dupli!
 		// Dupli could be particles and it's better to
@@ -120,51 +122,7 @@ void VRsceneExporter::exportScene()
 		if(isSmokeDomain(ob))
 			continue;
 
-		if(NOT(m_settings->m_animation)) {
-			exportObjectBase(ob);
-		}
-		else {
-			if(m_settings->m_checkAnimated == ANIM_CHECK_NONE) {
-				exportObjectBase(ob);
-			}
-			else if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE) {
-				if(IsMeshAnimated(ob))
-					exportObjectBase(ob);
-			}
-			else if(m_settings->m_checkAnimated == ANIM_CHECK_HASH || m_settings->m_checkAnimated == ANIM_CHECK_BOTH) {
-				if(m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
-					if(NOT(IsMeshAnimated(ob)))
-						continue;
-
-				std::string obName(ob->id.name);
-
-				GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
-				geomStaticMesh->init(m_settings->m_sce, m_settings->m_main, ob);
-
-				MHash curHash  = geomStaticMesh->getHash();
-				MHash prevHash = m_meshCache.getHash(obName);
-
-				if(NOT(curHash == prevHash)) {
-					// Write previous frame if hash is more then 'frame_step' back.
-					// If 'prevHash' is 0 then previous call was for the first frame
-					// and no need to reexport.
-					//
-					if(prevHash) {
-						int cacheFrame = m_meshCache.getFrame(obName);
-						int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
-
-						if(cacheFrame < prevFrame)
-							m_meshCache.getData(obName)->write(m_settings->m_fileGeom, prevFrame);
-					}
-
-					// Write current frame data
-					geomStaticMesh->write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-
-					// This will free previous data and store new pointer
-					m_meshCache.update(obName, curHash, m_settings->m_sce->r.cfra, geomStaticMesh);
-				}
-			}
-		}
+		exportObjectBase(ob);
 
 		expProgress += expProgStep;
 		nObjects++;
@@ -183,17 +141,26 @@ void VRsceneExporter::exportScene()
 void VRsceneExporter::exportObjectBase(Object *ob)
 {
 	if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
-		FreeDupliList(ob); // Free duplilist if there is some for some reason
+		if (ob->transflag & OB_DUPLI) {
+			FreeDupliList(ob);
 
-		ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
+			ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
 
-		for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next)
-			exportObject(ob, dob);
+			for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
+				if(m_settings->m_engine.test_break())
+					break;
 
-		FreeDupliList(ob);
+				exportObject(ob, dob);
+			}
+
+			FreeDupliList(ob);
+		}
 
 		if(NOT(EMPTY_TYPE(ob))) {
 			if(NOT(doRenderEmitter(ob)))
+				return;
+
+			if(m_settings->m_engine.test_break())
 				return;
 
 			exportObject(ob);
@@ -204,18 +171,60 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 {
-	// TODO: Cache nodes (?)
-	//
-
-	VRayScene::Node node(m_settings->m_sce, m_settings->m_main, ob, dOb);
+	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
+	node->init();
 
 	if(m_settings->m_exportNodes) {
-		node.init();
-		node.write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+		if(m_settings->m_animation) {
+			if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE || m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
+				if(NOT(IsNodeAnimated(ob)))
+					return;
+		}
+
+		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 	}
 
-	if(m_settings->m_exportGeometry)
-		node.writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+	if(m_settings->m_exportGeometry) {
+		if(NOT(m_settings->m_animation)) {
+			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+		}
+		else {
+			if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE || m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
+				if(NOT(IsMeshAnimated(ob)))
+					return;
+
+			if(m_settings->m_checkAnimated == ANIM_CHECK_HASH) {
+				std::string obName(ob->id.name);
+
+				MHash curHash  = node->getHash();
+				MHash prevHash = m_nodeCache.getHash(obName);
+
+				if(NOT(curHash == prevHash)) {
+					// Write previous frame if hash is more then 'frame_step' back.
+					// If 'prevHash' is 0 then previous call was for the first frame
+					// and no need to reexport.
+					//
+					if(prevHash) {
+						int cacheFrame = m_nodeCache.getFrame(obName);
+						int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
+
+						if(cacheFrame < prevFrame)
+							m_nodeCache.getData(obName)->writeGeometry(m_settings->m_fileGeom, prevFrame);
+					}
+
+					// Write current frame data
+					node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+
+					// This will free previous data and store new pointer
+					m_nodeCache.update(obName, curHash, m_settings->m_sce->r.cfra, node);
+				}
+			}
+		}
+	}
+
+	if(NOT(m_settings->m_animation)) {
+		delete node;
+	}
 }
 
 

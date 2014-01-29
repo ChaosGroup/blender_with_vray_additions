@@ -51,6 +51,10 @@ set(SRC
 	vrscene_exporter/GeomMayaHair.cpp
 	vrscene_exporter/GeomStaticMesh.h
 	vrscene_exporter/GeomStaticMesh.cpp
+	vrscene_exporter/GeomPlane.h
+	vrscene_exporter/GeomPlane.cpp
+	vrscene_exporter/GeomMeshFile.h
+	vrscene_exporter/GeomMeshFile.cpp
 	vrscene_exporter/exp_defines.h
 	vrscene_exporter/exp_types.h
 	vrscene_exporter/exp_anim.h

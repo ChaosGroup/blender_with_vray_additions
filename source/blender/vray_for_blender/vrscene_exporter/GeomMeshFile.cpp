@@ -1,0 +1,95 @@
+/*
+ * ***** BEGIN GPL LICENSE BLOCK *****
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *
+ * The Original Code is Copyright (C) 2010 Blender Foundation.
+ * All rights reserved.
+ *
+ * Contributor(s): Andrei Izrantcev <andrei.izrantcev@chaosgroup.com>
+ *
+ * ***** END GPL LICENSE BLOCK *****
+ */
+
+#include "GeomMeshFile.h"
+#include "CGR_rna.h"
+#include "CGR_string.h"
+#include "CGR_vrscene.h"
+
+#include "BLI_path_util.h"
+
+
+VRayScene::StrSet VRayScene::GeomMeshFile::proxies;
+
+
+void VRayScene::GeomMeshFile::init(Scene *sce, Main *main, Object *ob)
+{
+	m_scene  = sce;
+	m_main   = main;
+	m_object = ob;
+
+	initName();
+	initHash();
+}
+
+
+void VRayScene::GeomMeshFile::initName(const std::string &name)
+{
+	RnaAccess::RnaValue rna((ID*)m_object->data, "vray.GeomMeshFile");
+
+	std::string filePath = rna.getPath("file");
+	if(NOT(filePath.empty())) {
+		char baseName[FILE_MAXFILE];
+		strncpy(baseName, BLI_path_basename(filePath.c_str()), FILE_MAXFILE);
+		StripString(baseName);
+
+		std::stringstream pluginName;
+		pluginName << "Proxy" << baseName;
+
+		// We should also append additional params to export different proxy
+		pluginName << rna.getEnum("anim_type") << std::setprecision(2) << rna.getFloat("anim_speed") << rna.getFloat("anim_offset");
+
+		m_name = pluginName.str();
+	}
+	else {
+		m_name = "geomMeshFile";
+	}
+}
+
+
+void VRayScene::GeomMeshFile::initHash()
+{
+	RnaAccess::RnaValue rna((ID*)m_object->data, "vray.GeomMeshFile");
+
+	m_plugin << "\n"   << "GeomMeshFile" << " " << m_name << " {";
+	m_plugin << "\n\t" << "file"        << "=\"" << rna.getPath("file") << "\";";
+	m_plugin << "\n\t" << "anim_type"   << "=" << rna.getEnum("anim_type") << ";";
+	m_plugin << "\n\t" << "anim_speed"  << "=" << rna.getFloat("anim_speed") << ";";
+	m_plugin << "\n\t" << "anim_offset" << "=" << rna.getFloat("anim_offset") << ";";
+	m_plugin << "\n}\n";
+
+	m_hash = HashCode(m_plugin.str().c_str());
+}
+
+
+void VRayScene::GeomMeshFile::write(PyObject *output, int frame)
+{
+	if(NOT(proxies.find(m_name) == proxies.end()))
+		return;
+
+	proxies.insert(m_name);
+
+	PYTHON_PRINT(output, m_plugin.str().c_str());
+}

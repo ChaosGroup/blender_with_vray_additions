@@ -26,6 +26,8 @@
 #include "CGR_config.h"
 #include "exp_defines.h"
 
+#include "GeomMayaHair.h"
+
 #include "CGR_vrscene.h"
 #include "vrscene_api.h"
 
@@ -39,6 +41,24 @@ extern "C" {
 #  include "BKE_scene.h"
 #  include "MEM_guardedalloc.h"
 #  include "RNA_access.h"
+}
+
+
+using namespace VRayScene;
+
+
+int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName)
+{
+	GeomMayaHair geomMayaHair;
+	geomMayaHair.init(sce, main, ob, psys);
+	geomMayaHair.initName(pluginName);
+
+	if(NOT(geomMayaHair.getHash()))
+		return 1;
+
+	geomMayaHair.write(outputFile, sce->r.cfra);
+
+	return 0;
 }
 
 
@@ -325,7 +345,7 @@ BLI_INLINE void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, 
 }
 
 
-int write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob, ParticleSystem *psys, const char *pluginName)
+int write_GeomMayaHairInterpolate(PyObject *outputFile, Scene *sce, Main *bmain, Object *ob, ParticleSystem *psys, const char *pluginName)
 {
 	PYTHON_PRINT_BUF;
 

@@ -23,55 +23,43 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_EXP_TYPES_H
-#define CGR_EXP_TYPES_H
+#ifndef GEOM_MESH_FILE_H
+#define GEOM_MESH_FILE_H
 
-#include "exp_defines.h"
-#include "murmur3.h"
+extern "C" {
+#  include "DNA_mesh_types.h"
+#  include "DNA_scene_types.h"
+#  include "DNA_object_types.h"
+#  include "BKE_main.h"
+}
 
-#include <string>
-#include <vector>
-#include <set>
+#include "exp_types.h"
 
-#include <Python.h>
+#include <sstream>
 
 
 namespace VRayScene {
 
+class GeomMeshFile : public VRayExportable {
+	static StrSet proxies;
 
-typedef std::vector<std::string> StringVector;
-typedef std::set<std::string>    StrSet;
-
-class VRayExportable {
 public:
-	VRayExportable() {
-		m_name = "";
-		m_hash = 0;
+	virtual      ~GeomMeshFile() {}
+	virtual void  initHash();
+	virtual void  initName(const std::string &name="");
+	virtual void  write(PyObject *output, int frame=0);
 
-		sprintf(m_interpStart, "%s", "");
-		sprintf(m_interpEnd,   "%s", "");
-	}
+	void          init(Scene *sce, Main *main, Object *ob);
 
-	virtual      ~VRayExportable() {}
+private:
+	Scene        *m_scene;
+	Main         *m_main;
+	Object       *m_object;
 
-	MHash         getHash() const { return m_hash; }
-	const char   *getName() const { return m_name.c_str(); }
-
-	virtual void  initHash()=0;
-	virtual void  initName(const std::string &name="")=0;
-	virtual void  write(PyObject *output, int frame=0)=0;
-
-protected:
-	std::string   m_name;
-	MHash         m_hash;
-
-	char          m_interpStart[32];
-	char          m_interpEnd[3];
-
-	PYTHON_PRINT_BUF;
+	std::stringstream  m_plugin;
 
 };
 
 }
 
-#endif // CGR_EXP_TYPES_H
+#endif // GEOM_MESH_FILE_H
