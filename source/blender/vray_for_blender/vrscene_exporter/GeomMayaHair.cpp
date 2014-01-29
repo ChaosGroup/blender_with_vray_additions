@@ -34,6 +34,7 @@
 #include "BKE_material.h"
 #include "BKE_depsgraph.h"
 #include "BKE_scene.h"
+#include "BKE_object.h"
 #include "MEM_guardedalloc.h"
 #include "RNA_access.h"
 #include "BLI_string.h"
@@ -266,8 +267,8 @@ void GeomMayaHair::initData()
 
 	// Recalc hair with render settings
 	if(need_recalc) {
-		m_ob->recalc |= OB_RECALC_ALL;
-		BKE_scene_update_tagged(&eval_ctx, m_main, m_sce);
+		m_ob->recalc |= OB_RECALC_DATA;
+		BKE_object_handle_update_ex(&eval_ctx, m_sce, m_ob, m_sce->rigidbody_world);
 	}
 
 	// Get new child data pointers
@@ -435,8 +436,8 @@ void GeomMayaHair::initData()
 
 	// Recalc hair back with viewport settings
 	if(need_recalc) {
-		m_ob->recalc |= OB_RECALC_ALL;
-		BKE_scene_update_tagged(&eval_ctx, m_main, m_sce);
+		m_ob->recalc |= OB_RECALC_DATA;
+		BKE_object_handle_update_ex(&eval_ctx, m_sce, m_ob, m_sce->rigidbody_world);
 	}
 }
 
