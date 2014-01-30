@@ -43,6 +43,27 @@ extern "C" {
 #include <Python.h>
 
 
+static PyObject* mExportStart(PyObject *self, PyObject *args)
+{
+	char *jsonDirpath = NULL;
+
+	if(NOT(PyArg_ParseTuple(args, "s", &jsonDirpath)))
+		return NULL;
+
+	VRayExportable::initPluginDesc(jsonDirpath);
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* mExportFree(PyObject *self)
+{
+	VRayExportable::freePluginDesc();
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
 	long      contextPtr    = 0;
@@ -94,8 +115,6 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	bContext *C = (bContext*)(intptr_t)contextPtr;
 
 	Scene *sce = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
-
-	VRayExportable::initPluginDesc("/home/bdancer/devel/vray/vray_json");
 
 	ExpoterSettings *settings = new ExpoterSettings(renderEngine);
 	settings->m_sce  = sce;
@@ -349,6 +368,9 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 
 
 static PyMethodDef methods[] = {
+	{"start",             mExportStart ,      METH_VARARGS, "Startup init"},
+	{"free", (PyCFunction)mExportFree,        METH_NOARGS,  "Free resources"},
+
 	{"init", (PyCFunction)mExportInit ,       METH_VARARGS|METH_KEYWORDS, "Init exporter"},
 	{"exit",              mExportExit ,       METH_O,                     "Shutdown exporter"},
 
