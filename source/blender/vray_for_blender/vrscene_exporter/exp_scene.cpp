@@ -53,10 +53,7 @@ VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 {
 	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
 
-	m_eval_ctx.for_render = true;
-
-	sprintf(m_interpStart, "%s", "");
-	sprintf(m_interpEnd,   "%s", "");
+	VRayExportable::clearCache();
 }
 
 
@@ -144,6 +141,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		if (ob->transflag & OB_DUPLI) {
 			FreeDupliList(ob);
 
+			EvaluationContext  m_eval_ctx;
+			m_eval_ctx.for_render = true;
+
 			ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
 
 			for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
@@ -171,8 +171,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 {
-	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
-	node->init();
+	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
+	node->init(dOb);
 
 	if(m_settings->m_exportNodes) {
 		if(m_settings->m_animation) {
@@ -197,7 +197,7 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 				std::string obName(ob->id.name);
 
 				MHash curHash  = node->getHash();
-				MHash prevHash = m_nodeCache.getHash(obName);
+				MHash prevHash = m_expCache.getHash(obName);
 
 				if(NOT(curHash == prevHash)) {
 					// Write previous frame if hash is more then 'frame_step' back.
@@ -205,18 +205,18 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 					// and no need to reexport.
 					//
 					if(prevHash) {
-						int cacheFrame = m_nodeCache.getFrame(obName);
+						int cacheFrame = m_expCache.getFrame(obName);
 						int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
 
 						if(cacheFrame < prevFrame)
-							m_nodeCache.getData(obName)->writeGeometry(m_settings->m_fileGeom, prevFrame);
+							m_expCache.getData(obName)->writeGeometry(m_settings->m_fileGeom, prevFrame);
 					}
 
 					// Write current frame data
 					node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 
 					// This will free previous data and store new pointer
-					m_nodeCache.update(obName, curHash, m_settings->m_sce->r.cfra, node);
+					m_expCache.update(obName, curHash, m_settings->m_sce->r.cfra, node);
 				}
 			}
 		}

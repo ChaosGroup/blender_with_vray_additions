@@ -34,58 +34,59 @@
 
 template<typename T>
 struct AnimationFrame {
-    AnimationFrame() {
-        hash  = 0;
-        frame = 0;
-        data  = NULL;
-    }
+	AnimationFrame() {
+		hash  = 0;
+		frame = 0;
+		data  = NULL;
+	}
 
-    MHash    hash;
-    int      frame;
+	MHash    hash;
+	int      frame;
 	T*       data;
 };
 
 
 template<typename T>
 class AnimationCache {
-    typedef typename std::map< std::string, AnimationFrame<T> > ACache;
+	typedef typename std::map< std::string, AnimationFrame<T> > ACache;
 
-    ACache cache;
+	ACache cache;
 
 public:
-    AnimationCache() {}
+	AnimationCache() {}
 
-    ~AnimationCache() {
-        for(typename ACache::iterator it = cache.begin(); it != cache.end(); ++it) {
-            delete it->second.data;
-        }
-    }
+	~AnimationCache() { freeData(); }
+
+	void freeData() {
+		for(typename ACache::iterator it = cache.begin(); it != cache.end(); ++it)
+			delete it->second.data;
+	}
 
 	void update(const std::string &name, const MHash &hash, const int &frame, T *data) {
-        if(cache.count(name))
-            delete cache[name].data;
-        cache[name].data  = data;
-        cache[name].hash  = hash;
-        cache[name].frame = frame;
-    }
+		if(cache.count(name))
+			delete cache[name].data;
+		cache[name].data  = data;
+		cache[name].hash  = hash;
+		cache[name].frame = frame;
+	}
 
-    MHash getHash(const std::string &name) {
-        if(cache.count(name))
-            return cache[name].hash;
-        return 0;
-    }
+	MHash getHash(const std::string &name) {
+		if(cache.count(name))
+			return cache[name].hash;
+		return 0;
+	}
 
-    int getFrame(const std::string &name) {
-        if(cache.count(name))
-            return cache[name].frame;
+	int getFrame(const std::string &name) {
+		if(cache.count(name))
+			return cache[name].frame;
 		return -1;
-    }
+	}
 
 	T* getData(const std::string &name) {
-        if(cache.count(name))
-            return cache[name].data;
-        return NULL;
-    }
+		if(cache.count(name))
+			return cache[name].data;
+		return NULL;
+	}
 };
 
 #endif // CGR_ANIM_CACHE_H

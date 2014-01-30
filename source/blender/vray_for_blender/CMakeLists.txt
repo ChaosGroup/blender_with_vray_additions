@@ -55,14 +55,17 @@ set(SRC
 	vrscene_exporter/GeomPlane.cpp
 	vrscene_exporter/GeomMeshFile.h
 	vrscene_exporter/GeomMeshFile.cpp
+	vrscene_exporter/TexVoxelData.h
+	vrscene_exporter/TexVoxelData.cpp
 	vrscene_exporter/exp_defines.h
 	vrscene_exporter/exp_types.h
+	vrscene_exporter/exp_types.cpp
 	vrscene_exporter/exp_anim.h
 	vrscene_exporter/exp_scene.h
 	vrscene_exporter/exp_scene.cpp
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.cpp
-	vrscene_exporter/exp_nodes.cpp
+	vrscene_exporter/exp_hair_interp.cpp
 	vrscene_exporter/exp_smoke.cpp
 
 	vrscene_exporter/vrscene_api.h

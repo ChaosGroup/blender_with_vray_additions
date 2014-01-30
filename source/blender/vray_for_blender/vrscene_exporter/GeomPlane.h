@@ -36,9 +36,7 @@ public:
 	virtual      ~GeomPlane() {}
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
-	virtual void  write(PyObject *output, int frame=0);
-
-	void          init();
+	virtual void  writeData(PyObject *output);
 
 };
 

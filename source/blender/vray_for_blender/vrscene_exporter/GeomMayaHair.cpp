@@ -83,7 +83,8 @@ BLI_INLINE void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, 
 }
 
 
-GeomMayaHair::GeomMayaHair()
+GeomMayaHair::GeomMayaHair(Scene *scene, Main *main, Object *ob):
+	VRayExportable(scene, main, ob)
 {
 	m_hash = 0;
 
@@ -116,6 +117,10 @@ void GeomMayaHair::freeData()
 		delete [] widths;
 		widths = NULL;
 	}
+	if(strand_uvw) {
+		delete [] strand_uvw;
+		strand_uvw = NULL;
+	}
 	if(transparency) {
 		delete [] transparency;
 		transparency = NULL;
@@ -123,45 +128,8 @@ void GeomMayaHair::freeData()
 }
 
 
-void GeomMayaHair::initHash()
+void GeomMayaHair::init(ParticleSystem *psys)
 {
-	m_hash = HashCode(hair_vertices);
-}
-
-
-void GeomMayaHair::initName(const std::string &name)
-{
-	if(NOT(name.empty())) {
-		m_name = name;
-	}
-	else {
-		char nameBuf[MAX_ID_NAME] = "";
-
-		m_name.clear();
-		m_name.append("HAIR");
-
-		BLI_strncpy(nameBuf, m_psys->name, MAX_ID_NAME);
-		StripString(nameBuf);
-		m_name.append(nameBuf);
-
-		BLI_strncpy(nameBuf, m_psys->part->id.name, MAX_ID_NAME);
-		StripString(nameBuf);
-		m_name.append(nameBuf);
-	}
-}
-
-
-Material *GeomMayaHair::getHairMaterial() const
-{
-	return give_current_material(m_ob, m_psys->part->omat);
-}
-
-
-void GeomMayaHair::init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys)
-{
-	m_sce  = sce;
-	m_ob   = ob;
-	m_main = main;
 	m_psys = psys;
 
 	initData();
@@ -229,7 +197,7 @@ void GeomMayaHair::initData()
 	RNA_id_pointer_create(&pset->id, &rna_pset);
 
 	if(RNA_struct_find_property(&rna_pset, "vray")) {
-		VRayParticleSettings= RNA_pointer_get(&rna_pset, "vray");
+		VRayParticleSettings = RNA_pointer_get(&rna_pset, "vray");
 
 		if(RNA_struct_find_property(&VRayParticleSettings, "VRayFur")) {
 			VRayFur = RNA_pointer_get(&VRayParticleSettings, "VRayFur");
@@ -449,14 +417,37 @@ void GeomMayaHair::initAttributes()
 }
 
 
-void GeomMayaHair::write(PyObject *output, int frame)
+void GeomMayaHair::initName(const std::string &name)
 {
-	if(frame) {
-		sprintf(m_interpStart, "interpolate((%d,", frame);
-		sprintf(m_interpEnd,   "))");
+	if(NOT(name.empty())) {
+		m_name = name;
 	}
+	else {
+		char nameBuf[MAX_ID_NAME] = "";
 
-	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", this->getName());
+		m_name.clear();
+		m_name.append("HAIR");
+
+		BLI_strncpy(nameBuf, m_psys->name, MAX_ID_NAME);
+		StripString(nameBuf);
+		m_name.append(nameBuf);
+
+		BLI_strncpy(nameBuf, m_psys->part->id.name, MAX_ID_NAME);
+		StripString(nameBuf);
+		m_name.append(nameBuf);
+	}
+}
+
+
+void GeomMayaHair::initHash()
+{
+	m_hash = HashCode(hair_vertices);
+}
+
+
+void GeomMayaHair::writeData(PyObject *output)
+{
+	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", m_name.c_str());
 
 	PYTHON_PRINTF(output, "\n\tnum_hair_vertices=%sListIntHex(\"", m_interpStart);
 	PYTHON_PRINT(output, num_hair_vertices);
@@ -481,4 +472,10 @@ void GeomMayaHair::write(PyObject *output, int frame)
 	PYTHON_PRINTF(output, "\n\tgeom_tesselation_mult=%.3f;",  geom_tesselation_mult);
 
 	PYTHON_PRINT(output, "\n}\n");
+}
+
+
+Material *GeomMayaHair::getHairMaterial() const
+{
+	return give_current_material(m_ob, m_psys->part->omat);
 }

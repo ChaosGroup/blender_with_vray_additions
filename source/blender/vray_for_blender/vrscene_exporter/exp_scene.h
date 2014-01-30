@@ -47,7 +47,7 @@
 using namespace VRayScene;
 
 
-typedef AnimationCache<VRayScene::Node>  NodesCache;
+typedef AnimationCache<Node>  NodesCache;
 
 
 struct ExpoterSettings {
@@ -102,13 +102,8 @@ private:
 	int                isSmokeDomain(Object *ob);
 	int                doRenderEmitter(Object *ob);
 
-	NodesCache         m_nodeCache;
-	EvaluationContext  m_eval_ctx;
-
 	ExpoterSettings   *m_settings;
-
-	char               m_interpStart[32];
-	char               m_interpEnd[3];
+	NodesCache         m_expCache;
 
 	PYTHON_PRINT_BUF;
 

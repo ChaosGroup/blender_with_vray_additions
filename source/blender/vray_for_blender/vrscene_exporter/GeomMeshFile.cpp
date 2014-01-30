@@ -31,47 +31,38 @@
 #include "BLI_path_util.h"
 
 
-VRayScene::StrSet VRayScene::GeomMeshFile::proxies;
-
-
-void VRayScene::GeomMeshFile::init(Scene *sce, Main *main, Object *ob)
-{
-	m_scene  = sce;
-	m_main   = main;
-	m_object = ob;
-
-	initName();
-	initHash();
-}
-
-
 void VRayScene::GeomMeshFile::initName(const std::string &name)
 {
-	RnaAccess::RnaValue rna((ID*)m_object->data, "vray.GeomMeshFile");
-
-	std::string filePath = rna.getPath("file");
-	if(NOT(filePath.empty())) {
-		char baseName[FILE_MAXFILE];
-		strncpy(baseName, BLI_path_basename(filePath.c_str()), FILE_MAXFILE);
-		StripString(baseName);
-
-		std::stringstream pluginName;
-		pluginName << "Proxy" << baseName;
-
-		// We should also append additional params to export different proxy
-		pluginName << rna.getEnum("anim_type") << std::setprecision(2) << rna.getFloat("anim_speed") << rna.getFloat("anim_offset");
-
-		m_name = pluginName.str();
+	if(NOT(name.empty())) {
+		m_name = name;
 	}
 	else {
-		m_name = "geomMeshFile";
+		RnaAccess::RnaValue rna((ID*)m_ob->data, "vray.GeomMeshFile");
+
+		std::string filePath = rna.getPath("file");
+		if(NOT(filePath.empty())) {
+			char baseName[FILE_MAXFILE];
+			strncpy(baseName, BLI_path_basename(filePath.c_str()), FILE_MAXFILE);
+			StripString(baseName);
+
+			std::stringstream pluginName;
+			pluginName << "Proxy" << baseName;
+
+			// We should also append additional params to export different proxy
+			pluginName << rna.getEnum("anim_type") << std::setprecision(2) << rna.getFloat("anim_speed") << rna.getFloat("anim_offset");
+
+			m_name = pluginName.str();
+		}
+		else {
+			m_name = "geomMeshFile";
+		}
 	}
 }
 
 
 void VRayScene::GeomMeshFile::initHash()
 {
-	RnaAccess::RnaValue rna((ID*)m_object->data, "vray.GeomMeshFile");
+	RnaAccess::RnaValue rna((ID*)m_ob->data, "vray.GeomMeshFile");
 
 	m_plugin << "\n"   << "GeomMeshFile" << " " << m_name << " {";
 	m_plugin << "\n\t" << "file"        << "=\"" << rna.getPath("file") << "\";";
@@ -84,12 +75,7 @@ void VRayScene::GeomMeshFile::initHash()
 }
 
 
-void VRayScene::GeomMeshFile::write(PyObject *output, int frame)
+void VRayScene::GeomMeshFile::writeData(PyObject *output)
 {
-	if(NOT(proxies.find(m_name) == proxies.end()))
-		return;
-
-	proxies.insert(m_name);
-
 	PYTHON_PRINT(output, m_plugin.str().c_str());
 }

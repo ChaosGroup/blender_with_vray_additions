@@ -85,10 +85,10 @@ void MChan::freeData()
 }
 
 
-GeomStaticMesh::GeomStaticMesh()
+GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
+	VRayExportable(scene, main, ob)
 {
 	mesh = NULL;
-	object = NULL;
 
 	vertices = NULL;
 	coordIndex = 0;
@@ -107,6 +107,7 @@ GeomStaticMesh::GeomStaticMesh()
 	osd_subdiv_level = 0;
 	osd_subdiv_type = 0;
 	osd_subdiv_uvs = 0;
+	weld_threshold = -1.0f;
 
 	useDisplace = false;
 	useSmooth   = false;
@@ -115,24 +116,23 @@ GeomStaticMesh::GeomStaticMesh()
 }
 
 
-int GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
+void GeomStaticMesh::init()
 {
-	object = ob;
-
-	mesh = GetRenderMesh(sce, main, ob);
+	mesh = GetRenderMesh(m_sce, m_main, m_ob);
 	if(NOT(mesh))
-		return 2;
+		return;
 
 	if(NOT(mesh->totface)) {
-		FreeRenderMesh(main, mesh);
-		return 1;
+		FreeRenderMesh(m_main, mesh);
+		return;
 	}
 
 	initVertices();
 	initFaces();
 	initMapChannels();
+	initAttributes();
 
-	FreeRenderMesh(main, mesh);
+	FreeRenderMesh(m_main, mesh);
 
 	initName();
 	initHash();
@@ -142,7 +142,7 @@ int GeomStaticMesh::init(Scene *sce, Main *main, Object *ob)
 	initSmooth();
 #endif
 
-	return 0;
+	return;
 }
 
 
@@ -187,14 +187,14 @@ void GeomStaticMesh::initName(const std::string &name)
 	else {
 		char obName[MAX_ID_NAME] = "";
 
-		BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
+		BLI_strncpy(obName, m_ob->id.name+2, MAX_ID_NAME);
 		StripString(obName);
 
 		m_name.clear();
 		m_name.append("ME");
 		m_name.append(obName);
 
-		const ID *dataID = (ID*)object->data;
+		const ID *dataID = (ID*)m_ob->data;
 		if(dataID->lib) {
 			char libFilename[FILE_MAX] = "";
 
@@ -212,8 +212,8 @@ void GeomStaticMesh::initName(const std::string &name)
 
 void GeomStaticMesh::initDisplace()
 {
-	for(int a = 1; a <= object->totcol; ++a) {
-		Material *ma = give_current_material(object, a);
+	for(int a = 1; a <= m_ob->totcol; ++a) {
+		Material *ma = give_current_material(m_ob, a);
 		if(NOT(ma))
 			continue;
 
@@ -246,7 +246,7 @@ void GeomStaticMesh::initSmooth()
 	// vray.GeomStaticSmoothedMesh.use
 
 	PointerRNA obRNA;
-	RNA_id_pointer_create(&object->id, &obRNA);
+	RNA_id_pointer_create(&m_ob->id, &obRNA);
 
 	PointerRNA VRayObject             = RNA_pointer_get(&obRNA, "vray");
 	PointerRNA GeomStaticSmoothedMesh = RNA_pointer_get(&VRayObject, "GeomStaticSmoothedMesh");
@@ -513,6 +513,24 @@ void GeomStaticMesh::initMapChannels()
 }
 
 
+void GeomStaticMesh::initAttributes()
+{
+	if(m_propGroup) {
+		dynamic_geometry     = GetPythonAttrInt(m_propGroup, "dynamic_geometry");
+		environment_geometry = GetPythonAttrInt(m_propGroup, "environment_geometry");
+
+		osd_subdiv_level = GetPythonAttrInt(m_propGroup, "osd_subdiv_level");
+		osd_subdiv_type  = GetPythonAttrInt(m_propGroup, "osd_subdiv_type");
+		osd_subdiv_uvs   = GetPythonAttrInt(m_propGroup, "osd_subdiv_uvs");
+
+		weld_threshold = GetPythonAttrFloat(m_propGroup, "weld_threshold");
+	}
+	else {
+		// TODO: Get smth from RNA
+	}
+}
+
+
 void GeomStaticMesh::initHash()
 {
 #if 0
@@ -529,42 +547,29 @@ void GeomStaticMesh::initHash()
 }
 
 
-void GeomStaticMesh::write(PyObject *output, int frame)
+void GeomStaticMesh::writeData(PyObject *output)
 {
-	if(frame) {
-		sprintf(m_interpStart, "interpolate((%d,", frame);
-		sprintf(m_interpEnd,   "))");
-	}
-
-	// Plugin name
 	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", this->getName());
-
-	// Mesh components
 	PYTHON_PRINTF(output, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(output, this->getVertices());
+	PYTHON_PRINT(output, getVertices());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-
 	PYTHON_PRINTF(output, "\n\tfaces=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, this->getFaces());
+	PYTHON_PRINT(output, getFaces());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-
 	PYTHON_PRINTF(output, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(output, this->getNormals());
+	PYTHON_PRINT(output, getNormals());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-
 	PYTHON_PRINTF(output, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, this->getFaceNormals());
+	PYTHON_PRINT(output, getFaceNormals());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-
 	PYTHON_PRINTF(output, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, this->getFace_mtlIDs());
+	PYTHON_PRINT(output, getFaceMtlIDs());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-
 	PYTHON_PRINTF(output, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, this->getEdge_visibility());
+	PYTHON_PRINT(output, getEdgeVisibility());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
 
-	size_t mapChannelCount = this->getMapChannelCount();
+	size_t mapChannelCount = getMapChannelCount();
 	if(mapChannelCount) {
 		PYTHON_PRINT(output, "\n\tmap_channels_names=List(");
 		for(size_t i = 0; i < mapChannelCount; ++i) {
@@ -596,11 +601,11 @@ void GeomStaticMesh::write(PyObject *output, int frame)
 		PYTHON_PRINTF(output, ")%s;", m_interpEnd);
 	}
 
+	PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
 	PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
 	PYTHON_PRINTF(output, "\n\tosd_subdiv_level=%i;", osd_subdiv_level);
 	PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);
 	PYTHON_PRINTF(output, "\n\tosd_subdiv_uvs=%i;",   osd_subdiv_uvs);
 	PYTHON_PRINTF(output, "\n\tweld_threshold=%.3f;", weld_threshold);
-
-	PYTHON_PRINT(output, "\n}\n");
+	PYTHON_PRINT(output,  "\n}\n");
 }

@@ -131,6 +131,24 @@ char* GetStringZip(const u_int8_t *buf, unsigned bufLen)
 }
 
 
+char* GetFloatArrayZip(float *data, size_t size)
+{
+	float  *ptr = new float[size];
+	size_t  nBytes = size * sizeof(float);
+
+	if(NOT(data))
+		memset(ptr, 0, nBytes);
+	else
+		memcpy(ptr, data, nBytes);
+
+	char *charBuf = GetStringZip((u_int8_t*)ptr, nBytes);
+
+	delete [] ptr;
+
+	return charBuf;
+}
+
+
 void GetDoubleHex(float f, char *buf)
 {
     double d = double(f);
@@ -174,4 +192,16 @@ MHash HashCode(const char *s)
 		h = 31*h + (*s++);
 	}
 	return h;
+}
+
+
+int GetPythonAttrInt(PyObject *propGroup, const char *attrName)
+{
+	return int(PyLong_AsLong(PyNumber_Long(PyObject_GetAttrString(propGroup, attrName))));
+}
+
+
+float GetPythonAttrFloat(PyObject *propGroup, const char *attrName)
+{
+	return float(PyLong_AsDouble(PyNumber_Float(PyObject_GetAttrString(propGroup, attrName))));
 }

@@ -58,16 +58,16 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *lightsFile = NULL;
 
 	static char *kwlist[] = {
-		"engine",         // 0
-		"context",        // 1
-		"isAnimation",    // 2
-		"checkAnimated",  // 3
-		"exportNodes",    // 4
-		"exportGeometry", // 5
-		"objectFile",     // 6
-		"geometryFile",   // 7
-		"lightsFile",     // 8
-		"scene",          // 9
+		_C("engine"),         // 0
+		_C("context"),        // 1
+		_C("isAnimation"),    // 2
+		_C("checkAnimated"),  // 3
+		_C("exportNodes"),    // 4
+		_C("exportGeometry"), // 5
+		_C("objectFile"),     // 6
+		_C("geometryFile"),   // 7
+		_C("lightsFile"),     // 8
+		_C("scene"),          // 9
 		NULL
 	};
 
@@ -122,6 +122,37 @@ static PyObject* mExportExit(PyObject *self, PyObject *value)
 }
 
 
+static PyObject* mExportInitCache(PyObject *self, PyObject *args)
+{
+	int  isAnimation   = false;
+	int  checkAnimated = ANIM_CHECK_NONE;
+
+	if(NOT(PyArg_ParseTuple(args, "ii", &isAnimation, &checkAnimated)))
+		return NULL;
+
+	VRayExportable::setAnimationMode(isAnimation, checkAnimated);
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* mExportClearFrames(PyObject *self)
+{
+	VRayExportable::clearFrames();
+	VRayExportable::setAnimationMode(false, ANIM_CHECK_NONE);
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* mExportClearCache(PyObject *self)
+{
+	VRayExportable::clearCache();
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mExportScene(PyObject *self, PyObject *value)
 {
 	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(value);
@@ -133,14 +164,14 @@ static PyObject* mExportScene(PyObject *self, PyObject *value)
 
 static PyObject* mExportSmokeDomain(PyObject *self, PyObject *args)
 {
-	int         contextPtr;
-	int         objectPtr;
-	int         smdPtr;
+	long        contextPtr;
+	long        objectPtr;
+	long        smdPtr;
 	const char *pluginName;
 	const char *lights;
 	PyObject   *fileObject;
 
-	if(NOT(PyArg_ParseTuple(args, "iiissO", &contextPtr, &objectPtr, &smdPtr, &pluginName, &lights, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "lllssO", &contextPtr, &objectPtr, &smdPtr, &pluginName, &lights, &fileObject))) {
 		return NULL;
 	}
 
@@ -150,7 +181,7 @@ static PyObject* mExportSmokeDomain(PyObject *self, PyObject *args)
 
 	Scene *sce = CTX_data_scene(C);
 
-	write_SmokeDomain(fileObject, sce, ob, smd, pluginName, lights);
+	ExportSmokeDomain(fileObject, sce, ob, smd, pluginName, lights);
 
 	Py_RETURN_NONE;
 }
@@ -158,15 +189,14 @@ static PyObject* mExportSmokeDomain(PyObject *self, PyObject *args)
 
 static PyObject* mExportSmoke(PyObject *self, PyObject *args)
 {
-	int         contextPtr;
-	int         objectPtr;
-	int         smdPtr;
+	long        contextPtr;
+	long        objectPtr;
+	long        smdPtr;
 	const char *pluginName;
 	PyObject   *fileObject;
-
 	int         p_interpolation;
 
-	if(NOT(PyArg_ParseTuple(args, "iiiisO", &contextPtr, &objectPtr, &smdPtr, &p_interpolation, &pluginName, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "lllisO", &contextPtr, &objectPtr, &smdPtr, &p_interpolation, &pluginName, &fileObject))) {
 		return NULL;
 	}
 
@@ -176,7 +206,7 @@ static PyObject* mExportSmoke(PyObject *self, PyObject *args)
 
 	Scene *sce = CTX_data_scene(C);
 
-	write_TexVoxelData(fileObject, sce, ob, smd, pluginName, p_interpolation);
+	ExportTexVoxelData(fileObject, sce, ob, smd, pluginName, p_interpolation);
 
 	Py_RETURN_NONE;
 }
@@ -201,12 +231,12 @@ static PyObject* mExportHair(PyObject *self, PyObject *args)
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
 
-#if 0
-	if(write_GeomMayaHairInterpolate(fileObject, sce, main, ob, psys, pluginName)) {
+#if CGR_MANUAL_HAIR_INTERP
+	if(ExportGeomMayaHairInterpolate(fileObject, sce, main, ob, psys, pluginName)) {
 		return NULL;
 	}
 #else
-	if(write_GeomMayaHair(fileObject, sce, main, ob, psys, pluginName)) {
+	if(ExportGeomMayaHair(fileObject, sce, main, ob, psys, pluginName)) {
 		return NULL;
 	}
 #endif
@@ -217,13 +247,13 @@ static PyObject* mExportHair(PyObject *self, PyObject *args)
 
 static PyObject* mExportMesh(PyObject *self, PyObject *args)
 {
-	int         contextPtr;
-	int         objectPtr;
+	long        contextPtr;
+	long        objectPtr;
 	const char *pluginName;
 	PyObject   *propGroup;
 	PyObject   *fileObject;
 
-	if(NOT(PyArg_ParseTuple(args, "iisOO", &contextPtr, &objectPtr, &pluginName, &propGroup, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "llsOO", &contextPtr, &objectPtr, &pluginName, &propGroup, &fileObject))) {
 		return NULL;
 	}
 
@@ -233,7 +263,9 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
 
-	write_Mesh(fileObject, sce, ob, main, pluginName, propGroup);
+	if(ExportGeomStaticMesh(fileObject, sce, ob, main, pluginName, propGroup)) {
+		return NULL;
+	}
 
 	Py_RETURN_NONE;
 }
@@ -241,14 +273,14 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 
 static PyObject* mExportNode(PyObject *self, PyObject *args)
 {
-	int       contextPtr;
-	int       objectPtr;
+	long      contextPtr;
+	long      objectPtr;
 	PyObject *nodeFile;
 	PyObject *geomFile;
 
 	char      pluginName[CGR_MAX_PLUGIN_NAME];
 
-	if(NOT(PyArg_ParseTuple(args, "iiOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
+	if(NOT(PyArg_ParseTuple(args, "llOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
 		return NULL;
 	}
 
@@ -261,7 +293,7 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 	sprintf(pluginName, "%s", ob->id.name);
 	StripString(pluginName);
 
-	write_ObjectNode(nodeFile, geomFile, sce, main, ob, ob->obmat, pluginName);
+	// TODO
 
 	Py_RETURN_NONE;
 }
@@ -269,12 +301,12 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 
 static PyObject* mExportDupli(PyObject *self, PyObject *args)
 {
-	int       contextPtr;
-	int       objectPtr;
+	long      contextPtr;
+	long      objectPtr;
 	PyObject *nodeFile;
 	PyObject *geomFile;
 
-	if(NOT(PyArg_ParseTuple(args, "iiOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
+	if(NOT(PyArg_ParseTuple(args, "llOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
 		return NULL;
 	}
 
@@ -284,7 +316,7 @@ static PyObject* mExportDupli(PyObject *self, PyObject *args)
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
 
-	write_Dupli(nodeFile, geomFile, sce, main, ob);
+	// TODO
 
 	Py_RETURN_NONE;
 }
@@ -315,10 +347,10 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 
 
 static PyMethodDef methods[] = {
-	{"exportInit", (PyCFunction)mExportInit , METH_VARARGS|METH_KEYWORDS, "Init vrscene exporter"},
+	{"init", (PyCFunction)mExportInit ,       METH_VARARGS|METH_KEYWORDS, "Init exporter"},
+	{"exit",              mExportExit ,       METH_O,                     "Shutdown exporter"},
 
-	{"exportScene",       mExportScene,       METH_O,                     "Export scene to the *.vrscene file"},
-	{"exportExit",        mExportExit ,       METH_O,                     "Shutdown vrscene exporter"},
+	{"exportScene",       mExportScene,       METH_O,       "Export scene to the *.vrscene file"},
 
 	{"exportDupli",       mExportDupli,       METH_VARARGS, "Export dupli / particles"},
 	{"exportMesh",        mExportMesh,        METH_VARARGS, "Export mesh"},
@@ -326,6 +358,10 @@ static PyMethodDef methods[] = {
 	{"exportSmokeDomain", mExportSmokeDomain, METH_VARARGS, "Export domain data"},
 	{"exportHair",        mExportHair,        METH_VARARGS, "Export hair"},
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export Node description"},
+
+	{"initCache",                mExportInitCache,   METH_VARARGS, "Init animation cache"},
+	{"clearFrames", (PyCFunction)mExportClearFrames, METH_NOARGS,  "Clear frame cache"},
+	{"clearCache",  (PyCFunction)mExportClearCache,  METH_NOARGS,  "Clear name cache"},
 
 	{"getTransformHex",   mGetTransformHex,   METH_O,       "Get transform hex string"},
 
