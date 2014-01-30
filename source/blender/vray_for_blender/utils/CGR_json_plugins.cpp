@@ -26,6 +26,13 @@
 #include "CGR_config.h"
 #include "CGR_json_plugins.h"
 
+#include "DNA_space_types.h"
+#include "BLI_path_util.h"
+#include "BLI_fileops_types.h"
+#include "MEM_guardedalloc.h"
+
+#include "../editors/space_file/filelist.h"
+
 
 void PrintTree(boost::property_tree::ptree &pt)
 {
@@ -39,17 +46,47 @@ void PrintTree(boost::property_tree::ptree &pt)
 }
 
 
-int ReadPluginDesc(const char *pluginIDName, boost::property_tree::ptree &pTree)
+void VRayPluginsDesc::init(const std::string &dirPath)
 {
-    std::string jsonDirpath("/home/bdancer/devel/vray/vray_json/");
+	FileList *files = filelist_new(FILE_UNIX);
 
-    std::string jsonFilepath(jsonDirpath);
-    jsonFilepath.append(pluginIDName);
-    jsonFilepath.append(".json");
+	filelist_setdir(files, dirPath.c_str());
+	filelist_readdir(files);
 
-    std::ifstream file(jsonFilepath.c_str());
+	int nFiles = filelist_numfiles(files);
 
-    boost::property_tree::json_parser::read_json(file, pTree);
+	for(int i = 0; i < nFiles; ++i) {
+		struct direntry *file = filelist_file(files, i);
+		if(NOT(file && (S_ISREG(file->type))))
+			continue;
 
-    return 0;
+		std::string fileName(BLI_path_basename(file->path));
+		fileName.erase(fileName.find_last_of("."), std::string::npos);
+
+		boost::property_tree::ptree *pTree = new boost::property_tree::ptree();
+
+		std::ifstream fileStream(file->path);
+		boost::property_tree::json_parser::read_json(fileStream, *pTree);
+
+		m_desc[fileName] = pTree;
+	}
+
+	filelist_free(files);
+	MEM_freeN(files);
+}
+
+
+void VRayPluginsDesc::freeData()
+{
+	for(PluginDesc::iterator it = m_desc.begin(); it != m_desc.end(); ++it)
+		delete it->second;
+	m_desc.clear();
+}
+
+
+boost::property_tree::ptree *VRayPluginsDesc::getTree(const std::string &name)
+{
+	if(NOT(m_desc.count(name)))
+		return NULL;
+	return m_desc[name];
 }

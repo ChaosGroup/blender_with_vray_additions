@@ -30,6 +30,7 @@
 #include "exp_anim.h"
 
 #include "CGR_blender_data.h"
+#include "CGR_json_plugins.h"
 
 #include "murmur3.h"
 
@@ -151,6 +152,9 @@ public:
 	static void clearCache()  { m_expCache.clear();      }
 	static void clearFrames() { m_frameCache.freeData(); }
 
+	static void initPluginDesc(const std::string &dirPath) { m_pluginDesc.init(dirPath); }
+	static void freePluginDesc()                           { m_pluginDesc.freeData(); }
+
 protected:
 	void initInterpolate(int frame=INT_MIN) {
 		if(m_animation && frame > INT_MIN) {
@@ -163,22 +167,23 @@ protected:
 		}
 	}
 
-	static StrSet    m_expCache;
-	static ExpCache  m_frameCache;
-	static int       m_animation;
-	static int       m_checkAnimated;
+	static StrSet           m_expCache;
+	static ExpCache         m_frameCache;
+	static int              m_animation;
+	static int              m_checkAnimated;
+	static VRayPluginsDesc  m_pluginDesc;
 
-	std::string      m_name;
-	MHash            m_hash;
+	std::string             m_name;
+	MHash                   m_hash;
 
-	Scene           *m_sce;
-	Main            *m_main;
-	Object          *m_ob;
+	Scene                  *m_sce;
+	Main                   *m_main;
+	Object                 *m_ob;
 
-	PyObject        *m_propGroup;
+	PyObject               *m_propGroup;
 
-	char             m_interpStart[32];
-	char             m_interpEnd[3];
+	char                    m_interpStart[32];
+	char                    m_interpEnd[3];
 
 	PYTHON_PRINT_BUF;
 
