@@ -29,6 +29,8 @@
 #include "DNA_space_types.h"
 #include "BLI_path_util.h"
 #include "BLI_fileops_types.h"
+#include "BLI_string.h"
+#include "PIL_time.h"
 #include "MEM_guardedalloc.h"
 
 #include "../editors/space_file/filelist.h"
@@ -48,6 +50,12 @@ void PrintTree(boost::property_tree::ptree &pt)
 
 void VRayPluginsDesc::init(const std::string &dirPath)
 {
+	double timeMeasure = 0.0;
+	char   timeMeasureBuf[32];
+
+	PRINT_INFO_LB("Parsing plugin descriptions...");
+	timeMeasure = PIL_check_seconds_timer();
+
 	FileList *files = filelist_new(FILE_UNIX);
 
 	filelist_setdir(files, dirPath.c_str());
@@ -73,6 +81,9 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 
 	filelist_free(files);
 	MEM_freeN(files);
+
+	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
+	printf(" done [%s]\n", timeMeasureBuf);
 }
 
 
