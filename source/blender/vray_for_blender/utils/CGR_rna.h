@@ -37,7 +37,7 @@ namespace RnaAccess {
 
 class RnaValue {
 public:
-	RnaValue(ID *id, const char *rnaPointerPath, const char *pluginID=NULL);
+	RnaValue(ID *id, const char *rnaPointerPath);
 
 	int          GetValue(const char *propName, int   &value);
 	int          GetValue(const char *propName, bool  &value);
@@ -55,15 +55,13 @@ public:
 
 	int          hasProperty(const char *propName);
 
-	void         writePlugin(std::stringstream &ss);
+	void         writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss);
 
 private:
 	int          checkProperty(const char *propName);
 
 	std::string  m_path;
 	PointerRNA   m_pointer;
-
-	boost::property_tree::ptree m_pluginDesc;
 
 };
 

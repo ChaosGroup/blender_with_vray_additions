@@ -37,9 +37,26 @@
 #include <exception>
 #include <iostream>
 #include <sstream>
+#include <string>
+#include <map>
 
 
 void  PrintTree(boost::property_tree::ptree &pt);
-int   ReadPluginDesc(const char *pluginIDName, boost::property_tree::ptree &pTree);
+
+
+typedef std::map<std::string, boost::property_tree::ptree*>  PluginDesc;
+
+
+class VRayPluginsDesc {
+public:
+	void                         init(const std::string &dirPath);
+	void                         freeData();
+
+	boost::property_tree::ptree *getTree(const std::string &name);
+
+private:
+	PluginDesc                   m_desc;
+
+};
 
 #endif // CGR_JSON_PLUGINS_H

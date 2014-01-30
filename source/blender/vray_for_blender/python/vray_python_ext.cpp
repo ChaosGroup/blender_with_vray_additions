@@ -95,6 +95,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 	Scene *sce = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
 
+	VRayExportable::initPluginDesc("/home/bdancer/devel/vray/vray_json");
+
 	ExpoterSettings *settings = new ExpoterSettings(renderEngine);
 	settings->m_sce  = sce;
 	settings->m_main = CTX_data_main(C);

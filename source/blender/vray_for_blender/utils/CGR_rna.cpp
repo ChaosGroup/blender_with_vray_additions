@@ -44,14 +44,12 @@ using namespace RnaAccess;
 typedef std::vector<std::string> PathRNA;
 
 
-RnaValue::RnaValue(ID *id, const char *rnaPointerPath, const char *pluginID)
+RnaValue::RnaValue(ID *id, const char *rnaPointerPath)
 {
     m_path = rnaPointerPath;
 
     PathRNA rnaPath;
     boost::split(rnaPath, m_path, boost::is_any_of("."));
-
-    DEBUG_PRINT(0, "Initing RnaValue for path = %s", rnaPointerPath);
 
     RNA_id_pointer_create(id, &m_pointer);
 
@@ -63,9 +61,6 @@ RnaValue::RnaValue(ID *id, const char *rnaPointerPath, const char *pluginID)
         }
         m_pointer = RNA_pointer_get(&m_pointer, rnaPath[t].c_str());
     }
-
-	if(pluginID)
-		ReadPluginDesc(pluginID, m_pluginDesc);
 }
 
 
@@ -78,10 +73,13 @@ int RnaValue::hasProperty(const char *propName)
 
 
 // TODO: Error checking
-//q
-void RnaValue::writePlugin(std::stringstream &ss)
+//
+void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss)
 {
-	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, m_pluginDesc.get_child("Parameters")) {
+	if(NOT(pluginDesc))
+		return;
+
+	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 
