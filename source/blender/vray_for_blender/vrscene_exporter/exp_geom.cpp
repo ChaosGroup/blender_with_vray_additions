@@ -23,48 +23,23 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#include "exp_defines.h"
 #include "GeomStaticMesh.h"
 #include "vrscene_api.h"
 
 
-using namespace VRayScene;
-
-
-static void WritePythonAttribute(PyObject *outputFile, PyObject *propGroup, const char *attrName)
+int ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup)
 {
-	static char buf[CGR_MAX_PLUGIN_NAME];
-
-	PyObject *attr      = NULL;
-	PyObject *attrValue = NULL;
-
-	if(propGroup == Py_None)
-		return;
-
-	attr      = PyObject_GetAttrString(propGroup, attrName);
-	attrValue = PyNumber_Long(attr);
-
-	if(attrValue) {
-		PYTHON_PRINTF(outputFile, "\n\t%s=%li;", attrName, PyLong_AsLong(attrValue));
-	}
-}
-
-
-void write_Mesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup)
-{
-	GeomStaticMesh geomStaticMesh;
-	geomStaticMesh.init(sce, main, ob);
+	VRayScene::GeomStaticMesh geomStaticMesh(sce, main, ob);
+	geomStaticMesh.init();
 	geomStaticMesh.initName(pluginName);
 
+	geomStaticMesh.attachPropGroup(propGroup);
+	geomStaticMesh.initAttributes();
+
 	if(NOT(geomStaticMesh.getHash()))
-		return;
+		return 1;
 
 	geomStaticMesh.write(outputFile, sce->r.cfra);
 
-//	// Custom attibutes
-//	if(propGroup) {
-//		WritePythonAttribute(outputFile, propGroup, "dynamic_geometry");
-//		WritePythonAttribute(outputFile, propGroup, "osd_subdiv_level");
-//	}
-
+	return 0;
 }

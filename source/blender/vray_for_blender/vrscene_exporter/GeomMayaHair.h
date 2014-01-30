@@ -26,13 +26,6 @@
 #ifndef GEOM_MAYA_HAIR_H
 #define GEOM_MAYA_HAIR_H
 
-extern "C" {
-#include "DNA_mesh_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_object_types.h"
-#include "BKE_main.h"
-}
-
 #include "exp_types.h"
 
 #include <string>
@@ -43,14 +36,14 @@ namespace VRayScene {
 
 class GeomMayaHair : public VRayExportable {
 public:
-	GeomMayaHair();
+	GeomMayaHair(Scene *scene, Main *main, Object *ob);
 
 	virtual        ~GeomMayaHair() { freeData(); }
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
-	virtual void    write(PyObject *output, int frame=0);
+	virtual void    writeData(PyObject *output);
 
-	void            init(Scene *sce, Main *main, Object *ob, ParticleSystem *psys);
+	void            init(ParticleSystem *psys);
 	void            freeData();
 
 	char           *getHairVertices() const    { return hair_vertices; }
@@ -64,9 +57,6 @@ private:
 	void            initData();
 	void            initAttributes();
 
-	Main           *m_main;
-	Scene          *m_sce;
-	Object         *m_ob;
 	ParticleSystem *m_psys;
 
 	int             use_width_fade;

@@ -35,8 +35,8 @@
 
 #define PYTHON_PRINT_BUF char buf[2048]
 
-#define PYTHON_PRINT(pyObject, buf) \
-	PyObject_CallMethod(pyObject, (char*)"write", (char*)"s", buf);
+#define PYTHON_PRINT(pyObject, str) \
+	PyObject_CallMethod(pyObject, _C("write"), _C("s"), str);
 
 #define PYTHON_PRINTF(pyObject, ...) \
 	sprintf(buf, __VA_ARGS__); \

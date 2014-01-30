@@ -53,35 +53,13 @@ extern "C" {
 
 void  ExportScene(FILE *file, Scene *sce, Main *main);
 
-int   write_GeomMayaHairInterpolate(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
-int   write_GeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
+int   ExportGeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
+int   ExportGeomMayaHairInterpolate(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName);
 
-void  write_Mesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup);
-void  write_MeshFile(FILE *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName);
-void  write_GeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Mesh *mesh, const char *pluginName, PyObject *propGroup);
+int   ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup);
 
-void  write_SmokeDomain(PyObject *outputFile, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, const char *lights);
-void  write_TexVoxelData(PyObject *outputFile, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, short interp_type);
-
-void  write_Dupli(PyObject *nodeFile, PyObject *geomFile, Scene *sce, Main *main, Object *ob);
-void  write_ObjectNode(PyObject   *nodeFile,
-					   PyObject   *geomFile,
-					   Scene      *sce,
-					   Main       *main,
-					   Object     *ob,
-					   float       tm[4][4],
-					   const char *pluginName);
-void  write_Node(PyObject *outputFile, Scene *sce, Object *ob, const char *pluginName,
-				 const char *transform,
-				 const char *geometry,
-				 const char *material,
-				 const char *volume,
-				 const int   nsamples,
-				 const char *lights,
-				 const char *user_attributes,
-				 const int   visible,
-				 const int   objectID,
-				 const int   primary_visibility);
+void  ExportSmokeDomain(PyObject *outputFile, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, const char *lights);
+void  ExportTexVoxelData(PyObject *output, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, short interp_type);
 
 #ifdef __cplusplus
 }

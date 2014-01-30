@@ -26,13 +26,6 @@
 #include "GeomPlane.h"
 
 
-void VRayScene::GeomPlane::init()
-{
-	initName();
-	initHash();
-}
-
-
 void VRayScene::GeomPlane::initHash()
 {
 	m_hash = 1;
@@ -41,11 +34,14 @@ void VRayScene::GeomPlane::initHash()
 
 void VRayScene::GeomPlane::initName(const std::string &name)
 {
-	m_name = "geomPlane";
+	if(NOT(name.empty()))
+		m_name = name;
+	else
+		m_name = "geomPlane";
 }
 
 
-void VRayScene::GeomPlane::write(PyObject *output, int frame)
+void VRayScene::GeomPlane::writeData(PyObject *output)
 {
 	PYTHON_PRINTF(output, "\nGeomPlane %s {}", m_name.c_str());
 }
