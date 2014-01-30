@@ -113,7 +113,7 @@ void RnaValue::writePlugin(std::stringstream &ss)
 			else {
 				ss << "\n\t" << attrName << "=";
 
-				std::cout << attrName << ":" << attrType << std::endl;
+				// std::cout << attrName << ":" << attrType << std::endl;
 
 				if(attrType == "BOOL") {
 					ss << getBool(attrName.c_str());
