@@ -101,7 +101,7 @@ void VRsceneExporter::exportScene()
 		Object *ob = base->object;
 		base = base->next;
 
-		PRINT_INFO("Processing '%s'...", ob->id.name);
+		// PRINT_INFO("Processing '%s'...", ob->id.name);
 
 		// Skip object here, but not in dupli!
 		// Dupli could be particles and it's better to
