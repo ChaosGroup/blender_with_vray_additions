@@ -49,6 +49,8 @@
 
 #define CGR_MAX_PLUGIN_NAME  1024
 
+#define CGR_MANUAL_HAIR_INTERP  0
+
 #ifndef WIN32
 #  define COLOR_RED      "\033[0;31m"
 #  define COLOR_GREEN    "\033[0;32m"
@@ -143,5 +145,7 @@ typedef unsigned __int16 u_int16_t;
 typedef unsigned __int32 u_int32_t;
 typedef unsigned __int64 u_int64_t;
 #endif
+
+#define _C(x) (char*)x
 
 #endif // CGR_CONFIG

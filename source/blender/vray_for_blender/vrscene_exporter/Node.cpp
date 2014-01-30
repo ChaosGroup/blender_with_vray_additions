@@ -57,20 +57,18 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
-VRayScene::Node::Node(Scene *sce, Main *main, Object *ob, DupliObject *dOb)
+VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
+	VRayExportable(scene, main, ob)
 {
-	m_sce       = sce;
-	m_main      = main;
-
-	dupliObject = dOb;
-	object      = dupliObject ? dupliObject->ob : ob;
-
 	geometry = NULL;
 }
 
 
-void VRayScene::Node::init()
+void VRayScene::Node::init(DupliObject *dOb)
 {
+	dupliObject = dOb;
+	object      = dupliObject ? dupliObject->ob : m_ob;
+
 	initGeometry();
 	initTransform();
 	initProperties();
@@ -145,9 +143,8 @@ void VRayScene::Node::initGeometry()
 	RnaAccess::RnaValue rna((ID*)object->data, "vray");
 
 	if(NOT(rna.getBool("override"))) {
-		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh();
-		geomStaticMesh->init(m_sce, m_main, object);
-
+		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, object);
+		geomStaticMesh->init();
 		geometry = geomStaticMesh;
 	}
 	else {
@@ -157,8 +154,8 @@ void VRayScene::Node::initGeometry()
 			geometry = geomPlane;
 		}
 		else {
-			GeomMeshFile *geomMeshFile = new GeomMeshFile();
-			geomMeshFile->init(m_sce, m_main, object);
+			GeomMeshFile *geomMeshFile = new GeomMeshFile(m_sce, m_main, object);
+			geomMeshFile->init();
 			geometry = geomMeshFile;
 		}
 	}
@@ -293,13 +290,8 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 }
 
 
-void VRayScene::Node::write(PyObject *output, int frame)
+void VRayScene::Node::writeData(PyObject *output)
 {
-	if(frame) {
-		sprintf(m_interpStart, "interpolate((%d,", frame);
-		sprintf(m_interpEnd,   "))");
-	}
-
 	std::string material = writeMtlMulti(output);
 	material = writeMtlOverride(output, material);
 	material = writeMtlWrapper(output, material);

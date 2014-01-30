@@ -28,9 +28,6 @@
 
 extern "C" {
 #  include "DNA_mesh_types.h"
-#  include "DNA_scene_types.h"
-#  include "DNA_object_types.h"
-#  include "BKE_main.h"
 }
 
 #include "exp_types.h"
@@ -60,35 +57,27 @@ typedef std::vector<MChan*> MChans;
 
 class GeomStaticMesh : public VRayExportable {
 public:
-	GeomStaticMesh();
+	GeomStaticMesh(Scene *scene, Main *main, Object *ob);
 
 	virtual      ~GeomStaticMesh() { freeData(); }
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
-	virtual void  write(PyObject *output, int frame=0);
+	virtual void  writeData(PyObject *output);
 
-	int           init(Scene *sce, Main *main, Object *ob);
+	virtual void  init();
 	void          freeData();
 
-	char*         getVertices() const        { return vertices; }
-	char*         getFaces() const           { return faces;}
-	char*         getNormals() const         { return normals; }
-	char*         getFaceNormals() const     { return faceNormals; }
-	char*         getFace_mtlIDs() const     { return face_mtlIDs; }
-	char*         getEdge_visibility() const { return edge_visibility; }
+	void          initAttributes();
+
+	char*         getVertices() const       { return vertices; }
+	char*         getFaces() const          { return faces; }
+	char*         getNormals() const        { return normals; }
+	char*         getFaceNormals() const    { return faceNormals; }
+	char*         getFaceMtlIDs() const     { return face_mtlIDs; }
+	char*         getEdgeVisibility() const { return edge_visibility; }
 
 	size_t        getMapChannelCount() const { return map_channels.size(); }
 	const MChan*  getMapChannel(const size_t i) const;
-
-	// GeomStaticMesh properties
-	int           dynamic_geometry;
-	int           environment_geometry;
-
-	int           osd_subdiv_level;
-	int           osd_subdiv_type;
-	int           osd_subdiv_uvs;
-
-	float         weld_threshold;
 
 private:
 	void          writeGeomDisplacedMesh();
@@ -103,7 +92,6 @@ private:
 	void          initSmooth();
 
 	Mesh         *mesh;
-	Object       *object;
 
 	char         *vertices;
 	size_t        coordIndex;
@@ -119,11 +107,20 @@ private:
 	MChans        map_channels;
 
 	// Options
+	int           useSmooth;
 	int           useDisplace;
 	int           useDisplaceOverride;
 	std::string   displaceTextureName;
 
-	int           useSmooth;
+	// GeomStaticMesh properties
+	int           dynamic_geometry;
+	int           environment_geometry;
+
+	int           osd_subdiv_level;
+	int           osd_subdiv_type;
+	int           osd_subdiv_uvs;
+
+	float         weld_threshold;
 
 };
 

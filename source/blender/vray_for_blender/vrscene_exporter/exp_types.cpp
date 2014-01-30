@@ -23,30 +23,13 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef GEOM_MESH_FILE_H
-#define GEOM_MESH_FILE_H
-
 #include "exp_types.h"
 
-#include <sstream>
+
+using namespace VRayScene;
 
 
-namespace VRayScene {
-
-class GeomMeshFile : public VRayExportable {
-public:
-	GeomMeshFile(Scene *scene, Main *main, Object *ob):VRayExportable(scene, main, ob) {}
-
-	virtual      ~GeomMeshFile() {}
-	virtual void  initHash();
-	virtual void  initName(const std::string &name="");
-	virtual void  writeData(PyObject *output);
-
-private:
-	std::stringstream  m_plugin;
-
-};
-
-}
-
-#endif // GEOM_MESH_FILE_H
+StrSet    VRayExportable::m_expCache;
+ExpCache  VRayExportable::m_frameCache;
+int       VRayExportable::m_animation;
+int       VRayExportable::m_checkAnimated;
