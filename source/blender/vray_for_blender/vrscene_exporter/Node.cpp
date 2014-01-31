@@ -70,6 +70,9 @@ void VRayScene::Node::init(DupliObject *dOb)
 	object      = dupliObject ? dupliObject->ob : m_ob;
 
 	initGeometry();
+	if(NOT(geometry))
+		return;
+
 	initTransform();
 	initProperties();
 
@@ -80,10 +83,6 @@ void VRayScene::Node::init(DupliObject *dOb)
 
 void VRayScene::Node::freeData()
 {
-	if(geometry) {
-		delete geometry;
-		geometry = NULL;
-	}
 }
 
 
@@ -145,18 +144,21 @@ void VRayScene::Node::initGeometry()
 	if(NOT(rna.getBool("override"))) {
 		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, object);
 		geomStaticMesh->init();
-		geometry = geomStaticMesh;
+		if(NOT(geomStaticMesh->getHash()))
+			delete geomStaticMesh;
+		else
+			geometry = geomStaticMesh;
 	}
 	else {
-		if(rna.getEnum("override_type")) {
-			GeomPlane *geomPlane = new GeomPlane();
-			geomPlane->init();
-			geometry = geomPlane;
-		}
-		else {
+		if (rna.getEnum("override_type") == 0) {
 			GeomMeshFile *geomMeshFile = new GeomMeshFile(m_sce, m_main, object);
 			geomMeshFile->init();
 			geometry = geomMeshFile;
+		}
+		else if(rna.getEnum("override_type") == 1) {
+			GeomPlane *geomPlane = new GeomPlane();
+			geomPlane->init();
+			geometry = geomPlane;
 		}
 	}
 }
@@ -183,7 +185,8 @@ void VRayScene::Node::initProperties()
 
 void VRayScene::Node::initHash()
 {
-	m_hash = 1;
+	// TODO: Add visibility to hash
+	m_hash = HashCode(transform);
 }
 
 
@@ -303,6 +306,11 @@ void VRayScene::Node::writeData(PyObject *output)
 	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
 	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, this->getTransform(), m_interpEnd);
 	PYTHON_PRINT (output, "\n}\n");
+}
+
+
+int VRayScene::Node::isAnimated() {
+	return IsNodeAnimated(m_ob);
 }
 
 

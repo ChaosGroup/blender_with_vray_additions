@@ -47,9 +47,6 @@
 using namespace VRayScene;
 
 
-typedef AnimationCache<Node>  NodesCache;
-
-
 struct ExpoterSettings {
 	ExpoterSettings(BL::RenderEngine engine):m_engine(engine) {
 		m_sce  = NULL;
@@ -103,7 +100,6 @@ private:
 	int                doRenderEmitter(Object *ob);
 
 	ExpoterSettings   *m_settings;
-	NodesCache         m_expCache;
 
 	PYTHON_PRINT_BUF;
 

@@ -174,57 +174,21 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
 	node->init(dOb);
 
-	if(m_settings->m_exportNodes) {
-		if(m_settings->m_animation) {
-			if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE || m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
-				if(NOT(IsNodeAnimated(ob)))
-					return;
-		}
-
-		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
-	}
-
-	if(m_settings->m_exportGeometry) {
-		if(NOT(m_settings->m_animation)) {
-			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-		}
-		else {
-			if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE || m_settings->m_checkAnimated == ANIM_CHECK_BOTH)
-				if(NOT(IsMeshAnimated(ob)))
-					return;
-
-			if(m_settings->m_checkAnimated == ANIM_CHECK_HASH) {
-				std::string obName(ob->id.name);
-
-				MHash curHash  = node->getHash();
-				MHash prevHash = m_expCache.getHash(obName);
-
-				if(NOT(curHash == prevHash)) {
-					// Write previous frame if hash is more then 'frame_step' back.
-					// If 'prevHash' is 0 then previous call was for the first frame
-					// and no need to reexport.
-					//
-					if(prevHash) {
-						int cacheFrame = m_expCache.getFrame(obName);
-						int prevFrame  = m_settings->m_sce->r.cfra - m_settings->m_sce->r.frame_step;
-
-						if(cacheFrame < prevFrame)
-							m_expCache.getData(obName)->writeGeometry(m_settings->m_fileGeom, prevFrame);
-					}
-
-					// Write current frame data
-					node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-
-					// This will free previous data and store new pointer
-					m_expCache.update(obName, curHash, m_settings->m_sce->r.cfra, node);
-				}
-			}
-		}
-	}
-
-	if(NOT(m_settings->m_animation)) {
+	if(NOT(node->getHash())) {
 		delete node;
+		return;
 	}
+
+	if(m_settings->m_exportNodes)
+		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+
+	if(m_settings->m_exportGeometry)
+		node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+
+	// In animation mode pointer is stored in cache and is freed by the cache
+	//
+	if(NOT(m_settings->m_animation))
+		delete node;
 }
 
 
