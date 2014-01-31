@@ -61,6 +61,7 @@ public:
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
 	virtual void  writeData(PyObject *output);
+	virtual int   isAnimated();
 
 	void          init(DupliObject *dOb=NULL);
 	void          freeData();

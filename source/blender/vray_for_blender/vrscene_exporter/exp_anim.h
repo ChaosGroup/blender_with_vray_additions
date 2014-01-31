@@ -60,6 +60,7 @@ public:
 	void freeData() {
 		for(typename ACache::iterator it = cache.begin(); it != cache.end(); ++it)
 			delete it->second.data;
+		cache.clear();
 	}
 
 	void update(const std::string &name, const MHash &hash, const int &frame, T *data) {
