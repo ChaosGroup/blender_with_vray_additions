@@ -24,7 +24,7 @@ void  GetTransformHex(float m[4][4], char *buf);
 char* GetStringZip(const u_int8_t *buf, unsigned bufLen);
 char* GetFloatArrayZip(float *data, size_t size);
 
-int   GetPythonAttrInt(PyObject *propGroup, const char *attrName);
-float GetPythonAttrFloat(PyObject *propGroup, const char *attrName);
+int   GetPythonAttrInt(PyObject *propGroup, const char *attrName, int def=0);
+float GetPythonAttrFloat(PyObject *propGroup, const char *attrName, float def=0.0f);
 
 #endif // CGR_VRSCENE_H
