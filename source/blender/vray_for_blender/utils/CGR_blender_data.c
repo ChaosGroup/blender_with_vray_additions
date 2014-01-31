@@ -216,6 +216,7 @@ int IsMeshAnimated(Object *ob)
 			case eModifierType_Softbody:
 			case eModifierType_Explode:
 			case eModifierType_MeshDeform:
+			case eModifierType_ParticleSystem:
 			case eModifierType_SimpleDeform:
 			case eModifierType_ShapeKey:
 			case eModifierType_Screw:
