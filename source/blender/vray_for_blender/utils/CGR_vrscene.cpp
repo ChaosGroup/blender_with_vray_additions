@@ -198,9 +198,11 @@ MHash HashCode(const char *s)
 int GetPythonAttrInt(PyObject *propGroup, const char *attrName, int def)
 {
 	PyObject *attr = PyObject_GetAttrString(propGroup, attrName);
-	PyObject *value = PyNumber_Long(attr);
-	if(PyNumber_Long(value))
-		return PyLong_AsLong(value);
+	if(attr) {
+		PyObject *value = PyNumber_Long(attr);
+		if(PyNumber_Long(value))
+			return PyLong_AsLong(value);
+	}
 	return def;
 }
 
@@ -208,8 +210,10 @@ int GetPythonAttrInt(PyObject *propGroup, const char *attrName, int def)
 float GetPythonAttrFloat(PyObject *propGroup, const char *attrName, float def)
 {
 	PyObject *attr = PyObject_GetAttrString(propGroup, attrName);
-	PyObject *value = PyNumber_Long(attr);
-	if(PyNumber_Float(value))
-		return PyLong_AsDouble(value);
+	if(attr) {
+		PyObject *value = PyNumber_Long(attr);
+		if(PyNumber_Float(value))
+			return PyLong_AsDouble(value);
+	}
 	return def;
 }
