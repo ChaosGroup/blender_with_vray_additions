@@ -28,6 +28,7 @@
 
 void VRayScene::GeomPlane::initHash()
 {
+	// GeomPlane is always the same
 	m_hash = 1;
 }
 
