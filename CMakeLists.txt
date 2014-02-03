@@ -283,7 +283,7 @@ unset(PLATFORM_DEFAULT)
 option(WITH_CYCLES_LOGGING	"Build cycles with logging support" OFF)
 
 # V-Ray For Blender
-option(WITH_VRAY_FOR_BLENDER		"Enable V-Ray For Blender extentions" OFF)
+option(WITH_VRAY_FOR_BLENDER		"Enable V-Ray For Blender extentions" ON)
 
 # LLVM
 option(WITH_LLVM					"Use LLVM" OFF)
