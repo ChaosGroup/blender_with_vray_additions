@@ -368,7 +368,7 @@ mark_as_advanced(WITH_CYCLES_LOGGING)
 mark_as_advanced(WITH_CYCLES_DEBUG)
 
 # V-Ray For Blender
-option(WITH_VRAY_FOR_BLENDER		"Enable V-Ray For Blender extentions" OFF)
+option(WITH_VRAY_FOR_BLENDER		"Enable V-Ray For Blender extentions" ON)
 
 # LLVM
 option(WITH_LLVM					"Use LLVM" OFF)
