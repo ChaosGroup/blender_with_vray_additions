@@ -203,11 +203,29 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 		if(NOT(ma))
 			continue;
 
+		std::string materialName;
+
 		char mtlName[MAX_ID_NAME];
 		BLI_strncpy(mtlName, ma->id.name, MAX_ID_NAME);
 		StripString(mtlName);
 
-		mtls_list.push_back(mtlName);
+		materialName = mtlName;
+
+		// TODO: Make a generic function
+		//
+		if(ma->id.lib) {
+			char libFilename[FILE_MAX] = "";
+
+			BLI_split_file_part(ma->id.lib->name+2, libFilename, FILE_MAX);
+			BLI_replace_extension(libFilename, FILE_MAX, "");
+
+			StripString(libFilename);
+
+			materialName.append("LI");
+			materialName.append(libFilename);
+		}
+
+		mtls_list.push_back(materialName);
 		ids_list.push_back(boost::lexical_cast<std::string>(a));
 	}
 
