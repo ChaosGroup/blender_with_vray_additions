@@ -26,22 +26,16 @@
 #ifndef CGR_BLENDER_UTILS_H
 #define CGR_BLENDER_UTILS_H
 
-#ifdef __cplusplus
 extern "C" {
-#endif
+#  include "DNA_mesh_types.h"
+}
 
-#include "DNA_mesh_types.h"
+#include "BKE_main.h"
 #include "DNA_scene_types.h"
 #include "DNA_object_types.h"
-#include "BKE_main.h"
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include <string>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
@@ -50,8 +44,6 @@ void  FreeDupliList(Object *ob);
 int   IsNodeAnimated(Object *ob);
 int   IsMeshAnimated(Object *ob);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+std::string GetIDName(ID *id);
 
 #endif // CGR_BLENDER_UTILS_H
