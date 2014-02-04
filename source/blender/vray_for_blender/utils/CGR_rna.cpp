@@ -139,7 +139,9 @@ void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::strings
 int RnaValue::checkProperty(const char *propName)
 {
     if(m_pointer.data == NULL) {
-		PRINT_ERROR("Property pointer not found!");
+		// Don't print error here, because there really could be no pointer.
+		// This is because the same build is used with noded and non-noded exporter.
+		// PRINT_ERROR("Property pointer not found!");
 		return 1;
     }
 
