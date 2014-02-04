@@ -32,19 +32,19 @@
 #include "CGR_vrscene.h"
 #include "CGR_rna.h"
 
-extern "C" {
-#  include "BLI_math.h"
-#  include "DNA_meshdata_types.h"
-#  include "DNA_material_types.h"
-}
-
 #include "BKE_mesh.h"
 #include "BKE_material.h"
 #include "BKE_customdata.h"
 #include "MEM_guardedalloc.h"
+#include "BLI_math.h"
 #include "BLI_sys_types.h"
 #include "BLI_string.h"
 #include "BLI_path_util.h"
+
+extern "C" {
+#  include "DNA_meshdata_types.h"
+#  include "DNA_material_types.h"
+}
 
 
 using namespace VRayScene;
@@ -563,7 +563,7 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 
 	std::stringstream ss;
 	ss << "\n" << "GeomStaticSmoothedMesh" << " " << m_name << " {";
-	// ss << "\n\t" << "mesh=" << NAME << ";";
+	ss << "\n\t" << "mesh=" << meshName << ";";
 	rna.writePlugin(m_pluginDesc.getTree("GeomStaticSmoothedMesh"), ss);
 	ss << "\n}\n";
 
@@ -578,9 +578,9 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	std::stringstream ss;
 	ss << "\n" << "GeomDisplacedMesh" << " " << m_name << " {";
 	ss << "\n\t" << "mesh=" << meshName << ";";
-	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
 	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
 	ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
 	ss << "\n}\n";
 
 	PYTHON_PRINT(output, ss.str().c_str());
@@ -589,20 +589,15 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 
 void GeomStaticMesh::writeData(PyObject *output)
 {
-	std::string staticMeshName = m_name;
-
 	if(useDisplace && useSmooth) {
 		writeGeomStaticSmoothedMesh(output);
 		writeGeomDisplacedMesh(output);
-		staticMeshName = displaceName;
 	}
 	else if(useDisplace) {
 		writeGeomDisplacedMesh(output);
-		staticMeshName = displaceName;
 	}
 	else if(useSmooth) {
 		writeGeomStaticSmoothedMesh(output);
-		staticMeshName = smoothName;
 	}
 
 	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", meshName.c_str());

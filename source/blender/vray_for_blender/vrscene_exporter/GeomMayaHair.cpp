@@ -39,13 +39,13 @@
 #include "RNA_access.h"
 #include "BLI_string.h"
 #include "BLI_path_util.h"
+#include "BLI_math.h"
 
 extern "C" {
 #  include "DNA_material_types.h"
 #  include "DNA_modifier_types.h"
 #  include "BKE_DerivedMesh.h"
 #  include "BKE_particle.h"
-#  include "BLI_math.h"
 }
 
 
