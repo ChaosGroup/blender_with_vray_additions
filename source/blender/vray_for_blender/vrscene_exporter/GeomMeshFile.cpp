@@ -64,6 +64,7 @@ void VRayScene::GeomMeshFile::initHash()
 {
 	RnaAccess::RnaValue rna((ID*)m_ob->data, "vray.GeomMeshFile");
 
+	m_plugin.str("");
 	m_plugin << "\n"   << "GeomMeshFile" << " " << m_name << " {";
 	m_plugin << "\n\t" << "file"        << "=\"" << rna.getPath("file") << "\";";
 	m_plugin << "\n\t" << "anim_type"   << "=" << rna.getEnum("anim_type") << ";";
