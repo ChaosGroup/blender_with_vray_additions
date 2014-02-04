@@ -38,8 +38,10 @@
 #include "MEM_guardedalloc.h"
 #include "RNA_access.h"
 #include "BLI_string.h"
+#include "BLI_path_util.h"
 
 extern "C" {
+#  include "DNA_material_types.h"
 #  include "DNA_modifier_types.h"
 #  include "BKE_DerivedMesh.h"
 #  include "BKE_particle.h"
@@ -132,8 +134,11 @@ void GeomMayaHair::init(ParticleSystem *psys)
 {
 	m_psys = psys;
 
+	GetTransformHex(m_ob->obmat, m_nodeTm);
+
 	initData();
 	initAttributes();
+	initName();
 
 	initHash();
 }
@@ -436,12 +441,37 @@ void GeomMayaHair::initName(const std::string &name)
 		StripString(nameBuf);
 		m_name.append(nameBuf);
 	}
+
+	m_nodeName = "Node" + m_name;
 }
 
 
 void GeomMayaHair::initHash()
 {
 	m_hash = HashCode(hair_vertices);
+
+	m_nodePlugin.str("");
+	m_nodePlugin << "\n"   << "Node" << " " << m_nodeName << " {";
+	m_nodePlugin << "\n\t" << "material" << "=" << getHairMaterialName() << ";";
+	m_nodePlugin << "\n\t" << "geometry" << "=" << m_name << ";";
+	m_nodePlugin << "\n\t" << "objectID" << "=" <<  m_ob->index << ";";
+
+	m_nodePlugin << "\n\t" << "transform" << "=";
+	m_nodePlugin << m_interpStart << "TransformHex(\"" << m_nodeTm << "\")" << m_interpEnd << ";";
+
+	m_nodePlugin << "\n}\n";
+
+	m_hash = m_hash ^ HashCode(m_nodePlugin.str().c_str());
+}
+
+
+void GeomMayaHair::writeNode(PyObject *output, int frame)
+{
+	// Have to manually setup frame here
+	// because this is not called from write().
+	initInterpolate(frame);
+
+	PYTHON_PRINT(output, m_nodePlugin.str().c_str());
 }
 
 
@@ -475,7 +505,10 @@ void GeomMayaHair::writeData(PyObject *output)
 }
 
 
-Material *GeomMayaHair::getHairMaterial() const
+std::string GeomMayaHair::getHairMaterialName() const
 {
-	return give_current_material(m_ob, m_psys->part->omat);
+	Material *ma = give_current_material(m_ob, m_psys->part->omat);
+	if(NOT(ma))
+		return "MANOMATERIALISSET";
+	return GetIDName((ID*)ma);
 }
