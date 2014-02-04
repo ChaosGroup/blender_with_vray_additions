@@ -104,35 +104,9 @@ void VRayScene::Node::initName(const std::string &name)
 		m_name = name;
 	}
 	else {
-		char obName[MAX_ID_NAME] = "";
-
-		// Get object name with 'OB' prefix (+2)
-		//
-		BLI_strncpy(obName, object->id.name+2, MAX_ID_NAME);
-		StripString(obName);
-
-		// Construct object (Node) name
-		//
-		m_name.clear();
-		m_name.append("OB");
-		m_name.append(obName);
-
-		if(dupliObject) {
+		m_name = GetIDName((ID*)object);
+		if(dupliObject)
 			m_name.append(boost::lexical_cast<std::string>(dupliObject->persistent_id[0]));
-		}
-
-		// Check if object is linked
-		if(object->id.lib) {
-			char libFilename[FILE_MAX] = "";
-
-			BLI_split_file_part(object->id.lib->name+2, libFilename, FILE_MAX);
-			BLI_replace_extension(libFilename, FILE_MAX, "");
-
-			StripString(libFilename);
-
-			m_name.append("LI");
-			m_name.append(libFilename);
-		}
 	}
 }
 
@@ -203,27 +177,9 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 		if(NOT(ma))
 			continue;
 
-		std::string materialName;
+		// TODO: Material override
 
-		char mtlName[MAX_ID_NAME];
-		BLI_strncpy(mtlName, ma->id.name, MAX_ID_NAME);
-		StripString(mtlName);
-
-		materialName = mtlName;
-
-		// TODO: Make a generic function
-		//
-		if(ma->id.lib) {
-			char libFilename[FILE_MAX] = "";
-
-			BLI_split_file_part(ma->id.lib->name+2, libFilename, FILE_MAX);
-			BLI_replace_extension(libFilename, FILE_MAX, "");
-
-			StripString(libFilename);
-
-			materialName.append("LI");
-			materialName.append(libFilename);
-		}
+		std::string materialName = GetIDName((ID*)ma);
 
 		mtls_list.push_back(materialName);
 		ids_list.push_back(boost::lexical_cast<std::string>(a));
