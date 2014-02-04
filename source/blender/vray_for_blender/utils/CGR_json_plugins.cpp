@@ -33,6 +33,10 @@
 #include "PIL_time.h"
 #include "MEM_guardedalloc.h"
 
+#ifdef WIN32
+#  include "BLI_winstuff.h"
+#endif
+
 #include "../editors/space_file/filelist.h"
 
 
