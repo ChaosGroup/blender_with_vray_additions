@@ -104,6 +104,8 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 	map_channels.clear();
 
 	dynamic_geometry = 0;
+	environment_geometry = 0;
+
 	osd_subdiv_level = 0;
 	osd_subdiv_type = 0;
 	osd_subdiv_uvs = 0;
@@ -134,15 +136,11 @@ void GeomStaticMesh::init()
 
 	FreeRenderMesh(m_main, mesh);
 
-	initName();
-	initHash();
-
-#if 0
 	initDisplace();
 	initSmooth();
-#endif
 
-	return;
+	initName();
+	initHash();
 }
 
 
@@ -207,6 +205,17 @@ void GeomStaticMesh::initName(const std::string &name)
 			m_name.append(libFilename);
 		}
 	}
+
+	meshName = m_name;
+	if(useDisplace) {
+		m_name = "GeomDisplacedMesh" + m_name;
+	}
+	else if(useSmooth) {
+		m_name = "GeomStaticSmoothedMesh" + m_name;
+	}
+	else {
+		m_name = meshName;
+	}
 }
 
 
@@ -230,7 +239,11 @@ void GeomStaticMesh::initDisplace()
 
 						if(mapDisplacement) {
 							useDisplace = true;
-							displaceTextureName = tex->id.name; // XXX: texture blend?
+
+							// XXX: texture blend is not supported right now
+							displaceTexture     = tex;
+							displaceTextureName = tex->id.name;
+
 							break;
 						}
 					}
@@ -243,15 +256,9 @@ void GeomStaticMesh::initDisplace()
 
 void GeomStaticMesh::initSmooth()
 {
-	// vray.GeomStaticSmoothedMesh.use
+	RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticSmoothedMesh");
 
-	PointerRNA obRNA;
-	RNA_id_pointer_create(&m_ob->id, &obRNA);
-
-	PointerRNA VRayObject             = RNA_pointer_get(&obRNA, "vray");
-	PointerRNA GeomStaticSmoothedMesh = RNA_pointer_get(&VRayObject, "GeomStaticSmoothedMesh");
-
-	useSmooth = RNA_boolean_get(&GeomStaticSmoothedMesh, "use");
+	useSmooth = rna.getBool("use");
 }
 
 
@@ -526,7 +533,10 @@ void GeomStaticMesh::initAttributes()
 		weld_threshold = GetPythonAttrFloat(m_propGroup, "weld_threshold");
 	}
 	else {
-		// TODO: Get smth from RNA
+		RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticMesh");
+
+		// We only have 'dynamic_geometry' defined in vb25
+		dynamic_geometry = rna.getBool("dynamic_geometry");
 	}
 }
 
@@ -547,9 +557,55 @@ void GeomStaticMesh::initHash()
 }
 
 
+void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
+{
+	RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticSmoothedMesh");
+
+	std::stringstream ss;
+	ss << "\n" << "GeomStaticSmoothedMesh" << " " << m_name << " {";
+	// ss << "\n\t" << "mesh=" << NAME << ";";
+	rna.writePlugin(m_pluginDesc.getTree("GeomStaticSmoothedMesh"), ss);
+	ss << "\n}\n";
+
+	PYTHON_PRINT(output, ss.str().c_str());
+}
+
+
+void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
+{
+	RnaAccess::RnaValue rna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
+
+	std::stringstream ss;
+	ss << "\n" << "GeomDisplacedMesh" << " " << m_name << " {";
+	ss << "\n\t" << "mesh=" << meshName << ";";
+	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
+	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
+	ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+	ss << "\n}\n";
+
+	PYTHON_PRINT(output, ss.str().c_str());
+}
+
+
 void GeomStaticMesh::writeData(PyObject *output)
 {
-	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", this->getName());
+	std::string staticMeshName = m_name;
+
+	if(useDisplace && useSmooth) {
+		writeGeomStaticSmoothedMesh(output);
+		writeGeomDisplacedMesh(output);
+		staticMeshName = displaceName;
+	}
+	else if(useDisplace) {
+		writeGeomDisplacedMesh(output);
+		staticMeshName = displaceName;
+	}
+	else if(useSmooth) {
+		writeGeomStaticSmoothedMesh(output);
+		staticMeshName = smoothName;
+	}
+
+	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", meshName.c_str());
 	PYTHON_PRINTF(output, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
 	PYTHON_PRINT(output, getVertices());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
