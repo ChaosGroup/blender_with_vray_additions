@@ -80,7 +80,8 @@ public:
 	const MChan*  getMapChannel(const size_t i) const;
 
 private:
-	void          writeGeomDisplacedMesh();
+	void          writeGeomDisplacedMesh(PyObject *output);
+	void          writeGeomStaticSmoothedMesh(PyObject *output);
 
 	int           hasDisplace();
 
@@ -92,6 +93,7 @@ private:
 	void          initSmooth();
 
 	Mesh         *mesh;
+	std::string   meshName;
 
 	char         *vertices;
 	size_t        coordIndex;
@@ -108,8 +110,12 @@ private:
 
 	// Options
 	int           useSmooth;
+	std::string   smoothName;
+
 	int           useDisplace;
+	std::string   displaceName;
 	int           useDisplaceOverride;
+	Tex          *displaceTexture;
 	std::string   displaceTextureName;
 
 	// GeomStaticMesh properties
