@@ -27,9 +27,7 @@
 #define GEOM_MAYA_HAIR_H
 
 #include "exp_types.h"
-
-#include <string>
-#include <vector>
+#include "CGR_vrscene.h"
 
 
 namespace VRayScene {
@@ -41,7 +39,9 @@ public:
 	virtual        ~GeomMayaHair() { freeData(); }
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
+
 	virtual void    writeData(PyObject *output);
+	void            writeNode(PyObject *output, int frame=INT_MIN);
 
 	void            init(ParticleSystem *psys);
 	void            freeData();
@@ -51,13 +51,18 @@ public:
 	char           *getWidths() const          { return widths; }
 	char           *getTransparency() const    { return transparency; }
 
-	Material       *getHairMaterial() const;
 
 private:
 	void            initData();
 	void            initAttributes();
 
+	std::string     getHairMaterialName() const;
+
 	ParticleSystem *m_psys;
+
+	std::stringstream  m_nodePlugin;
+	std::string        m_nodeName;
+	char               m_nodeTm[TRANSFORM_HEX_SIZE];
 
 	int             use_width_fade;
 
