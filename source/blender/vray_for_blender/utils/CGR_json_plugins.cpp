@@ -67,6 +67,8 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 		struct direntry *file = filelist_file(files, i);
 		if(NOT(file && (S_ISREG(file->type))))
 			continue;
+		if(NOT(BLI_testextensie(file->path, ".json")))
+			continue;
 
 		std::string fileName(BLI_path_basename(file->path));
 		fileName.erase(fileName.find_last_of("."), std::string::npos);
