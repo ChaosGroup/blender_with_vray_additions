@@ -38,12 +38,6 @@
 #include "GeomMeshFile.h"
 #include "GeomPlane.h"
 
-extern "C" {
-#  include "DNA_modifier_types.h"
-#  include "DNA_material_types.h"
-#  include "BLI_math.h"
-}
-
 #include "BKE_depsgraph.h"
 #include "BKE_scene.h"
 #include "BKE_material.h"
@@ -51,6 +45,12 @@ extern "C" {
 #include "BLI_sys_types.h"
 #include "BLI_string.h"
 #include "BLI_path_util.h"
+#include "BLI_math_matrix.h"
+
+extern "C" {
+#  include "DNA_modifier_types.h"
+#  include "DNA_material_types.h"
+}
 
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast.hpp>
