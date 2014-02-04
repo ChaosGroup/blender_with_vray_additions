@@ -36,7 +36,7 @@ set(SRC
 	utils/CGR_json_plugins.h
 	utils/CGR_json_plugins.cpp
 	utils/CGR_blender_data.h
-	utils/CGR_blender_data.c
+	utils/CGR_blender_data.cpp
 	utils/CGR_string.h
 	utils/CGR_string.cpp
 	utils/CGR_vrscene.h
