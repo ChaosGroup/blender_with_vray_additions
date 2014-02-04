@@ -40,6 +40,7 @@ extern "C" {
 #  include "BKE_main.h"
 }
 
+#include <sstream>
 #include <string>
 #include <vector>
 #include <set>
