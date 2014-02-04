@@ -93,6 +93,8 @@ public:
 	void               exportScene();
 
 private:
+	void               init();
+
 	void               exportObjectBase(Object *ob);
 	void               exportObject(Object *ob, DupliObject *dOb=NULL);
 
@@ -100,6 +102,8 @@ private:
 	int                doRenderEmitter(Object *ob);
 
 	ExpoterSettings   *m_settings;
+
+	std::string        m_mtlOverride;
 
 	PYTHON_PRINT_BUF;
 

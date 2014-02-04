@@ -63,7 +63,7 @@ public:
 	virtual void  writeData(PyObject *output);
 	virtual int   isAnimated();
 
-	void          init(DupliObject *dOb=NULL);
+	void          init(DupliObject *dOb=NULL, const std::string &mtlOverrideName="");
 	void          freeData();
 	void          writeGeometry(PyObject *output, int frame=0);
 
@@ -94,6 +94,7 @@ private:
 	int           objectID;
 	char          transform[TRANSFORM_HEX_SIZE];
 	std::string   material;
+	std::string   m_materialOverride;
 
 	// Additional properties
 	VRayExportable *geometry;
