@@ -29,6 +29,7 @@
 #include "utils/CGR_string.h"
 #include "utils/CGR_blender_data.h"
 #include "utils/CGR_json_plugins.h"
+#include "utils/CGR_rna.h"
 
 #include "exp_scene.h"
 
@@ -53,7 +54,7 @@ VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 {
 	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
 
-	VRayExportable::clearCache();
+	init();
 }
 
 
@@ -62,6 +63,18 @@ VRsceneExporter::~VRsceneExporter()
 	PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
 
 	delete m_settings;
+}
+
+
+void VRsceneExporter::init()
+{
+	VRayExportable::clearCache();
+
+	m_mtlOverride = "";
+
+	RnaAccess::RnaValue rna(&m_settings->m_sce->id, "vray.SettingsOptions");
+	if(rna.getBool("mtl_override_on"))
+		m_mtlOverride = "MA" + rna.getString("mtl_override");
 }
 
 
@@ -193,7 +206,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 {
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
-	node->init(dOb);
+	node->init(dOb, m_mtlOverride);
 
 	if(NOT(node->getHash())) {
 		delete node;

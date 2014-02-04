@@ -64,10 +64,12 @@ VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 }
 
 
-void VRayScene::Node::init(DupliObject *dOb)
+void VRayScene::Node::init(DupliObject *dOb, const std::string &mtlOverrideName)
 {
 	dupliObject = dOb;
 	object      = dupliObject ? dupliObject->ob : m_ob;
+
+	m_materialOverride = mtlOverrideName;
 
 	initGeometry();
 	if(NOT(geometry))
@@ -177,9 +179,11 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 		if(NOT(ma))
 			continue;
 
-		// TODO: Material override
-
 		std::string materialName = GetIDName((ID*)ma);
+
+		RnaAccess::RnaValue rna(&ma->id, "vray");
+		if(NOT(m_materialOverride.empty()) && NOT(rna.getBool("dontOverride")))
+			materialName = m_materialOverride;
 
 		mtls_list.push_back(materialName);
 		ids_list.push_back(boost::lexical_cast<std::string>(a));
