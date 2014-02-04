@@ -24,6 +24,11 @@
  */
 
 #include "CGR_config.h"
+
+#ifdef WIN32
+#  include "BLI_winstuff.h"
+#endif
+
 #include "CGR_json_plugins.h"
 
 #include "DNA_space_types.h"
@@ -32,10 +37,6 @@
 #include "BLI_string.h"
 #include "PIL_time.h"
 #include "MEM_guardedalloc.h"
-
-#ifdef WIN32
-#  include "BLI_winstuff.h"
-#endif
 
 #include "../editors/space_file/filelist.h"
 
