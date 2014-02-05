@@ -115,6 +115,8 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 	useSmooth   = false;
 
 	displaceTextureName = "";
+
+	m_useZip = true;
 }
 
 
@@ -284,7 +286,7 @@ void GeomStaticMesh::initVertices()
 		coordIndex += 3;
 	}
 
-	vertices = GetStringZip((u_int8_t*)vertsArray, coordIndex * sizeof(float));
+	vertices = m_useZip ? GetStringZip((u_int8_t*)vertsArray, coordIndex * sizeof(float)) : GetHex((u_int8_t*)vertsArray, coordIndex * sizeof(float));
 
 	delete [] vertsArray;
 }
@@ -412,11 +414,11 @@ void GeomStaticMesh::initFaces()
 	if(k)
 		evArray[evIndex++] = ev;
 
-	faces           = GetStringZip((u_int8_t*)facesArray,       vertIndex      * sizeof(int));
-	normals         = GetStringZip((u_int8_t*)normalsArray,     normIndex      * sizeof(float));
-	faceNormals     = GetStringZip((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int));
-	face_mtlIDs     = GetStringZip((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int));
-	edge_visibility = GetStringZip((u_int8_t*)evArray,          evIndex        * sizeof(int));
+	faces           = m_useZip ? GetStringZip((u_int8_t*)facesArray,       vertIndex      * sizeof(int))   : GetHex((u_int8_t*)facesArray,       vertIndex      * sizeof(int));
+	normals         = m_useZip ? GetStringZip((u_int8_t*)normalsArray,     normIndex      * sizeof(float)) : GetHex((u_int8_t*)normalsArray,     normIndex      * sizeof(float));
+	faceNormals     = m_useZip ? GetStringZip((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int))   : GetHex((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int));
+	face_mtlIDs     = m_useZip ? GetStringZip((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int))   : GetHex((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int));
+	edge_visibility = m_useZip ? GetStringZip((u_int8_t*)evArray,          evIndex        * sizeof(int))   : GetHex((u_int8_t*)evArray,          evIndex        * sizeof(int));
 
 	delete [] facesArray;
 	delete [] normalsArray;

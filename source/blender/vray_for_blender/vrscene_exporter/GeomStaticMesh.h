@@ -108,6 +108,9 @@ private:
 
 	MChans        map_channels;
 
+	// Export options
+	int           m_useZip;
+
 	// Options
 	int           useSmooth;
 	std::string   smoothName;
