@@ -242,7 +242,7 @@ void GeomStaticMesh::initDisplace()
 
 							// XXX: texture blend is not supported right now
 							displaceTexture     = tex;
-							displaceTextureName = GetIDName((ID*)tex);
+							displaceTextureName = StripString(GetIDName((ID*)tex));
 
 							break;
 						}
@@ -574,6 +574,8 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 {
 	RnaAccess::RnaValue rna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
+
+	// TODO: displacement type settings
 
 	std::stringstream ss;
 	ss << "\n" << "GeomDisplacedMesh" << " " << m_name << " {";
