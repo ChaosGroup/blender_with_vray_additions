@@ -45,6 +45,7 @@
 #include "MEM_guardedalloc.h"
 
 extern "C" {
+#include "DNA_anim_types.h"
 #include "DNA_curve_types.h"
 #include "DNA_meshdata_types.h"
 #include "DNA_meta_types.h"
@@ -172,11 +173,8 @@ void FreeDupliList(Object *ob)
 //
 int IsNodeAnimated(Object *ob)
 {
-	if(ob->adt) {
-		// ...
-		return 1;
-	}
-
+	if(ob->adt)
+		return ob->adt->action != NULL;
 	return 0;
 }
 
@@ -195,19 +193,19 @@ int IsMeshAnimated(Object *ob)
 		case OB_FONT: {
 			Curve *cu = (Curve*)ob->data;
 			if(cu->adt)
-				return 1;
+				return cu->adt->action != NULL;
 		}
 			break;
 		case OB_MBALL: {
 			MetaBall *mb = (MetaBall*)ob->data;
 			if(mb->adt)
-				return 1;
+				return mb->adt->action != NULL;
 		}
 			break;
 		case OB_MESH: {
 			Mesh *me = (Mesh*)ob->data;
 			if(me->adt)
-				return 1;
+				return me->adt->action != NULL;
 		}
 			break;
 		default:
@@ -228,7 +226,8 @@ int IsMeshAnimated(Object *ob)
 			case eModifierType_ShapeKey:
 			case eModifierType_Screw:
 			case eModifierType_Warp:
-				return ob->adt != NULL;
+				if(ob->adt)
+					return ob->adt->action != NULL;
 			default:
 				mod = mod->next;
 		}
