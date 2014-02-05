@@ -92,6 +92,17 @@ static void getStringHex(const u_int8_t *buf, unsigned nBytes, char *pstr)
 }
 
 
+
+char *GetHex(const u_int8_t *data, unsigned dataLen)
+{
+	char *buf = new char[dataLen*2];
+
+	getStringHex(data, dataLen, buf);
+
+	return buf;
+}
+
+
 char* GetStringZip(const u_int8_t *buf, unsigned bufLen)
 {
     // First compress the data into a temporary buffer
