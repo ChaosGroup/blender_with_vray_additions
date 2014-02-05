@@ -99,6 +99,7 @@ private:
 	void               exportObject(Object *ob, DupliObject *dOb=NULL);
 
 	int                isSmokeDomain(Object *ob);
+	int                isMeshLight(Object *ob);
 	int                doRenderEmitter(Object *ob);
 
 	ExpoterSettings   *m_settings;
