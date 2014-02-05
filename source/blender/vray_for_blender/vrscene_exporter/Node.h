@@ -64,6 +64,8 @@ public:
 	virtual int   isAnimated();
 
 	void          init(DupliObject *dOb=NULL, const std::string &mtlOverrideName="");
+	int           initGeometry();
+
 	void          freeData();
 	void          writeGeometry(PyObject *output, int frame=0);
 
@@ -75,7 +77,6 @@ public:
 	int           getObjectID() const;
 
 private:
-	void          initGeometry();
 	void          initTransform();
 	void          initProperties();
 
