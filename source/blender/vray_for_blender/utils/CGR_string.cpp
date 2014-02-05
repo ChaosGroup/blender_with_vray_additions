@@ -23,6 +23,7 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
+#include "CGR_config.h"
 #include "CGR_string.h"
 
 #include <string.h>
@@ -45,4 +46,13 @@ void StripString(char *str)
 				str[i] = '_';
 		}
 	}
+}
+
+
+std::string StripString(const std::string &str)
+{
+	static char buf[CGR_MAX_PLUGIN_NAME];
+	strncpy(buf, str.c_str(), CGR_MAX_PLUGIN_NAME);
+	StripString(buf);
+	return buf;
 }

@@ -26,14 +26,10 @@
 #ifndef CGR_STRING_H
 #define CGR_STRING_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string>
 
-void StripString(char *str);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+void         StripString(char *str);
+std::string  StripString(const std::string &str);
 
 #endif // CGR_STRING_H
