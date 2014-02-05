@@ -101,6 +101,7 @@ void VRsceneExporter::exportScene()
 
 	float  expProgress = 0.0f;
 	float  expProgStep = 1.0f / nObjects;
+	int    progUpdateCnt = nObjects > 2000 ? 1000 : 100;
 
 	// Export stuff
 	base = (Base*)m_settings->m_sce->base.first;
@@ -136,7 +137,7 @@ void VRsceneExporter::exportScene()
 
 		expProgress += expProgStep;
 		nObjects++;
-		if((nObjects % 1000) == 0) {
+		if((nObjects % progUpdateCnt) == 0) {
 			m_settings->m_engine.update_progress(expProgress);
 		}
 	}
@@ -214,6 +215,8 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 		}
 	}
 
+	int meshLight = isMeshLight(ob);
+
 	node->init(dOb, m_mtlOverride);
 	if(NOT(node->getHash())) {
 		delete node;
@@ -227,7 +230,7 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 	}
 
-	if(hasGeometry && m_settings->m_exportNodes)
+	if(hasGeometry && m_settings->m_exportNodes && NOT(meshLight))
 		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 
 	// In animation mode pointer is stored in cache and is freed by the cache
@@ -246,6 +249,13 @@ int VRsceneExporter::isSmokeDomain(Object *ob)
 		mod = mod->next;
 	}
 	return 0;
+}
+
+
+int VRsceneExporter::isMeshLight(Object *ob)
+{
+	RnaAccess::RnaValue rna(&ob->id, "vray.LightMesh");
+	return rna.getBool("use");
 }
 
 
