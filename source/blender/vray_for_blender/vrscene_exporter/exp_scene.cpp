@@ -184,7 +184,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 				if(m_settings->m_exportNodes)
 					geomMayaHair->writeNode(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 				if(m_settings->m_exportGeometry)
-					geomMayaHair->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+					geomMayaHair->write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 				if(NOT(m_settings->m_animation))
 					delete geomMayaHair;
 			}
@@ -206,22 +206,33 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 {
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
-	node->init(dOb, m_mtlOverride);
 
+	if(m_settings->m_animation && m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra) {
+		if(NOT(node->isAnimated() || IsMeshAnimated(ob))) {
+			delete node;
+			return;
+		}
+	}
+
+	node->init(dOb, m_mtlOverride);
 	if(NOT(node->getHash())) {
 		delete node;
 		return;
 	}
 
-	if(m_settings->m_exportNodes)
-		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+	int hasGeometry = 1;
+	if(m_settings->m_exportGeometry) {
+		hasGeometry = node->initGeometry();
+		if(hasGeometry)
+			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+	}
 
-	if(m_settings->m_exportGeometry)
-		node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+	if(hasGeometry && m_settings->m_exportNodes)
+		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 
 	// In animation mode pointer is stored in cache and is freed by the cache
 	//
-	if(NOT(m_settings->m_animation))
+	if(NOT(m_settings->m_animation) || NOT(hasGeometry))
 		delete node;
 }
 
