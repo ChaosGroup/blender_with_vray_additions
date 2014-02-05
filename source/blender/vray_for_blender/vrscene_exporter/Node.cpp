@@ -71,10 +71,6 @@ void VRayScene::Node::init(DupliObject *dOb, const std::string &mtlOverrideName)
 
 	m_materialOverride = mtlOverrideName;
 
-	initGeometry();
-	if(NOT(geometry))
-		return;
-
 	initTransform();
 	initProperties();
 
@@ -113,30 +109,37 @@ void VRayScene::Node::initName(const std::string &name)
 }
 
 
-void VRayScene::Node::initGeometry()
+int VRayScene::Node::initGeometry()
 {
 	RnaAccess::RnaValue rna((ID*)object->data, "vray");
 
 	if(NOT(rna.getBool("override"))) {
 		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, object);
 		geomStaticMesh->init();
-		if(NOT(geomStaticMesh->getHash()))
+		if(NOT(geomStaticMesh->getHash())) {
 			delete geomStaticMesh;
-		else
+			return 0;
+		}
+		else {
 			geometry = geomStaticMesh;
+			return 1;
+		}
 	}
 	else {
 		if (rna.getEnum("override_type") == 0) {
 			GeomMeshFile *geomMeshFile = new GeomMeshFile(m_sce, m_main, object);
 			geomMeshFile->init();
 			geometry = geomMeshFile;
+			return 1;
 		}
 		else if(rna.getEnum("override_type") == 1) {
 			GeomPlane *geomPlane = new GeomPlane();
 			geomPlane->init();
 			geometry = geomPlane;
+			return 1;
 		}
 	}
+	return 0;
 }
 
 
