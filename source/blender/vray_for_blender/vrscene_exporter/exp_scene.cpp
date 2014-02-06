@@ -130,7 +130,7 @@ void VRsceneExporter::exportScene()
 
 		// Smoke domain will be exported when exporting Effects
 		//
-		if(isSmokeDomain(ob))
+		if(Node::IsSmokeDomain(ob))
 			continue;
 
 		exportObjectBase(ob);
@@ -163,6 +163,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
 				if(m_settings->m_engine.test_break())
 					break;
+				if(NOT(GEOM_TYPE(dob->ob)))
+					continue;
 
 				exportObject(ob, dob);
 			}
@@ -206,7 +208,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 {
-	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
+	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
 	if(m_settings->m_animation && m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra) {
 		if(NOT(node->isAnimated() || IsMeshAnimated(ob))) {
@@ -215,9 +217,7 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 		}
 	}
 
-	int meshLight = isMeshLight(ob);
-
-	node->init(dOb, m_mtlOverride);
+	node->init(m_mtlOverride);
 	if(NOT(node->getHash())) {
 		delete node;
 		return;
@@ -230,32 +230,13 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 	}
 
-	if(hasGeometry && m_settings->m_exportNodes && NOT(meshLight))
+	if(hasGeometry && m_settings->m_exportNodes && NOT(node->isMeshLight()))
 		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 
 	// In animation mode pointer is stored in cache and is freed by the cache
 	//
 	if(NOT(m_settings->m_animation) || NOT(hasGeometry))
 		delete node;
-}
-
-
-int VRsceneExporter::isSmokeDomain(Object *ob)
-{
-	ModifierData *mod = (ModifierData*)ob->modifiers.first;
-	while(mod) {
-		if(mod->type == eModifierType_Smoke)
-			return 1;
-		mod = mod->next;
-	}
-	return 0;
-}
-
-
-int VRsceneExporter::isMeshLight(Object *ob)
-{
-	RnaAccess::RnaValue rna(&ob->id, "vray.LightMesh");
-	return rna.getBool("use");
 }
 
 
