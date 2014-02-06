@@ -57,18 +57,18 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
-VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
+VRayScene::Node::Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb):
 	VRayExportable(scene, main, ob)
 {
 	geometry = NULL;
+
+	dupliObject = dOb;
+	object      = dupliObject ? dupliObject->ob : m_ob;
 }
 
 
-void VRayScene::Node::init(DupliObject *dOb, const std::string &mtlOverrideName)
+void VRayScene::Node::init(const std::string &mtlOverrideName)
 {
-	dupliObject = dOb;
-	object      = dupliObject ? dupliObject->ob : m_ob;
-
 	m_materialOverride = mtlOverrideName;
 
 	initTransform();
@@ -291,8 +291,34 @@ void VRayScene::Node::writeData(PyObject *output)
 
 
 int VRayScene::Node::isAnimated() {
-	return IsNodeAnimated(m_ob);
+	return IsNodeAnimated(object);
 }
+
+
+int VRayScene::Node::IsSmokeDomain(Object *ob)
+{
+	ModifierData *mod = (ModifierData*)ob->modifiers.first;
+	while(mod) {
+		if(mod->type == eModifierType_Smoke)
+			return 1;
+		mod = mod->next;
+	}
+	return 0;
+}
+
+
+int VRayScene::Node::isSmokeDomain()
+{
+	return Node::IsSmokeDomain(object);
+}
+
+
+int VRayScene::Node::isMeshLight()
+{
+	RnaAccess::RnaValue rna(&object->id, "vray.LightMesh");
+	return rna.getBool("use");
+}
+
 
 
 void VRayScene::Node::writeGeometry(PyObject *output, int frame)
