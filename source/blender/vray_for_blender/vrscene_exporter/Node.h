@@ -55,7 +55,9 @@ enum GeomOverride {
 
 class Node : public VRayExportable {
 public:
-	Node(Scene *scene, Main *main, Object *ob);
+	Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL);
+
+	static int    IsSmokeDomain(Object *ob);
 
 	virtual      ~Node() { freeData(); }
 	virtual void  initHash();
@@ -63,7 +65,7 @@ public:
 	virtual void  writeData(PyObject *output);
 	virtual int   isAnimated();
 
-	void          init(DupliObject *dOb=NULL, const std::string &mtlOverrideName="");
+	void          init(const std::string &mtlOverrideName="");
 	int           initGeometry();
 
 	void          freeData();
@@ -75,6 +77,9 @@ public:
 
 	char         *getTransform() const;
 	int           getObjectID() const;
+
+	int           isMeshLight();
+	int           isSmokeDomain();
 
 private:
 	void          initTransform();
