@@ -116,7 +116,11 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 	Scene *sce = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
 
-	ExpoterSettings *settings = new ExpoterSettings(renderEngine);
+	PointerRNA sceneRnaPtr;
+	RNA_id_pointer_create((ID*)sce, &sceneRnaPtr);
+	BL::Scene scene(sceneRnaPtr);
+
+	ExpoterSettings *settings = new ExpoterSettings(scene, renderEngine);
 	settings->m_sce  = sce;
 	settings->m_main = CTX_data_main(C);
 
