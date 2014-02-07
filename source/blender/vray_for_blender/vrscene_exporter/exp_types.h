@@ -34,6 +34,10 @@
 
 #include "murmur3.h"
 
+#include "BKE_depsgraph.h"
+#include "MEM_guardedalloc.h"
+#include "RNA_blender_cpp.h"
+
 extern "C" {
 #  include "DNA_scene_types.h"
 #  include "DNA_object_types.h"
@@ -49,6 +53,48 @@ extern "C" {
 
 
 namespace VRayScene {
+
+struct ExpoterSettings {
+	ExpoterSettings(BL::Scene scene, BL::RenderEngine engine):
+		b_scene(scene),
+		b_engine(engine)
+	{
+		m_sce  = NULL;
+		m_main = NULL;
+
+		m_fileObject = NULL;
+		m_fileGeom   = NULL;
+		m_fileLights = NULL;
+
+		m_exportNodes    = true;
+		m_exportGeometry = true;
+
+		m_animation = false;
+		m_checkAnimated = ANIM_CHECK_BOTH;
+
+		m_activeLayers = true;
+		m_altDInstances = false;
+	}
+
+	Scene            *m_sce;
+	Main             *m_main;
+
+	BL::Scene         b_scene;
+	BL::RenderEngine  b_engine;
+
+	PyObject         *m_fileObject;
+	PyObject         *m_fileGeom;
+	PyObject         *m_fileLights;
+
+	int               m_exportNodes;
+	int               m_exportGeometry;
+
+	int               m_animation;
+	int               m_checkAnimated;
+
+	int               m_activeLayers;
+	int               m_altDInstances;
+};
 
 
 class VRayExportable;
