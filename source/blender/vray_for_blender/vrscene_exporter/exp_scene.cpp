@@ -169,6 +169,16 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			}
 
 			b_ob.dupli_list_clear();
+
+			// If dupli were not from particles skip base object
+			//
+			if(ob->transflag & OB_DUPLIPARTS) {
+				if(NOT(Node::DoRenderEmitter(ob)))
+					return;
+			}
+			else {
+				return;
+			}
 		}
 
 		if(NOT(EMPTY_TYPE(ob))) {
