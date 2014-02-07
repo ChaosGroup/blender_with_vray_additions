@@ -171,31 +171,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			b_ob.dupli_list_clear();
 		}
 
-		if(ob->particlesystem.first) {
-			for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next) {
-				ParticleSettings *pset = psys->part;
-
-				if(pset->type != PART_HAIR)
-					continue;
-
-				if(psys->part->ren_as != PART_DRAW_PATH)
-					continue;
-
-				GeomMayaHair *geomMayaHair = new GeomMayaHair(m_settings->m_sce, m_settings->m_main, ob);
-				geomMayaHair->init(psys);
-				if(m_settings->m_exportNodes)
-					geomMayaHair->writeNode(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
-				if(m_settings->m_exportGeometry)
-					geomMayaHair->write(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-				if(NOT(m_settings->m_animation))
-					delete geomMayaHair;
-			}
-		}
-
 		if(NOT(EMPTY_TYPE(ob))) {
-			if(NOT(doRenderEmitter(ob)))
-				return;
-
 			if(m_settings->b_engine.test_break())
 				return;
 
@@ -222,6 +198,12 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 		return;
 	}
 
+	if(node->hasHair()) {
+		node->writeHair(m_settings);
+		if(NOT(node->doRenderEmitter()))
+			return;
+	}
+
 	int hasGeometry = 1;
 	if(m_settings->m_exportGeometry) {
 		hasGeometry = node->initGeometry();
@@ -236,18 +218,4 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 	//
 	if(NOT(m_settings->m_animation) || NOT(hasGeometry))
 		delete node;
-}
-
-
-int VRsceneExporter::doRenderEmitter(Object *ob)
-{
-	if(ob->particlesystem.first) {
-		int show_emitter = 0;
-		for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next)
-			show_emitter += psys->part->draw & PART_DRAW_EMITTER;
-		/* if no psys has "show emitter" selected don't render emitter */
-		if (show_emitter == 0)
-			return 0;
-	}
-	return 1;
 }

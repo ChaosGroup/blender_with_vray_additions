@@ -57,58 +57,58 @@ class Node : public VRayExportable {
 public:
 	Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL);
 
-	static int    IsSmokeDomain(Object *ob);
+	static int      IsSmokeDomain(Object *ob);
+	static int      HasHair(Object *ob);
+	static int      DoRenderEmitter(Object *ob);
 
-	virtual      ~Node() { freeData(); }
-	virtual void  initHash();
-	virtual void  initName(const std::string &name="");
-	virtual void  writeData(PyObject *output);
-	virtual int   isAnimated();
+	virtual        ~Node() { freeData(); }
+	virtual void    initHash();
+	virtual void    initName(const std::string &name="");
+	virtual void    writeData(PyObject *output);
+	virtual int     isAnimated();
 
-	void          init(const std::string &mtlOverrideName="");
-	int           initGeometry();
+	void            init(const std::string &mtlOverrideName="");
+	int             initGeometry();
 
-	void          freeData();
-	void          writeGeometry(PyObject *output, int frame=0);
+	void            freeData();
 
-	MHash         getGeometryHash();
-	const char   *getDataName() const { return geometry->getName(); }
-	Object       *getObject() const   { return object; }
+	void            writeGeometry(PyObject *output, int frame=0);
+	void            writeHair(ExpoterSettings *settings);
 
-	char         *getTransform() const;
-	int           getObjectID() const;
+	MHash           getGeometryHash();
+	const char     *getDataName() const { return m_geometry->getName(); }
+	Object         *getObject() const   { return m_object; }
 
-	int           isMeshLight();
-	int           isSmokeDomain();
+	char           *getTransform() const;
+	int             getObjectID() const;
+
+	int             isMeshLight();
+	int             isSmokeDomain();
+	int             hasHair();
+	int             doRenderEmitter();
 
 private:
-	void          initTransform();
-	void          initProperties();
+	void            initTransform();
+	void            initProperties();
 
-	std::string   writeGeomDisplacedMesh(PyObject *output, const std::string &meshName);
-	std::string   writeGeomStaticSmoothedMesh(PyObject *output, const std::string &meshName);
+	std::string     writeGeomDisplacedMesh(PyObject *output, const std::string &meshName);
+	std::string     writeGeomStaticSmoothedMesh(PyObject *output, const std::string &meshName);
 
-	std::string   writeMtlMulti(PyObject *output);
-	std::string   writeMtlWrapper(PyObject *output, const std::string &baseMtl);
-	std::string   writeMtlOverride(PyObject *output, const std::string &baseMtl);
-	std::string   writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
+	std::string     writeMtlMulti(PyObject *output);
+	std::string     writeMtlWrapper(PyObject *output, const std::string &baseMtl);
+	std::string     writeMtlOverride(PyObject *output, const std::string &baseMtl);
+	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 
-	Object       *object;
-	DupliObject  *dupliObject;
+	Object         *m_object;
+	DupliObject    *m_dupliObject;
+
+	std::string     m_materialOverride;
 
 	// Node properties
-	int           objectID;
-	char          transform[TRANSFORM_HEX_SIZE];
-	std::string   material;
-	std::string   m_materialOverride;
-
-	// Additional properties
-	VRayExportable *geometry;
-
-	int           useMtlWrapper;
-	int           useMtlOverride;
-	int           useMtlRenderStats;
-
+	int             m_objectID;
+	char            m_transform[TRANSFORM_HEX_SIZE];
+	std::string     m_materiall;
+	VRayExportable *m_geometry;
 };
 
 }
