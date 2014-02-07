@@ -577,14 +577,35 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 {
 	RnaAccess::RnaValue rna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
 
-	// TODO: displacement type settings
-
 	std::stringstream ss;
 	ss << "\n" << "GeomDisplacedMesh" << " " << m_name << " {";
 	ss << "\n\t" << "mesh=" << meshName << ";";
 	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
 	ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
 	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
+
+	// Overrider type settings
+	//
+	int displace_type = rna.getEnum("type");
+
+	std::cout << "Displace type = " << displace_type << std::endl;
+
+	if(displace_type == 1) {
+		ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+		ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+	}
+	else if(displace_type == 0) {
+		ss << "\n\t" << "displace_2d"         << "=" << 1 << ";";
+		ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+	}
+	else if(displace_type == 2) {
+		ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+		ss << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+	}
+
+	// Use first channel for displace
+	ss << "\n\t" << "map_channel" << "=" << 0 << ";";
+
 	ss << "\n}\n";
 
 	PYTHON_PRINT(output, ss.str().c_str());
