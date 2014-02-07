@@ -90,7 +90,7 @@ void VRsceneExporter::exportScene()
 
 	Base *base = NULL;
 
-	m_settings->m_engine.update_progress(0.0f);
+	m_settings->b_engine.update_progress(0.0f);
 
 	size_t nObjects = 0;
 	base = (Base*)m_settings->m_sce->base.first;
@@ -107,8 +107,8 @@ void VRsceneExporter::exportScene()
 	base = (Base*)m_settings->m_sce->base.first;
 	nObjects = 0;
 	while(base) {
-		if(m_settings->m_engine.test_break()) {
-			m_settings->m_engine.report(RPT_WARNING, "Export interrupted!");
+		if(m_settings->b_engine.test_break()) {
+			m_settings->b_engine.report(RPT_WARNING, "Export interrupted!");
 			break;
 		}
 
@@ -138,11 +138,11 @@ void VRsceneExporter::exportScene()
 		expProgress += expProgStep;
 		nObjects++;
 		if((nObjects % progUpdateCnt) == 0) {
-			m_settings->m_engine.update_progress(expProgress);
+			m_settings->b_engine.update_progress(expProgress);
 		}
 	}
 
-	m_settings->m_engine.update_progress(1.0f);
+	m_settings->b_engine.update_progress(1.0f);
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	printf(" done [%s]\n", timeMeasureBuf);
@@ -152,16 +152,15 @@ void VRsceneExporter::exportScene()
 void VRsceneExporter::exportObjectBase(Object *ob)
 {
 	if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
-		if(ob->transflag & OB_DUPLI) {
-			FreeDupliList(ob);
+		PointerRNA objectRnaPtr;
+		RNA_id_pointer_create((ID*)ob, &objectRnaPtr);
+		BL::Object b_ob(objectRnaPtr);
 
-			EvaluationContext  m_eval_ctx;
-			m_eval_ctx.for_render = true;
-
-			ob->duplilist = object_duplilist(&m_eval_ctx, m_settings->m_sce, ob);
+		if(b_ob.is_duplicator()) {
+			b_ob.dupli_list_create(m_settings->b_scene, 2);
 
 			for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
-				if(m_settings->m_engine.test_break())
+				if(m_settings->b_engine.test_break())
 					break;
 				if(NOT(GEOM_TYPE(dob->ob)))
 					continue;
@@ -169,7 +168,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 				exportObject(ob, dob);
 			}
 
-			FreeDupliList(ob);
+			b_ob.dupli_list_clear();
 		}
 
 		if(ob->particlesystem.first) {
@@ -197,7 +196,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(doRenderEmitter(ob)))
 				return;
 
-			if(m_settings->m_engine.test_break())
+			if(m_settings->b_engine.test_break())
 				return;
 
 			exportObject(ob);
