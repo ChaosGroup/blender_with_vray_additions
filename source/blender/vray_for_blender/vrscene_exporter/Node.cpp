@@ -41,6 +41,7 @@
 #include "BKE_depsgraph.h"
 #include "BKE_scene.h"
 #include "BKE_material.h"
+#include "BKE_particle.h"
 #include "MEM_guardedalloc.h"
 #include "BLI_sys_types.h"
 #include "BLI_string.h"
@@ -60,10 +61,10 @@ extern "C" {
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb):
 	VRayExportable(scene, main, ob)
 {
-	geometry = NULL;
+	m_geometry = NULL;
 
-	dupliObject = dOb;
-	object      = dupliObject ? dupliObject->ob : m_ob;
+	m_dupliObject = dOb;
+	m_object      = m_dupliObject ? m_dupliObject->ob : m_ob;
 }
 
 
@@ -86,13 +87,13 @@ void VRayScene::Node::freeData()
 
 char* VRayScene::Node::getTransform() const
 {
-	return const_cast<char*>(transform);
+	return const_cast<char*>(m_transform);
 }
 
 
 int VRayScene::Node::getObjectID() const
 {
-	return objectID;
+	return m_objectID;
 }
 
 
@@ -102,40 +103,40 @@ void VRayScene::Node::initName(const std::string &name)
 		m_name = name;
 	}
 	else {
-		m_name = GetIDName((ID*)object);
-		if(dupliObject)
-			m_name.append(boost::lexical_cast<std::string>(dupliObject->persistent_id[0]));
+		m_name = GetIDName((ID*)m_object);
+		if(m_dupliObject)
+			m_name.append(boost::lexical_cast<std::string>(m_dupliObject->persistent_id[0]));
 	}
 }
 
 
 int VRayScene::Node::initGeometry()
 {
-	RnaAccess::RnaValue rna((ID*)object->data, "vray");
+	RnaAccess::RnaValue rna((ID*)m_object->data, "vray");
 
 	if(NOT(rna.getBool("override"))) {
-		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, object);
+		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, m_object);
 		geomStaticMesh->init();
 		if(NOT(geomStaticMesh->getHash())) {
 			delete geomStaticMesh;
 			return 0;
 		}
 		else {
-			geometry = geomStaticMesh;
+			m_geometry = geomStaticMesh;
 			return 1;
 		}
 	}
 	else {
 		if (rna.getEnum("override_type") == 0) {
-			GeomMeshFile *geomMeshFile = new GeomMeshFile(m_sce, m_main, object);
+			GeomMeshFile *geomMeshFile = new GeomMeshFile(m_sce, m_main, m_object);
 			geomMeshFile->init();
-			geometry = geomMeshFile;
+			m_geometry = geomMeshFile;
 			return 1;
 		}
 		else if(rna.getEnum("override_type") == 1) {
 			GeomPlane *geomPlane = new GeomPlane();
 			geomPlane->init();
-			geometry = geomPlane;
+			m_geometry = geomPlane;
 			return 1;
 		}
 	}
@@ -147,38 +148,38 @@ void VRayScene::Node::initTransform()
 {
 	float tm[4][4];
 
-	if(dupliObject)
-		copy_m4_m4(tm, dupliObject->mat);
+	if(m_dupliObject)
+		copy_m4_m4(tm, m_dupliObject->mat);
 	else
-		copy_m4_m4(tm, object->obmat);
+		copy_m4_m4(tm, m_object->obmat);
 
-	GetTransformHex(tm, transform);
+	GetTransformHex(tm, m_transform);
 }
 
 
 void VRayScene::Node::initProperties()
 {
-	objectID = object->index;
+	m_objectID = m_object->index;
 }
 
 
 void VRayScene::Node::initHash()
 {
 	// TODO: Add visibility to hash
-	m_hash = HashCode(transform);
+	m_hash = HashCode(m_transform);
 }
 
 
 std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 {
-	if(NOT(object->totcol))
+	if(NOT(m_object->totcol))
 		return "MANOMATERIALISSET";
 
 	StringVector mtls_list;
 	StringVector ids_list;
 
-	for(int a = 1; a <= object->totcol; ++a) {
-		Material *ma = give_current_material(object, a);
+	for(int a = 1; a <= m_object->totcol; ++a) {
+		Material *ma = give_current_material(m_object, a);
 		if(NOT(ma))
 			continue;
 
@@ -199,7 +200,7 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 		return mtls_list[0];
 
 	char obMtlName[MAX_ID_NAME];
-	BLI_strncpy(obMtlName, object->id.name+2, MAX_ID_NAME);
+	BLI_strncpy(obMtlName, m_object->id.name+2, MAX_ID_NAME);
 	StripString(obMtlName);
 
 	std::string plugName("MM");
@@ -216,7 +217,7 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 
 std::string VRayScene::Node::writeMtlWrapper(PyObject *output, const std::string &baseMtl)
 {
-	RnaAccess::RnaValue rna(&object->id, "vray.MtlWrapper");
+	RnaAccess::RnaValue rna(&m_object->id, "vray.MtlWrapper");
 	if(NOT(rna.getBool("use")))
 		return baseMtl;
 
@@ -236,7 +237,7 @@ std::string VRayScene::Node::writeMtlWrapper(PyObject *output, const std::string
 
 std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::string &baseMtl)
 {
-	RnaAccess::RnaValue rna(&object->id, "vray.MtlOverride");
+	RnaAccess::RnaValue rna(&m_object->id, "vray.MtlOverride");
 	if(NOT(rna.getBool("use")))
 		return baseMtl;
 
@@ -256,7 +257,7 @@ std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::strin
 
 std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::string &baseMtl)
 {
-	RnaAccess::RnaValue rna(&object->id, "vray.MtlRenderStats");
+	RnaAccess::RnaValue rna(&m_object->id, "vray.MtlRenderStats");
 	if(NOT(rna.getBool("use")))
 		return baseMtl;
 
@@ -291,7 +292,7 @@ void VRayScene::Node::writeData(PyObject *output)
 
 
 int VRayScene::Node::isAnimated() {
-	return IsNodeAnimated(object);
+	return IsNodeAnimated(m_object);
 }
 
 
@@ -307,21 +308,83 @@ int VRayScene::Node::IsSmokeDomain(Object *ob)
 }
 
 
+int VRayScene::Node::HasHair(Object *ob)
+{
+	if(ob->particlesystem.first) {
+		for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next) {
+			ParticleSettings *pset = psys->part;
+			if(pset->type != PART_HAIR)
+				continue;
+			if(psys->part->ren_as == PART_DRAW_PATH)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+int VRayScene::Node::DoRenderEmitter(Object *ob)
+{
+	if(ob->particlesystem.first) {
+		int show_emitter = 0;
+		for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next)
+			show_emitter += psys->part->draw & PART_DRAW_EMITTER;
+		/* if no psys has "show emitter" selected don't render emitter */
+		if (show_emitter == 0)
+			return 0;
+	}
+	return 1;
+}
+
+
 int VRayScene::Node::isSmokeDomain()
 {
-	return Node::IsSmokeDomain(object);
+	return Node::IsSmokeDomain(m_object);
+}
+
+
+int VRayScene::Node::hasHair()
+{
+	return Node::HasHair(m_object);
+}
+
+
+int VRayScene::Node::doRenderEmitter()
+{
+	return Node::DoRenderEmitter(m_object);
 }
 
 
 int VRayScene::Node::isMeshLight()
 {
-	RnaAccess::RnaValue rna(&object->id, "vray.LightMesh");
+	RnaAccess::RnaValue rna(&m_object->id, "vray.LightMesh");
 	return rna.getBool("use");
 }
 
 
-
 void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 {
-	geometry->write(output, frame);
+	m_geometry->write(output, frame);
+}
+
+
+void VRayScene::Node::writeHair(ExpoterSettings *settings)
+{
+	if(m_object->particlesystem.first) {
+		for(ParticleSystem *psys = (ParticleSystem*)m_object->particlesystem.first; psys; psys = psys->next) {
+			ParticleSettings *pset = psys->part;
+			if(pset->type != PART_HAIR)
+				continue;
+			if(psys->part->ren_as != PART_DRAW_PATH)
+				continue;
+
+			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, m_object);
+			geomMayaHair->init(psys);
+			if(settings->m_exportNodes)
+				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
+			if(settings->m_exportGeometry)
+				geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
+			if(NOT(settings->m_animation))
+				delete geomMayaHair;
+		}
+	}
 }
