@@ -48,7 +48,10 @@ using namespace VRayScene;
 
 
 struct ExpoterSettings {
-	ExpoterSettings(BL::RenderEngine engine):m_engine(engine) {
+	ExpoterSettings(BL::Scene scene, BL::RenderEngine engine):
+		b_scene(scene),
+		b_engine(engine)
+	{
 		m_sce  = NULL;
 		m_main = NULL;
 
@@ -68,7 +71,9 @@ struct ExpoterSettings {
 
 	Scene            *m_sce;
 	Main             *m_main;
-	BL::RenderEngine  m_engine;
+
+	BL::Scene         b_scene;
+	BL::RenderEngine  b_engine;
 
 	PyObject         *m_fileObject;
 	PyObject         *m_fileGeom;
