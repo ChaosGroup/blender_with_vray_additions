@@ -41,17 +41,17 @@ void VRayScene::GeomMeshFile::initName(const std::string &name)
 
 		std::string filePath = rna.getPath("file");
 		if(NOT(filePath.empty())) {
-			char baseName[FILE_MAXFILE];
-			strncpy(baseName, BLI_path_basename(filePath.c_str()), FILE_MAXFILE);
-			StripString(baseName);
+			char pluginName[CGR_MAX_PLUGIN_NAME];
 
-			std::stringstream pluginName;
-			pluginName << "Proxy" << baseName;
+			char fileName[FILE_MAXFILE];
+			strncpy(fileName, BLI_path_basename(filePath.c_str()), FILE_MAXFILE);
 
-			// We should also append additional params to export different proxy
-			pluginName << rna.getEnum("anim_type") << std::setprecision(2) << rna.getFloat("anim_speed") << rna.getFloat("anim_offset");
+			snprintf(pluginName, CGR_MAX_PLUGIN_NAME,
+					 "VRayProxy%sA%iS%.0fO%.0f",
+					 fileName, rna.getEnum("anim_type"), rna.getFloat("anim_speed"), rna.getFloat("anim_offset"));
+			StripString(pluginName);
 
-			m_name = pluginName.str();
+			m_name = pluginName;
 		}
 		else {
 			m_name = "geomMeshFile";
