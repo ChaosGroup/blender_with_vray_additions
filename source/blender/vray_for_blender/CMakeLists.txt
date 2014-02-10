@@ -47,6 +47,8 @@ set(SRC
 	# vrscene export
 	vrscene_exporter/Node.h
 	vrscene_exporter/Node.cpp
+	vrscene_exporter/Light.h
+	vrscene_exporter/Light.cpp
 	vrscene_exporter/GeomMayaHair.h
 	vrscene_exporter/GeomMayaHair.cpp
 	vrscene_exporter/GeomStaticMesh.h
