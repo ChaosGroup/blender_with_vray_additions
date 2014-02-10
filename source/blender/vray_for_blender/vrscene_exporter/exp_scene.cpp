@@ -33,6 +33,11 @@
 
 #include "exp_scene.h"
 
+#include "vrscene_exporter/GeomMayaHair.h"
+#include "vrscene_exporter/GeomStaticMesh.h"
+#include "vrscene_exporter/Node.h"
+#include "vrscene_exporter/Light.h"
+
 #include "PIL_time.h"
 #include "BLI_string.h"
 #include "BKE_material.h"
@@ -151,44 +156,48 @@ void VRsceneExporter::exportScene()
 
 void VRsceneExporter::exportObjectBase(Object *ob)
 {
-	if(GEOM_TYPE(ob) || EMPTY_TYPE(ob)) {
-		PointerRNA objectRnaPtr;
-		RNA_id_pointer_create((ID*)ob, &objectRnaPtr);
-		BL::Object b_ob(objectRnaPtr);
+	if(NOT(GEOM_TYPE(ob) || EMPTY_TYPE(ob) || LIGHT_TYPE(ob)))
+		return;
 
-		if(b_ob.is_duplicator()) {
-			b_ob.dupli_list_create(m_settings->b_scene, 2);
+	PointerRNA objectRnaPtr;
+	RNA_id_pointer_create((ID*)ob, &objectRnaPtr);
+	BL::Object b_ob(objectRnaPtr);
 
-			for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
-				if(m_settings->b_engine.test_break())
-					break;
-				if(NOT(GEOM_TYPE(dob->ob)))
-					continue;
+	if(b_ob.is_duplicator()) {
+		b_ob.dupli_list_create(m_settings->b_scene, 2);
 
-				exportObject(ob, dob);
-			}
-
-			b_ob.dupli_list_clear();
-
-			// If dupli were not from particles skip base object
-			//
-			// XXX: What if there will be particles and hair on the same object?
-			//
-			if(ob->transflag & OB_DUPLIPARTS) {
-				if(NOT(Node::DoRenderEmitter(ob)))
-					return;
-			}
-			else {
-				return;
-			}
-		}
-
-		if(NOT(EMPTY_TYPE(ob))) {
+		for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
 			if(m_settings->b_engine.test_break())
-				return;
+				break;
 
-			exportObject(ob);
+			// Export lights only for dupli
+			if(LIGHT_TYPE(dob->ob))
+				exportLight(ob, dob);
+
+			if(NOT(EMPTY_TYPE(dob->ob)))
+				exportObject(ob, dob);
 		}
+
+		b_ob.dupli_list_clear();
+
+		// If dupli were not from particles skip base object
+		//
+		// XXX: What if there will be particles and hair on the same object?
+		//
+		if(ob->transflag & OB_DUPLIPARTS) {
+			if(NOT(Node::DoRenderEmitter(ob)))
+				return;
+		}
+		else {
+			return;
+		}
+	}
+
+	if(GEOM_TYPE(ob)) {
+		if(m_settings->b_engine.test_break())
+			return;
+
+		exportObject(ob);
 	}
 }
 
@@ -230,4 +239,16 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 	//
 	if(NOT(m_settings->m_animation) || NOT(hasGeometry))
 		delete node;
+}
+
+
+void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
+{
+	Light *light = new Light(m_settings->m_sce, m_settings->m_main, ob, dOb);
+
+	if(m_settings->m_exportNodes)
+		light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
+
+	if(NOT(m_settings->m_animation))
+		delete light;
 }
