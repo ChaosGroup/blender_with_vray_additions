@@ -237,13 +237,13 @@ int IsMeshAnimated(Object *ob)
 }
 
 
-std::string GetIDName(ID *id)
+std::string GetIDName(ID *id, const std::string prefix)
 {
 	char baseName[MAX_ID_NAME];
 	BLI_strncpy(baseName, id->name, MAX_ID_NAME);
 	StripString(baseName);
 
-	std::string idName = baseName;
+	std::string idName = prefix + baseName;
 
 	if(id->lib) {
 		char libFilename[FILE_MAX] = "";
