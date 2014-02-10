@@ -29,10 +29,7 @@
 #include "CGR_config.h"
 
 #include "vrscene_exporter/exp_defines.h"
-#include "vrscene_exporter/exp_anim.h"
-#include "vrscene_exporter/GeomMayaHair.h"
-#include "vrscene_exporter/GeomStaticMesh.h"
-#include "vrscene_exporter/Node.h"
+#include "vrscene_exporter/exp_types.h"
 
 #include "BKE_depsgraph.h"
 #include "MEM_guardedalloc.h"
@@ -59,6 +56,7 @@ private:
 
 	void               exportObjectBase(Object *ob);
 	void               exportObject(Object *ob, DupliObject *dOb=NULL);
+	void               exportLight(Object *ob, DupliObject *dOb=NULL);
 
 	ExpoterSettings   *m_settings;
 

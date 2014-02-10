@@ -54,7 +54,6 @@ extern "C" {
 }
 
 #include <boost/lexical_cast.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
 
 
