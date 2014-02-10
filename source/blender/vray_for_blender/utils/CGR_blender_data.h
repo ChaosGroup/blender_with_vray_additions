@@ -44,6 +44,6 @@ void  FreeDupliList(Object *ob);
 int   IsNodeAnimated(Object *ob);
 int   IsMeshAnimated(Object *ob);
 
-std::string GetIDName(ID *id);
+std::string GetIDName(ID *id, const std::string prefix="");
 
 #endif // CGR_BLENDER_UTILS_H
