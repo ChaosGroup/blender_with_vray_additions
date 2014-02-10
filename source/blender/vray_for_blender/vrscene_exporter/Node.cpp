@@ -103,7 +103,15 @@ void VRayScene::Node::initName(const std::string &name)
 		m_name = name;
 	}
 	else {
-		m_name = GetIDName((ID*)m_object);
+		m_name.clear();
+
+		// If base object is a duplicator also add it's name
+		if(m_ob->transflag & OB_DUPLI)
+			m_name = GetIDName((ID*)m_ob);
+
+		m_name.append(GetIDName((ID*)m_object));
+
+		// Add unique dupli index
 		if(m_dupliObject)
 			m_name.append(boost::lexical_cast<std::string>(m_dupliObject->persistent_id[0]));
 	}
