@@ -172,6 +172,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 			// If dupli were not from particles skip base object
 			//
+			// XXX: What if there will be particles and hair on the same object?
+			//
 			if(ob->transflag & OB_DUPLIPARTS) {
 				if(NOT(Node::DoRenderEmitter(ob)))
 					return;
