@@ -133,6 +133,7 @@
 
 #define GEOM_TYPE(ob) ob->type == OB_MESH || ob->type == OB_CURVE || ob->type == OB_SURF  || ob->type == OB_FONT  || ob->type == OB_MBALL
 #define EMPTY_TYPE(ob) ob->type == OB_EMPTY
+#define LIGHT_TYPE(ob) ob->type == OB_LAMP
 
 #define	ANIM_CHECK_NONE    0
 #define	ANIM_CHECK_SIMPLE  1
