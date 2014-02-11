@@ -183,10 +183,6 @@ int IsMeshAnimated(Object *ob)
 {
 	ModifierData *mod = NULL;
 
-	// TODO: Go through the adt and check if there is smth,
-	// adt could be not NULL, but contain no actual data...
-	// ob.animation_data_clear() will actually clear the adt pointer.
-
 	switch(ob->type) {
 		case OB_CURVE:
 		case OB_SURF:
@@ -215,6 +211,12 @@ int IsMeshAnimated(Object *ob)
 	mod = (ModifierData*)ob->modifiers.first;
 	while(mod) {
 		switch(mod->type) {
+			case eModifierType_Hook: {
+				HookModifierData *hMod = (HookModifierData*)mod;
+				if(hMod->object)
+					if(hMod->object->adt)
+						return hMod->object->adt->action != NULL;
+			}
 			case eModifierType_Armature:
 			case eModifierType_Array:
 			case eModifierType_Displace:
