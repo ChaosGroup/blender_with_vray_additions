@@ -162,6 +162,7 @@ public:
 				return;
 			m_expCache.insert(m_name);
 
+			initInterpolate(frame);
 			writeData(output);
 		}
 		else {
@@ -224,7 +225,7 @@ public:
 
 protected:
 	void initInterpolate(int frame=INT_MIN) {
-		if(m_animation && frame > INT_MIN && frame > m_sce->r.sfra) {
+		if(m_animation && frame > INT_MIN && frame >= m_sce->r.sfra) {
 			sprintf(m_interpStart, "interpolate((%d,", frame);
 			sprintf(m_interpEnd,   "))");
 		}
