@@ -207,7 +207,7 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
 	if(m_settings->m_animation && m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra) {
-		if(NOT(node->isAnimated() || IsMeshAnimated(ob))) {
+		if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE && NOT(node->isAnimated() || IsMeshAnimated(ob))) {
 			delete node;
 			return;
 		}
