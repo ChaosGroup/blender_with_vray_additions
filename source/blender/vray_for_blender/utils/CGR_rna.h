@@ -55,7 +55,7 @@ public:
 
 	int          hasProperty(const char *propName);
 
-	void         writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss);
+	void         writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss, const char *s_interp="", const char *e_interp="");
 
 private:
 	int          checkProperty(const char *propName);
