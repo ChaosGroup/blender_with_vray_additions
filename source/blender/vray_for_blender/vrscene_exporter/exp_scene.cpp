@@ -225,11 +225,11 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 			return;
 	}
 
-	int hasGeometry = 1;
-	if(m_settings->m_exportGeometry) {
-		hasGeometry = node->initGeometry();
-		if(hasGeometry)
+	int hasGeometry = node->initGeometry();
+	if(hasGeometry) {
+		if(m_settings->m_exportGeometry) {
 			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+		}
 	}
 
 	if(hasGeometry && m_settings->m_exportNodes && NOT(node->isMeshLight()))
