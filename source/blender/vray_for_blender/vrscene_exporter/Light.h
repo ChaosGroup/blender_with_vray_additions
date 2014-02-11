@@ -28,6 +28,8 @@
 
 #include "exp_types.h"
 
+#include "CGR_vrscene.h"
+
 #include <sstream>
 #include <map>
 
@@ -38,15 +40,23 @@ class Light : public VRayExportable {
 public:
 	Light(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL);
 
-	virtual      ~Light() {}
-	virtual void  initHash();
-	virtual void  initName(const std::string &name="");
-	virtual void  writeData(PyObject *output);
+	virtual           ~Light() {}
+	virtual void       initHash();
+	virtual void       initName(const std::string &name="");
+	virtual void       writeData(PyObject *output);
 
 private:
-	std::stringstream  m_plugin;
+	void               initType();
+	void               initTransform();
+
+	void               writeKelvinColor();
+
+	std::stringstream  m_pluginHash;
 	Object            *m_object;
 	DupliObject       *m_dupliObject;
+
+	std::string        m_vrayPluginID;
+	char               m_transform[TRANSFORM_HEX_SIZE];
 
 };
 
