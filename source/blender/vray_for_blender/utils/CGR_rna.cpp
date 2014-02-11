@@ -60,12 +60,14 @@ RnaValue::RnaValue(ID *id, const char *rnaPointerPath)
             break;
         }
         m_pointer = RNA_pointer_get(&m_pointer, rnaPath[t].c_str());
-    }
+	}
 }
 
 
 int RnaValue::hasProperty(const char *propName)
 {
+	if(NOT(m_pointer.data))
+		return 0;
 	if(RNA_struct_find_property(&m_pointer, propName))
 		return 1;
 	return 0;
@@ -74,7 +76,7 @@ int RnaValue::hasProperty(const char *propName)
 
 // TODO: Error checking
 //
-void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss)
+void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss, const char *s_interp, const char *e_interp)
 {
 	if(NOT(pluginDesc))
 		return;
@@ -106,10 +108,12 @@ void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::strings
 					}
 				}
 
+				ss << "\n\t" << attrName << "=" << s_interp;
 				ss << "\"" << str << "\"";
+				ss << e_interp << ";";
 			}
 			else {
-				ss << "\n\t" << attrName << "=";
+				ss << "\n\t" << attrName << "=" << s_interp;
 
 				// std::cout << attrName << ":" << attrType << std::endl;
 
@@ -129,7 +133,7 @@ void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::strings
 					ss << "TE" << getString(attrName.c_str());
 				}
 
-				ss << ";";
+				ss << e_interp << ";";
 			}
 		}
 	}
