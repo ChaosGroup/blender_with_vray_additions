@@ -57,7 +57,7 @@ typedef std::vector<MChan*> MChans;
 
 class GeomStaticMesh : public VRayExportable {
 public:
-	GeomStaticMesh(Scene *scene, Main *main, Object *ob);
+	GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkComponents=false);
 
 	virtual      ~GeomStaticMesh() { freeData(); }
 	virtual void  initHash();
@@ -93,7 +93,7 @@ private:
 	void          initSmooth();
 
 	Mesh         *mesh;
-	std::string   meshName;
+	StringVector  meshComponentNames;
 
 	char         *vertices;
 	size_t        coordIndex;
@@ -112,6 +112,8 @@ private:
 	int           m_useZip;
 
 	// Options
+	int           m_checkComponents;
+
 	int           useSmooth;
 	std::string   smoothName;
 

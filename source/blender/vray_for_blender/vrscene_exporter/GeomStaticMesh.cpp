@@ -85,7 +85,7 @@ void MChan::freeData()
 }
 
 
-GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
+GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkComponents):
 	VRayExportable(scene, main, ob)
 {
 	mesh = NULL;
@@ -117,6 +117,8 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 	displaceTextureName = "";
 
 	m_useZip = true;
+
+	m_checkComponents = checkComponents;
 }
 
 
@@ -138,8 +140,10 @@ void GeomStaticMesh::init()
 
 	FreeRenderMesh(m_main, mesh);
 
-	initDisplace();
-	initSmooth();
+	if(m_checkComponents) {
+		initDisplace();
+		initSmooth();
+	}
 
 	initName();
 	initHash();
@@ -181,43 +185,20 @@ void GeomStaticMesh::freeData()
 
 void GeomStaticMesh::initName(const std::string &name)
 {
-	if(NOT(name.empty())) {
+	if(NOT(name.empty()))
 		m_name = name;
-	}
-	else {
-		char obName[MAX_ID_NAME] = "";
+	else
+		m_name = "Me" + GetIDName((ID*)m_ob);
 
-		BLI_strncpy(obName, m_ob->id.name+2, MAX_ID_NAME);
-		StripString(obName);
+	meshComponentNames.push_back(m_name);
+	if(useSmooth && useDisplace)
+		meshComponentNames.push_back("smoothDisp" + m_name);
+	else if(useSmooth)
+		meshComponentNames.push_back("smooth" + m_name);
+	else if(useDisplace)
+		meshComponentNames.push_back("disp" + m_name);
 
-		m_name.clear();
-		m_name.append("ME");
-		m_name.append(obName);
-
-		const ID *dataID = (ID*)m_ob->data;
-		if(dataID->lib) {
-			char libFilename[FILE_MAX] = "";
-
-			BLI_split_file_part(dataID->lib->name+2, libFilename, FILE_MAX);
-			BLI_replace_extension(libFilename, FILE_MAX, "");
-
-			StripString(libFilename);
-
-			m_name.append("LI");
-			m_name.append(libFilename);
-		}
-	}
-
-	meshName = m_name;
-	if(useDisplace) {
-		m_name = "GeomDisplacedMesh" + m_name;
-	}
-	else if(useSmooth) {
-		m_name = "GeomStaticSmoothedMesh" + m_name;
-	}
-	else {
-		m_name = meshName;
-	}
+	m_name = meshComponentNames.back();
 }
 
 
@@ -561,13 +542,49 @@ void GeomStaticMesh::initHash()
 
 void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 {
-	RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticSmoothedMesh");
+	RnaAccess::RnaValue smoothRna(&m_ob->id, "vray.GeomStaticSmoothedMesh");
+
+	size_t mCompSize = meshComponentNames.size();
 
 	std::stringstream ss;
-	ss << "\n" << "GeomStaticSmoothedMesh" << " " << m_name << " {";
-	ss << "\n\t" << "mesh=" << meshName << ";";
-	rna.writePlugin(m_pluginDesc.getTree("GeomStaticSmoothedMesh"), ss);
+	ss << "\n" << "GeomStaticSmoothedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
+	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
+
+	smoothRna.writePlugin(m_pluginDesc.getTree("GeomStaticSmoothedMesh"), ss, m_interpStart, m_interpEnd);
+
+	if(useDisplace) {
+		RnaAccess::RnaValue dispRna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
+
+		ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
+		ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+
+		dispRna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss, m_interpStart, m_interpEnd);
+
+		// Overrider type settings
+		//
+		int displace_type = dispRna.getEnum("type");
+
+		std::cout << "Displace type = " << displace_type << std::endl;
+
+		if(displace_type == 1) {
+			ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+			ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+		}
+		else if(displace_type == 0) {
+			ss << "\n\t" << "displace_2d"         << "=" << 1 << ";";
+			ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+		}
+		else if(displace_type == 2) {
+			ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+			ss << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+		}
+
+		// Use first channel for displace
+		ss << "\n\t" << "map_channel" << "=" << 0 << ";";
+	}
 	ss << "\n}\n";
+
+	meshComponentNames.pop_back();
 
 	PYTHON_PRINT(output, ss.str().c_str());
 }
@@ -577,12 +594,16 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 {
 	RnaAccess::RnaValue rna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
 
+	size_t mCompSize = meshComponentNames.size();
+
 	std::stringstream ss;
-	ss << "\n" << "GeomDisplacedMesh" << " " << m_name << " {";
-	ss << "\n\t" << "mesh=" << meshName << ";";
+	ss << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
+	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
 	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
 	ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
-	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
+	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss, m_interpStart, m_interpEnd);
+
+	meshComponentNames.pop_back();
 
 	// Overrider type settings
 	//
@@ -614,18 +635,16 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 
 void GeomStaticMesh::writeData(PyObject *output)
 {
-	if(useDisplace && useSmooth) {
+	if(useSmooth && useDisplace)
 		writeGeomStaticSmoothedMesh(output);
-		writeGeomDisplacedMesh(output);
-	}
-	else if(useDisplace) {
-		writeGeomDisplacedMesh(output);
-	}
-	else if(useSmooth) {
+	else if(useSmooth)
 		writeGeomStaticSmoothedMesh(output);
-	}
+	else if(useDisplace)
+		writeGeomDisplacedMesh(output);
 
-	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", meshName.c_str());
+	size_t mCompSize = meshComponentNames.size();
+
+	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", meshComponentNames[mCompSize-1].c_str());
 	PYTHON_PRINTF(output, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
 	PYTHON_PRINT(output, getVertices());
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
