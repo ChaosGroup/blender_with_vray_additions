@@ -41,6 +41,7 @@
 #include "PIL_time.h"
 #include "BLI_string.h"
 #include "BKE_material.h"
+#include "BKE_global.h"
 
 extern "C" {
 #  include "DNA_particle_types.h"
@@ -57,7 +58,8 @@ extern "C" {
 VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 	m_settings(settings)
 {
-	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
+	if(G.debug)
+		PRINT_INFO("VRsceneExporter::VRsceneExporter()");
 
 	init();
 }
@@ -65,7 +67,8 @@ VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 
 VRsceneExporter::~VRsceneExporter()
 {
-	PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
+	if(G.debug)
+		PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
 
 	delete m_settings;
 }
@@ -85,7 +88,8 @@ void VRsceneExporter::init()
 
 void VRsceneExporter::exportScene()
 {
-	PRINT_INFO("VRsceneExporter::exportScene()");
+	if(G.debug)
+		PRINT_INFO("VRsceneExporter::exportScene()");
 
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
