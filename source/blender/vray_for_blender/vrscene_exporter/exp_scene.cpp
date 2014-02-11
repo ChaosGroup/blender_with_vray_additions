@@ -94,7 +94,7 @@ void VRsceneExporter::exportScene()
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
-	PRINT_INFO_LB("VRsceneExporter: Exporting scene for frame %i...", m_settings->m_sce->r.cfra);
+	PRINT_INFO_LB("Exporting scene for frame %i...", m_settings->m_sce->r.cfra);
 	timeMeasure = PIL_check_seconds_timer();
 
 	Base *base = NULL;
