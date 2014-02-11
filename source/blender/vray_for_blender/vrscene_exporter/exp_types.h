@@ -173,8 +173,10 @@ public:
 				writeData(output);
 			}
 			else if(m_checkAnimated == ANIM_CHECK_HASH || m_checkAnimated == ANIM_CHECK_BOTH) {
-				if(NOT(isAnimated()) && frame > m_sce->r.sfra)
-					return;
+				if(m_checkAnimated == ANIM_CHECK_BOTH) {
+					if(NOT(isAnimated()) && frame > m_sce->r.sfra)
+						return;
+				}
 
 				MHash currHash = getHash();
 				MHash prevHash = m_frameCache.getHash(m_name);
