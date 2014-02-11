@@ -121,8 +121,11 @@ int VRayScene::Node::initGeometry()
 {
 	RnaAccess::RnaValue rna((ID*)m_object->data, "vray");
 
+	// XXX: Init only geometry name here
+	// This will solve export without exporting meshes
+
 	if(NOT(rna.getBool("override"))) {
-		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, m_object);
+		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, m_object, true);
 		geomStaticMesh->init();
 		if(NOT(geomStaticMesh->getHash())) {
 			delete geomStaticMesh;
