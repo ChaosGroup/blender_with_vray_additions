@@ -58,8 +58,9 @@ extern "C" {
 VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 	m_settings(settings)
 {
-	if(G.debug)
+	if(G.debug) {
 		PRINT_INFO("VRsceneExporter::VRsceneExporter()");
+	}
 
 	init();
 }
@@ -67,8 +68,9 @@ VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 
 VRsceneExporter::~VRsceneExporter()
 {
-	if(G.debug)
+	if(G.debug) {
 		PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
+	}
 
 	delete m_settings;
 }
@@ -88,8 +90,9 @@ void VRsceneExporter::init()
 
 void VRsceneExporter::exportScene()
 {
-	if(G.debug)
+	if(G.debug) {
 		PRINT_INFO("VRsceneExporter::exportScene()");
+	}
 
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
