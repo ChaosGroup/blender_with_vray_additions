@@ -131,7 +131,7 @@ int VRayScene::Node::preInitGeometry()
 			m_geometryType = VRayScene::eGeometryPlane;
 
 	if(m_geometryType == VRayScene::eGeometryMesh)
-		return IsMeshValid(m_object);
+		return IsMeshValid(m_sce, m_main, m_object);
 	else
 		return 1;
 }
@@ -356,12 +356,6 @@ int VRayScene::Node::hasHair()
 int VRayScene::Node::doRenderEmitter()
 {
 	return Node::DoRenderEmitter(m_object);
-}
-
-
-int VRayScene::Node::isDataAnimated()
-{
-
 }
 
 
