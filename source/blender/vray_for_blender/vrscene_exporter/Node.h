@@ -88,8 +88,6 @@ public:
 	int             hasHair();
 	int             doRenderEmitter();
 
-	int             isDataAnimated();
-
 private:
 	void            initTransform();
 	void            initProperties();
