@@ -144,7 +144,7 @@ int VRayScene::Node::initGeometry()
 			return 1;
 		}
 		else if(rna.getEnum("override_type") == 1) {
-			GeomPlane *geomPlane = new GeomPlane();
+			GeomPlane *geomPlane = new GeomPlane(m_sce, m_main, m_object);
 			geomPlane->init();
 			m_geometry = geomPlane;
 			return 1;
