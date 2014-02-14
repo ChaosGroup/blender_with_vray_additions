@@ -261,3 +261,29 @@ std::string GetIDName(ID *id, const std::string prefix)
 
 	return idName;
 }
+
+
+int IsMeshValid(Object *ob)
+{
+	switch(ob->type) {
+		case OB_CURVE:
+		case OB_SURF:
+		case OB_FONT: {
+			// Curve *cu = (Curve*)ob->data;
+			// TODO
+		}
+			break;
+		case OB_MBALL:
+			break;
+		case OB_MESH: {
+			Mesh *me = (Mesh*)ob->data;
+			if(NOT(me->totpoly))
+				return 0;
+		}
+			break;
+		default:
+			break;
+	}
+
+	return 1;
+}
