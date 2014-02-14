@@ -174,8 +174,9 @@ void FreeDupliList(Object *ob)
 int IsNodeAnimated(Object *ob)
 {
 	if(ob->adt)
-		return ob->adt->action != NULL;
-	return 0;
+		return (ob->adt->action != NULL);
+	else if(ob->parent)
+		return IsNodeAnimated(ob->parent);
 }
 
 
