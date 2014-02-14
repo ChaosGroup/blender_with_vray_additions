@@ -57,6 +57,9 @@ public:
 		m_head  = NULL;
 #endif
 		p_interpolation = 0;
+
+		m_propGroup = NULL;
+		m_asFluid = false;
 	}
 
 	virtual           ~TexVoxelData() { freeData(); }
@@ -67,7 +70,11 @@ public:
 	void               init(SmokeModifierData *smd);
 	void               freeData();
 
+	void               setPropGroup(PyObject *propGroup);
 	void               setInterpolation(int value);
+
+	int                asFluid() const         { return m_asFluid; }
+	void               setAsFluid(int asFluid) { m_asFluid = asFluid; }
 
 private:
 	void               initUvTransform();
@@ -87,8 +94,10 @@ private:
 #endif
 
 	char               m_uvw_transform[TRANSFORM_HEX_SIZE];
-
 	int                p_interpolation;
+
+	PyObject          *m_propGroup;
+	int                m_asFluid;
 
 };
 
