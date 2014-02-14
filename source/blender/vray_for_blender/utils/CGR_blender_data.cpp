@@ -263,14 +263,25 @@ std::string GetIDName(ID *id, const std::string prefix)
 }
 
 
-int IsMeshValid(Object *ob)
+int IsMeshValid(Scene *sce, Main *main, Object *ob)
 {
 	switch(ob->type) {
-		case OB_CURVE:
-		case OB_SURF:
 		case OB_FONT: {
-			// Curve *cu = (Curve*)ob->data;
-			// TODO
+			Curve *cu = (Curve*)ob->data;
+			if(cu->str == NULL)
+				return 0;
+		}
+			break;
+		case OB_SURF:
+		case OB_CURVE: {
+			// XXX: Check more gently here
+			Mesh *mesh = GetRenderMesh(sce, main, ob);
+			if(NOT(mesh))
+				return 0;
+			if(NOT(mesh->totface)) {
+				FreeRenderMesh(main, mesh);
+				return 0;
+			}
 		}
 			break;
 		case OB_MBALL:

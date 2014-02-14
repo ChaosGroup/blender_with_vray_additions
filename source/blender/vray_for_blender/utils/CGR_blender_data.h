@@ -43,7 +43,7 @@ void  FreeDupliList(Object *ob);
 
 int   IsNodeAnimated(Object *ob);
 int   IsMeshAnimated(Object *ob);
-int   IsMeshValid(Object *ob);
+int   IsMeshValid(Scene *sce, Main *main, Object *ob);
 
 std::string GetIDName(ID *id, const std::string prefix="");
 
