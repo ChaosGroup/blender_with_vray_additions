@@ -214,7 +214,10 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
 	if(m_settings->m_animation && m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra) {
-		if(m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE && NOT(node->isAnimated() || IsMeshAnimated(ob))) {
+		if((m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE ||
+			m_settings->m_checkAnimated == ANIM_CHECK_BOTH) &&
+		   NOT(node->isAnimated() || IsMeshAnimated(ob)))
+		{
 			delete node;
 			return;
 		}
@@ -232,15 +235,17 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 			return;
 	}
 
-	int hasGeometry = node->initGeometry();
+	int hasGeometry = node->preInitGeometry();
 	if(hasGeometry) {
 		if(m_settings->m_exportGeometry) {
+			node->initGeometry();
 			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 		}
+
+		if(m_settings->m_exportNodes && NOT(node->isMeshLight()))
+			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 	}
 
-	if(hasGeometry && m_settings->m_exportNodes && NOT(node->isMeshLight()))
-		node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 
 	// In animation mode pointer is stored in cache and is freed by the cache
 	//
