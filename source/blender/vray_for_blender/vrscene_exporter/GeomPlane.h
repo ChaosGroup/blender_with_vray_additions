@@ -33,6 +33,8 @@ namespace VRayScene {
 
 class GeomPlane : public VRayExportable {
 public:
+	GeomPlane(Scene *scene, Main *main, Object *ob):VRayExportable(scene, main, ob) {}
+
 	virtual      ~GeomPlane() {}
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
