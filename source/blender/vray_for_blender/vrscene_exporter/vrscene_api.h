@@ -60,6 +60,7 @@ int   ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *m
 
 void  ExportSmokeDomain(PyObject *outputFile, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, const char *lights);
 void  ExportTexVoxelData(PyObject *output, Scene *sce, Object *ob, SmokeModifierData *smd, const char *pluginName, short interp_type);
+void  ExportVoxelDataAsFluid(PyObject *output, Scene *sce, Object *ob, SmokeModifierData *smd, PyObject *propGroup, const char *pluginName);
 
 #ifdef __cplusplus
 }

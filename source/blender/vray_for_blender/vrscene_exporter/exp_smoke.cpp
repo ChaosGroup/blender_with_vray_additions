@@ -109,3 +109,18 @@ void ExportSmokeDomain(PyObject          *outputFile,
 
 	write_SmokeGizmo(outputFile, sce, ob, smd, pluginName, geomteryPluginName, lights);
 }
+
+
+void  ExportVoxelDataAsFluid(PyObject *output, Scene *sce, Object *ob, SmokeModifierData *smd, PyObject *propGroup, const char *pluginName)
+{
+	VRayScene::TexVoxelData texVoxelData(sce, NULL, ob);
+	texVoxelData.initName(pluginName);
+	texVoxelData.init(smd);
+	texVoxelData.setPropGroup(propGroup);
+	texVoxelData.setAsFluid(true);
+
+	if(NOT(texVoxelData.getHash()))
+		return;
+
+	texVoxelData.write(output, sce->r.cfra);
+}

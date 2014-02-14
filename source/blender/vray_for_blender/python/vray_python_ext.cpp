@@ -237,6 +237,31 @@ static PyObject* mExportSmoke(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mExportFluid(PyObject *self, PyObject *args)
+{
+	long        contextPtr;
+	long        objectPtr;
+	long        smdPtr;
+	PyObject   *propGroup;
+	const char *pluginName;
+	PyObject   *fileObject;
+
+	if(NOT(PyArg_ParseTuple(args, "lllOsO", &contextPtr, &objectPtr, &smdPtr, &propGroup, &pluginName, &fileObject))) {
+		return NULL;
+	}
+
+	bContext          *C   = (bContext*)(intptr_t)contextPtr;
+	Object            *ob  = (Object*)(intptr_t)objectPtr;
+	SmokeModifierData *smd = (SmokeModifierData*)(intptr_t)smdPtr;
+
+	Scene *sce = CTX_data_scene(C);
+
+	ExportVoxelDataAsFluid(fileObject, sce, ob, smd, propGroup, pluginName);
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mExportHair(PyObject *self, PyObject *args)
 {
 	long        contextPtr;
@@ -386,6 +411,7 @@ static PyMethodDef methods[] = {
 	{"exportSmokeDomain", mExportSmokeDomain, METH_VARARGS, "Export domain data"},
 	{"exportHair",        mExportHair,        METH_VARARGS, "Export hair"},
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export Node description"},
+	{"exportFluid",       mExportFluid,       METH_VARARGS, "Export voxel data as TexMayaFluid"},
 
 	{"initCache",                mExportInitCache,   METH_VARARGS, "Init animation cache"},
 	{"clearFrames", (PyCFunction)mExportClearFrames, METH_NOARGS,  "Clear frame cache"},
