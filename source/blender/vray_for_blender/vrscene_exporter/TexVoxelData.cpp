@@ -109,6 +109,12 @@ void TexVoxelData::freeData()
 }
 
 
+void TexVoxelData::setPropGroup(PyObject *propGroup)
+{
+	m_propGroup = propGroup;
+}
+
+
 void TexVoxelData::initHash()
 {
 	m_hash = HashCode(m_dens);
@@ -224,33 +230,89 @@ void TexVoxelData::initSmoke()
 
 void TexVoxelData::writeData(PyObject *output)
 {
-	PYTHON_PRINTF(output, "\nUVWGenPlanarWorld UVW%s {", m_name.c_str());
-	PYTHON_PRINTF(output, "\n\tuvw_transform=%sTransformHex(\"%s\")%s;", m_interpStart, m_uvw_transform, m_interpEnd);
-	PYTHON_PRINTF(output, "\n}\n");
+	if(m_asFluid) {
+		int interpolation_type = m_propGroup ? GetPythonAttrInt(m_propGroup, "interpolation_type") : 0;
 
-	PYTHON_PRINTF(output, "\nTexVoxelData %s {", m_name.c_str());
-	PYTHON_PRINTF(output, "\n\tuvwgen=UVW%s;", m_name.c_str());
-	PYTHON_PRINTF(output, "\n\tinterpolation=%i;", p_interpolation);
-	PYTHON_PRINTF(output, "\n\tresolution=Vector(%i,%i,%i);", m_res_high[0], m_res_high[1], m_res_high[2]);
-#if CGR_USE_HEAT
-	PYTHON_PRINTF(output, "\n\tresolution_low=Vector(%i,%i,%i);", m_res_low[0], m_res_low[1], m_res_low[2]);
-#endif
-	PYTHON_PRINTF(output, "\n\tdensity=%sListFloatHex(\"", m_interpStart);
-	PYTHON_PRINT(output, m_dens);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tflame=%sListFloatHex(\"", m_interpStart);
-	PYTHON_PRINT(output, m_flame);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tfuel=%sListFloatHex(\"", m_interpStart);
-	PYTHON_PRINT(output, m_fuel);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-#if CGR_USE_HEAT
-	// Heat is somehow always low res
-	if(NOT(sds->flags & MOD_SMOKE_HIGHRES)) {
-		PYTHON_PRINTF(output, "\n\theat=%sListFloatHex(\"", m_interpStart);
-		PYTHON_PRINT(output, m_heat);
+		PYTHON_PRINTF(output, "\nTexMayaFluid %s@Data@Density {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tsize_x=%i;", m_res_high[0]);
+		PYTHON_PRINTF(output, "\n\tsize_y=%i;", m_res_high[1]);
+		PYTHON_PRINTF(output, "\n\tsize_z=%i;", m_res_high[2]);
+		PYTHON_PRINTF(output, "\n\tinterpolation_type=%i;", interpolation_type);
+		PYTHON_PRINTF(output, "\n\tvalues=%sListFloatHex(\"", m_interpStart);
+		PYTHON_PRINT(output, m_dens);
 		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		PYTHON_PRINTF(output, "\n}\n");
+		PYTHON_PRINTF(output, "\nTexMayaFluidTransformed %s@Density {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tfluid_tex=%s@Data@Density;", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tfluid_value_scale=1.0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_x=0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_y=0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_z=0;");
+		PYTHON_PRINTF(output, "\n}\n");
+
+		PYTHON_PRINTF(output, "\nTexMayaFluid %s@Data@Flame {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tsize_x=%i;", m_res_high[0]);
+		PYTHON_PRINTF(output, "\n\tsize_y=%i;", m_res_high[1]);
+		PYTHON_PRINTF(output, "\n\tsize_z=%i;", m_res_high[2]);
+		PYTHON_PRINTF(output, "\n\tinterpolation_type=%i;", interpolation_type);
+		PYTHON_PRINTF(output, "\n\tvalues=%sListFloatHex(\"", m_interpStart);
+		PYTHON_PRINT(output, m_flame);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		PYTHON_PRINTF(output, "\n}\n");
+		PYTHON_PRINTF(output, "\nTexMayaFluidTransformed %s@Flame {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tfluid_tex=%s@Data@Flame;", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tfluid_value_scale=1.0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_x=0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_y=0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_z=0;");
+		PYTHON_PRINTF(output, "\n}\n");
+
+		PYTHON_PRINTF(output, "\nTexMayaFluid %s@Data@Fuel {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tsize_x=%i;", m_res_high[0]);
+		PYTHON_PRINTF(output, "\n\tsize_y=%i;", m_res_high[1]);
+		PYTHON_PRINTF(output, "\n\tsize_z=%i;", m_res_high[2]);
+		PYTHON_PRINTF(output, "\n\tinterpolation_type=%i;", interpolation_type);
+		PYTHON_PRINTF(output, "\n\tvalues=%sListFloatHex(\"", m_interpStart);
+		PYTHON_PRINT(output, m_fuel);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		PYTHON_PRINTF(output, "\n}\n");
+		PYTHON_PRINTF(output, "\nTexMayaFluidTransformed %s@Fuel {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tfluid_tex=%s@Data@Fuel;", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tfluid_value_scale=1.0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_x=0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_y=0;");
+		PYTHON_PRINTF(output, "\n\tdynamic_offset_z=0;");
+		PYTHON_PRINTF(output, "\n}\n");
 	}
+	else {
+		PYTHON_PRINTF(output, "\nUVWGenPlanarWorld UVW%s {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tuvw_transform=%sTransformHex(\"%s\")%s;", m_interpStart, m_uvw_transform, m_interpEnd);
+		PYTHON_PRINTF(output, "\n}\n");
+
+		PYTHON_PRINTF(output, "\nTexVoxelData %s {", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tuvwgen=UVW%s;", m_name.c_str());
+		PYTHON_PRINTF(output, "\n\tinterpolation=%i;", p_interpolation);
+		PYTHON_PRINTF(output, "\n\tresolution=Vector(%i,%i,%i);", m_res_high[0], m_res_high[1], m_res_high[2]);
+#if CGR_USE_HEAT
+		PYTHON_PRINTF(output, "\n\tresolution_low=Vector(%i,%i,%i);", m_res_low[0], m_res_low[1], m_res_low[2]);
 #endif
-	PYTHON_PRINTF(output, "\n}\n");
+		PYTHON_PRINTF(output, "\n\tdensity=%sListFloatHex(\"", m_interpStart);
+		PYTHON_PRINT(output, m_dens);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		PYTHON_PRINTF(output, "\n\tflame=%sListFloatHex(\"", m_interpStart);
+		PYTHON_PRINT(output, m_flame);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		PYTHON_PRINTF(output, "\n\tfuel=%sListFloatHex(\"", m_interpStart);
+		PYTHON_PRINT(output, m_fuel);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+#if CGR_USE_HEAT
+		// Heat is somehow always low res
+		if(NOT(sds->flags & MOD_SMOKE_HIGHRES)) {
+			PYTHON_PRINTF(output, "\n\theat=%sListFloatHex(\"", m_interpStart);
+			PYTHON_PRINT(output, m_heat);
+			PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		}
+#endif
+		PYTHON_PRINTF(output, "\n}\n");
+	}
 }
