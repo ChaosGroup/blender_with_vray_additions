@@ -564,8 +564,6 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 		//
 		int displace_type = dispRna.getEnum("type");
 
-		std::cout << "Displace type = " << displace_type << std::endl;
-
 		if(displace_type == 1) {
 			ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
 			ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
