@@ -155,13 +155,15 @@ public:
 	// It will also setup interpolate statements prefix and suffix for animation.
 	//
 	void write(PyObject *output, int frame=INT_MIN) {
+		if(NOT(getHash()))
+			return;
+
 		if(NOT(m_animation) || (m_animation && m_checkAnimated == ANIM_CHECK_NONE)) {
 			// TODO: Do this in animation mode also to prevent data reexport of dupli objects
 			//
 			if(m_expCache.find(m_name) != m_expCache.end())
 				return;
 			m_expCache.insert(m_name);
-
 			initInterpolate(frame);
 			writeData(output);
 		}
