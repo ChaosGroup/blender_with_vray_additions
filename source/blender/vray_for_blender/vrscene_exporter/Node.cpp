@@ -61,6 +61,7 @@ VRayScene::Node::Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb):
 	VRayExportable(scene, main, ob)
 {
 	m_geometry = NULL;
+	m_geometryType = VRayScene::eGeometryMesh;
 
 	m_dupliObject = dOb;
 	m_object      = m_dupliObject ? m_dupliObject->ob : m_ob;
@@ -117,40 +118,34 @@ void VRayScene::Node::initName(const std::string &name)
 }
 
 
-int VRayScene::Node::initGeometry()
+int VRayScene::Node::preInitGeometry()
 {
 	RnaAccess::RnaValue rna((ID*)m_object->data, "vray");
 
-	// XXX: Init only geometry name here
-	// This will solve export without exporting meshes
+	if(NOT(rna.getBool("override")))
+		m_geometryType = VRayScene::eGeometryMesh;
+	else
+		if (rna.getEnum("override_type") == 0)
+			m_geometryType = VRayScene::eGeometryProxy;
+		else if(rna.getEnum("override_type") == 1)
+			m_geometryType = VRayScene::eGeometryPlane;
 
-	if(NOT(rna.getBool("override"))) {
-		GeomStaticMesh *geomStaticMesh = new GeomStaticMesh(m_sce, m_main, m_object, true);
-		geomStaticMesh->init();
-		if(NOT(geomStaticMesh->getHash())) {
-			delete geomStaticMesh;
-			return 0;
-		}
-		else {
-			m_geometry = geomStaticMesh;
-			return 1;
-		}
-	}
-	else {
-		if (rna.getEnum("override_type") == 0) {
-			GeomMeshFile *geomMeshFile = new GeomMeshFile(m_sce, m_main, m_object);
-			geomMeshFile->init();
-			m_geometry = geomMeshFile;
-			return 1;
-		}
-		else if(rna.getEnum("override_type") == 1) {
-			GeomPlane *geomPlane = new GeomPlane(m_sce, m_main, m_object);
-			geomPlane->init();
-			m_geometry = geomPlane;
-			return 1;
-		}
-	}
-	return 0;
+	if(m_geometryType == VRayScene::eGeometryMesh)
+		return IsMeshValid(m_object);
+	else
+		return 1;
+}
+
+
+void VRayScene::Node::initGeometry()
+{
+	if(m_geometryType == VRayScene::eGeometryMesh)
+		m_geometry = new GeomStaticMesh(m_sce, m_main, m_object, true);
+	else if(m_geometryType == VRayScene::eGeometryProxy)
+		m_geometry = new GeomMeshFile(m_sce, m_main, m_object);
+	else if(m_geometryType == VRayScene::eGeometryPlane)
+		m_geometry = new GeomPlane(m_sce, m_main, m_object);
+	m_geometry->init();
 }
 
 
@@ -361,6 +356,12 @@ int VRayScene::Node::hasHair()
 int VRayScene::Node::doRenderEmitter()
 {
 	return Node::DoRenderEmitter(m_object);
+}
+
+
+int VRayScene::Node::isDataAnimated()
+{
+
 }
 
 

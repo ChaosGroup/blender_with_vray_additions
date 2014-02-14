@@ -46,10 +46,10 @@ extern "C" {
 namespace VRayScene {
 
 
-enum GeomOverride {
-	eOverideNone,
-	eOverideProxy,
-	eOveridePlane
+enum GeomType {
+	eGeometryMesh,
+	eGeometryProxy,
+	eGeometryPlane
 };
 
 
@@ -68,7 +68,8 @@ public:
 	virtual int     isAnimated();
 
 	void            init(const std::string &mtlOverrideName="");
-	int             initGeometry();
+	int             preInitGeometry();
+	void            initGeometry();
 
 	void            freeData();
 
@@ -86,6 +87,8 @@ public:
 	int             isSmokeDomain();
 	int             hasHair();
 	int             doRenderEmitter();
+
+	int             isDataAnimated();
 
 private:
 	void            initTransform();
@@ -109,6 +112,7 @@ private:
 	char            m_transform[TRANSFORM_HEX_SIZE];
 	std::string     m_materiall;
 	VRayExportable *m_geometry;
+	GeomType        m_geometryType;
 };
 
 }
