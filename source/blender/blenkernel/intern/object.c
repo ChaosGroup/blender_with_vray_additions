@@ -3004,6 +3004,8 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
                                  RigidBodyWorld *rbw,
                                  const bool do_proxy_update)
 {
+	ob->id.pad2 = CGR_NONE;
+
 	if (ob->recalc & OB_RECALC_ALL) {
 		/* speed optimization for animation lookups */
 		if (ob->pose) {
@@ -3054,9 +3056,11 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 		if (ob->recalc & OB_RECALC_DATA) {
 			BKE_object_handle_data_update(eval_ctx, scene, ob);
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
+			ob->id.pad2 |= CGR_UPDATED_DATA;
 		}
 		else {
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
+			ob->id.pad2 |= CGR_UPDATED_OBJECT;
 		}
 
 		ob->recalc &= ~OB_RECALC_ALL;

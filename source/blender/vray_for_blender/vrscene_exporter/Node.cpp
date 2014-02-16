@@ -296,8 +296,23 @@ void VRayScene::Node::writeData(PyObject *output)
 }
 
 
-int VRayScene::Node::isAnimated() {
-	return IsNodeAnimated(m_object);
+int VRayScene::Node::isAnimated()
+{
+	return m_object->id.pad2;
+}
+
+
+int VRayScene::Node::isObjectUpdated()
+{
+	if(m_object->type == OB_FONT)
+		return m_object->id.pad2 & CGR_UPDATED_DATA;
+	return m_object->id.pad2 & CGR_UPDATED_OBJECT;
+}
+
+
+int VRayScene::Node::isObjectDataUpdated()
+{
+	return m_object->id.pad2 & CGR_UPDATED_DATA;
 }
 
 
