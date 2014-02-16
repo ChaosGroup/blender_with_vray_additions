@@ -58,6 +58,8 @@ private:
 	void               exportObject(Object *ob, DupliObject *dOb=NULL);
 	void               exportLight(Object *ob, DupliObject *dOb=NULL);
 
+	int                checkUpdates();
+
 	ExpoterSettings   *m_settings;
 
 	std::string        m_mtlOverride;

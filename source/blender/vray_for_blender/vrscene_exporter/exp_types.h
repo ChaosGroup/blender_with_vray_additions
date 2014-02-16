@@ -141,7 +141,7 @@ public:
 	virtual void  writeData(PyObject *output)=0;
 
 	virtual int isAnimated() {
-		return IsMeshAnimated(m_ob);
+		return m_ob->id.pad2;
 	}
 
 	virtual void  init() {
@@ -194,7 +194,7 @@ public:
 						int prevFrame  = frame - m_sce->r.frame_step;
 
 						if(cacheFrame < prevFrame) {
-							initInterpolate(frame);
+							initInterpolate(prevFrame);
 							m_frameCache.getData(m_name)->writeData(output);
 						}
 					}

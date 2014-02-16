@@ -67,6 +67,9 @@ public:
 	virtual void    writeData(PyObject *output);
 	virtual int     isAnimated();
 
+	int             isObjectUpdated();
+	int             isObjectDataUpdated();
+
 	void            init(const std::string &mtlOverrideName="");
 	int             preInitGeometry();
 	void            initGeometry();

@@ -171,12 +171,13 @@ void FreeDupliList(Object *ob)
 
 // We are checking only 'transform' and visibility here
 //
-int IsNodeAnimated(Object *ob)
+int IsObjectHasActions(Object *ob)
 {
 	if(ob->adt)
 		return (ob->adt->action != NULL);
 	else if(ob->parent)
-		return IsNodeAnimated(ob->parent);
+		return IsObjectHasActions(ob->parent);
+	return 0;
 }
 
 
