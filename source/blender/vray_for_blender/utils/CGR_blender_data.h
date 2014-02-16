@@ -36,6 +36,10 @@ extern "C" {
 
 #include <string>
 
+enum {
+	OBJECT_PERSISTENT_ID_SIZE = 8
+};
+
 
 Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
@@ -44,6 +48,8 @@ void  FreeDupliList(Object *ob);
 int   IsObjectHasActions(Object *ob);
 int   IsMeshAnimated(Object *ob);
 int   IsMeshValid(Scene *sce, Main *main, Object *ob);
+
+int   IsParentUpdated(Object *ob);
 
 std::string GetIDName(ID *id, const std::string prefix="");
 
