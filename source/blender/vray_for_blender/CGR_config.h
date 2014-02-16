@@ -104,10 +104,12 @@
 	fflush(stdout);
 
 #define PRINT_INFO(...) \
-    fprintf(stdout, OUTPUT_PROMPT); \
-    fprintf(stdout, __VA_ARGS__); \
-    fprintf(stdout, "\n"); \
-	fflush(stdout);
+	if(G.debug) {\
+	fprintf(stdout, OUTPUT_PROMPT); \
+	fprintf(stdout, __VA_ARGS__); \
+	fprintf(stdout, "\n"); \
+	fflush(stdout);\
+	}
 
 #define PRINT_INFO_LB(...) \
 	fprintf(stdout, OUTPUT_PROMPT); \

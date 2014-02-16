@@ -97,7 +97,7 @@ void VRsceneExporter::exportScene()
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
-	PRINT_INFO_LB("Exporting scene for frame %i...", m_settings->m_sce->r.cfra);
+	PRINT_INFO_LB("Exporting scene for frame %i...%s", m_settings->m_sce->r.cfra, G.debug ? "\n" : "");
 	timeMeasure = PIL_check_seconds_timer();
 
 	Base *base = NULL;
@@ -157,6 +157,8 @@ void VRsceneExporter::exportScene()
 	m_settings->b_engine.update_progress(1.0f);
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
+	if(G.debug)
+		PRINT_INFO_LB("Frame %i export",  m_settings->m_sce->r.cfra);
 	printf(" done [%s]\n", timeMeasureBuf);
 }
 
@@ -170,12 +172,23 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	RNA_id_pointer_create((ID*)ob, &objectRnaPtr);
 	BL::Object b_ob(objectRnaPtr);
 
+	if(ob->id.pad2)
+		PRINT_INFO("Object %s update: %i", ob->id.name, ob->id.pad2);
+
 	if(b_ob.is_duplicator()) {
 		b_ob.dupli_list_create(m_settings->b_scene, 2);
 
 		for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
 			if(m_settings->b_engine.test_break())
 				break;
+			PointerRNA dupliObjectRnaPtr;
+			RNA_id_pointer_create((ID*)dob, &dupliObjectRnaPtr);
+			BL::DupliObject b_dOb(dupliObjectRnaPtr);
+
+			if(b_dOb.hide()) {
+				PRINT_INFO("Hide dupli");
+				continue;
+			}
 
 			// Export lights only for dupli
 			if(LIGHT_TYPE(dob->ob))
@@ -213,11 +226,8 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 {
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
-	if(m_settings->m_animation && m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra) {
-		if((m_settings->m_checkAnimated == ANIM_CHECK_SIMPLE ||
-			m_settings->m_checkAnimated == ANIM_CHECK_BOTH) &&
-		   NOT(node->isAnimated() || IsMeshAnimated(ob)))
-		{
+	if(checkUpdates()) {
+		if(NOT(node->isAnimated())) {
 			delete node;
 			return;
 		}
@@ -242,10 +252,14 @@ void VRsceneExporter::exportObject(Object *ob, DupliObject *dOb)
 			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 		}
 
-		if(m_settings->m_exportNodes && NOT(node->isMeshLight()))
-			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+		if(m_settings->m_exportNodes && NOT(node->isMeshLight())) {
+			int writeObject = true;
+			if(checkUpdates())
+				writeObject = node->isObjectUpdated();
+			if(writeObject)
+				node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+		}
 	}
-
 
 	// In animation mode pointer is stored in cache and is freed by the cache
 	//
@@ -263,4 +277,12 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 
 	if(NOT(m_settings->m_animation))
 		delete light;
+}
+
+
+int VRsceneExporter::checkUpdates()
+{
+	if(m_settings->m_animation)
+		return m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra;
+	return 0;
 }

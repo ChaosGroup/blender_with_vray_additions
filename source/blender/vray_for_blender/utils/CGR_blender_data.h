@@ -41,7 +41,7 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
 void  FreeDupliList(Object *ob);
 
-int   IsNodeAnimated(Object *ob);
+int   IsObjectHasActions(Object *ob);
 int   IsMeshAnimated(Object *ob);
 int   IsMeshValid(Scene *sce, Main *main, Object *ob);
 
