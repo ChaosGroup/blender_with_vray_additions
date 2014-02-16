@@ -115,7 +115,7 @@ public:
 
 		m_propGroup = NULL;
 
-		initInterpolate();
+		initInterpolate(0);
 	}
 
 	VRayExportable(Scene *scene, Main *main, Object *ob) {
@@ -128,7 +128,7 @@ public:
 
 		m_propGroup = NULL;
 
-		initInterpolate();
+		initInterpolate(0);
 	}
 
 	virtual      ~VRayExportable() {}
@@ -194,7 +194,9 @@ public:
 						int prevFrame  = frame - m_sce->r.frame_step;
 
 						if(cacheFrame < prevFrame) {
+							printf("%s prev_frame = %i\n", m_name.c_str(), prevFrame);
 							initInterpolate(prevFrame);
+							printf("%s m_start\n", m_interpStart);
 							m_frameCache.getData(m_name)->writeData(output);
 						}
 					}
@@ -225,9 +227,8 @@ public:
 	static void initPluginDesc(const std::string &dirPath) { m_pluginDesc.init(dirPath); }
 	static void freePluginDesc()                           { m_pluginDesc.freeData(); }
 
-protected:
-	void initInterpolate(int frame=INT_MIN) {
-		if(m_animation && frame > INT_MIN && frame >= m_sce->r.sfra) {
+	static void initInterpolate(int frame) {
+		if(m_animation) {
 			sprintf(m_interpStart, "interpolate((%d,", frame);
 			sprintf(m_interpEnd,   "))");
 		}
@@ -237,11 +238,14 @@ protected:
 		}
 	}
 
+protected:
 	static StrSet           m_expCache;
 	static ExpCache         m_frameCache;
 	static int              m_animation;
 	static int              m_checkAnimated;
 	static VRayPluginsDesc  m_pluginDesc;
+	static char             m_interpStart[32];
+	static char             m_interpEnd[3];
 
 	std::string             m_name;
 	MHash                   m_hash;
@@ -251,9 +255,6 @@ protected:
 	Object                 *m_ob;
 
 	PyObject               *m_propGroup;
-
-	char                    m_interpStart[32];
-	char                    m_interpEnd[3];
 
 	PYTHON_PRINT_BUF;
 
