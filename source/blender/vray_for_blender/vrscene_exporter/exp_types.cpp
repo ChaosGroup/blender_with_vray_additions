@@ -31,6 +31,9 @@ using namespace VRayScene;
 
 StrSet           VRayExportable::m_expCache;
 ExpCache         VRayExportable::m_frameCache;
-int              VRayExportable::m_animation;
-int              VRayExportable::m_checkAnimated;
+int              VRayExportable::m_animation     = 0;
+int              VRayExportable::m_checkAnimated = 0;
 VRayPluginsDesc  VRayExportable::m_pluginDesc;
+
+char             VRayExportable::m_interpStart[32];
+char             VRayExportable::m_interpEnd[3];
