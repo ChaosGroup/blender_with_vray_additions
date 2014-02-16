@@ -140,6 +140,8 @@ public:
 	virtual void  initName(const std::string &name="")=0;
 	virtual void  writeData(PyObject *output)=0;
 
+	virtual void  writeFakeData(PyObject *output) {}
+
 	virtual int isAnimated() {
 		return m_ob->id.pad2;
 	}
@@ -185,19 +187,31 @@ public:
 				MHash prevHash = m_frameCache.getHash(m_name);
 
 				if(currHash != prevHash) {
-					// Write previous frame if hash is more then 'frame_step' back.
-					// If 'prevHash' is 0 then previous call was for the first frame
-					// and no need to reexport.
-					//
-					if(prevHash) {
-						int cacheFrame = m_frameCache.getFrame(m_name);
-						int prevFrame  = frame - m_sce->r.frame_step;
+					int cacheFrame = m_frameCache.getFrame(m_name);
+					int prevFrame  = frame - m_sce->r.frame_step;
 
+					if(prevHash) {
+						// Write previous frame if hash is more then 'frame_step' back.
 						if(cacheFrame < prevFrame) {
-							printf("%s prev_frame = %i\n", m_name.c_str(), prevFrame);
 							initInterpolate(prevFrame);
-							printf("%s m_start\n", m_interpStart);
 							m_frameCache.getData(m_name)->writeData(output);
+						}
+					}
+					else {
+						// If 'prevHash' is 0, then previous call was for the first frame
+						// and no need to reexport.
+						//
+						if(frame > m_sce->r.sfra) {
+							// HACK: When exporting particles we need hidden previous state,
+							// but dupli_list generate only real visible objects
+							//
+							initInterpolate(m_sce->r.sfra);
+							writeFakeData(output);
+
+							if(frame > (m_sce->r.sfra + m_sce->r.frame_step)) {
+								initInterpolate(prevFrame);
+								writeFakeData(output);
+							}
 						}
 					}
 
