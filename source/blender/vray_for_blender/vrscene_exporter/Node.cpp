@@ -170,8 +170,10 @@ void VRayScene::Node::initProperties()
 
 void VRayScene::Node::initHash()
 {
-	// TODO: Add visibility to hash
-	m_hash = HashCode(m_transform);
+	std::stringstream hash;
+	hash << m_transform << m_visible;
+
+	m_hash = HashCode(hash.str().c_str());
 }
 
 
@@ -280,6 +282,23 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 }
 
 
+void VRayScene::Node::writeFakeData(PyObject *output)
+{
+	std::string material = writeMtlMulti(output);
+	material = writeMtlOverride(output, material);
+	material = writeMtlWrapper(output, material);
+	material = writeMtlRenderStats(output, material);
+
+	PYTHON_PRINTF(output, "\nNode %s {", this->getName());
+	PYTHON_PRINTF(output, "\n\tobjectID=%i;", this->getObjectID());
+	PYTHON_PRINTF(output, "\n\tgeometry=%s;", this->getDataName());
+	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
+	PYTHON_PRINTF(output, "\n\tvisible=%s%i%s;", m_interpStart, 0, m_interpEnd);
+	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, this->getTransform(), m_interpEnd);
+	PYTHON_PRINT (output, "\n}\n");
+}
+
+
 void VRayScene::Node::writeData(PyObject *output)
 {
 	std::string material = writeMtlMulti(output);
@@ -291,6 +310,7 @@ void VRayScene::Node::writeData(PyObject *output)
 	PYTHON_PRINTF(output, "\n\tobjectID=%i;", this->getObjectID());
 	PYTHON_PRINTF(output, "\n\tgeometry=%s;", this->getDataName());
 	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
+	PYTHON_PRINTF(output, "\n\tvisible=%s%i%s;", m_interpStart, m_visible, m_interpEnd);
 	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, this->getTransform(), m_interpEnd);
 	PYTHON_PRINT (output, "\n}\n");
 }
@@ -298,7 +318,7 @@ void VRayScene::Node::writeData(PyObject *output)
 
 int VRayScene::Node::isAnimated()
 {
-	return m_object->id.pad2;
+	return IsParentUpdated(m_object);
 }
 
 
@@ -306,7 +326,14 @@ int VRayScene::Node::isObjectUpdated()
 {
 	if(m_object->type == OB_FONT)
 		return m_object->id.pad2 & CGR_UPDATED_DATA;
-	return m_object->id.pad2 & CGR_UPDATED_OBJECT;
+
+	// XXX: Check exactly how parent update affects child object
+	int updated = m_object->id.pad2 & CGR_UPDATED_OBJECT;
+	if(NOT(updated))
+		if(m_object->parent)
+			return IsParentUpdated(m_object);
+
+	return updated;
 }
 
 
@@ -374,6 +401,12 @@ int VRayScene::Node::doRenderEmitter()
 }
 
 
+void VRayScene::Node::setVisiblity(const int &visible)
+{
+	m_visible = visible;
+}
+
+
 int VRayScene::Node::isMeshLight()
 {
 	RnaAccess::RnaValue rna(&m_object->id, "vray.LightMesh");
@@ -408,3 +441,41 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 		}
 	}
 }
+
+
+VRayScene::BLNode::BLNode(Scene *scene, BL::Object ob, BLTm tm):m_object(ob),m_tm(tm)
+{
+	m_sce = scene;
+}
+
+
+void VRayScene::BLNode::initName(const std::string &name)
+{
+	if(NOT(name.empty()))
+		m_name = name;
+	else
+		m_name = m_object.name();
+}
+
+
+void VRayScene::BLNode::initHash()
+{
+}
+
+
+void VRayScene::BLNode::writeData(PyObject *output)
+{
+}
+
+
+int VRayScene::BLNode::isAnimated()
+{
+	return ((ID*)m_object.data().ptr.data)->pad2;
+}
+
+
+void VRayScene::BLNode::setVisible(const int &visible)
+{
+	m_visible = visible;
+}
+

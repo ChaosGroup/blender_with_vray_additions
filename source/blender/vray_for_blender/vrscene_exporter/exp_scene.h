@@ -31,6 +31,8 @@
 #include "vrscene_exporter/exp_defines.h"
 #include "vrscene_exporter/exp_types.h"
 
+#include "vrscene_exporter/Node.h"
+
 #include "BKE_depsgraph.h"
 #include "MEM_guardedalloc.h"
 #include "RNA_blender_cpp.h"
@@ -55,8 +57,10 @@ private:
 	void               init();
 
 	void               exportObjectBase(Object *ob);
-	void               exportObject(Object *ob, DupliObject *dOb=NULL);
+	void               exportObject(Object *ob, const int &visible=1, DupliObject *dOb=NULL);
 	void               exportLight(Object *ob, DupliObject *dOb=NULL);
+
+	void               exportObject(BL::Object dupOb, BLTm tm, bool visible=true);
 
 	int                checkUpdates();
 

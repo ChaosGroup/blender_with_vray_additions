@@ -45,11 +45,34 @@ extern "C" {
 
 namespace VRayScene {
 
+typedef BL::Array<float, 16>  BLTm;
+
 
 enum GeomType {
 	eGeometryMesh,
 	eGeometryProxy,
 	eGeometryPlane
+};
+
+
+class BLNode : public VRayExportable {
+public:
+	BLNode(Scene *scene, BL::Object ob, BLTm tm);
+
+	virtual        ~BLNode() {}
+
+	virtual void    initHash();
+	virtual void    initName(const std::string &name="");
+	virtual void    writeData(PyObject *output);
+	virtual int     isAnimated();
+
+	void            setVisible(const int &visible);
+
+private:
+	BL::Object      m_object;
+	BLTm            m_tm;
+	int             m_visible;
+
 };
 
 
@@ -65,6 +88,7 @@ public:
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
 	virtual void    writeData(PyObject *output);
+	virtual void    writeFakeData(PyObject *output);
 	virtual int     isAnimated();
 
 	int             isObjectUpdated();
@@ -91,6 +115,8 @@ public:
 	int             hasHair();
 	int             doRenderEmitter();
 
+	void            setVisiblity(const int &visible);
+
 private:
 	void            initTransform();
 	void            initProperties();
@@ -110,6 +136,7 @@ private:
 
 	// Node properties
 	int             m_objectID;
+	int             m_visible;
 	char            m_transform[TRANSFORM_HEX_SIZE];
 	std::string     m_materiall;
 	VRayExportable *m_geometry;
