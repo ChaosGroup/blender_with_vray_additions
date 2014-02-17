@@ -64,6 +64,7 @@ public:
 	virtual void  initName(const std::string &name="");
 	virtual void  writeData(PyObject *output);
 
+	virtual void  preInit();
 	virtual void  init();
 	void          freeData();
 
