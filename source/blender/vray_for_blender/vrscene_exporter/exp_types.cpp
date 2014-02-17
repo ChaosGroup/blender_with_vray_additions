@@ -37,3 +37,6 @@ VRayPluginsDesc  VRayExportable::m_pluginDesc;
 
 char             VRayExportable::m_interpStart[32];
 char             VRayExportable::m_interpEnd[3];
+
+
+VRayExportable::~VRayExportable() {}
