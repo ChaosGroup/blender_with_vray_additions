@@ -85,6 +85,7 @@ public:
 	static int      DoRenderEmitter(Object *ob);
 
 	virtual        ~Node() { freeData(); }
+	virtual void    preInit() {}
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
 	virtual void    writeData(PyObject *output);

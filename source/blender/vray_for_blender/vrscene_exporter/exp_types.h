@@ -146,9 +146,13 @@ public:
 		return m_ob->id.pad2;
 	}
 
-	virtual void  init() {
+	virtual void preInit() {
 		initName();
 		initHash();
+	}
+
+	virtual void init() {
+		preInit();
 	}
 
 	// This function will check if there is a cached plugin and export it before

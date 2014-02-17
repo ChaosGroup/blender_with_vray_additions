@@ -130,21 +130,26 @@ int VRayScene::Node::preInitGeometry()
 		else if(rna.getEnum("override_type") == 1)
 			m_geometryType = VRayScene::eGeometryPlane;
 
+	int meshValid = true;
 	if(m_geometryType == VRayScene::eGeometryMesh)
-		return IsMeshValid(m_sce, m_main, m_object);
-	else
-		return 1;
+		meshValid = IsMeshValid(m_sce, m_main, m_object);
+
+	if(meshValid) {
+		if(m_geometryType == VRayScene::eGeometryMesh)
+			m_geometry = new GeomStaticMesh(m_sce, m_main, m_object, true);
+		else if(m_geometryType == VRayScene::eGeometryProxy)
+			m_geometry = new GeomMeshFile(m_sce, m_main, m_object);
+		else if(m_geometryType == VRayScene::eGeometryPlane)
+			m_geometry = new GeomPlane(m_sce, m_main, m_object);
+		m_geometry->preInit();
+	}
+
+	return meshValid;
 }
 
 
 void VRayScene::Node::initGeometry()
 {
-	if(m_geometryType == VRayScene::eGeometryMesh)
-		m_geometry = new GeomStaticMesh(m_sce, m_main, m_object, true);
-	else if(m_geometryType == VRayScene::eGeometryProxy)
-		m_geometry = new GeomMeshFile(m_sce, m_main, m_object);
-	else if(m_geometryType == VRayScene::eGeometryPlane)
-		m_geometry = new GeomPlane(m_sce, m_main, m_object);
 	m_geometry->init();
 }
 

@@ -31,6 +31,12 @@
 #include "BLI_path_util.h"
 
 
+void VRayScene::GeomMeshFile::preInit()
+{
+	initName();
+}
+
+
 void VRayScene::GeomMeshFile::initName(const std::string &name)
 {
 	if(NOT(name.empty())) {
@@ -80,3 +86,4 @@ void VRayScene::GeomMeshFile::writeData(PyObject *output)
 {
 	PYTHON_PRINT(output, m_plugin.str().c_str());
 }
+

@@ -38,9 +38,11 @@ public:
 	GeomMeshFile(Scene *scene, Main *main, Object *ob):VRayExportable(scene, main, ob) {}
 
 	virtual      ~GeomMeshFile() {}
+	virtual void  preInit();
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
 	virtual void  writeData(PyObject *output);
+
 
 private:
 	std::stringstream  m_plugin;

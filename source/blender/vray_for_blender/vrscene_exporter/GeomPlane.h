@@ -36,9 +36,11 @@ public:
 	GeomPlane(Scene *scene, Main *main, Object *ob):VRayExportable(scene, main, ob) {}
 
 	virtual      ~GeomPlane() {}
+	virtual void  preInit();
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
 	virtual void  writeData(PyObject *output);
+
 
 };
 
