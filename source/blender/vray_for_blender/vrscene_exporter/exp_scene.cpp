@@ -178,30 +178,6 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	if(b_ob.is_duplicator()) {
 		b_ob.dupli_list_create(m_settings->b_scene, 2);
 
-#if 0
-		BL::Object::particle_systems_iterator psysIt;
-		for(b_ob.particle_systems.begin(psysIt); psysIt != b_ob.particle_systems.end(); ++psysIt) {
-			BL::ParticleSystem b_psys = *psysIt;
-
-			BL::ParticleSettings b_pset = b_psys.settings();
-			if(NOT(b_pset.render_type() == BL::ParticleSettings::render_type_OBJECT ||
-				   b_pset.render_type() == BL::ParticleSettings::render_type_GROUP))
-				continue;
-
-			b_pset.dupli_object();
-			b_pset.dupli_group();
-
-			BL::ParticleSystem::particles_iterator paIt;
-			for(b_psys.particles.begin(paIt); paIt != b_psys.particles.end(); ++paIt) {
-				BL::Particle b_pa = *paIt;
-
-				if(b_pa.alive_state() == BL::Particle::alive_state_UNBORN)
-					continue;
-			}
-		}
-#endif
-
-#if 1
 		BL::Object::dupli_list_iterator b_dup;
 		for(b_ob.dupli_list.begin(b_dup); b_dup != b_ob.dupli_list.end(); ++b_dup) {
 			if(m_settings->b_engine.test_break())
@@ -209,30 +185,6 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 			BL::DupliObject b_dupOb  = *b_dup;
 			BL::Object      b_dup_ob = b_dupOb.object();
-
-			BL::Array<int, OBJECT_PERSISTENT_ID_SIZE> persistent_id = b_dup->persistent_id();
-
-			bool visible = true;
-
-			// test if this dupli was generated from a particle sytem
-			BL::ParticleSystem b_psys = b_dupOb.particle_system();
-			if(b_psys) {
-				// don't handle child particles yet
-				if(persistent_id[0] >= b_psys.particles.length())
-					continue;
-
-				BL::Particle b_pa = b_psys.particles[persistent_id[0]];
-#if 1
-				if(m_settings->m_sce->r.cfra < b_pa.birth_time())
-					visible = false;
-				if(b_pa.birth_time() + b_pa.lifetime() > m_settings->m_sce->r.cfra)
-					visible = false;
-
-				visible = b_pa.is_visible() && b_pa.is_exist();
-#else
-				visible = b_pa.alive_state() == BL::Particle::alive_state_ALIVE;
-#endif
-			}
 
 			DupliObject *dupOb = (DupliObject*)b_dupOb.ptr.data;
 
@@ -243,19 +195,6 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(b_dup_ob.type() == BL::Object::type_EMPTY))
 				exportObject(ob, visible, dupOb);
 		}
-#else
-		for(DupliObject *dob = (DupliObject*)ob->duplilist->first; dob; dob = dob->next) {
-			if(m_settings->b_engine.test_break())
-				break;
-
-			// Export lights only for dupli
-			if(LIGHT_TYPE(dob->ob))
-				exportLight(ob, dob);
-
-			if(NOT(EMPTY_TYPE(dob->ob)))
-				exportObject(ob, true, dob);
-		}
-#endif
 
 		b_ob.dupli_list_clear();
 
