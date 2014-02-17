@@ -57,9 +57,7 @@ extern "C" {
 VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 	m_settings(settings)
 {
-	if(G.debug) {
-		PRINT_INFO("VRsceneExporter::VRsceneExporter()");
-	}
+	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
 
 	init();
 }
@@ -67,9 +65,7 @@ VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
 
 VRsceneExporter::~VRsceneExporter()
 {
-	if(G.debug) {
-		PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
-	}
+	PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
 
 	delete m_settings;
 }
@@ -89,9 +85,7 @@ void VRsceneExporter::init()
 
 void VRsceneExporter::exportScene()
 {
-	if(G.debug) {
-		PRINT_INFO("VRsceneExporter::exportScene()");
-	}
+	PRINT_INFO("VRsceneExporter::exportScene()");
 
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
@@ -193,7 +187,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 				exportLight(ob, dupOb);
 
 			if(NOT(b_dup_ob.type() == BL::Object::type_EMPTY))
-				exportObject(ob, visible, dupOb);
+				exportObject(ob, true, dupOb);
 		}
 
 		b_ob.dupli_list_clear();
