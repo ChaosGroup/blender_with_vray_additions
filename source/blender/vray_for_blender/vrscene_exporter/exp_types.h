@@ -131,7 +131,7 @@ public:
 		initInterpolate(0);
 	}
 
-	virtual      ~VRayExportable() {}
+	virtual      ~VRayExportable()=0;
 
 	MHash         getHash() const { return m_hash; }
 	const char   *getName() const { return m_name.c_str(); }
