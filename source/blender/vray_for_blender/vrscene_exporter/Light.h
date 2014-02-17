@@ -41,6 +41,7 @@ public:
 	Light(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL);
 
 	virtual           ~Light() {}
+	virtual void       preInit() {}
 	virtual void       initHash();
 	virtual void       initName(const std::string &name="");
 	virtual void       writeData(PyObject *output);

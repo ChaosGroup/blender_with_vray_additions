@@ -140,13 +140,19 @@ void GeomStaticMesh::init()
 
 	FreeRenderMesh(m_main, mesh);
 
+	preInit();
+	initHash();
+}
+
+
+void GeomStaticMesh::preInit()
+{
 	if(m_checkComponents) {
 		initDisplace();
 		initSmooth();
 	}
 
 	initName();
-	initHash();
 }
 
 

@@ -26,6 +26,12 @@
 #include "GeomPlane.h"
 
 
+void VRayScene::GeomPlane::preInit()
+{
+	initName();
+}
+
+
 void VRayScene::GeomPlane::initHash()
 {
 	// GeomPlane is always the same

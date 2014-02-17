@@ -37,6 +37,7 @@ public:
 	GeomMayaHair(Scene *scene, Main *main, Object *ob);
 
 	virtual        ~GeomMayaHair() { freeData(); }
+	virtual void    preInit() {}
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
 
