@@ -103,17 +103,13 @@ void VRayScene::Node::initName(const std::string &name)
 		m_name = name;
 	}
 	else {
-		m_name.clear();
+		m_name = GetIDName((ID*)m_object);
 
-		// If base object is a duplicator also add it's name
-		if(m_ob->transflag & OB_DUPLI)
-			m_name = GetIDName((ID*)m_ob);
-
-		m_name.append(GetIDName((ID*)m_object));
-
-		// Add unique dupli index
-		if(m_dupliObject)
+		// Add unique dupli index and base name
+		if(m_dupliObject) {
+			m_name.append(GetIDName((ID*)m_ob));
 			m_name.append(boost::lexical_cast<std::string>(m_dupliObject->persistent_id[0]));
+		}
 	}
 }
 
@@ -321,15 +317,31 @@ void VRayScene::Node::writeData(PyObject *output)
 }
 
 
+int VRayScene::Node::IsUpdated(Object *ob)
+{
+	if(ob->type == OB_FONT)
+		return ob->id.pad2 & CGR_UPDATED_DATA;
+
+	int updated = ob->id.pad2 & CGR_UPDATED_OBJECT;
+	if(NOT(updated)) {
+		if(ob->parent) {
+			// XXX: Check exactly how parent update affects child object
+			return VRayScene::Node::IsUpdated(ob->parent);
+		}
+	}
+	return updated;
+}
+
+
 int VRayScene::Node::isAnimated()
 {
-	return VRayScene::Node::IsAnimated(m_object);
+	return isObjectUpdated() || isObjectDataUpdated();
 }
 
 
 int VRayScene::Node::isObjectUpdated()
 {
-	return isAnimated();
+	return VRayScene::Node::IsUpdated(m_object);
 }
 
 
@@ -376,20 +388,6 @@ int VRayScene::Node::DoRenderEmitter(Object *ob)
 			return 0;
 	}
 	return 1;
-}
-
-int VRayScene::Node::IsAnimated(Object *ob)
-{
-	if(ob->type == OB_FONT)
-		return ob->id.pad2 & CGR_UPDATED_DATA;
-
-	// XXX: Check exactly how parent update affects child object
-	int updated = ob->id.pad2 & CGR_UPDATED_OBJECT;
-	if(NOT(updated))
-		if(ob->parent)
-			return IsParentUpdated(ob);
-
-	return updated;
 }
 
 
