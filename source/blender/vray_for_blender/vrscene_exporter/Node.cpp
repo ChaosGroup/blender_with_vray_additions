@@ -57,14 +57,16 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
-VRayScene::Node::Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb):
+VRayScene::Node::Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb, int from_particles):
 	VRayExportable(scene, main, ob)
 {
-	m_geometry = NULL;
+	m_geometry     = NULL;
 	m_geometryType = VRayScene::eGeometryMesh;
 
 	m_dupliObject = dOb;
 	m_object      = m_dupliObject ? m_dupliObject->ob : m_ob;
+
+	m_is_particle = from_particles;
 }
 
 
