@@ -170,6 +170,7 @@ public:
 			if(m_expCache.find(m_name) != m_expCache.end())
 				return;
 			m_expCache.insert(m_name);
+
 			initInterpolate(frame);
 			writeData(output);
 		}
@@ -182,10 +183,9 @@ public:
 				writeData(output);
 			}
 			else if(m_checkAnimated == ANIM_CHECK_HASH || m_checkAnimated == ANIM_CHECK_BOTH) {
-				if(m_checkAnimated == ANIM_CHECK_BOTH) {
+				if(m_checkAnimated == ANIM_CHECK_BOTH)
 					if(NOT(isAnimated()) && frame > m_sce->r.sfra)
 						return;
-				}
 
 				MHash currHash = getHash();
 				MHash prevHash = m_frameCache.getHash(m_name);
