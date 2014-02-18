@@ -135,6 +135,7 @@ public:
 
 	MHash         getHash() const { return m_hash; }
 	const char   *getName() const { return m_name.c_str(); }
+	const std::string getMName() const { return m_name; }
 
 	virtual void  initHash()=0;
 	virtual void  initName(const std::string &name="")=0;

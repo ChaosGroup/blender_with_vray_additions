@@ -78,7 +78,7 @@ private:
 
 class Node : public VRayExportable {
 public:
-	Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL);
+	Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL, int from_particles=false);
 
 	static int      IsSmokeDomain(Object *ob);
 	static int      HasHair(Object *ob);
@@ -133,6 +133,7 @@ private:
 
 	Object         *m_object;
 	DupliObject    *m_dupliObject;
+	int             m_is_particle;
 
 	std::string     m_materialOverride;
 
