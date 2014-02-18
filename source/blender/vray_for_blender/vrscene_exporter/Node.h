@@ -83,6 +83,7 @@ public:
 	static int      IsSmokeDomain(Object *ob);
 	static int      HasHair(Object *ob);
 	static int      DoRenderEmitter(Object *ob);
+	static int      IsAnimated(Object *ob);
 
 	virtual        ~Node() { freeData(); }
 	virtual void    preInit() {}
