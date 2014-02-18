@@ -304,9 +304,9 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 
 int IsParentUpdated(Object *ob)
 {
-	if(ob->parent)
-		return IsParentUpdated(ob->parent);
 	if(ob->id.pad2)
 		return 1;
+	if(ob->parent)
+		return IsParentUpdated(ob->parent);
 	return 0;
 }
