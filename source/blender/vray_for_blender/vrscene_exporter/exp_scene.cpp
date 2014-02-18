@@ -251,8 +251,13 @@ void VRsceneExporter::exportObject(Object *ob, const int &visible, DupliObject *
 	int hasGeometry = node->preInitGeometry();
 	if(hasGeometry) {
 		if(m_settings->m_exportGeometry) {
-			node->initGeometry();
-			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+			int writeObject = true;
+			if(checkUpdates())
+				writeObject = node->isObjectDataUpdated();
+			if(writeObject) {
+				node->initGeometry();
+				node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
+			}
 		}
 
 		if(m_settings->m_exportNodes && NOT(node->isMeshLight())) {
@@ -285,7 +290,7 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 
 int VRsceneExporter::checkUpdates()
 {
-	if(m_settings->m_animation)
+	if(m_settings->m_animation && m_settings->m_checkAnimated != ANIM_CHECK_NONE)
 		return m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra;
 	return 0;
 }
