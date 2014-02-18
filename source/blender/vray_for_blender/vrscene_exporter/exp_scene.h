@@ -46,7 +46,59 @@
 using namespace VRayScene;
 
 
+// Blender gives us particles for the current frame,
+// so we need to track when they appear and dissappear
+//
+class VRsceneParticles {
+	typedef std::vector<Node*> Particles;
+
+public:
+	const int size() const {
+		return m_particles.size();
+	}
+
+	void append(Node *node) {
+		m_visibleParticles.push_back(node);
+	}
+
+	void write() {
+		// First call; simply copy data
+		if(NOT(m_particles.size())) {
+			m_particles.insert(m_particles.end(), m_visibleParticles.begin(), m_visibleParticles.end());
+		}
+
+		Particles::const_iterator nodeIt;
+		for(nodeIt = m_particles.begin(); nodeIt != m_particles.end(); ++nodeIt) {
+			Node *node = *nodeIt;
+			node->setVisiblity(false);
+
+			Particles::const_iterator visibleIt;
+			for(visibleIt = m_visibleParticles.begin(); visibleIt != m_visibleParticles.end(); ++visibleIt) {
+				Node *newNode = *visibleIt;
+				if(node->getMName() == newNode->getMName()) {
+					node->setVisiblity(true);
+					continue;
+				}
+			}
+		}
+	}
+
+	void clear() {
+		m_particles.clear();
+		m_visibleParticles.clear();
+	}
+
+private:
+	Particles  m_visibleParticles;
+	Particles  m_particles;
+	StrSet     m_particlesNames;
+
+};
+
+
 class VRsceneExporter {
+	friend class VRsceneParticles;
+
 public:
 	VRsceneExporter(ExpoterSettings *settings);
 	~VRsceneExporter();
@@ -56,17 +108,23 @@ public:
 private:
 	void               init();
 
+	void               exportNode(Node *node);
+
 	void               exportObjectBase(Object *ob);
-	void               exportObject(Object *ob, const int &visible=1, DupliObject *dOb=NULL);
+	void               exportObject(Object *ob, const int &visible=true, DupliObject *dOb=NULL, const int &from_particles=false);
 	void               exportLight(Object *ob, DupliObject *dOb=NULL);
 
+#if CGR_USE_CPP_API
 	void               exportObject(BL::Object dupOb, BLTm tm, bool visible=true);
+#endif
 
 	int                checkUpdates();
 
 	ExpoterSettings   *m_settings;
 
 	std::string        m_mtlOverride;
+
+	VRsceneParticles   m_particles;
 
 	PYTHON_PRINT_BUF;
 

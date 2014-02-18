@@ -140,6 +140,9 @@ void VRsceneExporter::exportScene()
 
 		exportObjectBase(ob);
 
+		if(m_particles.size())
+			m_particles.write();
+
 		expProgress += expProgStep;
 		nObjects++;
 		if((nObjects % progUpdateCnt) == 0) {
@@ -180,6 +183,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			BL::DupliObject b_dupOb  = *b_dup;
 			BL::Object      b_dup_ob = b_dupOb.object();
 
+			int from_particles = !!b_dupOb.particle_system();
+
 			DupliObject *dupOb = (DupliObject*)b_dupOb.ptr.data;
 
 			// Export lights only for dupli
@@ -187,7 +192,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 				exportLight(ob, dupOb);
 
 			if(NOT(b_dup_ob.type() == BL::Object::type_EMPTY))
-				exportObject(ob, true, dupOb);
+				exportObject(ob, true, dupOb, from_particles);
 		}
 
 		b_ob.dupli_list_clear();
@@ -214,6 +219,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 }
 
 
+#if CGR_USE_CPP_API
 void VRsceneExporter::exportObject(BL::Object ob, BLTm tm, bool visible)
 {
 	BLNode *node = new BLNode(m_settings->m_sce, ob, tm);
@@ -222,13 +228,24 @@ void VRsceneExporter::exportObject(BL::Object ob, BLTm tm, bool visible)
 	node->initHash();
 	node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 }
+#endif
 
 
-void VRsceneExporter::exportObject(Object *ob, const int &visible, DupliObject *dOb)
+void VRsceneExporter::exportObject(Object *ob, const int &visible, DupliObject *dOb, const int &from_particles)
 {
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
-	node->setVisiblity(visible);
 
+	if(from_particles)
+		m_particles.append(node);
+	else {
+		node->setVisiblity(visible);
+		exportNode(node);
+	}
+}
+
+
+void VRsceneExporter::exportNode(Node *node)
+{
 	if(checkUpdates()) {
 		if(NOT(node->isAnimated())) {
 			delete node;
@@ -244,8 +261,10 @@ void VRsceneExporter::exportObject(Object *ob, const int &visible, DupliObject *
 
 	if(node->hasHair()) {
 		node->writeHair(m_settings);
-		if(NOT(node->doRenderEmitter()))
+		if(NOT(node->doRenderEmitter())) {
+			delete node;
 			return;
+		}
 	}
 
 	int hasGeometry = node->preInitGeometry();
@@ -270,7 +289,6 @@ void VRsceneExporter::exportObject(Object *ob, const int &visible, DupliObject *
 	}
 
 	// In animation mode pointer is stored in cache and is freed by the cache
-	//
 	if(NOT(m_settings->m_animation) || NOT(hasGeometry))
 		delete node;
 }
