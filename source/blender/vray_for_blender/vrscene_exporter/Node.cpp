@@ -323,22 +323,13 @@ void VRayScene::Node::writeData(PyObject *output)
 
 int VRayScene::Node::isAnimated()
 {
-	return IsParentUpdated(m_object);
+	return VRayScene::Node::IsAnimated(m_object);
 }
 
 
 int VRayScene::Node::isObjectUpdated()
 {
-	if(m_object->type == OB_FONT)
-		return m_object->id.pad2 & CGR_UPDATED_DATA;
-
-	// XXX: Check exactly how parent update affects child object
-	int updated = m_object->id.pad2 & CGR_UPDATED_OBJECT;
-	if(NOT(updated))
-		if(m_object->parent)
-			return IsParentUpdated(m_object);
-
-	return updated;
+	return isAnimated();
 }
 
 
@@ -385,6 +376,20 @@ int VRayScene::Node::DoRenderEmitter(Object *ob)
 			return 0;
 	}
 	return 1;
+}
+
+int VRayScene::Node::IsAnimated(Object *ob)
+{
+	if(ob->type == OB_FONT)
+		return ob->id.pad2 & CGR_UPDATED_DATA;
+
+	// XXX: Check exactly how parent update affects child object
+	int updated = ob->id.pad2 & CGR_UPDATED_OBJECT;
+	if(NOT(updated))
+		if(ob->parent)
+			return IsParentUpdated(ob);
+
+	return updated;
 }
 
 
