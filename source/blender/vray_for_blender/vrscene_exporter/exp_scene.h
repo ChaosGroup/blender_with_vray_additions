@@ -118,6 +118,7 @@ private:
 	void                    exportObject(Object *ob, const int &visible=true, const int &checkUpdated=true);
 	void                    exportLight(Object *ob, DupliObject *dOb=NULL);
 
+	void                    initDupli();
 	void                    exportDupli();
 
 #if CGR_USE_CPP_API

@@ -121,30 +121,9 @@ void VRsceneExporter::exportScene()
 	// Create particle system data
 	// Needed for the correct first frame
 	//
-	if(m_settings->m_sce->r.cfra == m_settings->m_sce->r.sfra) {
-		BL::Scene::objects_iterator bl_obIt;
-		for(bl_sce.objects.begin(bl_obIt); bl_obIt != bl_sce.objects.end(); ++bl_obIt) {
-			BL::Object bl_ob = *bl_obIt;
-			if(bl_ob.type() == BL::Object::type_META)
-				continue;
-			if(bl_ob.is_duplicator()) {
-				if(bl_ob.particle_systems.length()) {
-					BL::Object::particle_systems_iterator bl_psysIt;
-					for(bl_ob.particle_systems.begin(bl_psysIt); bl_psysIt != bl_ob.particle_systems.end(); ++bl_psysIt) {
-						BL::ParticleSystem bl_psys = *bl_psysIt;
-						BL::ParticleSettings bl_pset = bl_psys.settings();
-
-						if(bl_pset.type() == BL::ParticleSettings::type_HAIR && bl_pset.render_type() == BL::ParticleSettings::render_type_PATH)
-							continue;
-
-						m_psys.get(bl_pset.name());
-					}
-				}
-				if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE)
-					m_psys.get(bl_ob.name());
-			}
-		}
-	}
+	if(m_settings->m_animation)
+		if(m_settings->m_sce->r.cfra == m_settings->m_sce->r.sfra)
+			initDupli();
 
 	// Export stuff
 	base = (Base*)m_settings->m_sce->base.first;
@@ -348,6 +327,36 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 		delete light;
 }
 
+
+void VRsceneExporter::initDupli()
+{
+	PointerRNA sceneRNA;
+	RNA_id_pointer_create((ID*)m_settings->m_sce, &sceneRNA);
+	BL::Scene bl_sce(sceneRNA);
+
+	BL::Scene::objects_iterator bl_obIt;
+	for(bl_sce.objects.begin(bl_obIt); bl_obIt != bl_sce.objects.end(); ++bl_obIt) {
+		BL::Object bl_ob = *bl_obIt;
+		if(bl_ob.type() == BL::Object::type_META)
+			continue;
+		if(bl_ob.is_duplicator()) {
+			if(bl_ob.particle_systems.length()) {
+				BL::Object::particle_systems_iterator bl_psysIt;
+				for(bl_ob.particle_systems.begin(bl_psysIt); bl_psysIt != bl_ob.particle_systems.end(); ++bl_psysIt) {
+					BL::ParticleSystem bl_psys = *bl_psysIt;
+					BL::ParticleSettings bl_pset = bl_psys.settings();
+
+					if(bl_pset.type() == BL::ParticleSettings::type_HAIR && bl_pset.render_type() == BL::ParticleSettings::render_type_PATH)
+						continue;
+
+					m_psys.get(bl_pset.name());
+				}
+			}
+			if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE)
+				m_psys.get(bl_ob.name());
+		}
+	}
+}
 
 void VRsceneExporter::exportDupli()
 {

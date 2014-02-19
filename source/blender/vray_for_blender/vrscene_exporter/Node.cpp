@@ -356,6 +356,7 @@ int VRayScene::Node::HasHair(Object *ob)
 	return 0;
 }
 
+
 int VRayScene::Node::DoRenderEmitter(Object *ob)
 {
 	if(ob->particlesystem.first) {
