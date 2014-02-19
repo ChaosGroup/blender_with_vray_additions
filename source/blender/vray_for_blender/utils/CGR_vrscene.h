@@ -12,7 +12,7 @@
 #define ATTR_INT   1
 #define ATTR_FLOAT 2
 
-#define TRANSFORM_HEX_SIZE  129
+#define CGR_TRANSFORM_HEX_SIZE  129
 
 
 MHash HashCode(const char* s);

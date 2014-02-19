@@ -93,7 +93,7 @@ private:
 	char              *m_heat;
 #endif
 
-	char               m_uvw_transform[TRANSFORM_HEX_SIZE];
+	char               m_uvw_transform[CGR_TRANSFORM_HEX_SIZE];
 	int                p_interpolation;
 
 	PyObject          *m_propGroup;

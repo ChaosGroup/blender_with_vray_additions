@@ -52,6 +52,13 @@ extern "C" {
 #include <Python.h>
 
 
+namespace BL {
+
+typedef Array<float, 16>  Transform;
+
+}
+
+
 namespace VRayScene {
 
 struct ExpoterSettings {
@@ -74,6 +81,12 @@ struct ExpoterSettings {
 
 		m_activeLayers = true;
 		m_altDInstances = false;
+	}
+
+	int checkUpdates() {
+		if(m_animation && m_checkAnimated != ANIM_CHECK_NONE)
+			return m_sce->r.cfra > m_sce->r.sfra;
+		return 0;
 	}
 
 	Scene            *m_sce;
@@ -103,6 +116,7 @@ typedef std::vector<std::string>        StringVector;
 typedef std::set<std::string>           StrSet;
 typedef AnimationCache<VRayExportable>  ExpCache;
 
+
 class VRayExportable {
 public:
 	VRayExportable() {
@@ -114,6 +128,7 @@ public:
 		m_ob   = NULL;
 
 		m_propGroup = NULL;
+		m_checkUpdated = true;
 
 		initInterpolate(0);
 	}
@@ -127,6 +142,7 @@ public:
 		m_ob   = ob;
 
 		m_propGroup = NULL;
+		m_checkUpdated = true;
 
 		initInterpolate(0);
 	}
@@ -143,7 +159,7 @@ public:
 
 	virtual void  writeFakeData(PyObject *output) {}
 
-	virtual int isAnimated() {
+	virtual int isUpdated() {
 		return m_ob->id.pad2;
 	}
 
@@ -177,7 +193,7 @@ public:
 		}
 		else {
 			if(m_checkAnimated == ANIM_CHECK_SIMPLE) {
-				if(NOT(isAnimated()) && frame > m_sce->r.sfra)
+				if(checkUpdated(frame) && NOT(isUpdated()))
 					return;
 
 				initInterpolate(frame);
@@ -185,7 +201,7 @@ public:
 			}
 			else if(m_checkAnimated == ANIM_CHECK_HASH || m_checkAnimated == ANIM_CHECK_BOTH) {
 				if(m_checkAnimated == ANIM_CHECK_BOTH)
-					if(NOT(isAnimated()) && frame > m_sce->r.sfra)
+					if(checkUpdated(frame) && NOT(isUpdated()))
 						return;
 
 				MHash currHash = getHash();
@@ -195,28 +211,22 @@ public:
 					int cacheFrame = m_frameCache.getFrame(m_name);
 					int prevFrame  = frame - m_sce->r.frame_step;
 
-					if(prevHash) {
+					if(prevHash == 0) {
+#if 0
+						// prevHash 0 could mean that object have appeared at some frame of
+						// animation; so we need to set some fake data for previous state
+						// Let's say invisible at the first frame.
+						if(frame > m_sce->r.sfra) {
+							initInterpolate(m_sce->r.sfra);
+							writeFakeData(output);
+						}
+#endif
+					}
+					else {
 						// Write previous frame if hash is more then 'frame_step' back.
 						if(cacheFrame < prevFrame) {
 							initInterpolate(prevFrame);
 							m_frameCache.getData(m_name)->writeData(output);
-						}
-					}
-					else {
-						// If 'prevHash' is 0, then previous call was for the first frame
-						// and no need to reexport.
-						//
-						if(frame > m_sce->r.sfra) {
-							// HACK: When exporting particles we need hidden previous state,
-							// but dupli_list generate only real visible objects
-							//
-							initInterpolate(m_sce->r.sfra);
-							writeFakeData(output);
-
-							if(frame > (m_sce->r.sfra + m_sce->r.frame_step)) {
-								initInterpolate(prevFrame);
-								writeFakeData(output);
-							}
 						}
 					}
 
@@ -233,6 +243,14 @@ public:
 	//
 	void attachPropGroup(PyObject *propGroup) {
 		m_propGroup = propGroup;
+	}
+
+	bool checkUpdated(const int &frame) {
+		// Data is exported first time - force export
+		if(m_expCache.count(m_name) == 0)
+			return false;
+		m_expCache.insert(m_name);
+		return frame > m_sce->r.sfra;
 	}
 
 	static void setAnimationMode(int animation, int checkAnimated) {
@@ -274,6 +292,8 @@ protected:
 	Object                 *m_ob;
 
 	PyObject               *m_propGroup;
+
+	int                     m_checkUpdated;
 
 	PYTHON_PRINT_BUF;
 

@@ -45,9 +45,6 @@ extern "C" {
 
 namespace VRayScene {
 
-typedef BL::Array<float, 16>  BLTm;
-
-
 enum GeomType {
 	eGeometryMesh,
 	eGeometryProxy,
@@ -57,20 +54,20 @@ enum GeomType {
 
 class BLNode : public VRayExportable {
 public:
-	BLNode(Scene *scene, BL::Object ob, BLTm tm);
+	BLNode(Scene *scene, BL::Object ob, BL::Transform tm);
 
 	virtual        ~BLNode() {}
 
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
 	virtual void    writeData(PyObject *output);
-	virtual int     isAnimated();
+	virtual int     isUpdated();
 
 	void            setVisible(const int &visible);
 
 private:
 	BL::Object      m_object;
-	BLTm            m_tm;
+	BL::Transform   m_tm;
 	int             m_visible;
 
 };
@@ -78,7 +75,7 @@ private:
 
 class Node : public VRayExportable {
 public:
-	Node(Scene *scene, Main *main, Object *ob, DupliObject *dOb=NULL, int from_particles=false);
+	Node(Scene *scene, Main *main, Object *ob);
 
 	static int      IsSmokeDomain(Object *ob);
 	static int      HasHair(Object *ob);
@@ -91,7 +88,7 @@ public:
 	virtual void    initName(const std::string &name="");
 	virtual void    writeData(PyObject *output);
 	virtual void    writeFakeData(PyObject *output);
-	virtual int     isAnimated();
+	virtual int     isUpdated();
 
 	int             isObjectUpdated();
 	int             isObjectDataUpdated();
@@ -105,10 +102,6 @@ public:
 	void            writeGeometry(PyObject *output, int frame=0);
 	void            writeHair(ExpoterSettings *settings);
 
-	MHash           getGeometryHash();
-	const char     *getDataName() const { return m_geometry->getName(); }
-	Object         *getObject() const   { return m_object; }
-
 	char           *getTransform() const;
 	int             getObjectID() const;
 
@@ -117,11 +110,11 @@ public:
 	int             hasHair();
 	int             doRenderEmitter();
 
-	void            setVisiblity(const int &visible);
+	void            setVisiblity(const int &visible=true);
+	void            setObjectID(const int &objectID=0);
 
 private:
 	void            initTransform();
-	void            initProperties();
 
 	std::string     writeGeomDisplacedMesh(PyObject *output, const std::string &meshName);
 	std::string     writeGeomStaticSmoothedMesh(PyObject *output, const std::string &meshName);
@@ -131,19 +124,18 @@ private:
 	std::string     writeMtlOverride(PyObject *output, const std::string &baseMtl);
 	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 
-	Object         *m_object;
-	DupliObject    *m_dupliObject;
-	int             m_is_particle;
+	const char     *getDataName() const { return m_geometry->getName(); }
 
+	// Export options
 	std::string     m_materialOverride;
 
 	// Node properties
 	int             m_objectID;
 	int             m_visible;
-	char            m_transform[TRANSFORM_HEX_SIZE];
-	std::string     m_materiall;
+	char            m_transform[CGR_TRANSFORM_HEX_SIZE];
 	VRayExportable *m_geometry;
 	GeomType        m_geometryType;
+
 };
 
 }

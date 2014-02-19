@@ -378,8 +378,8 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 		MatrixObject *transform = (MatrixObject*)value;
 
 		float tm[4][4];
-		char  tmBuf[TRANSFORM_HEX_SIZE]  = "";
-		char  buf[TRANSFORM_HEX_SIZE+20] = "";
+		char  tmBuf[CGR_TRANSFORM_HEX_SIZE]  = "";
+		char  buf[CGR_TRANSFORM_HEX_SIZE+20] = "";
 
 		copy_v3_v3(tm[0], MATRIX_COL_PTR(transform, 0));
 		copy_v3_v3(tm[1], MATRIX_COL_PTR(transform, 1));

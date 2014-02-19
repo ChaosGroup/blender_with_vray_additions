@@ -2964,6 +2964,9 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 				BKE_object_where_is_calc_ex(scene, rbw, ob, NULL);
 		}
 		
+		if(ob->recalc & OB_RECALC_OB || ob->recalc & OB_RECALC_TIME)
+			ob->id.pad2 |= CGR_UPDATED_OBJECT;
+
 		if (ob->recalc & OB_RECALC_DATA) {
 			ID *data_id = (ID *)ob->data;
 			AnimData *adt = BKE_animdata_from_id(data_id);
@@ -3112,7 +3115,6 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 		}
 		else {
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
-			ob->id.pad2 |= CGR_UPDATED_OBJECT;
 		}
 
 		ob->recalc &= ~OB_RECALC_ALL;
