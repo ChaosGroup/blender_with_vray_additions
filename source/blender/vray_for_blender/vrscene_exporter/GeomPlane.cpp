@@ -29,6 +29,7 @@
 void VRayScene::GeomPlane::preInit()
 {
 	initName();
+	initHash();
 }
 
 
