@@ -57,7 +57,7 @@ private:
 	DupliObject       *m_dupliObject;
 
 	std::string        m_vrayPluginID;
-	char               m_transform[TRANSFORM_HEX_SIZE];
+	char               m_transform[CGR_TRANSFORM_HEX_SIZE];
 
 };
 
