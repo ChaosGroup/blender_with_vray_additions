@@ -275,14 +275,15 @@ public:
 		}
 	}
 
+	static char             m_interpStart[32];
+	static char             m_interpEnd[3];
+
 protected:
 	static StrSet           m_expCache;
 	static ExpCache         m_frameCache;
 	static int              m_animation;
 	static int              m_checkAnimated;
 	static VRayPluginsDesc  m_pluginDesc;
-	static char             m_interpStart[32];
-	static char             m_interpEnd[3];
 
 	std::string             m_name;
 	MHash                   m_hash;

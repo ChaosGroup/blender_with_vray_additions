@@ -104,16 +104,15 @@ void VRsceneExporter::exportScene()
 
 	m_settings->b_engine.update_progress(0.0f);
 
-	size_t nObjects = 0;
-	base = (Base*)m_settings->m_sce->base.first;
-	while(base) {
-		nObjects++;
-		base = base->next;
-	}
+	PointerRNA sceneRNA;
+	RNA_id_pointer_create((ID*)m_settings->m_sce, &sceneRNA);
+	BL::Scene bl_sce(sceneRNA);
+
+	size_t nObjects = bl_sce.objects.length();
 
 	float  expProgress = 0.0f;
 	float  expProgStep = 1.0f / nObjects;
-	int    progUpdateCnt = nObjects > 2000 ? 1000 : 100;
+	int    progUpdateCnt = nObjects > 3000 ? 1000 : 100;
 
 	// Clear caches
 	m_exportedObject.clear();
@@ -123,10 +122,6 @@ void VRsceneExporter::exportScene()
 	// Needed for the correct first frame
 	//
 	if(m_settings->m_sce->r.cfra == m_settings->m_sce->r.sfra) {
-		PointerRNA sceneRNA;
-		RNA_id_pointer_create((ID*)m_settings->m_sce, &sceneRNA);
-		BL::Scene bl_sce(sceneRNA);
-
 		BL::Scene::objects_iterator bl_obIt;
 		for(bl_sce.objects.begin(bl_obIt); bl_obIt != bl_sce.objects.end(); ++bl_obIt) {
 			BL::Object bl_ob = *bl_obIt;
@@ -308,6 +303,9 @@ void VRsceneExporter::exportObject(Object *ob, const int &visible, const int &ch
 	}
 
 	exportNode(node, checkUpdated);
+
+	if(NOT(m_settings->m_animation))
+		delete node;
 }
 
 
@@ -360,8 +358,10 @@ void VRsceneExporter::exportDupli()
 		const std::string   psysName = sysIt->first;
 		const MyPartSystem *parts    = sysIt->second;
 
-		PYTHON_PRINTF(out, "\nInstancer Psys%s {", StripString(psysName).c_str());
-		PYTHON_PRINTF(out, "\n\tinstances=interpolate((%i, List(%i", sce->r.cfra, sce->r.cfra);
+		std::cout << psysName << std::endl;
+
+		PYTHON_PRINTF(out, "\nInstancer Dupli%s {", StripString(psysName).c_str());
+		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, m_settings->m_animation ? sce->r.cfra : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
@@ -374,7 +374,7 @@ void VRsceneExporter::exportDupli()
 				}
 			}
 		}
-		PYTHON_PRINT(out, ")));");
+		PYTHON_PRINTF(out, ")%s;", VRayExportable::m_interpEnd);
 		PYTHON_PRINTF(m_settings->m_fileObject, "\n}\n");
 	}
 
