@@ -358,8 +358,6 @@ void VRsceneExporter::exportDupli()
 		const std::string   psysName = sysIt->first;
 		const MyPartSystem *parts    = sysIt->second;
 
-		std::cout << psysName << std::endl;
-
 		PYTHON_PRINTF(out, "\nInstancer Dupli%s {", StripString(psysName).c_str());
 		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, m_settings->m_animation ? sce->r.cfra : 0);
 		if(parts->size()) {
