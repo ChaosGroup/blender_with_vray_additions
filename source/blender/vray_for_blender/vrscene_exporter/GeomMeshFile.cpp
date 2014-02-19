@@ -34,6 +34,7 @@
 void VRayScene::GeomMeshFile::preInit()
 {
 	initName();
+	initHash();
 }
 
 

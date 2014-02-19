@@ -52,27 +52,6 @@ enum GeomType {
 };
 
 
-class BLNode : public VRayExportable {
-public:
-	BLNode(Scene *scene, BL::Object ob, BL::Transform tm);
-
-	virtual        ~BLNode() {}
-
-	virtual void    initHash();
-	virtual void    initName(const std::string &name="");
-	virtual void    writeData(PyObject *output);
-	virtual int     isUpdated();
-
-	void            setVisible(const int &visible);
-
-private:
-	BL::Object      m_object;
-	BL::Transform   m_tm;
-	int             m_visible;
-
-};
-
-
 class Node : public VRayExportable {
 public:
 	Node(Scene *scene, Main *main, Object *ob);

@@ -113,7 +113,7 @@ int VRayScene::Node::preInitGeometry()
 	if(NOT(rna.getBool("override")))
 		m_geometryType = VRayScene::eGeometryMesh;
 	else
-		if (rna.getEnum("override_type") == 0)
+		if(rna.getEnum("override_type") == 0)
 			m_geometryType = VRayScene::eGeometryProxy;
 		else if(rna.getEnum("override_type") == 1)
 			m_geometryType = VRayScene::eGeometryPlane;
@@ -434,41 +434,3 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 		}
 	}
 }
-
-
-VRayScene::BLNode::BLNode(Scene *scene, BL::Object ob, BL::Transform tm):m_object(ob),m_tm(tm)
-{
-	m_sce = scene;
-}
-
-
-void VRayScene::BLNode::initName(const std::string &name)
-{
-	if(NOT(name.empty()))
-		m_name = name;
-	else
-		m_name = m_object.name();
-}
-
-
-void VRayScene::BLNode::initHash()
-{
-}
-
-
-void VRayScene::BLNode::writeData(PyObject *output)
-{
-}
-
-
-int VRayScene::BLNode::isUpdated()
-{
-	return ((ID*)m_object.data().ptr.data)->pad2;
-}
-
-
-void VRayScene::BLNode::setVisible(const int &visible)
-{
-	m_visible = visible;
-}
-
