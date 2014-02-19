@@ -54,10 +54,17 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
-VRsceneExporter::VRsceneExporter(ExpoterSettings *settings):
-	m_settings(settings)
+const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+
+ExpoterSettings* VRsceneExporter::m_settings = NULL;
+std::string      VRsceneExporter::m_mtlOverride;
+
+
+VRsceneExporter::VRsceneExporter(ExpoterSettings *settings)
 {
 	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
+
+	m_settings = settings;
 
 	init();
 }
@@ -108,6 +115,42 @@ void VRsceneExporter::exportScene()
 	float  expProgStep = 1.0f / nObjects;
 	int    progUpdateCnt = nObjects > 2000 ? 1000 : 100;
 
+	// Clear caches
+	m_exportedObject.clear();
+	m_psys.clear();
+
+	// Create particle system data
+	// Needed for the correct first frame
+	//
+	if(m_settings->m_sce->r.cfra == m_settings->m_sce->r.sfra) {
+		PointerRNA sceneRNA;
+		RNA_id_pointer_create((ID*)m_settings->m_sce, &sceneRNA);
+		BL::Scene bl_sce(sceneRNA);
+
+		BL::Scene::objects_iterator bl_obIt;
+		for(bl_sce.objects.begin(bl_obIt); bl_obIt != bl_sce.objects.end(); ++bl_obIt) {
+			BL::Object bl_ob = *bl_obIt;
+			if(bl_ob.type() == BL::Object::type_META)
+				continue;
+			if(bl_ob.is_duplicator()) {
+				if(bl_ob.particle_systems.length()) {
+					BL::Object::particle_systems_iterator bl_psysIt;
+					for(bl_ob.particle_systems.begin(bl_psysIt); bl_psysIt != bl_ob.particle_systems.end(); ++bl_psysIt) {
+						BL::ParticleSystem bl_psys = *bl_psysIt;
+						BL::ParticleSettings bl_pset = bl_psys.settings();
+
+						if(bl_pset.type() == BL::ParticleSettings::type_HAIR && bl_pset.render_type() == BL::ParticleSettings::render_type_PATH)
+							continue;
+
+						m_psys.get(bl_pset.name());
+					}
+				}
+				if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE)
+					m_psys.get(bl_ob.name());
+			}
+		}
+	}
+
 	// Export stuff
 	base = (Base*)m_settings->m_sce->base.first;
 	nObjects = 0;
@@ -133,15 +176,7 @@ void VRsceneExporter::exportScene()
 			if(NOT(ob->lay & m_settings->m_sce->lay))
 				continue;
 
-		// Smoke domain will be exported when exporting Effects
-		//
-		if(Node::IsSmokeDomain(ob))
-			continue;
-
 		exportObjectBase(ob);
-
-		if(m_particles.size())
-			m_particles.write();
 
 		expProgress += expProgStep;
 		nObjects++;
@@ -149,6 +184,8 @@ void VRsceneExporter::exportScene()
 			m_settings->b_engine.update_progress(expProgress);
 		}
 	}
+
+	exportDupli();
 
 	m_settings->b_engine.update_progress(1.0f);
 
@@ -165,53 +202,73 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	if(NOT(GEOM_TYPE(ob) || EMPTY_TYPE(ob) || LIGHT_TYPE(ob)))
 		return;
 
-	PointerRNA objectRnaPtr;
-	RNA_id_pointer_create((ID*)ob, &objectRnaPtr);
-	BL::Object b_ob(objectRnaPtr);
+	PointerRNA objectRNA;
+	RNA_id_pointer_create((ID*)ob, &objectRNA);
+	BL::Object bl_ob(objectRNA);
 
 	if(ob->id.pad2)
-		PRINT_INFO("Object %s update: %i", ob->id.name, ob->id.pad2);
+		PRINT_INFO("Base object %s (update: %i)", ob->id.name, ob->id.pad2);
 
-	if(b_ob.is_duplicator()) {
-		b_ob.dupli_list_create(m_settings->b_scene, 2);
+	if(bl_ob.is_duplicator()) {
+		bl_ob.dupli_list_create(m_settings->b_scene, 2);
 
 		BL::Object::dupli_list_iterator b_dup;
-		for(b_ob.dupli_list.begin(b_dup); b_dup != b_ob.dupli_list.end(); ++b_dup) {
+		for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
 			if(m_settings->b_engine.test_break())
 				break;
 
-			BL::DupliObject b_dupOb  = *b_dup;
-			BL::Object      b_dup_ob = b_dupOb.object();
+			BL::DupliObject bl_dupliOb      = *b_dup;
+			BL::Object      bl_duplicatedOb = bl_dupliOb.object();
 
-			int from_particles = !!b_dupOb.particle_system();
+			DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
 
-			DupliObject *dupOb = (DupliObject*)b_dupOb.ptr.data;
+			if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
+				continue;
 
-			// Export lights only for dupli
-			if(b_dup_ob.type() == BL::Object::type_LAMP)
-				exportLight(ob, dupOb);
+			std::string dupliBaseName;
 
-			if(NOT(b_dup_ob.type() == BL::Object::type_EMPTY))
-				exportObject(ob, true, dupOb, from_particles);
+			BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
+			if(bl_psys) {
+				BL::ParticleSettings bl_pset = bl_psys.settings();
+				dupliBaseName = bl_pset.name();
+			}
+			else {
+				dupliBaseName = bl_ob.name();
+			}
+
+			MyPartSystem *mySys = m_psys.get(dupliBaseName);
+
+			MyParticle *myPa = new MyParticle();
+			myPa->nodeName = GetIDName(&dupliOb->ob->id);
+			myPa->particleId = dupliOb->persistent_id[0];
+			GetTransformHex(dupliOb->mat, myPa->transform);
+
+			mySys->append(myPa);
+
+			if(bl_duplicatedOb.type() == BL::Object::type_LAMP)
+				exportLight(ob, dupliOb);
+			else
+				exportObject(dupliOb->ob, false, false);
 		}
 
-		b_ob.dupli_list_clear();
+		bl_ob.dupli_list_clear();
 
-		// If dupli were not from particles skip base object
-		//
-		// XXX: What if there will be particles and hair on the same object?
-		//
-		if(ob->transflag & OB_DUPLIPARTS) {
+		// If dupli were not from particles (eg DupliGroup) skip base object
+		if(NOT(ob->transflag & OB_DUPLIPARTS))
+			return;
+
+		// If there is fur we will check for "Render Emitter" later
+		if(NOT(Node::HasHair(ob)))
 			if(NOT(Node::DoRenderEmitter(ob)))
 				return;
-		}
-		else {
-			return;
-		}
 	}
 
 	if(GEOM_TYPE(ob)) {
 		if(m_settings->b_engine.test_break())
+			return;
+
+		// Smoke domain will be exported from Effects
+		if(Node::IsSmokeDomain(ob))
 			return;
 
 		exportObject(ob);
@@ -231,66 +288,54 @@ void VRsceneExporter::exportObject(BL::Object ob, BLTm tm, bool visible)
 #endif
 
 
-void VRsceneExporter::exportObject(Object *ob, const int &visible, DupliObject *dOb, const int &from_particles)
+void VRsceneExporter::exportObject(Object *ob, const int &visible, const int &checkUpdated)
 {
-	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob, dOb);
+	const std::string idName = GetIDName(&ob->id);
 
-	if(from_particles)
-		m_particles.append(node);
-	else {
-		node->setVisiblity(visible);
-		exportNode(node);
-	}
-}
+	if(m_exportedObject.count(idName))
+		return;
+	m_exportedObject.insert(idName);
 
-
-void VRsceneExporter::exportNode(Node *node)
-{
-	if(checkUpdates()) {
-		if(NOT(node->isAnimated())) {
-			delete node;
-			return;
-		}
-	}
-
+	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
 	node->init(m_mtlOverride);
-	if(NOT(node->getHash())) {
+	node->setVisiblity(visible);
+	node->initHash();
+
+	// This will check if object's mesh is valid
+	if(NOT(node->preInitGeometry())) {
 		delete node;
 		return;
 	}
 
+	exportNode(node, checkUpdated);
+}
+
+
+void VRsceneExporter::exportNode(Node *node, const int &checkUpdated)
+{
 	if(node->hasHair()) {
 		node->writeHair(m_settings);
-		if(NOT(node->doRenderEmitter())) {
-			delete node;
+		if(NOT(node->doRenderEmitter()))
 			return;
+	}
+
+	if(m_settings->m_exportGeometry) {
+		int writeData = true;
+		if(checkUpdated && m_settings->checkUpdates())
+			writeData = node->isObjectDataUpdated();
+		if(writeData) {
+			node->initGeometry();
+			node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
 		}
 	}
 
-	int hasGeometry = node->preInitGeometry();
-	if(hasGeometry) {
-		if(m_settings->m_exportGeometry) {
-			int writeObject = true;
-			if(checkUpdates())
-				writeObject = node->isObjectDataUpdated();
-			if(writeObject) {
-				node->initGeometry();
-				node->writeGeometry(m_settings->m_fileGeom, m_settings->m_sce->r.cfra);
-			}
-		}
-
-		if(m_settings->m_exportNodes && NOT(node->isMeshLight())) {
-			int writeObject = true;
-			if(checkUpdates())
-				writeObject = node->isObjectUpdated();
-			if(writeObject)
-				node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
-		}
+	if(m_settings->m_exportNodes && NOT(node->isMeshLight())) {
+		int writeObject = true;
+		if(checkUpdated && m_settings->checkUpdates())
+			writeObject = node->isObjectUpdated();
+		if(writeObject)
+			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 	}
-
-	// In animation mode pointer is stored in cache and is freed by the cache
-	if(NOT(m_settings->m_animation) || NOT(hasGeometry))
-		delete node;
 }
 
 
@@ -306,9 +351,32 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 }
 
 
-int VRsceneExporter::checkUpdates()
+void VRsceneExporter::exportDupli()
 {
-	if(m_settings->m_animation && m_settings->m_checkAnimated != ANIM_CHECK_NONE)
-		return m_settings->m_sce->r.cfra > m_settings->m_sce->r.sfra;
-	return 0;
+	PyObject *out = m_settings->m_fileObject;
+	Scene    *sce = m_settings->m_sce;
+
+	for(MyPartSystems::const_iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
+		const std::string   psysName = sysIt->first;
+		const MyPartSystem *parts    = sysIt->second;
+
+		PYTHON_PRINTF(out, "\nInstancer Psys%s {", StripString(psysName).c_str());
+		PYTHON_PRINTF(out, "\n\tinstances=interpolate((%i, List(%i", sce->r.cfra, sce->r.cfra);
+		if(parts->size()) {
+			PYTHON_PRINT(out, ",");
+			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
+				MyParticle *pa = *paIt;
+
+				PYTHON_PRINTF(out, "List(%zd,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
+
+				if(paIt != --parts->m_particles.end()) {
+					PYTHON_PRINT(out, ",");
+				}
+			}
+		}
+		PYTHON_PRINT(out, ")));");
+		PYTHON_PRINTF(m_settings->m_fileObject, "\n}\n");
+	}
+
+	m_psys.clear();
 }

@@ -63,7 +63,7 @@ private:
 
 	std::stringstream  m_nodePlugin;
 	std::string        m_nodeName;
-	char               m_nodeTm[TRANSFORM_HEX_SIZE];
+	char               m_nodeTm[CGR_TRANSFORM_HEX_SIZE];
 
 	int             use_width_fade;
 

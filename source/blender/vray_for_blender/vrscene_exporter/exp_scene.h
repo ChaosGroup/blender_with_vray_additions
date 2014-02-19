@@ -39,92 +39,93 @@
 
 #include <Python.h>
 
-#include <string>
-#include <vector>
-
 
 using namespace VRayScene;
 
 
-// Blender gives us particles for the current frame,
-// so we need to track when they appear and dissappear
-//
-class VRsceneParticles {
-	typedef std::vector<Node*> Particles;
+struct MyParticle {
+	std::string        nodeName;
+	size_t             particleId;
+	char               transform[CGR_TRANSFORM_HEX_SIZE];
+	static const char *velocity;
+};
+typedef std::vector<MyParticle*> Particles;
 
+
+class MyPartSystem {
 public:
-	const int size() const {
-		return m_particles.size();
+	~MyPartSystem() {
+		clear();
 	}
 
-	void append(Node *node) {
-		m_visibleParticles.push_back(node);
-	}
+	Particles  m_particles;
 
-	void write() {
-		// First call; simply copy data
-		if(NOT(m_particles.size())) {
-			m_particles.insert(m_particles.end(), m_visibleParticles.begin(), m_visibleParticles.end());
-		}
-
-		Particles::const_iterator nodeIt;
-		for(nodeIt = m_particles.begin(); nodeIt != m_particles.end(); ++nodeIt) {
-			Node *node = *nodeIt;
-			node->setVisiblity(false);
-
-			Particles::const_iterator visibleIt;
-			for(visibleIt = m_visibleParticles.begin(); visibleIt != m_visibleParticles.end(); ++visibleIt) {
-				Node *newNode = *visibleIt;
-				if(node->getMName() == newNode->getMName()) {
-					node->setVisiblity(true);
-					continue;
-				}
-			}
-		}
+	void append(MyParticle *pa) {
+		m_particles.push_back(pa);
 	}
 
 	void clear() {
+		for(Particles::const_iterator paIt = m_particles.begin(); paIt != m_particles.end(); ++paIt)
+			delete *paIt;
 		m_particles.clear();
-		m_visibleParticles.clear();
 	}
 
-private:
-	Particles  m_visibleParticles;
-	Particles  m_particles;
-	StrSet     m_particlesNames;
+	const size_t size() const {
+		return m_particles.size();
+	}
+};
+typedef std::map<std::string, MyPartSystem*> MyPartSystems;
+
+
+class MyParticles {
+public:
+	~MyParticles() {
+		clear();
+	}
+
+	MyPartSystem* get(const std::string &name) {
+		if(NOT(m_systems.count(name)))
+			m_systems[name] = new MyPartSystem();
+		return m_systems[name];
+	}
+
+	void clear() {
+		for(MyPartSystems::const_iterator sysIt = m_systems.begin(); sysIt != m_systems.end(); ++sysIt)
+			sysIt->second->clear();
+		m_systems.clear();
+	}
+
+	MyPartSystems m_systems;
 
 };
 
 
 class VRsceneExporter {
-	friend class VRsceneParticles;
-
 public:
 	VRsceneExporter(ExpoterSettings *settings);
 	~VRsceneExporter();
 
-	void               exportScene();
+	static ExpoterSettings *m_settings;
+	static std::string      m_mtlOverride;
+
+	static void             exportNode(Node *node, const int &checkUpdated=true);
+	void                    exportScene();
 
 private:
-	void               init();
+	void                    init();
 
-	void               exportNode(Node *node);
+	void                    exportObjectBase(Object *ob);
+	void                    exportObject(Object *ob, const int &visible=true, const int &checkUpdated=true);
+	void                    exportLight(Object *ob, DupliObject *dOb=NULL);
 
-	void               exportObjectBase(Object *ob);
-	void               exportObject(Object *ob, const int &visible=true, DupliObject *dOb=NULL, const int &from_particles=false);
-	void               exportLight(Object *ob, DupliObject *dOb=NULL);
+	void                    exportDupli();
 
 #if CGR_USE_CPP_API
-	void               exportObject(BL::Object dupOb, BLTm tm, bool visible=true);
+	void                    exportObject(BL::Object dupOb, BLTm tm, bool visible=true);
 #endif
 
-	int                checkUpdates();
-
-	ExpoterSettings   *m_settings;
-
-	std::string        m_mtlOverride;
-
-	VRsceneParticles   m_particles;
+	StrSet                  m_exportedObject;
+	MyParticles             m_psys;
 
 	PYTHON_PRINT_BUF;
 
