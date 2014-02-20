@@ -297,18 +297,6 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 }
 
 
-#if CGR_USE_CPP_API
-void VRsceneExporter::exportObject(BL::Object ob, BLTm tm, bool visible)
-{
-	BLNode *node = new BLNode(m_settings->m_sce, ob, tm);
-	node->setVisible(visible);
-	node->initName();
-	node->initHash();
-	node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
-}
-#endif
-
-
 void VRsceneExporter::exportObject(Object *ob, const int &visible, const int &checkUpdated)
 {
 	const std::string idName = GetIDName(&ob->id);

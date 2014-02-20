@@ -125,10 +125,6 @@ private:
 	void                    initDupli();
 	void                    exportDupli();
 
-#if CGR_USE_CPP_API
-	void                    exportObject(BL::Object dupOb, BLTm tm, bool visible=true);
-#endif
-
 	StrSet                  m_exportedObject;
 	MyParticles             m_psys;
 	PtrSet                  m_skipObjects;
