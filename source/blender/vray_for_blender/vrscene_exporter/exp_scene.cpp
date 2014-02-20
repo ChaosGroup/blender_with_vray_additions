@@ -41,7 +41,7 @@
 #include "BLI_string.h"
 #include "BKE_material.h"
 #include "BKE_global.h"
-#include "BLI_math.h"
+#include "BLI_math_matrix.h"
 
 extern "C" {
 #  include "DNA_particle_types.h"
