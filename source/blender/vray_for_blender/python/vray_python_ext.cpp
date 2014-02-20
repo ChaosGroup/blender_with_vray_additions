@@ -396,6 +396,35 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 }
 
 
+static PyObject* mSetSkipObjects(PyObject *self, PyObject *args)
+{
+	long      exporterPtr;
+	PyObject *skipList;
+
+	if(NOT(PyArg_ParseTuple(args, "lO", &exporterPtr, &skipList)))
+		return NULL;
+
+	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
+
+	if(PySequence_Check(skipList)) {
+		int listSize = PySequence_Size(skipList);
+		if(listSize > 0) {
+			for(int i = 0; i < listSize; ++i) {
+				PyObject *item = PySequence_GetItem(skipList, i);
+
+				PyObject *value = PyNumber_Long(item);
+				if(PyNumber_Long(value))
+					exporter->addSkipObject((void*)PyLong_AsLong(value));
+
+				Py_DecRef(item);
+			}
+		}
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
 	{"start",             mExportStart ,      METH_VARARGS, "Startup init"},
 	{"free", (PyCFunction)mExportFree,        METH_NOARGS,  "Free resources"},
@@ -418,6 +447,7 @@ static PyMethodDef methods[] = {
 	{"clearCache",  (PyCFunction)mExportClearCache,  METH_NOARGS,  "Clear name cache"},
 
 	{"getTransformHex",   mGetTransformHex,   METH_O,       "Get transform hex string"},
+	{"setSkipObjects",    mSetSkipObjects,    METH_VARARGS, "Set a list of objects to skip from exporting"},
 
 	{NULL, NULL, 0, NULL},
 };

@@ -511,7 +511,7 @@ void GeomStaticMesh::initMapChannels()
 
 void GeomStaticMesh::initAttributes()
 {
-	if(m_propGroup) {
+	if(m_propGroup && NOT(m_propGroup == Py_None)) {
 		dynamic_geometry     = GetPythonAttrInt(m_propGroup, "dynamic_geometry");
 		environment_geometry = GetPythonAttrInt(m_propGroup, "environment_geometry");
 

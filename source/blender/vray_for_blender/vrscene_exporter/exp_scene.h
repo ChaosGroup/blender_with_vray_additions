@@ -101,12 +101,16 @@ public:
 
 
 class VRsceneExporter {
+	typedef std::set<void*> PtrSet;
+
 public:
 	VRsceneExporter(ExpoterSettings *settings);
 	~VRsceneExporter();
 
 	static ExpoterSettings *m_settings;
 	static std::string      m_mtlOverride;
+
+	void                    addSkipObject(void *obPtr);
 
 	static void             exportNode(Node *node, const int &checkUpdated=true);
 	void                    exportScene();
@@ -127,6 +131,7 @@ private:
 
 	StrSet                  m_exportedObject;
 	MyParticles             m_psys;
+	PtrSet                  m_skipObjects;
 
 	PYTHON_PRINT_BUF;
 
