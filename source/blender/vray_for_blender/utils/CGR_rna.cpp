@@ -96,20 +96,34 @@ void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::strings
 			   attrType == "TRANSFORM")
 				continue;
 
-			if(attrType == "STRING") {
+			if(attrType == "STRING" ||
+			   attrType == "MATERIAL" ||
+			   attrType == "TEXTURE") {
 				std::string str = getString(attrName.c_str());
 				if(str.empty())
 					continue;
 
-				if(v.second.count("subtype")) {
-					std::string subType = v.second.get_child("subtype").data();
-					if(subType == "FILE_PATH" || subType == "DIR_PATH") {
-						str = getPath(attrName.c_str());
+				ss << "\n\t" << attrName << "=" << s_interp;
+
+				if(attrType == "MATERIAL") {
+					ss << "MA" << getString(attrName.c_str());
+				}
+				else if(attrType == "TEXTURE") {
+					ss << "TE" << getString(attrName.c_str());
+				}
+				else {
+					if(v.second.count("subtype")) {
+						std::string subType = v.second.get_child("subtype").data();
+						if(subType == "FILE_PATH" || subType == "DIR_PATH") {
+							str = getPath(attrName.c_str());
+						}
 					}
+					else {
+						str = getString(attrName.c_str());
+					}
+					ss << "\"" << str << "\"";
 				}
 
-				ss << "\n\t" << attrName << "=" << s_interp;
-				ss << "\"" << str << "\"";
 				ss << e_interp << ";";
 			}
 			else {
@@ -125,12 +139,6 @@ void RnaValue::writePlugin(boost::property_tree::ptree *pluginDesc, std::strings
 				}
 				else if(attrType == "FLOAT") {
 					ss << std::setprecision(3) << getFloat(attrName.c_str());
-				}
-				else if(attrType == "MATERIAL") {
-					ss << "MA" << getString(attrName.c_str());
-				}
-				else if(attrType == "TEXTURE") {
-					ss << "TE" << getString(attrName.c_str());
 				}
 
 				ss << e_interp << ";";
