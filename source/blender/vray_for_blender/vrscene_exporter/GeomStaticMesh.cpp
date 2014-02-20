@@ -231,7 +231,7 @@ void GeomStaticMesh::initDisplace()
 
 							// XXX: texture blend is not supported right now
 							displaceTexture     = tex;
-							displaceTextureName = StripString(GetIDName((ID*)tex));
+							displaceTextureName = GetIDName((ID*)tex);
 
 							break;
 						}
