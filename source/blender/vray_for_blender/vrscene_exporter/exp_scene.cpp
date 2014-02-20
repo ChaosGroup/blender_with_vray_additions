@@ -97,7 +97,15 @@ VRsceneExporter::~VRsceneExporter()
 {
 	PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
 
+	m_skipObjects.clear();
+
 	delete m_settings;
+}
+
+
+void VRsceneExporter::addSkipObject(void *obPtr)
+{
+	m_skipObjects.insert(obPtr);
 }
 
 
@@ -172,6 +180,11 @@ void VRsceneExporter::exportScene()
 		if(m_settings->m_activeLayers)
 			if(NOT(ob->lay & m_settings->m_sce->lay))
 				continue;
+
+		if(m_skipObjects.count((void*)&ob->id)) {
+			PRINT_INFO("Skipping object: %s", ob->id.name);
+			continue;
+		}
 
 		exportObjectBase(ob);
 
