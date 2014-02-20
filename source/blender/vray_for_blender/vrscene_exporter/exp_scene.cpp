@@ -41,6 +41,7 @@
 #include "BLI_string.h"
 #include "BKE_material.h"
 #include "BKE_global.h"
+#include "BLI_math.h"
 
 extern "C" {
 #  include "DNA_particle_types.h"
@@ -58,6 +59,28 @@ const char* MyParticle::velocity = "00000000000000000000000000000000000000000000
 
 ExpoterSettings* VRsceneExporter::m_settings = NULL;
 std::string      VRsceneExporter::m_mtlOverride;
+
+
+static int RenderDuplicator(BL::Object ob)
+{
+	if(NOT(ob.is_duplicator()))
+		return true;
+
+	if(ob.dupli_type() != BL::Object::dupli_type_NONE)
+		return false;
+
+	if(ob.particle_systems.length()) {
+		BL::Object::particle_systems_iterator psysIt;
+		for(ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
+			BL::ParticleSystem   psys = *psysIt;
+			BL::ParticleSettings pset = psys.settings();
+			if(pset.use_render_emitter())
+				return true;
+		}
+	}
+
+	return false;
+}
 
 
 VRsceneExporter::VRsceneExporter(ExpoterSettings *settings)
@@ -192,7 +215,10 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 				break;
 
 			BL::DupliObject bl_dupliOb      = *b_dup;
-			BL::Object      bl_duplicatedOb = bl_dupliOb.object();
+			BL::Object      bl_duplicatedOb =  bl_dupliOb.object();
+
+			if(NOT(RenderDuplicator(bl_duplicatedOb)))
+				continue;
 
 			DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
 
@@ -204,7 +230,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
 			if(bl_psys) {
 				BL::ParticleSettings bl_pset = bl_psys.settings();
-				dupliBaseName = bl_pset.name();
+				dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
 			}
 			else {
 				dupliBaseName = bl_ob.name();
@@ -215,7 +241,12 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			MyParticle *myPa = new MyParticle();
 			myPa->nodeName = GetIDName(&dupliOb->ob->id);
 			myPa->particleId = dupliOb->persistent_id[0];
-			GetTransformHex(dupliOb->mat, myPa->transform);
+
+			// Instancer use original object's transform
+			// so apply inverse matrix here
+			float dupliTm[4][4];
+			mul_m4_m4m4(dupliTm, dupliOb->mat, dupliOb->ob->imat);
+			GetTransformHex(dupliTm, myPa->transform);
 
 			mySys->append(myPa);
 
@@ -227,14 +258,17 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 		bl_ob.dupli_list_clear();
 
-		// If dupli were not from particles (eg DupliGroup) skip base object
-		if(NOT(ob->transflag & OB_DUPLIPARTS))
-			return;
-
-		// If there is fur we will check for "Render Emitter" later
-		if(NOT(Node::HasHair(ob)))
-			if(NOT(Node::DoRenderEmitter(ob)))
+		if(ob->transflag & OB_DUPLI) {
+			// If dupli were not from particles (eg DupliGroup) skip base object
+			if(NOT(ob->transflag & OB_DUPLIPARTS))
 				return;
+			else {
+				// If there is fur we will check for "Render Emitter" later
+				if(NOT(Node::HasHair(ob)))
+					if(NOT(Node::DoRenderEmitter(ob)))
+						return;
+			}
+		}
 	}
 
 	if(GEOM_TYPE(ob)) {
