@@ -613,8 +613,6 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	//
 	int displace_type = rna.getEnum("type");
 
-	std::cout << "Displace type = " << displace_type << std::endl;
-
 	if(displace_type == 1) {
 		ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
 		ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
