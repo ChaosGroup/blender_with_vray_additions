@@ -61,7 +61,7 @@ ExpoterSettings* VRsceneExporter::m_settings = NULL;
 std::string      VRsceneExporter::m_mtlOverride;
 
 
-static int RenderDuplicator(BL::Object ob)
+static int DoRenderObject(BL::Object ob)
 {
 	if(NOT(ob.is_duplicator()))
 		return true;
@@ -234,7 +234,10 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			BL::DupliObject bl_dupliOb      = *b_dup;
 			BL::Object      bl_duplicatedOb =  bl_dupliOb.object();
 
-			if(NOT(RenderDuplicator(bl_duplicatedOb)))
+			if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
+				continue;
+
+			if(NOT(DoRenderObject(bl_duplicatedOb)))
 				continue;
 
 			DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
