@@ -57,7 +57,7 @@ typedef std::vector<MChan*> MChans;
 
 class GeomStaticMesh : public VRayExportable {
 public:
-	GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkComponents=false);
+	GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkComponents=true);
 
 	virtual      ~GeomStaticMesh() { freeData(); }
 	virtual void  initHash();

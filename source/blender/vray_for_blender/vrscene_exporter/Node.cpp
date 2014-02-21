@@ -106,7 +106,7 @@ void VRayScene::Node::initName(const std::string &name)
 }
 
 
-int VRayScene::Node::preInitGeometry()
+int VRayScene::Node::preInitGeometry(int useDisplaceSubdiv)
 {
 	RnaAccess::RnaValue rna((ID*)m_ob->data, "vray");
 
@@ -124,7 +124,7 @@ int VRayScene::Node::preInitGeometry()
 
 	if(meshValid) {
 		if(m_geometryType == VRayScene::eGeometryMesh)
-			m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob, true);
+			m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob, useDisplaceSubdiv);
 		else if(m_geometryType == VRayScene::eGeometryProxy)
 			m_geometry = new GeomMeshFile(m_sce, m_main, m_ob);
 		else if(m_geometryType == VRayScene::eGeometryPlane)

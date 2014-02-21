@@ -129,6 +129,8 @@ private:
 	MyParticles             m_psys;
 	PtrSet                  m_skipObjects;
 
+	int                     m_useDisplaceSubdiv;
+
 	PYTHON_PRINT_BUF;
 
 };
