@@ -61,6 +61,26 @@ typedef Array<float, 16>  Transform;
 
 namespace VRayScene {
 
+
+struct NodeAttrs {
+	NodeAttrs() {
+		override = false;
+
+		objectID = 0;
+		visible  = true;
+		primary_visibility = true;
+		nsamples = 0;
+	}
+
+	int  override;
+
+	int  objectID;
+	int  visible;
+	int  primary_visibility;
+	int  nsamples;
+};
+
+
 struct ExpoterSettings {
 	ExpoterSettings(BL::Scene scene, BL::RenderEngine engine):
 		b_scene(scene),

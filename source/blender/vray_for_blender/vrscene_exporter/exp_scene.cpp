@@ -226,6 +226,14 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	if(bl_ob.is_duplicator()) {
 		bl_ob.dupli_list_create(m_settings->b_scene, 2);
 
+		RnaAccess::RnaValue bl_obRNA((ID*)ob, "vray");
+		int override_objectID = bl_obRNA.getInt("dupliGroupIDOverride");
+
+		NodeAttrs dupliAttrs;
+		dupliAttrs.override = true;
+		dupliAttrs.visible  = false; // Dupli are shown via Instancer
+		dupliAttrs.objectID = override_objectID;
+
 		BL::Object::dupli_list_iterator b_dup;
 		for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
 			if(m_settings->b_engine.test_break())
@@ -264,8 +272,13 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 			// Instancer use original object's transform
 			// so apply inverse matrix here
+			// When linking from file 'imat' is not valid,
+			// so better to always calculate it ourselves.
+			float duplicatedTmInv[4][4];
+			copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
+			invert_m4(duplicatedTmInv);
 			float dupliTm[4][4];
-			mul_m4_m4m4(dupliTm, dupliOb->mat, dupliOb->ob->imat);
+			mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
 			GetTransformHex(dupliTm, myPa->transform);
 
 			mySys->append(myPa);
@@ -273,7 +286,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP)
 				exportLight(ob, dupliOb);
 			else
-				exportObject(dupliOb->ob, false, false);
+				exportObject(dupliOb->ob, false, dupliAttrs);
 		}
 
 		bl_ob.dupli_list_clear();
@@ -304,7 +317,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 }
 
 
-void VRsceneExporter::exportObject(Object *ob, const int &visible, const int &checkUpdated)
+void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
 {
 	const std::string idName = GetIDName(&ob->id);
 
@@ -314,7 +327,12 @@ void VRsceneExporter::exportObject(Object *ob, const int &visible, const int &ch
 
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
 	node->init(m_mtlOverride);
-	node->setVisiblity(visible);
+	if(attrs.override) {
+		node->setVisiblity(attrs.visible);
+		if(attrs.objectID > -1) {
+			node->setObjectID(attrs.objectID);
+		}
+	}
 	node->initHash();
 
 	// This will check if object's mesh is valid

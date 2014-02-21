@@ -119,7 +119,7 @@ private:
 	void                    init();
 
 	void                    exportObjectBase(Object *ob);
-	void                    exportObject(Object *ob, const int &visible=true, const int &checkUpdated=true);
+	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportLight(Object *ob, DupliObject *dOb=NULL);
 
 	void                    initDupli();
