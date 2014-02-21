@@ -118,6 +118,10 @@ void VRsceneExporter::init()
 	RnaAccess::RnaValue rna(&m_settings->m_sce->id, "vray.SettingsOptions");
 	if(rna.getBool("mtl_override_on"))
 		m_mtlOverride = "MA" + rna.getString("mtl_override");
+
+	RnaAccess::RnaValue exporterRNA(&m_settings->m_sce->id, "vray.exporter");
+
+	m_useDisplaceSubdiv = exporterRNA.getBool("use_displace");
 }
 
 
@@ -311,7 +315,7 @@ void VRsceneExporter::exportObject(Object *ob, const int &visible, const int &ch
 	node->initHash();
 
 	// This will check if object's mesh is valid
-	if(NOT(node->preInitGeometry())) {
+	if(NOT(node->preInitGeometry(m_useDisplaceSubdiv))) {
 		delete node;
 		return;
 	}
