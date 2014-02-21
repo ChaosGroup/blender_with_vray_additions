@@ -561,7 +561,7 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 	if(useDisplace) {
 		RnaAccess::RnaValue dispRna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
 
-		ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
+		ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
 		ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
 
 		dispRna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss, m_interpStart, m_interpEnd);
@@ -603,7 +603,7 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	std::stringstream ss;
 	ss << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
 	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
-	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << ";";
+	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
 	ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
 	rna.writePlugin(m_pluginDesc.getTree("GeomDisplacedMesh"), ss, m_interpStart, m_interpEnd);
 
