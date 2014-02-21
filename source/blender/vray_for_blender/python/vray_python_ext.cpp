@@ -398,10 +398,10 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 
 static PyObject* mSetSkipObjects(PyObject *self, PyObject *args)
 {
-	long      exporterPtr;
-	PyObject *skipList;
+	Py_ssize_t  exporterPtr;
+	PyObject   *skipList;
 
-	if(NOT(PyArg_ParseTuple(args, "lO", &exporterPtr, &skipList)))
+	if(NOT(PyArg_ParseTuple(args, "nO", &exporterPtr, &skipList)))
 		return NULL;
 
 	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
