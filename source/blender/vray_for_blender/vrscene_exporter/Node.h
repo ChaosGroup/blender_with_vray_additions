@@ -73,7 +73,7 @@ public:
 	int             isObjectDataUpdated();
 
 	void            init(const std::string &mtlOverrideName="");
-	int             preInitGeometry();
+	int             preInitGeometry(int useDisplaceSubdiv=true);
 	void            initGeometry();
 
 	void            freeData();
