@@ -413,7 +413,7 @@ void VRsceneExporter::exportDupli()
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
 				MyParticle *pa = *paIt;
 
-				PYTHON_PRINTF(out, "List(%zd,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
+				PYTHON_PRINTF(out, "List(%i,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
 
 				if(paIt != --parts->m_particles.end()) {
 					PYTHON_PRINT(out, ",");
