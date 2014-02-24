@@ -34,9 +34,11 @@
 
 #include "murmur3.h"
 
+#include "BKE_global.h"
 #include "BKE_depsgraph.h"
 #include "MEM_guardedalloc.h"
 #include "RNA_blender_cpp.h"
+#include "BLI_path_util.h"
 
 extern "C" {
 #  include "DNA_scene_types.h"
@@ -132,8 +134,18 @@ struct ExpoterSettings {
 
 class VRayExportable;
 
-typedef std::vector<std::string>        StringVector;
+struct MyColor {
+	MyColor(float r, float g, float b):m_r(r),m_g(g),m_b(b) {}
+	MyColor(float c[3]):m_r(c[0]),m_g(c[1]),m_b(c[2])       {}
+
+	float m_r;
+	float m_g;
+	float m_b;
+};
+
+typedef std::vector<std::string>        StrVector;
 typedef std::set<std::string>           StrSet;
+
 typedef AnimationCache<VRayExportable>  ExpCache;
 
 
@@ -261,7 +273,7 @@ public:
 
 	// Set property group; used to get plugin parameters from Blender Node's propertry groups
 	//
-	void attachPropGroup(PyObject *propGroup) {
+	void setPropGroup(PyObject *propGroup) {
 		m_propGroup = propGroup;
 	}
 
@@ -295,8 +307,99 @@ public:
 		}
 	}
 
-	static char             m_interpStart[32];
-	static char             m_interpEnd[3];
+	static char m_interpStart[32];
+	static char m_interpEnd[3];
+
+	void writeHeader(const char *pluginID, const char *pluginName) {
+		m_plugin << "\n" << pluginID << " " << pluginName << " {";
+	}
+
+	void writeFooter() {
+		m_plugin << "\n}\n";
+	}
+
+	void writeAttribute(const char *name, const int &value) {
+		m_plugin << "\n\t" << name << "=" << m_interpStart;
+		m_plugin << value;
+		m_plugin << m_interpEnd << ";";
+	}
+
+	void writeAttribute(const char *name, const MyColor &value) {
+		m_plugin << "\n\t" << name << "=" << m_interpStart;
+		m_plugin << "Color(" << value.m_r << "," << value.m_g << "," << value.m_b << ")";
+		m_plugin << m_interpEnd << ";";
+	}
+
+	void writeAttribute(const char *name, const char *value, const int &quotes=false) {
+		m_plugin << "\n\t" << name << "=" << m_interpStart;
+		if(quotes)
+			m_plugin << "\"";
+		m_plugin << value;
+		if(quotes)
+			m_plugin << "\"";
+		m_plugin << m_interpEnd << ";";
+	}
+
+	void writeAttribute(PointerRNA *ptr, const char *propName)
+	{
+		PropertyRNA *prop = RNA_struct_find_property(ptr, propName);
+		if(NOT(prop))
+			return;
+
+		PropertyType propType = RNA_property_type(prop);
+
+		m_plugin << "\n\t" << propName << "=" << m_interpStart;
+
+		if(propType == PROP_BOOLEAN) {
+			m_plugin << RNA_boolean_get(ptr, propName);
+		}
+		else if(propType == PROP_INT) {
+			m_plugin << RNA_int_get(ptr, propName);
+		}
+		else if(propType == PROP_FLOAT) {
+			PropertySubType propSubType = RNA_property_subtype(prop);
+			if(propSubType == PROP_COLOR) {
+				float values[3];
+				RNA_float_get_array(ptr, propName, values);
+
+				m_plugin << "Color(" << values[0] << "," << values[1] << "," << values[2] << ")";
+			}
+			else {
+				m_plugin << RNA_float_get(ptr, propName);
+			}
+		}
+		else if(propType == PROP_ENUM) {
+			m_plugin << RNA_enum_get(ptr, propName);
+		}
+		else if(propType == PROP_STRING) {
+			char value[FILE_MAX] = "";
+
+			RNA_string_get(ptr, propName, value);
+
+			PropertySubType propSubType = RNA_property_subtype(prop);
+			if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
+				BLI_path_abs(value, G.main->name);
+				m_plugin << "\"" << value << "\"";
+			}
+			else if(propSubType == PROP_FILENAME) {
+				m_plugin << "\"" << value << "\"";
+			}
+			else {
+				m_plugin << value;
+			}
+		}
+		m_plugin << m_interpEnd << ";";
+	}
+
+	void writeAttributes(PointerRNA *ptr) {
+		PropertyRNA *iterprop = RNA_struct_iterator_property(ptr->type);
+		RNA_PROP_BEGIN(ptr, itemptr, iterprop) {
+			PropertyRNA *prop = (PropertyRNA*)itemptr.data;
+
+			writeAttribute(ptr, RNA_property_identifier(prop));
+		}
+		RNA_PROP_END;
+	}
 
 protected:
 	static StrSet           m_expCache;
@@ -307,6 +410,7 @@ protected:
 
 	std::string             m_name;
 	MHash                   m_hash;
+	std::stringstream       m_plugin;
 
 	Scene                  *m_sce;
 	Main                   *m_main;
