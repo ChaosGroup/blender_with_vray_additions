@@ -253,40 +253,41 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
 				continue;
 
-			std::string dupliBaseName;
-
-			BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
-			if(bl_psys) {
-				BL::ParticleSettings bl_pset = bl_psys.settings();
-				dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
-			}
-			else {
-				dupliBaseName = bl_ob.name();
-			}
-
-			MyPartSystem *mySys = m_psys.get(dupliBaseName);
-
-			MyParticle *myPa = new MyParticle();
-			myPa->nodeName = GetIDName(&dupliOb->ob->id);
-			myPa->particleId = dupliOb->persistent_id[0];
-
-			// Instancer use original object's transform
-			// so apply inverse matrix here
-			// When linking from file 'imat' is not valid,
-			// so better to always calculate it ourselves.
-			float duplicatedTmInv[4][4];
-			copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
-			invert_m4(duplicatedTmInv);
-			float dupliTm[4][4];
-			mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
-			GetTransformHex(dupliTm, myPa->transform);
-
-			mySys->append(myPa);
-
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP)
 				exportLight(ob, dupliOb);
-			else
+			else {
+				std::string dupliBaseName;
+
+				BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
+				if(NOT(bl_psys))
+					dupliBaseName = bl_ob.name();
+				else {
+					BL::ParticleSettings bl_pset = bl_psys.settings();
+					dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+				}
+
+				MyPartSystem *mySys = m_psys.get(dupliBaseName);
+
+				MyParticle *myPa = new MyParticle();
+				myPa->nodeName = GetIDName(&dupliOb->ob->id);
+				myPa->particleId = dupliOb->persistent_id[0];
+
+				// Instancer use original object's transform,
+				// so apply inverse matrix here.
+				// When linking from file 'imat' is not valid,
+				// so better to always calculate inverse matrix ourselves.
+				//
+				float duplicatedTmInv[4][4];
+				copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
+				invert_m4(duplicatedTmInv);
+				float dupliTm[4][4];
+				mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
+				GetTransformHex(dupliTm, myPa->transform);
+
+				mySys->append(myPa);
+
 				exportObject(dupliOb->ob, false, dupliAttrs);
+			}
 		}
 
 		bl_ob.dupli_list_clear();
@@ -304,15 +305,18 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		}
 	}
 
-	if(GEOM_TYPE(ob)) {
-		if(m_settings->b_engine.test_break())
-			return;
+	if(m_settings->b_engine.test_break())
+		return;
 
+	if(GEOM_TYPE(ob)) {
 		// Smoke domain will be exported from Effects
 		if(Node::IsSmokeDomain(ob))
 			return;
-
 		exportObject(ob);
+	}
+	else if(LIGHT_TYPE(ob)) {
+		// Export only in dupli for now...
+		// exportLight(ob);
 	}
 }
 
