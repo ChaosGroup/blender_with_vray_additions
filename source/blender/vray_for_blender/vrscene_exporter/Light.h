@@ -50,14 +50,16 @@ private:
 	void               initType();
 	void               initTransform();
 
-	void               writeKelvinColor();
+	void               writeKelvinColor(const std::string &name, const int &temp);
+	void               writePlugin();
 
-	std::stringstream  m_pluginHash;
 	Object            *m_object;
 	DupliObject       *m_dupliObject;
 
 	std::string        m_vrayPluginID;
 	char               m_transform[CGR_TRANSFORM_HEX_SIZE];
+
+	const char       **m_paramDesc;
 
 };
 
