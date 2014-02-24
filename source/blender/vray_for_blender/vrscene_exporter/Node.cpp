@@ -162,8 +162,8 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 	if(NOT(m_ob->totcol))
 		return "MANOMATERIALISSET";
 
-	StringVector mtls_list;
-	StringVector ids_list;
+	StrVector mtls_list;
+	StrVector ids_list;
 
 	for(int a = 1; a <= m_ob->totcol; ++a) {
 		Material *ma = give_current_material(m_ob, a);
