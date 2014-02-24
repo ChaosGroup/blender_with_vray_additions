@@ -57,6 +57,8 @@ public:
 
 	void         writePlugin(boost::property_tree::ptree *pluginDesc, std::stringstream &ss, const char *s_interp="", const char *e_interp="");
 
+	PointerRNA*  getPtr() { return &m_pointer; }
+
 private:
 	int          checkProperty(const char *propName);
 
