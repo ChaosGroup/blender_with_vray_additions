@@ -94,7 +94,7 @@ private:
 	void          initSmooth();
 
 	Mesh         *mesh;
-	StringVector  meshComponentNames;
+	StrVector     meshComponentNames;
 
 	char         *vertices;
 	size_t        coordIndex;
