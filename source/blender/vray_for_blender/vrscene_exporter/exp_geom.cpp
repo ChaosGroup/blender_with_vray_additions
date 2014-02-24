@@ -33,7 +33,7 @@ int ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *mai
 	geomStaticMesh.init();
 	geomStaticMesh.initName(pluginName);
 
-	geomStaticMesh.attachPropGroup(propGroup);
+	geomStaticMesh.setPropGroup(propGroup);
 	geomStaticMesh.initAttributes();
 
 	if(NOT(geomStaticMesh.getHash()))
