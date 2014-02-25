@@ -367,6 +367,7 @@ void VRayScene::Light::writePlugin()
 {
 	Lamp                *la = (Lamp*)m_object->data;
 	RnaAccess::RnaValue  laRna((ID*)la, "vray");
+	PointerRNA          *la_ptr = laRna.getPtr();
 
 	std::string kelvinColor;
 
@@ -414,7 +415,7 @@ void VRayScene::Light::writePlugin()
 	if(m_vrayPluginID == "LightSpot") {
 		float middleRegion = la->dist - la->spotblend;
 
-		writeAttribute("decay", laRna.getFloat("decay"));
+		writeAttribute(la_ptr, "decay");
 
 		writeAttribute("coneAngle", la->spotsize);
 		writeAttribute("penumbraAngle", -la->spotsize * la->spotblend);
@@ -439,33 +440,24 @@ void VRayScene::Light::writePlugin()
 
 	while(*m_paramDesc) {
 		if(STR_CMP(*m_paramDesc, "shadow_subdivs")) {
-			writeAttribute("shadow_subdivs", laRna.getInt("subdivs"));
+			writeAttribute(la_ptr, "shadow_subdivs", "subdivs");
 		}
 		else if(STR_CMP(*m_paramDesc, "shadowSubdivs")) {
-			writeAttribute("shadowSubdivs", laRna.getInt("subdivs"));
+			writeAttribute(la_ptr, "shadowSubdivs", "subdivs");
 		}
 		else if(STR_CMP(*m_paramDesc, "shadowRadius") && m_vrayPluginID == "LightDirectMax") {
 			float shadowRadius = laRna.getInt("shadowRadius");
 
-			writeAttribute("shadowRadius",  shadowRadius);
-
 			writeAttribute("shadowShape",   laRna.getEnum("shadowShape"));
+			writeAttribute("shadowRadius",  shadowRadius);
 			writeAttribute("shadowRadius1", shadowRadius);
 			writeAttribute("shadowRadius2", shadowRadius);
 		}
 		else if(STR_CMP(*m_paramDesc, "intensity") && m_vrayPluginID == "LightIESMax") {
-			writeAttribute("power", laRna.getFloat("intensity"));
-		}
-		else if(STR_CMP(*m_paramDesc, "shadow_color") || STR_CMP(*m_paramDesc, "shadowColor")) {
-			float color[3];
-			laRna.GetValue(*m_paramDesc, color);
-			writeAttribute(*m_paramDesc, color);
-		}
-		else if(STR_CMP(*m_paramDesc, "ies_file")) {
-			writeAttribute("ies_file", laRna.getPath("ies_file").c_str(), true);
+			writeAttribute(la_ptr, "power", "intensity");
 		}
 		else
-			writeAttribute(laRna.getPtr(), *m_paramDesc);
+			writeAttribute(la_ptr, *m_paramDesc);
 
 		m_paramDesc++;
 	}

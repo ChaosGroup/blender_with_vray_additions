@@ -213,7 +213,7 @@ std::string VRayScene::Node::writeMtlWrapper(PyObject *output, const std::string
 	std::stringstream ss;
 	ss << "\n" << "MtlWrapper" << " " << pluginName << " {";
 	ss << "\n\t" << "base_material=" << baseMtl << ";";
-	rna.writePlugin(m_pluginDesc.getTree("MtlWrapper"), ss);
+	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("MtlWrapper"), ss);
 	ss << "\n}\n";
 
 	PYTHON_PRINT(output, ss.str().c_str());
@@ -233,7 +233,7 @@ std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::strin
 	std::stringstream ss;
 	ss << "\n" << "MtlOverride" << " " << pluginName << " {";
 	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
-	rna.writePlugin(m_pluginDesc.getTree("MtlOverride"), ss);
+	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("MtlOverride"), ss);
 	ss << "\n}\n";
 
 	PYTHON_PRINT(output, ss.str().c_str());
@@ -253,7 +253,7 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 	std::stringstream ss;
 	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
 	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
-	rna.writePlugin(m_pluginDesc.getTree("MtlRenderStats"), ss);
+	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("MtlRenderStats"), ss);
 	ss << "\n}\n";
 
 	PYTHON_PRINT(output, ss.str().c_str());
