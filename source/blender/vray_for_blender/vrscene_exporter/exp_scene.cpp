@@ -220,6 +220,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	RNA_id_pointer_create((ID*)ob, &objectRNA);
 	BL::Object bl_ob(objectRNA);
 
+	PRINT_INFO("Processing object %s", ob->id.name);
+
 	if(ob->id.pad2)
 		PRINT_INFO("Base object %s (update: %i)", ob->id.name, ob->id.pad2);
 
