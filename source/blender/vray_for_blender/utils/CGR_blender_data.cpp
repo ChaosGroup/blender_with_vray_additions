@@ -290,8 +290,22 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 			break;
 		case OB_MESH: {
 			Mesh *me = (Mesh*)ob->data;
-			if(NOT(me->totpoly))
+			if(NOT(me->totpoly)) {
+				// Additionally check for skin modifier.
+				// It's workflow is based only on edges,
+				// so there are no totpoly in this case.
+				//
+				ModifierData *mod = (ModifierData*)ob->modifiers.first;
+				while(mod) {
+					switch(mod->type) {
+						case eModifierType_Skin:
+							return 1;
+						default:
+							mod = mod->next;
+					}
+				}
 				return 0;
+			}
 		}
 			break;
 		default:
