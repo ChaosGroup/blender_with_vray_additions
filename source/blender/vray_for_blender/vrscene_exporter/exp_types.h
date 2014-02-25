@@ -318,6 +318,20 @@ public:
 		m_plugin << "\n}\n";
 	}
 
+	// Generic function for automatic attribute export
+	//   @propName    - name of the attribute in the plugin description; could match RNA name
+	//   @rnaPropName - override for the RNA name if RNA name doesn't match the plugin attribute name
+	//
+	void writeAttribute(PointerRNA *ptr, const char *propName, const char *rnaPropName=NULL);
+
+	// Write all attibutes from RNA pointer
+	void writeAttributes(PointerRNA *ptr);
+
+	// Write all attibutes based on JSON plugin description
+	void writeAttributes(PointerRNA *ptr, boost::property_tree::ptree *pluginDesc, std::stringstream &output);
+
+	// Manual attributes export
+	//
 	void writeAttribute(const char *name, const int &value) {
 		m_plugin << "\n\t" << name << "=" << m_interpStart;
 		m_plugin << value;
@@ -338,67 +352,6 @@ public:
 		if(quotes)
 			m_plugin << "\"";
 		m_plugin << m_interpEnd << ";";
-	}
-
-	void writeAttribute(PointerRNA *ptr, const char *propName)
-	{
-		PropertyRNA *prop = RNA_struct_find_property(ptr, propName);
-		if(NOT(prop))
-			return;
-
-		PropertyType propType = RNA_property_type(prop);
-
-		m_plugin << "\n\t" << propName << "=" << m_interpStart;
-
-		if(propType == PROP_BOOLEAN) {
-			m_plugin << RNA_boolean_get(ptr, propName);
-		}
-		else if(propType == PROP_INT) {
-			m_plugin << RNA_int_get(ptr, propName);
-		}
-		else if(propType == PROP_FLOAT) {
-			PropertySubType propSubType = RNA_property_subtype(prop);
-			if(propSubType == PROP_COLOR) {
-				float values[3];
-				RNA_float_get_array(ptr, propName, values);
-
-				m_plugin << "Color(" << values[0] << "," << values[1] << "," << values[2] << ")";
-			}
-			else {
-				m_plugin << RNA_float_get(ptr, propName);
-			}
-		}
-		else if(propType == PROP_ENUM) {
-			m_plugin << RNA_enum_get(ptr, propName);
-		}
-		else if(propType == PROP_STRING) {
-			char value[FILE_MAX] = "";
-
-			RNA_string_get(ptr, propName, value);
-
-			PropertySubType propSubType = RNA_property_subtype(prop);
-			if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
-				BLI_path_abs(value, G.main->name);
-				m_plugin << "\"" << value << "\"";
-			}
-			else if(propSubType == PROP_FILENAME) {
-				m_plugin << "\"" << value << "\"";
-			}
-			else {
-				m_plugin << value;
-			}
-		}
-		m_plugin << m_interpEnd << ";";
-	}
-
-	void writeAttributes(PointerRNA *ptr) {
-		PropertyRNA *iterprop = RNA_struct_iterator_property(ptr->type);
-		RNA_PROP_BEGIN(ptr, itemptr, iterprop) {
-			PropertyRNA *prop = (PropertyRNA*)itemptr.data;
-
-			writeAttribute(ptr, RNA_property_identifier(prop));
-		}
-		RNA_PROP_END;
 	}
 
 protected:
