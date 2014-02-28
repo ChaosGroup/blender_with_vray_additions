@@ -561,9 +561,6 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 	if(useDisplace) {
 		RnaAccess::RnaValue dispRna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
 
-		ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
-		ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
-
 		writeAttributes(dispRna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
 
 		// Overrider type settings
@@ -581,6 +578,13 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 		else if(displace_type == 2) {
 			ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
 			ss << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+		}
+
+		if(displace_type == 2) {
+			ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+		}
+		else {
+			ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
 		}
 
 		// Use first channel for displace
@@ -603,8 +607,6 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	std::stringstream ss;
 	ss << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
 	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
-	ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
-	ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
 	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
 
 	meshComponentNames.pop_back();
@@ -624,6 +626,13 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	else if(displace_type == 2) {
 		ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
 		ss << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+	}
+
+	if(displace_type == 2) {
+		ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+	}
+	else {
+		ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
 	}
 
 	// Use first channel for displace
