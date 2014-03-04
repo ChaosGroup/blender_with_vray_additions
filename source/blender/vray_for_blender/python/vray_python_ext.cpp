@@ -114,15 +114,20 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 	bContext *C = (bContext*)(intptr_t)contextPtr;
 
-	Scene *sce = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
+	Scene *sce  = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
+	Main  *main = CTX_data_main(C);
 
 	PointerRNA sceneRnaPtr;
 	RNA_id_pointer_create((ID*)sce, &sceneRnaPtr);
 	BL::Scene scene(sceneRnaPtr);
 
-	ExpoterSettings *settings = new ExpoterSettings(scene, renderEngine);
+	PointerRNA dataPtr;
+	RNA_id_pointer_create((ID*)main, &dataPtr);
+	BL::BlendData data(dataPtr);
+
+	ExpoterSettings *settings = new ExpoterSettings(scene, data, renderEngine);
 	settings->m_sce  = sce;
-	settings->m_main = CTX_data_main(C);
+	settings->m_main = main;
 
 	settings->m_animation      = isAnimation;
 	settings->m_checkAnimated  = checkAnimated;
