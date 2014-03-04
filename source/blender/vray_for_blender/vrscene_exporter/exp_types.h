@@ -148,6 +148,7 @@ typedef std::set<std::string>           StrSet;
 
 typedef AnimationCache<VRayExportable>  ExpCache;
 
+// NOTE: Cache all params?
 
 class VRayExportable {
 public:
@@ -375,6 +376,14 @@ protected:
 
 	PYTHON_PRINT_BUF;
 
+};
+
+
+// Base class for geometry
+// This will override some exporting functions
+// for more efficient transfer over http
+//
+class VRayGeom : public VRayExportable {
 };
 
 }
