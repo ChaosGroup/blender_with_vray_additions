@@ -130,6 +130,7 @@ private:
 	PtrSet                  m_skipObjects;
 
 	int                     m_useDisplaceSubdiv;
+	int                     m_useInstancer;
 
 	PYTHON_PRINT_BUF;
 
