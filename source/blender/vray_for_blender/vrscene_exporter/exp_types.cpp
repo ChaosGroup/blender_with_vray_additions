@@ -166,7 +166,7 @@ void VRayExportable::writeAttributes(PointerRNA *ptr, boost::property_tree::ptre
 				if(v.second.count("subtype")) {
 					std::string subType = v.second.get_child("subtype").data();
 					if(subType == "FILE_PATH" || subType == "DIR_PATH") {
-						BLI_path_abs(value, G.main->name);
+						BLI_path_abs(value, ID_BLEND_PATH(G.main, ((ID*)ptr->id.data)));
 					}
 				}
 				output << "\"" << value << "\"";
