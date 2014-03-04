@@ -231,7 +231,7 @@ std::string RnaValue::getPath(const char *propName)
 
 	RNA_string_get(&m_pointer, propName, filepath);
 
-	BLI_path_abs(filepath, G.main->name);
+	BLI_path_abs(filepath, ID_BLEND_PATH(G.main, ((ID*)m_pointer.id.data)));
 
 	return std::string(filepath);
 }
