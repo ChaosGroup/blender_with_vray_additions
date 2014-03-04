@@ -148,6 +148,15 @@ void VRsceneExporter::exportScene()
 	float  expProgress = 0.0f;
 	float  expProgStep = 1.0f / nObjects;
 	int    progUpdateCnt = nObjects > 3000 ? 1000 : 100;
+	if(nObjects > 3000) {
+		progUpdateCnt = 1000;
+	}
+	else if(nObjects < 200) {
+		progUpdateCnt = 10;
+	}
+	else {
+		progUpdateCnt = 100;
+	}
 
 	// Clear caches
 	m_exportedObject.clear();
