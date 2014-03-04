@@ -65,6 +65,8 @@ set(SRC
 	vrscene_exporter/exp_anim.h
 	vrscene_exporter/exp_scene.h
 	vrscene_exporter/exp_scene.cpp
+	vrscene_exporter/exp_nodes.h
+	vrscene_exporter/exp_nodes.cpp
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.cpp
 	vrscene_exporter/exp_hair_interp.cpp
