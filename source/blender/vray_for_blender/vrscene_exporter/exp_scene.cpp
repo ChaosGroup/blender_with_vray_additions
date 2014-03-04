@@ -340,6 +340,16 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 		return;
 	m_exportedObject.insert(idName);
 
+	BL::NodeTree ntree = getNodeTree(ob);
+	if(ntree)
+		exportNodeFromNodeTree(ntree, ob);
+	else
+		exportNode(ob, checkUpdated, attrs);
+}
+
+
+void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
+{
 	Node *node = new Node(m_settings->m_sce, m_settings->m_main, ob);
 	node->init(m_mtlOverride);
 	if(attrs.override) {
@@ -356,15 +366,6 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 		return;
 	}
 
-	exportNode(node, checkUpdated);
-
-	if(NOT(m_settings->m_animation))
-		delete node;
-}
-
-
-void VRsceneExporter::exportNode(Node *node, const int &checkUpdated)
-{
 	if(node->hasHair()) {
 		node->writeHair(m_settings);
 		if(NOT(node->doRenderEmitter()))
@@ -387,6 +388,50 @@ void VRsceneExporter::exportNode(Node *node, const int &checkUpdated)
 			writeObject = node->isObjectUpdated();
 		if(writeObject)
 			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+	}
+
+	if(NOT(m_settings->m_animation))
+		delete node;
+}
+
+
+void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const int &checkUpdated)
+{
+#if 0
+	BL::NodeTree::nodes_iterator b_node;
+
+	PRINT_INFO("ntree = \"%s\"", ntree.name().c_str());
+
+	BL::Node::inputs_iterator  b_input;
+	BL::Node::outputs_iterator b_output;
+
+	for(ntree.nodes.begin(b_node); b_node != ntree.nodes.end(); ++b_node) {
+		PRINT_INFO("  node = \"%s\" ['%s']", b_node->name().c_str(), b_node->rna_type().identifier().c_str());
+
+		for (b_node->inputs.begin(b_input); b_input != b_node->inputs.end(); ++b_input) {
+			PRINT_INFO("    input = \"%s\"", b_input->name().c_str());
+		}
+
+		for (b_node->outputs.begin(b_output); b_output != b_node->outputs.end(); ++b_output) {
+			PRINT_INFO("    output = \"%s\"", b_output->name().c_str());
+		}
+	}
+#endif
+
+	BL::Node nodeOutput = getNodeByType(ntree, "VRayNodeObjectOutput");
+	if(NOT(nodeOutput)) {
+		PRINT_ERROR("Object: %s => Output node not found!", ob->id.name);
+		return;
+	}
+
+	BL::Node materialNode = getConnectedNode(ntree, nodeOutput, "Material");
+	if(materialNode) {
+		PRINT_INFO("Material node: '%s'", materialNode.name().c_str())
+	}
+
+	BL::Node geometryNode = getConnectedNode(ntree, nodeOutput, "Geometry");
+	if(geometryNode) {
+		PRINT_INFO("Geometry node: '%s'", geometryNode.name().c_str())
 	}
 }
 
@@ -461,4 +506,42 @@ void VRsceneExporter::exportDupli()
 	}
 
 	m_psys.clear();
+}
+
+
+BL::NodeTree VRsceneExporter::getNodeTree(Object *ob)
+{
+	PRINT_INFO("getNodeTree(%s)", ob->id.name);
+
+	RnaAccess::RnaValue VRayObject((ID*)ob, "vray");
+
+#if CGR_NTREE_DRIVER
+	if(VRayObject.hasProperty("ntree__enum__")) {
+		int ntreePtr = VRayObject.getEnum("ntree__enum__");
+		if(ntreePtr != -1) {
+			bNodeTree *ntree = (bNodeTree*)(intptr_t)ntreePtr;
+			PointerRNA ntreeRNA;
+			RNA_id_pointer_create((ID*)(&ntree->id), &ntreeRNA);
+			return BL::NodeTree(ntreePtr);
+		}
+	}
+#else
+	if(VRayObject.hasProperty("ntree__name__")) {
+		std::string ntreeName = VRayObject.getString("ntree__name__");
+
+		PRINT_INFO("Object '%s' node tree is '%s'", ob->id.name, ntreeName.c_str());
+
+		if(NOT(ntreeName.empty())) {
+			BL::BlendData::node_groups_iterator nodeGroupIt;
+			for(m_settings->b_data.node_groups.begin(nodeGroupIt); nodeGroupIt != m_settings->b_data.node_groups.end(); ++nodeGroupIt) {
+				BL::NodeTree nodeTree = *nodeGroupIt;
+				if(nodeTree.name() == ntreeName) {
+					return nodeTree;
+				}
+			}
+		}
+	}
+#endif
+
+	return BL::NodeTree(PointerRNA_NULL);
 }

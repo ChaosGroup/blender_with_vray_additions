@@ -112,7 +112,6 @@ public:
 
 	void                    addSkipObject(void *obPtr);
 
-	static void             exportNode(Node *node, const int &checkUpdated=true);
 	void                    exportScene();
 
 private:
@@ -124,6 +123,16 @@ private:
 
 	void                    initDupli();
 	void                    exportDupli();
+
+	void                    exportNode(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const int &checkUpdated=true);
+
+	BL::NodeTree            getNodeTree(Object *ob);
+
+	BL::NodeSocket          getSocketByName(BL::Node node, const std::string &socketName);
+	BL::Node                getNodeByType(BL::NodeTree nodeTree, const std::string &nodeType);
+	BL::Node                getConnectedNode(BL::NodeTree nodeTree, BL::NodeSocket socket);
+	BL::Node                getConnectedNode(BL::NodeTree nodeTree, BL::Node node, const std::string &socketName);
 
 	StrSet                  m_exportedObject;
 	MyParticles             m_psys;

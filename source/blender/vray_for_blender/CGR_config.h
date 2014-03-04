@@ -47,6 +47,7 @@
 #define CGR_USE_TIME_DEBUG  (1 && CGR_USE_DEBUG)
 #define CGR_USE_DRAW_DEBUG  (0 && CGR_USE_DEBUG)
 #define CGR_USE_CPP_API      0
+#define CGR_NTREE_DRIVER     0
 
 #define CGR_MAX_PLUGIN_NAME  1024
 

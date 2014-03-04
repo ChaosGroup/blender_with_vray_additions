@@ -84,8 +84,9 @@ struct NodeAttrs {
 
 
 struct ExpoterSettings {
-	ExpoterSettings(BL::Scene scene, BL::RenderEngine engine):
+	ExpoterSettings(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine):
 		b_scene(scene),
+		b_data(data),
 		b_engine(engine)
 	{
 		m_sce  = NULL;
@@ -115,6 +116,7 @@ struct ExpoterSettings {
 	Main             *m_main;
 
 	BL::Scene         b_scene;
+	BL::BlendData     b_data;
 	BL::RenderEngine  b_engine;
 
 	PyObject         *m_fileObject;
