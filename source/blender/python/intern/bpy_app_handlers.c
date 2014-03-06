@@ -62,6 +62,7 @@ static PyStructSequence_Field app_cb_info_fields[] = {
 	{(char *)"game_pre",           (char *)"Callback list - on starting the game engine"},
 	{(char *)"game_post",          (char *)"Callback list - on ending the game engine"},
 	{(char *)"version_update",     (char *)"Callback list - on ending the versioning code"},
+	{(char *)"exit",               (char *)"Callback list - on Blender exit"},
 
 	/* sets the permanent tag */
 #   define APP_CB_OTHER_FIELDS 1
