@@ -104,6 +104,8 @@ struct ExpoterSettings {
 
 		m_activeLayers = true;
 		m_altDInstances = false;
+
+		m_useNodes = false;
 	}
 
 	int checkUpdates() {
@@ -131,6 +133,8 @@ struct ExpoterSettings {
 
 	int               m_activeLayers;
 	int               m_altDInstances;
+
+	int               m_useNodes;
 };
 
 
