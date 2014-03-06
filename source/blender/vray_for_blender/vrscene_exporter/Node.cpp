@@ -174,9 +174,13 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 		Material *ma = give_current_material(m_ob, a);
 		// NOTE: Slot could present, but no material is selected
 		if(ma) {
-			RnaAccess::RnaValue rna(&ma->id, "vray");
-			if(rna.getBool("dontOverride")) {
-				materialName = GetIDName((ID*)ma);
+			std::string maName = GetIDName((ID*)ma);
+			if(m_materialOverride.empty())
+				materialName = maName;
+			else {
+				RnaAccess::RnaValue rna(&ma->id, "vray");
+				if(rna.getBool("dontOverride"))
+					materialName = maName;
 			}
 		}
 
