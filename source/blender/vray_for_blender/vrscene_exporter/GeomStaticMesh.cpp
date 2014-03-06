@@ -229,7 +229,9 @@ void GeomStaticMesh::initDisplace()
 						if(mapDisplacement) {
 							useDisplace = true;
 
-							// XXX: texture blend is not supported right now
+							// NOTE: Texture blend is not supported,
+							// and will be supported only in vb30
+							//
 							displaceTexture     = tex;
 							displaceTextureName = GetIDName((ID*)tex);
 
