@@ -341,7 +341,7 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 	m_exportedObject.insert(idName);
 
 	BL::NodeTree ntree = getNodeTree(ob);
-	if(ntree)
+	if(m_settings->m_useNodes && ntree)
 		exportNodeFromNodeTree(ntree, ob);
 	else
 		exportNode(ob, checkUpdated, attrs);
