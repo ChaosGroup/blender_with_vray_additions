@@ -160,21 +160,25 @@ void VRayScene::Node::initHash()
 std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 {
 	if(NOT(m_ob->totcol))
-		return "MANOMATERIALISSET";
+		return CGR_DEFAULT_MATERIAL;
 
 	StrVector mtls_list;
 	StrVector ids_list;
 
 	for(int a = 1; a <= m_ob->totcol; ++a) {
+		std::string materialName = CGR_DEFAULT_MATERIAL;
+		if(NOT(m_materialOverride.empty())) {
+		   materialName = m_materialOverride;
+		}
+
 		Material *ma = give_current_material(m_ob, a);
-		if(NOT(ma))
-			continue;
-
-		std::string materialName = GetIDName((ID*)ma);
-
-		RnaAccess::RnaValue rna(&ma->id, "vray");
-		if(NOT(m_materialOverride.empty()) && NOT(rna.getBool("dontOverride")))
-			materialName = m_materialOverride;
+		// NOTE: Slot could present, but no material is selected
+		if(ma) {
+			RnaAccess::RnaValue rna(&ma->id, "vray");
+			if(rna.getBool("dontOverride")) {
+				materialName = GetIDName((ID*)ma);
+			}
+		}
 
 		mtls_list.push_back(materialName);
 		ids_list.push_back(boost::lexical_cast<std::string>(a));
