@@ -72,6 +72,7 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	long      checkAnimated = ANIM_CHECK_NONE;
 	long      exportNodes    = true;
 	long      exportGeometry = true;
+	long      useNodes       = false;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
@@ -89,11 +90,12 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		_C("geometryFile"),   // 7
 		_C("lightsFile"),     // 8
 		_C("scene"),          // 9
+		_C("useNodes"),       // 10
 		NULL
 	};
 
 	//                                  012345678 9
-	static const char  kwlistTypes[] = "OlllllOOO|l";
+	static const char  kwlistTypes[] = "OlllllOOO|ll";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
@@ -105,7 +107,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 									   &obFile,
 									   &geomFile,
 									   &lightsFile,
-									   &scenePtr)))
+									   &scenePtr,
+									   &useNodes)))
 		return NULL;
 
 	PointerRNA engineRnaPtr;
@@ -129,6 +132,7 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	settings->m_sce  = sce;
 	settings->m_main = main;
 
+	settings->m_useNodes       = useNodes;
 	settings->m_animation      = isAnimation;
 	settings->m_checkAnimated  = checkAnimated;
 	settings->m_exportNodes    = exportNodes;
