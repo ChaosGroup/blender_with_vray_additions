@@ -216,67 +216,7 @@ public:
 	// Is will call virtual writeData() for actual data write.
 	// It will also setup interpolate statements prefix and suffix for animation.
 	//
-	void write(PyObject *output, int frame=INT_MIN) {
-		if(NOT(getHash()))
-			return;
-
-		if(NOT(m_animation) || (m_animation && m_checkAnimated == ANIM_CHECK_NONE)) {
-			// TODO: Do this in animation mode also to prevent data reexport of dupli objects
-			//
-			if(m_expCache.find(m_name) != m_expCache.end())
-				return;
-			m_expCache.insert(m_name);
-
-			initInterpolate(frame);
-			writeData(output);
-		}
-		else {
-			if(m_checkAnimated == ANIM_CHECK_SIMPLE) {
-				if(checkUpdated(frame) && NOT(isUpdated()))
-					return;
-
-				initInterpolate(frame);
-				writeData(output);
-			}
-			else if(m_checkAnimated == ANIM_CHECK_HASH || m_checkAnimated == ANIM_CHECK_BOTH) {
-				if(m_checkAnimated == ANIM_CHECK_BOTH)
-					if(checkUpdated(frame) && NOT(isUpdated()))
-						return;
-
-				MHash currHash = getHash();
-				MHash prevHash = m_frameCache.getHash(m_name);
-
-				if(currHash != prevHash) {
-					int cacheFrame = m_frameCache.getFrame(m_name);
-					int prevFrame  = frame - m_sce->r.frame_step;
-
-					if(prevHash == 0) {
-#if 0
-						// prevHash 0 could mean that object have appeared at some frame of
-						// animation; so we need to set some fake data for previous state
-						// Let's say invisible at the first frame.
-						if(frame > m_sce->r.sfra) {
-							initInterpolate(m_sce->r.sfra);
-							writeFakeData(output);
-						}
-#endif
-					}
-					else {
-						// Write previous frame if hash is more then 'frame_step' back.
-						if(cacheFrame < prevFrame) {
-							initInterpolate(prevFrame);
-							m_frameCache.getData(m_name)->writeData(output);
-						}
-					}
-
-					initInterpolate(frame);
-					writeData(output);
-
-					m_frameCache.update(m_name, currHash, frame, this);
-				}
-			}
-		}
-	}
+	void write(PyObject *output, int frame=INT_MIN);
 
 	// Set property group; used to get plugin parameters from Blender Node's propertry groups
 	//
@@ -335,7 +275,7 @@ public:
 	void writeAttributes(PointerRNA *ptr);
 
 	// Write all attibutes based on JSON plugin description
-	void writeAttributes(PointerRNA *ptr, boost::property_tree::ptree *pluginDesc, std::stringstream &output);
+	void writeAttributes(PointerRNA *ptr, boost::property_tree::ptree *pluginDesc, std::stringstream &output, const StrSet &skipAttrs=StrSet());
 
 	// Manual attributes export
 	//

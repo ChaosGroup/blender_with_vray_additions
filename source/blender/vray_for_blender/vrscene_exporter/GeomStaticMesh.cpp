@@ -561,7 +561,10 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 	if(useDisplace) {
 		RnaAccess::RnaValue dispRna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
 
-		writeAttributes(dispRna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
+		StrSet skipDispAttrs;
+		skipDispAttrs.insert("map_channel");
+
+		writeAttributes(dispRna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss, skipDispAttrs);
 
 		// Overrider type settings
 		//
@@ -604,10 +607,15 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 
 	size_t mCompSize = meshComponentNames.size();
 
+
+	StrSet skipDispAttrs;
+	skipDispAttrs.insert("map_channel");
+
 	std::stringstream ss;
 	ss << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
 	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
-	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss);
+
+	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss, skipDispAttrs);
 
 	meshComponentNames.pop_back();
 
