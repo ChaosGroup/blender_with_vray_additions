@@ -64,6 +64,9 @@ typedef Array<float, 16>  Transform;
 namespace VRayScene {
 
 
+class VRayExportable;
+
+
 struct NodeAttrs {
 	NodeAttrs() {
 		override = false;
@@ -96,23 +99,13 @@ struct ExpoterSettings {
 		m_fileGeom   = NULL;
 		m_fileLights = NULL;
 
-		m_exportNodes    = true;
-		m_exportGeometry = true;
-
-		m_animation = false;
-		m_checkAnimated = ANIM_CHECK_BOTH;
-
 		m_activeLayers = true;
 		m_altDInstances = false;
 
-		m_useNodes = false;
+		m_useNodeTree = false;
 	}
 
-	int checkUpdates() {
-		if(m_animation && m_checkAnimated != ANIM_CHECK_NONE)
-			return m_sce->r.cfra > m_sce->r.sfra;
-		return 0;
-	}
+	int               checkUpdates();
 
 	Scene            *m_sce;
 	Main             *m_main;
@@ -125,20 +118,11 @@ struct ExpoterSettings {
 	PyObject         *m_fileGeom;
 	PyObject         *m_fileLights;
 
-	int               m_exportNodes;
-	int               m_exportGeometry;
-
-	int               m_animation;
-	int               m_checkAnimated;
-
 	int               m_activeLayers;
 	int               m_altDInstances;
-
-	int               m_useNodes;
+	int               m_useNodeTree;
 };
 
-
-class VRayExportable;
 
 struct MyColor {
 	MyColor(float r, float g, float b):m_r(r),m_g(g),m_b(b) {}
@@ -254,9 +238,6 @@ public:
 		}
 	}
 
-	static char m_interpStart[32];
-	static char m_interpEnd[3];
-
 	void writeHeader(const char *pluginID, const char *pluginName) {
 		m_plugin << "\n" << pluginID << " " << pluginName << " {";
 	}
@@ -301,11 +282,16 @@ public:
 		m_plugin << m_interpEnd << ";";
 	}
 
+	static char             m_interpStart[32];
+	static char             m_interpEnd[3];
+	static int              m_animation;
+	static int              m_checkAnimated;
+	static int              m_exportNodes;
+	static int              m_exportGeometry;
+
 protected:
 	static StrSet           m_expCache;
 	static ExpCache         m_frameCache;
-	static int              m_animation;
-	static int              m_checkAnimated;
 	static VRayPluginsDesc  m_pluginDesc;
 
 	std::string             m_name;
