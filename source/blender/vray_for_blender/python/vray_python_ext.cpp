@@ -66,13 +66,9 @@ static PyObject* mExportFree(PyObject *self)
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
-	long      contextPtr    = 0;
-	long      scenePtr      = 0;
-	long      isAnimation   = false;
-	long      checkAnimated = ANIM_CHECK_NONE;
-	long      exportNodes    = true;
-	long      exportGeometry = true;
-	long      useNodes       = false;
+	long      contextPtr = 0;
+	long      scenePtr   = 0;
+	long      useNodes   = false;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
@@ -82,28 +78,20 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	static char *kwlist[] = {
 		_C("engine"),         // 0
 		_C("context"),        // 1
-		_C("isAnimation"),    // 2
-		_C("checkAnimated"),  // 3
-		_C("exportNodes"),    // 4
-		_C("exportGeometry"), // 5
-		_C("objectFile"),     // 6
-		_C("geometryFile"),   // 7
-		_C("lightsFile"),     // 8
-		_C("scene"),          // 9
-		_C("useNodes"),       // 10
+		_C("objectFile"),     // 2
+		_C("geometryFile"),   // 3
+		_C("lightsFile"),     // 4
+		_C("scene"),          // 5
+		_C("useNodes"),       // 6
 		NULL
 	};
 
-	//                                  012345678 9
-	static const char  kwlistTypes[] = "OlllllOOO|ll";
+	//                                  01234 56
+	static const char  kwlistTypes[] = "OlOOO|ll";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
 									   &contextPtr,
-									   &isAnimation,
-									   &checkAnimated,
-									   &exportNodes,
-									   &exportGeometry,
 									   &obFile,
 									   &geomFile,
 									   &lightsFile,
@@ -132,11 +120,7 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	settings->m_sce  = sce;
 	settings->m_main = main;
 
-	settings->m_useNodes       = useNodes;
-	settings->m_animation      = isAnimation;
-	settings->m_checkAnimated  = checkAnimated;
-	settings->m_exportNodes    = exportNodes;
-	settings->m_exportGeometry = exportGeometry;
+	settings->m_useNodeTree = useNodes;
 
 	settings->m_fileObject = obFile;
 	settings->m_fileGeom   = geomFile;
@@ -187,10 +171,18 @@ static PyObject* mExportClearCache(PyObject *self)
 }
 
 
-static PyObject* mExportScene(PyObject *self, PyObject *value)
+static PyObject* mExportScene(PyObject *self, PyObject *args)
 {
-	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(value);
-	exporter->exportScene();
+	long exporterPtr   = 0;
+
+	int exportNodes    = true;
+	int exportGeometry = true;
+
+	if(NOT(PyArg_ParseTuple(args, "lii", &exporterPtr, &exportNodes, &exportGeometry)))
+		return NULL;
+
+	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
+	exporter->exportScene(exportNodes, exportGeometry);
 
 	Py_RETURN_NONE;
 }
@@ -441,7 +433,7 @@ static PyMethodDef methods[] = {
 	{"init", (PyCFunction)mExportInit ,       METH_VARARGS|METH_KEYWORDS, "Init exporter"},
 	{"exit",              mExportExit ,       METH_O,                     "Shutdown exporter"},
 
-	{"exportScene",       mExportScene,       METH_O,       "Export scene to the *.vrscene file"},
+	{"exportScene",       mExportScene,       METH_VARARGS, "Export scene to the *.vrscene file"},
 
 	{"exportDupli",       mExportDupli,       METH_VARARGS, "Export dupli / particles"},
 	{"exportMesh",        mExportMesh,        METH_VARARGS, "Export mesh"},

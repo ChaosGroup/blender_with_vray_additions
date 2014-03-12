@@ -434,11 +434,11 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, m_ob);
 			geomMayaHair->init(psys);
-			if(settings->m_exportNodes)
+			if(m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
-			if(settings->m_exportGeometry)
+			if(m_exportGeometry)
 				geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
-			if(NOT(settings->m_animation))
+			if(NOT(m_animation))
 				delete geomMayaHair;
 		}
 	}
