@@ -112,7 +112,7 @@ public:
 
 	void                    addSkipObject(void *obPtr);
 
-	void                    exportScene();
+	void                    exportScene(const int &exportNodes, const int &exportGeometry);
 
 private:
 	void                    init();

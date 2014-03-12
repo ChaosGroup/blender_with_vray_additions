@@ -31,12 +31,14 @@ using namespace VRayScene;
 
 StrSet           VRayExportable::m_expCache;
 ExpCache         VRayExportable::m_frameCache;
-int              VRayExportable::m_animation     = 0;
-int              VRayExportable::m_checkAnimated = 0;
 VRayPluginsDesc  VRayExportable::m_pluginDesc;
 
 char             VRayExportable::m_interpStart[32];
 char             VRayExportable::m_interpEnd[3];
+int              VRayExportable::m_animation = false;
+int              VRayExportable::m_checkAnimated = ANIM_CHECK_NONE;
+int              VRayExportable::m_exportNodes = true;
+int              VRayExportable::m_exportGeometry = true;
 
 
 VRayExportable::~VRayExportable() {}
@@ -257,4 +259,11 @@ void VRayExportable::writeAttributes(PointerRNA *ptr, boost::property_tree::ptre
 			output << m_interpEnd << ";";
 		}
 	}
+}
+
+
+int ExpoterSettings::checkUpdates() {
+	if(VRayExportable::m_animation && VRayExportable::m_checkAnimated != ANIM_CHECK_NONE)
+		return m_sce->r.cfra > m_sce->r.sfra;
+	return 0;
 }

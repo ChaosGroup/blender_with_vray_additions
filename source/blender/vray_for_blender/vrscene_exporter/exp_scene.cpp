@@ -125,9 +125,12 @@ void VRsceneExporter::init()
 }
 
 
-void VRsceneExporter::exportScene()
+void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeometry)
 {
 	PRINT_INFO("VRsceneExporter::exportScene()");
+
+	VRayExportable::m_exportNodes    = exportNodes;
+	VRayExportable::m_exportGeometry = exportGeometry;
 
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
@@ -165,7 +168,7 @@ void VRsceneExporter::exportScene()
 	// Create particle system data
 	// Needed for the correct first frame
 	//
-	if(m_settings->m_animation)
+	if(VRayExportable::m_animation)
 		if(m_settings->m_sce->r.cfra == m_settings->m_sce->r.sfra)
 			initDupli();
 
@@ -341,7 +344,7 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 	m_exportedObject.insert(idName);
 
 	BL::NodeTree ntree = getNodeTree(ob);
-	if(m_settings->m_useNodes && ntree)
+	if(m_settings->m_useNodeTree && ntree)
 		exportNodeFromNodeTree(ntree, ob);
 	else
 		exportNode(ob, checkUpdated, attrs);
@@ -372,7 +375,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			return;
 	}
 
-	if(m_settings->m_exportGeometry) {
+	if(VRayExportable::m_exportGeometry) {
 		int writeData = true;
 		if(checkUpdated && m_settings->checkUpdates())
 			writeData = node->isObjectDataUpdated();
@@ -382,7 +385,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		}
 	}
 
-	if(m_settings->m_exportNodes && NOT(node->isMeshLight())) {
+	if(VRayExportable::m_exportNodes && NOT(node->isMeshLight())) {
 		int writeObject = true;
 		if(checkUpdated && m_settings->checkUpdates())
 			writeObject = node->isObjectUpdated();
@@ -390,7 +393,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 	}
 
-	if(NOT(m_settings->m_animation))
+	if(NOT(VRayExportable::m_animation))
 		delete node;
 }
 
@@ -399,10 +402,10 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 {
 	Light *light = new Light(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
-	if(m_settings->m_exportNodes)
+	if(VRayExportable::m_exportNodes)
 		light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
 
-	if(NOT(m_settings->m_animation))
+	if(NOT(VRayExportable::m_animation))
 		delete light;
 }
 
@@ -448,7 +451,7 @@ void VRsceneExporter::exportDupli()
 		const MyPartSystem *parts    = sysIt->second;
 
 		PYTHON_PRINTF(out, "\nInstancer Dupli%s {", StripString(psysName).c_str());
-		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, m_settings->m_animation ? sce->r.cfra : 0);
+		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, VRayExportable::m_animation ? sce->r.cfra : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
