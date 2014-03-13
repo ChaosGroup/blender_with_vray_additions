@@ -266,6 +266,18 @@ public:
 		m_plugin << m_interpEnd << ";";
 	}
 
+	void writeAttribute(const char *name, const float &value) {
+		m_plugin << "\n\t" << name << "=" << m_interpStart;
+		m_plugin << std::setprecision(6) << value;
+		m_plugin << m_interpEnd << ";";
+	}
+
+	void writeAttribute(const char *name, const double &value) {
+		m_plugin << "\n\t" << name << "=" << m_interpStart;
+		m_plugin << std::setprecision(12) << value;
+		m_plugin << m_interpEnd << ";";
+	}
+
 	void writeAttribute(const char *name, const MyColor &value) {
 		m_plugin << "\n\t" << name << "=" << m_interpStart;
 		m_plugin << "Color(" << value.m_r << "," << value.m_g << "," << value.m_b << ")";
