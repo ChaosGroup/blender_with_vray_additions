@@ -57,10 +57,10 @@ void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const
 	m_plugin << "\n\t" << propName << "=" << m_interpStart;
 
 	if(propType == PROP_BOOLEAN) {
-		m_plugin << RNA_boolean_get(ptr, propName);
+		m_plugin << RNA_boolean_get(ptr, rnaPropetryName);
 	}
 	else if(propType == PROP_INT) {
-		m_plugin << RNA_int_get(ptr, propName);
+		m_plugin << RNA_int_get(ptr, rnaPropetryName);
 	}
 	else if(propType == PROP_FLOAT) {
 		if(RNA_property_array_check(prop)) {
@@ -68,32 +68,32 @@ void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const
 			if(propSubType == PROP_COLOR) {
 				if(RNA_property_array_length(ptr, prop) == 4) {
 					float acolor[4];
-					RNA_float_get_array(ptr, propName, acolor);
+					RNA_float_get_array(ptr, rnaPropetryName, acolor);
 					m_plugin << "AColor(" << acolor[0] << "," << acolor[1] << "," << acolor[2] << "," << acolor[3] << ")";
 				}
 				else {
 					float color[3];
-					RNA_float_get_array(ptr, propName, color);
+					RNA_float_get_array(ptr, rnaPropetryName, color);
 					m_plugin << "Color(" << color[0] << "," << color[1] << "," << color[2] << ")";
 				}
 			}
 			else {
 				float vector[3];
-				RNA_float_get_array(ptr, propName, vector);
+				RNA_float_get_array(ptr, rnaPropetryName, vector);
 				m_plugin << "Vector(" << vector[0] << "," << vector[1] << "," << vector[2] << ")";
 			}
 		}
 		else {
-			m_plugin << RNA_float_get(ptr, propName);
+			m_plugin << RNA_float_get(ptr, rnaPropetryName);
 		}
 	}
 	else if(propType == PROP_ENUM) {
-		m_plugin << RNA_enum_get(ptr, propName);
+		m_plugin << RNA_enum_get(ptr, rnaPropetryName);
 	}
 	else if(propType == PROP_STRING) {
 		char value[FILE_MAX] = "";
 
-		RNA_string_get(ptr, propName, value);
+		RNA_string_get(ptr, rnaPropetryName, value);
 
 		PropertySubType propSubType = RNA_property_subtype(prop);
 		if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
