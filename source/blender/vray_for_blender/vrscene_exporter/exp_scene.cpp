@@ -116,8 +116,20 @@ void VRsceneExporter::init()
 	m_mtlOverride = "";
 
 	RnaAccess::RnaValue rna(&m_settings->m_sce->id, "vray.SettingsOptions");
-	if(rna.getBool("mtl_override_on"))
-		m_mtlOverride = "MA" + rna.getString("mtl_override");
+	if(rna.getBool("mtl_override_on")) {
+		std::string overrideName = rna.getString("mtl_override");
+
+		if(NOT(overrideName.empty())) {
+			BL::BlendData::materials_iterator bl_maIt;
+			for(m_settings->b_data.materials.begin(bl_maIt); bl_maIt != m_settings->b_data.materials.end(); ++bl_maIt) {
+				BL::Material bl_ma = *bl_maIt;
+				if(bl_ma.name() == overrideName) {
+					m_mtlOverride = GetIDName((ID*)bl_ma.ptr.data);
+					break;
+				}
+			}
+		}
+	}
 
 	RnaAccess::RnaValue exporterRNA(&m_settings->m_sce->id, "vray.exporter");
 
