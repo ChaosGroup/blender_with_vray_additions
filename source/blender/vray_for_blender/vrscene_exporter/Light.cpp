@@ -389,7 +389,7 @@ void VRayScene::Light::writePlugin()
 	}
 	else {
 		if(NOT(kelvinColor.empty()))
-			writeAttribute("color", kelvinColor.c_str());
+			writeAttribute("color_tex", kelvinColor.c_str());
 		else {
 			MyColor color(la->r, la->g, la->b);
 			writeAttribute("color", color);
