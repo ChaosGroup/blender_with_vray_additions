@@ -250,6 +250,17 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		PRINT_INFO("Base object %s (update: %i)", ob->id.name, ob->id.pad2);
 
 	if(bl_ob.is_duplicator()) {
+		// If object is a dupli group holder and it's not animated -
+		// export it only for the first frame
+		//
+		if(m_settings->checkUpdates()) {
+			if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
+				if(NOT(VRayScene::Node::IsUpdated((Object*)bl_ob.ptr.data))) {
+					return;
+				}
+			}
+		}
+
 		bl_ob.dupli_list_create(m_settings->b_scene, 2);
 
 		RnaAccess::RnaValue bl_obRNA((ID*)ob, "vray");
