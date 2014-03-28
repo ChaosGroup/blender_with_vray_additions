@@ -52,6 +52,25 @@ enum GeomType {
 };
 
 
+struct RenderStats {
+	RenderStats() {
+		camera_visibility = true;
+		gi_visibility = true;
+		reflections_visibility = true;
+		refractions_visibility = true;
+		shadows_visibility = true;
+		visibility = true;
+	}
+
+	int camera_visibility;
+	int gi_visibility;
+	int reflections_visibility;
+	int refractions_visibility;
+	int shadows_visibility;
+	int visibility;
+};
+
+
 class Node : public VRayExportable {
 public:
 	Node(Scene *scene, Main *main, Object *ob);
@@ -91,6 +110,7 @@ public:
 
 	void            setVisiblity(const int &visible=true);
 	void            setObjectID(const int &objectID=0);
+	void            setHideFromView(const RenderStats &renderStats);
 
 private:
 	void            initTransform();
@@ -102,6 +122,7 @@ private:
 	std::string     writeMtlWrapper(PyObject *output, const std::string &baseMtl);
 	std::string     writeMtlOverride(PyObject *output, const std::string &baseMtl);
 	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
+	std::string     writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName);
 
 	const char     *getDataName() const { return m_geometry->getName(); }
 
@@ -114,6 +135,8 @@ private:
 	char            m_transform[CGR_TRANSFORM_HEX_SIZE];
 	VRayExportable *m_geometry;
 	GeomType        m_geometryType;
+
+	RenderStats     m_renderStatsOverride;
 
 };
 

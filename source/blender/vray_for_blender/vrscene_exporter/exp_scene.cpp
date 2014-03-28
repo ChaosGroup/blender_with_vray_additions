@@ -98,8 +98,6 @@ VRsceneExporter::~VRsceneExporter()
 	PRINT_INFO("VRsceneExporter::~VRsceneExporter()");
 
 	m_skipObjects.clear();
-
-	delete m_settings;
 }
 
 
@@ -109,13 +107,30 @@ void VRsceneExporter::addSkipObject(void *obPtr)
 }
 
 
+void VRsceneExporter::addToHideFromViewList(const std::string &listKey, void *obPtr)
+{
+	if(listKey == "all")
+		m_hideFromView.visibility.insert(obPtr);
+	else if (listKey == "camera")
+		m_hideFromView.camera_visibility.insert(obPtr);
+	else if (listKey == "gi")
+		m_hideFromView.gi_visibility.insert(obPtr);
+	else if (listKey == "reflect")
+		m_hideFromView.reflections_visibility.insert(obPtr);
+	else if (listKey == "refract")
+		m_hideFromView.refractions_visibility.insert(obPtr);
+	else if (listKey == "shadows")
+		m_hideFromView.shadows_visibility.insert(obPtr);
+}
+
+
 void VRsceneExporter::init()
 {
 	VRayExportable::clearCache();
 
 	m_mtlOverride = "";
 
-	RnaAccess::RnaValue rna(&m_settings->m_sce->id, "vray.SettingsOptions");
+	RnaAccess::RnaValue rna((ID*)m_settings->m_sce, "vray.SettingsOptions");
 	if(rna.getBool("mtl_override_on")) {
 		std::string overrideName = rna.getString("mtl_override");
 
@@ -131,9 +146,14 @@ void VRsceneExporter::init()
 		}
 	}
 
-	RnaAccess::RnaValue exporterRNA(&m_settings->m_sce->id, "vray.exporter");
+	if(m_settings->m_sce->camera) {
+		RnaAccess::RnaValue vrayCamera((ID*)m_settings->m_sce->camera->data, "vray");
+		VRayExportable::m_exportSettings->m_useHideFromView = vrayCamera.getBool("hide_from_view");
+	}
 
-	m_useDisplaceSubdiv = exporterRNA.getBool("use_displace");
+	RnaAccess::RnaValue vrayExporter((ID*)m_settings->m_sce, "vray.exporter");
+	VRayExportable::m_exportSettings->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
+	VRayExportable::m_exportSettings->m_useCameraLoop     = vrayExporter.getBool("camera_loop");
 }
 
 
@@ -184,6 +204,10 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 		if(m_settings->m_sce->r.cfra == m_settings->m_sce->r.sfra)
 			initDupli();
 
+	// For "Hide From View"
+	RnaAccess::RnaValue vrayExporter((ID*)m_settings->m_sce, "vray.exporter");
+	VRayExportable::m_exportSettings->m_customFrame = vrayExporter.getInt("customFrame");
+
 	// Export stuff
 	base = (Base*)m_settings->m_sce->base.first;
 	nObjects = 0;
@@ -224,6 +248,8 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 	}
 
 	exportDupli();
+
+	m_hideFromView.clear();
 
 	m_settings->b_engine.update_progress(1.0f);
 
@@ -386,8 +412,22 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	}
 	node->initHash();
 
+	if(VRayExportable::m_exportSettings->m_useHideFromView) {
+		if(m_hideFromView.affectObject(ob)) {
+			RenderStats hideFromViewStats;
+			hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
+			hideFromViewStats.gi_visibility          = !m_hideFromView.gi_visibility.count(ob);
+			hideFromViewStats.reflections_visibility = !m_hideFromView.reflections_visibility.count(ob);
+			hideFromViewStats.refractions_visibility = !m_hideFromView.refractions_visibility.count(ob);
+			hideFromViewStats.shadows_visibility     = !m_hideFromView.shadows_visibility.count(ob);
+			hideFromViewStats.camera_visibility      = !m_hideFromView.camera_visibility.count(ob);
+
+			node->setHideFromView(hideFromViewStats);
+		}
+	}
+
 	// This will check if object's mesh is valid
-	if(NOT(node->preInitGeometry(m_useDisplaceSubdiv))) {
+	if(NOT(node->preInitGeometry(VRayExportable::m_exportSettings->m_useDisplaceSubdiv))) {
 		delete node;
 		return;
 	}

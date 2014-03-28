@@ -103,6 +103,9 @@ struct ExpoterSettings {
 		m_altDInstances = false;
 
 		m_useNodeTree = false;
+		m_useCameraLoop = false;
+
+		m_customFrame = 0;
 	}
 
 	int               checkUpdates();
@@ -121,6 +124,13 @@ struct ExpoterSettings {
 	int               m_activeLayers;
 	int               m_altDInstances;
 	int               m_useNodeTree;
+
+	int               m_useHideFromView;
+	int               m_useCameraLoop;
+	int               m_useDisplaceSubdiv;
+	int               m_useInstancer;
+
+	int               m_customFrame;
 };
 
 
@@ -300,6 +310,7 @@ public:
 	static int              m_checkAnimated;
 	static int              m_exportNodes;
 	static int              m_exportGeometry;
+	static ExpoterSettings *m_exportSettings;
 
 protected:
 	static StrSet           m_expCache;
