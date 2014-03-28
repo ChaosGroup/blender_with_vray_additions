@@ -39,7 +39,7 @@ int              VRayExportable::m_animation = false;
 int              VRayExportable::m_checkAnimated = ANIM_CHECK_NONE;
 int              VRayExportable::m_exportNodes = true;
 int              VRayExportable::m_exportGeometry = true;
-
+ExpoterSettings *VRayExportable::m_exportSettings = NULL;
 
 VRayExportable::~VRayExportable() {}
 
