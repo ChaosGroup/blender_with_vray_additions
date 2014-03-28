@@ -116,17 +116,15 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	RNA_id_pointer_create((ID*)main, &dataPtr);
 	BL::BlendData data(dataPtr);
 
-	ExpoterSettings *settings = new ExpoterSettings(scene, data, renderEngine);
-	settings->m_sce  = sce;
-	settings->m_main = main;
+	VRayExportable::m_exportSettings = new ExpoterSettings(scene, data, renderEngine);
+	VRayExportable::m_exportSettings->m_sce  = sce;
+	VRayExportable::m_exportSettings->m_main = main;
+	VRayExportable::m_exportSettings->m_useNodeTree = useNodes;
+	VRayExportable::m_exportSettings->m_fileObject = obFile;
+	VRayExportable::m_exportSettings->m_fileGeom   = geomFile;
+	VRayExportable::m_exportSettings->m_fileLights = lightsFile;
 
-	settings->m_useNodeTree = useNodes;
-
-	settings->m_fileObject = obFile;
-	settings->m_fileGeom   = geomFile;
-	settings->m_fileLights = lightsFile;
-
-	VRsceneExporter *exporter = new VRsceneExporter(settings);
+	VRsceneExporter *exporter = new VRsceneExporter(VRayExportable::m_exportSettings);
 
 	return PyLong_FromVoidPtr(exporter);
 }
@@ -135,6 +133,9 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 static PyObject* mExportExit(PyObject *self, PyObject *value)
 {
 	delete (VRsceneExporter*)PyLong_AsVoidPtr(value);
+
+	delete VRayExportable::m_exportSettings;
+	VRayExportable::m_exportSettings = NULL;
 
 	Py_RETURN_NONE;
 }
@@ -426,6 +427,53 @@ static PyObject* mSetSkipObjects(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mSetHideFromView(PyObject *self, PyObject *args)
+{
+	Py_ssize_t  exporterPtr;
+	PyObject   *hideFromViewDict;
+
+	if(NOT(PyArg_ParseTuple(args, "nO", &exporterPtr, &hideFromViewDict)))
+		return NULL;
+
+	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
+
+	const char *hideFromViewKeys[] = {
+		"all",
+		"camera",
+		"gi",
+		"reflect",
+		"refract",
+		"shadows"
+	};
+
+	int nHideFromViewKeys = sizeof(hideFromViewKeys) / sizeof(hideFromViewKeys[0]);
+
+	if(PyDict_Check(hideFromViewDict)) {
+		for(int k = 0; k < nHideFromViewKeys; ++k) {
+			const char *key = hideFromViewKeys[k];
+
+			PyObject *hideSet = PyDict_GetItemString(hideFromViewDict, key);
+			if(PySet_Check(hideSet)) {
+				int setSize = PySet_Size(hideSet);
+				if(setSize > 0) {
+					Py_ssize_t  pos = 0;
+					PyObject   *item;
+					long        hash;
+					while(_PySet_NextEntry(hideSet, &pos, &item, &hash)) {
+						PyObject *value = PyNumber_Long(item);
+						if(PyNumber_Long(value))
+							exporter->addToHideFromViewList(key, (void*)PyLong_AsLong(value));
+						Py_DecRef(item);
+					}
+				}
+			}
+		}
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
 	{"start",             mExportStart ,      METH_VARARGS, "Startup init"},
 	{"free", (PyCFunction)mExportFree,        METH_NOARGS,  "Free resources"},
@@ -449,6 +497,7 @@ static PyMethodDef methods[] = {
 
 	{"getTransformHex",   mGetTransformHex,   METH_O,       "Get transform hex string"},
 	{"setSkipObjects",    mSetSkipObjects,    METH_VARARGS, "Set a list of objects to skip from exporting"},
+	{"setHideFromView",   mSetHideFromView,   METH_VARARGS, "Setup overrides for objects for the current view"},
 
 	{NULL, NULL, 0, NULL},
 };

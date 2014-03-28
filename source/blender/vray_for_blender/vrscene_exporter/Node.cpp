@@ -270,6 +270,43 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 }
 
 
+#define HIDE_FROM_VIEW(frame, value) \
+	"interpolate(" \
+	<< "(" << 0 << "," << 1 << ")," \
+	<< "(" << frame << "," << value << ")" \
+	<< ")"
+
+std::string VRayScene::Node::writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName)
+{
+	std::stringstream ss;
+	std::string       pluginName = "HideFromView" + nodeName;
+
+	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
+	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
+	if(m_exportSettings->m_useCameraLoop) {
+		ss << "\n\t" << "visibility="             << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.visibility)             << ";";
+		ss << "\n\t" << "gi_visibility="          << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.gi_visibility)          << ";";
+		ss << "\n\t" << "camera_visibility="      << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.camera_visibility)      << ";";
+		ss << "\n\t" << "reflections_visibility=" << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.reflections_visibility) << ";";
+		ss << "\n\t" << "refractions_visibility=" << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.refractions_visibility) << ";";
+		ss << "\n\t" << "shadows_visibility="     << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.shadows_visibility)     << ";";
+	}
+	else {
+		ss << "\n\t" << "visibility="             << m_renderStatsOverride.visibility             << ";";
+		ss << "\n\t" << "gi_visibility="          << m_renderStatsOverride.gi_visibility          << ";";
+		ss << "\n\t" << "camera_visibility="      << m_renderStatsOverride.camera_visibility      << ";";
+		ss << "\n\t" << "reflections_visibility=" << m_renderStatsOverride.reflections_visibility << ";";
+		ss << "\n\t" << "refractions_visibility=" << m_renderStatsOverride.refractions_visibility << ";";
+		ss << "\n\t" << "shadows_visibility="     << m_renderStatsOverride.shadows_visibility     << ";";
+	}
+	ss << "\n}\n";
+
+	PYTHON_PRINT(output, ss.str().c_str());
+
+	return pluginName;
+}
+
+
 void VRayScene::Node::writeFakeData(PyObject *output)
 {
 	std::string material = writeMtlMulti(output);
@@ -293,6 +330,9 @@ void VRayScene::Node::writeData(PyObject *output)
 	material = writeMtlOverride(output, material);
 	material = writeMtlWrapper(output, material);
 	material = writeMtlRenderStats(output, material);
+
+	if(m_exportSettings->m_useCameraLoop)
+		material = writeHideFromView(output, material, getName());
 
 	PYTHON_PRINTF(output, "\nNode %s {", getName());
 	PYTHON_PRINTF(output, "\n\tobjectID=%i;", getObjectID());
@@ -406,6 +446,12 @@ void VRayScene::Node::setVisiblity(const int &visible)
 void VRayScene::Node::setObjectID(const int &objectID)
 {
 	m_objectID = objectID;
+}
+
+
+void VRayScene::Node::setHideFromView(const VRayScene::RenderStats &renderStats)
+{
+	m_renderStatsOverride = renderStats;
 }
 
 

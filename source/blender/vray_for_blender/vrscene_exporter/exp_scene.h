@@ -43,6 +43,37 @@
 using namespace VRayScene;
 
 
+typedef std::set<void*> PtrSet;
+
+
+struct HideFromView {
+	void clear() {
+		camera_visibility.clear();
+		gi_visibility.clear();
+		reflections_visibility.clear();
+		refractions_visibility.clear();
+		shadows_visibility.clear();
+		visibility.clear();
+	}
+
+	bool affectObject(Object *ob) {
+		return (visibility.count(ob)             ||
+				gi_visibility.count(ob)          ||
+				reflections_visibility.count(ob) ||
+				refractions_visibility.count(ob) ||
+				shadows_visibility.count(ob)     ||
+				camera_visibility.count(ob));
+	}
+
+	PtrSet camera_visibility;
+	PtrSet gi_visibility;
+	PtrSet reflections_visibility;
+	PtrSet refractions_visibility;
+	PtrSet shadows_visibility;
+	PtrSet visibility;
+};
+
+
 struct MyParticle {
 	std::string        nodeName;
 	size_t             particleId;
@@ -101,8 +132,6 @@ public:
 
 
 class VRsceneExporter {
-	typedef std::set<void*> PtrSet;
-
 public:
 	VRsceneExporter(ExpoterSettings *settings);
 	~VRsceneExporter();
@@ -110,7 +139,11 @@ public:
 	static ExpoterSettings *m_settings;
 	static std::string      m_mtlOverride;
 
+	// Used to skip Node creating of gizmo objects
 	void                    addSkipObject(void *obPtr);
+
+	// Used for "Hide From View" feature
+	void                    addToHideFromViewList(const std::string &listKey, void *obPtr);
 
 	void                    exportScene(const int &exportNodes, const int &exportGeometry);
 
@@ -138,8 +171,7 @@ private:
 	MyParticles             m_psys;
 	PtrSet                  m_skipObjects;
 
-	int                     m_useDisplaceSubdiv;
-	int                     m_useInstancer;
+	HideFromView            m_hideFromView;
 
 	PYTHON_PRINT_BUF;
 
