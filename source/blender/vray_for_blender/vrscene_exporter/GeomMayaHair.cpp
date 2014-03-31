@@ -52,6 +52,9 @@ extern "C" {
 using namespace VRayScene;
 
 
+#define USE_MANUAL_RECALC  0
+
+
 // Taken from "source/blender/render/intern/source/convertblender.c"
 // and slightly modified
 //
@@ -150,7 +153,6 @@ void GeomMayaHair::initData()
 	ParticleSystemModifierData *psmd = NULL;
 
 	ParticleData       *pa   = NULL;
-	HairKey            *hkey = NULL;
 	ParticleStrandData  sd;
 
 	ParticleCacheKey **child_cache = NULL;
@@ -164,19 +166,20 @@ void GeomMayaHair::initData()
 	float     segment[3];
 	float     hair_width = 0.001f;
 
-	int       use_child    = 0;
-	int       need_recalc  = 0;
-	int       is_free_edit = 0;
+	int       use_child   = 0;
+	int       need_recalc = 1;
 
 	PointerRNA  rna_pset;
 	PointerRNA  VRayParticleSettings;
 	PointerRNA  VRayFur;
 
+#if USE_MANUAL_RECALC
 	int  display_percentage;
 	int  display_percentage_child;
 
 	EvaluationContext eval_ctx;
 	eval_ctx.for_render = true;
+#endif
 
 	// For standart macroses to work
 	int p;
@@ -207,48 +210,68 @@ void GeomMayaHair::initData()
 		if(RNA_struct_find_property(&VRayParticleSettings, "VRayFur")) {
 			VRayFur = RNA_pointer_get(&VRayParticleSettings, "VRayFur");
 
-			// Get hair width
 			hair_width = RNA_float_get(&VRayFur, "width");
 		}
 	}
+
+	PointerRNA psmdRNA;
+	PointerRNA obRNA;
+	PointerRNA sceRNA;
+
+	RNA_id_pointer_create((ID*)psmd,  &psmdRNA);
+	RNA_id_pointer_create((ID*)m_sce, &sceRNA);
+	RNA_id_pointer_create((ID*)m_ob,  &obRNA);
+
+	BL::ParticleSystemModifier b_psmd(psmdRNA);
+	BL::Scene                  b_sce(sceRNA);
+	BL::Object                 b_ob(obRNA);
+
+	BL::ParticleSystem   b_psys(b_psmd.particle_system().ptr);
+	BL::ParticleSettings b_part(b_psys.settings().ptr);
+
+	b_psys.set_resolution(b_sce, b_ob, 2);
 
 	child_cache = psys->childcache;
 	child_total = psys->totchildcache;
 	use_child   = (pset->childtype && child_cache);
 
-	// Store "Display percentage" setting
-	display_percentage       = pset->disp;
-	display_percentage_child = pset->child_nbr;
-
 	// Recalc parent hair only if they are not
 	// manually edited
-	is_free_edit = psys_check_edited(psys);
-	if(NOT(is_free_edit)) {
-		need_recalc = 1;
-		pset->disp = 100;
-		psys->recalc |= PSYS_RECALC;
-	}
-
-	if(use_child) {
-		need_recalc = 1;
-		pset->child_nbr = pset->ren_child_nbr;
-		psys->recalc |= PSYS_RECALC_CHILD;
-	}
+	if(psys_check_edited(psys))
+		need_recalc = 0;
 
 	if(psys->flag & PSYS_HAIR_DYNAMICS)
 		need_recalc = 0;
 
-	// Recalc hair with render settings
 	if(need_recalc) {
-		m_ob->recalc |= OB_RECALC_DATA;
-		BKE_object_handle_update_ex(&eval_ctx, m_sce, m_ob, m_sce->rigidbody_world);
+#if USE_MANUAL_RECALC
+		// Store "Display percentage" setting
+		display_percentage       = pset->disp;
+		display_percentage_child = pset->child_nbr;
+
+		// Set render settings
+		pset->disp = 100;
+		if(use_child)
+			pset->child_nbr = pset->ren_child_nbr;
+
+		// Recalc hair with render settings
+		psys->recalc |= PSYS_RECALC;
+		m_ob->recalc |= OB_RECALC_ALL;
+
+		BKE_object_handle_update_ex(&eval_ctx, m_sce, m_ob, m_sce->rigidbody_world, false);
+
+		// Get new child data pointers
+		if(use_child) {
+			child_cache = psys->childcache;
+			child_total = psys->totchildcache;
+		}
+#endif
 	}
 
-	// Get new child data pointers
-	if(use_child) {
-		child_cache = psys->childcache;
-		child_total = psys->totchildcache;
-	}
+	int draw_step = b_part.render_step();
+	int ren_step = (int)powf(2.0f, (float)draw_step);
+
+	int totparts = b_psys.particles.length();
 
 	// Store the number or vertices per hair
 	//
@@ -266,11 +289,12 @@ void GeomMayaHair::initData()
 		}
 	}
 	else {
-		num_hair_vertices_arrSize = psys->totpart;
-		num_hair_vertices_arr = new int[psys->totpart];
-		LOOP_PARTICLES {
-			num_hair_vertices_arr[p] = pa->totkey;
-			vertices_total_count += pa->totkey;
+		num_hair_vertices_arrSize = totparts;
+		num_hair_vertices_arr = new int[totparts];
+
+		for(int pa_no = 0; pa_no < totparts; pa_no++) {
+			num_hair_vertices_arr[pa_no]  = ren_step+1;
+			vertices_total_count         += ren_step+1;
 		}
 	}
 
@@ -297,7 +321,10 @@ void GeomMayaHair::initData()
 				copy_v3_v3(child_key_co, child_key->co);
 
 				// Remove transform by applying inverse matrix
-				mul_m4_v3(m_ob->imat, child_key_co);
+				float obImat[4][4];
+				copy_m4_m4(obImat, m_ob->obmat);
+				invert_m4(obImat);
+				mul_m4_v3(obImat, child_key_co);
 
 				// Store coordinates
 				COPY_VECTOR(hair_vertices_arr, hair_vert_co_index, child_key_co);
@@ -307,15 +334,14 @@ void GeomMayaHair::initData()
 		}
 	}
 	else {
-		LOOP_PARTICLES {
-			psys_mat_hair_to_object(NULL, psmd->dm, psmd->psys->part->from, pa, hairmat);
+		float nco[3];
+		invert_m4_m4(hairmat, m_ob->obmat);
+		for(int pa_no = 0; pa_no < totparts; pa_no++) {
+			for(int step_no = 0; step_no <= ren_step; step_no++) {
+				b_psys.co_hair(b_ob, pa_no, step_no, nco);
+				mul_m4_v3(hairmat, nco);
 
-			for(s = 0, hkey = pa->hair; s < pa->totkey; ++s, ++hkey) {
-				copy_v3_v3(segment, hkey->co);
-				mul_m4_v3(hairmat, segment);
-
-				// Store coordinates
-				COPY_VECTOR(hair_vertices_arr, hair_vert_co_index, segment);
+				COPY_VECTOR(hair_vertices_arr, hair_vert_co_index, nco);
 
 				widths_arr[hair_vert_index++] = hair_width;
 			}
@@ -397,21 +423,20 @@ void GeomMayaHair::initData()
 		}
 	}
 
-	// Restore "Display percentage" setting
-	pset->disp      = display_percentage;
-	pset->child_nbr = display_percentage_child;
-
-	if(NOT(is_free_edit))
-		psys->recalc |= PSYS_RECALC;
-
-	if(use_child)
-		psys->recalc |= PSYS_RECALC_CHILD;
-
-	// Recalc hair back with viewport settings
 	if(need_recalc) {
-		m_ob->recalc |= OB_RECALC_DATA;
-		BKE_object_handle_update_ex(&eval_ctx, m_sce, m_ob, m_sce->rigidbody_world);
+#if USE_MANUAL_RECALC
+		// Restore "Display percentage" setting
+		pset->disp      = display_percentage;
+		pset->child_nbr = display_percentage_child;
+
+		// Recalc hair back with viewport settings
+		psys->recalc |= PSYS_RECALC;
+		m_ob->recalc |= OB_RECALC_ALL;
+		BKE_object_handle_update_ex(&eval_ctx, m_sce, m_ob, m_sce->rigidbody_world, false);
+#endif
 	}
+
+	psys_render_restore(m_ob, m_psys);
 }
 
 
@@ -448,6 +473,9 @@ void GeomMayaHair::initName(const std::string &name)
 
 void GeomMayaHair::initHash()
 {
+	if(NOT(hair_vertices))
+		return;
+
 	m_hash = HashCode(hair_vertices);
 
 	m_nodePlugin.str("");
