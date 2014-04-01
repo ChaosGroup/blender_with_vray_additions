@@ -458,7 +458,7 @@ static PyObject* mSetHideFromView(PyObject *self, PyObject *args)
 				if(setSize > 0) {
 					Py_ssize_t  pos = 0;
 					PyObject   *item;
-					long        hash;
+					Py_hash_t   hash;
 					while(_PySet_NextEntry(hideSet, &pos, &item, &hash)) {
 						PyObject *value = PyNumber_Long(item);
 						if(PyNumber_Long(value))
