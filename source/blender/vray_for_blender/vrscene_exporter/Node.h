@@ -85,7 +85,6 @@ public:
 	virtual void    initHash();
 	virtual void    initName(const std::string &name="");
 	virtual void    writeData(PyObject *output);
-	virtual void    writeFakeData(PyObject *output);
 	virtual int     isUpdated();
 
 	int             isObjectUpdated();

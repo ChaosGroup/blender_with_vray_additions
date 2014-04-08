@@ -82,6 +82,14 @@ void VRayScene::Node::init(const std::string &mtlOverrideName)
 
 void VRayScene::Node::freeData()
 {
+	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"Node::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
+
+	if(NOT(VRayExportable::m_animation) || (VRayExportable::m_animation && NOT(VRayExportable::m_checkAnimated))) {
+		if(m_geometry) {
+			delete m_geometry;
+			m_geometry = NULL;
+		}
+	}
 }
 
 
@@ -304,23 +312,6 @@ std::string VRayScene::Node::writeHideFromView(PyObject *output, const std::stri
 	PYTHON_PRINT(output, ss.str().c_str());
 
 	return pluginName;
-}
-
-
-void VRayScene::Node::writeFakeData(PyObject *output)
-{
-	std::string material = writeMtlMulti(output);
-	material = writeMtlOverride(output, material);
-	material = writeMtlWrapper(output, material);
-	material = writeMtlRenderStats(output, material);
-
-	PYTHON_PRINTF(output, "\nNode %s {", getName());
-	PYTHON_PRINTF(output, "\n\tobjectID=%i;", getObjectID());
-	PYTHON_PRINTF(output, "\n\tgeometry=%s;", getDataName());
-	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
-	PYTHON_PRINTF(output, "\n\tvisible=%s%i%s;", m_interpStart, 0, m_interpEnd);
-	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, m_transform, m_interpEnd);
-	PYTHON_PRINT (output, "\n}\n");
 }
 
 
