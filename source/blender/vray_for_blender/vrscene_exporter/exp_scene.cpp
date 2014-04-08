@@ -55,13 +55,15 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
+// Default velocity transform matrix hex
 const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+
 
 ExpoterSettings* VRsceneExporter::m_settings = NULL;
 std::string      VRsceneExporter::m_mtlOverride;
 
 
-static int DoRenderObject(BL::Object ob)
+static int IsDuplicatorRenderable(BL::Object ob)
 {
 	if(NOT(ob.is_duplicator()))
 		return true;
@@ -279,7 +281,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		// If object is a dupli group holder and it's not animated -
 		// export it only for the first frame
 		//
-		if(m_settings->checkUpdates()) {
+		if(m_settings->DoUpdateCheck()) {
 			if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
 				if(NOT(VRayScene::Node::IsUpdated((Object*)bl_ob.ptr.data))) {
 					return;
@@ -308,7 +310,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
 				continue;
 
-			if(NOT(DoRenderObject(bl_duplicatedOb)))
+			if(NOT(IsDuplicatorRenderable(bl_duplicatedOb)))
 				continue;
 
 			DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
@@ -392,11 +394,15 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 		return;
 	m_exportedObject.insert(idName);
 
-	BL::NodeTree ntree = getNodeTree(ob);
-	if(m_settings->m_useNodeTree && ntree)
-		exportNodeFromNodeTree(ntree, ob);
-	else
+	if(m_settings->m_useNodeTree) {
+		BL::NodeTree ntree = getNodeTree(ob);
+		if(ntree) {
+			exportNodeFromNodeTree(ntree, ob);
+		}
+	}
+	else {
 		exportNode(ob, checkUpdated, attrs);
+	}
 }
 
 
@@ -440,7 +446,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 	if(VRayExportable::m_exportGeometry) {
 		int writeData = true;
-		if(checkUpdated && m_settings->checkUpdates())
+		if(checkUpdated && m_settings->DoUpdateCheck())
 			writeData = node->isObjectDataUpdated();
 		if(writeData) {
 			node->initGeometry();
@@ -450,13 +456,13 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 	if(VRayExportable::m_exportNodes && NOT(node->isMeshLight())) {
 		int writeObject = true;
-		if(checkUpdated && m_settings->checkUpdates())
+		if(checkUpdated && m_settings->DoUpdateCheck())
 			writeObject = node->isObjectUpdated();
 		if(writeObject)
 			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
 	}
 
-	if(NOT(VRayExportable::m_animation))
+	if(NOT(VRayExportable::m_animation) || (VRayExportable::m_animation && NOT(VRayExportable::m_checkAnimated)))
 		delete node;
 }
 
@@ -468,7 +474,7 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 	if(VRayExportable::m_exportNodes)
 		light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
 
-	if(NOT(VRayExportable::m_animation))
+	if(NOT(VRayExportable::m_animation) || (VRayExportable::m_animation && NOT(VRayExportable::m_checkAnimated)))
 		delete light;
 }
 
