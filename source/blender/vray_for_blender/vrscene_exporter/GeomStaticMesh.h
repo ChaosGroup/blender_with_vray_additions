@@ -114,6 +114,8 @@ private:
 
 	// Options
 	int           m_checkComponents;
+	sstream       m_pluginDisplace;
+	sstream       m_pluginSmooth;
 
 	int           useSmooth;
 	std::string   smoothName;
