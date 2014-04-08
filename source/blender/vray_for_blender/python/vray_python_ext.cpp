@@ -144,7 +144,7 @@ static PyObject* mExportExit(PyObject *self, PyObject *value)
 static PyObject* mExportInitCache(PyObject *self, PyObject *args)
 {
 	int  isAnimation   = false;
-	int  checkAnimated = ANIM_CHECK_NONE;
+	int  checkAnimated = false;
 
 	if(NOT(PyArg_ParseTuple(args, "ii", &isAnimation, &checkAnimated)))
 		return NULL;
@@ -158,7 +158,7 @@ static PyObject* mExportInitCache(PyObject *self, PyObject *args)
 static PyObject* mExportClearFrames(PyObject *self)
 {
 	VRayExportable::clearFrames();
-	VRayExportable::setAnimationMode(false, ANIM_CHECK_NONE);
+	VRayExportable::setAnimationMode(false, false);
 
 	Py_RETURN_NONE;
 }
