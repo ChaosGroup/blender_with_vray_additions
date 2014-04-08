@@ -42,15 +42,22 @@
 
 #define CGR_PLUGIN_NAME V-Ray For Blender
 
-#define CGR_USE_DEBUG        1
+#ifdef DEBUG
+#  define CGR_USE_DEBUG      1
+#else
+#  define CGR_USE_DEBUG      1
+#endif
+
 #define CGR_USE_CALL_DEBUG  (1 && CGR_USE_DEBUG)
 #define CGR_USE_TIME_DEBUG  (1 && CGR_USE_DEBUG)
 #define CGR_USE_DRAW_DEBUG  (0 && CGR_USE_DEBUG)
-#define CGR_USE_RNA_API      0
-#define CGR_NTREE_DRIVER     0
+#define CGR_USE_DESTR_DEBUG (1 && CGR_USE_DEBUG)
 
+#define CGR_USE_RNA_API          0
+#define CGR_NTREE_DRIVER         0
 #define CGR_USE_DUPLI_INSTANCER  0
 #define CGR_MANUAL_HAIR_INTERP   0
+#define CGR_USE_MURMUR_HASH      0
 
 #define CGR_MAX_PLUGIN_NAME  1024
 #define CGR_DEFAULT_MATERIAL "MANOMATERIALISSET"
@@ -94,7 +101,7 @@
 #  define DEBUG_PRINT(use_debug, ...)
 #else
 #  define DEBUG_PRINT(use_debug, ...) \
-    if(use_debug) { \
+	if(use_debug && G.debug) { \
         fprintf(stdout, OUTPUT_PROMPT); \
         fprintf(stdout, __VA_ARGS__); \
         fprintf(stdout, "\n"); \
@@ -140,11 +147,6 @@
 #define GEOM_TYPE(ob) ob->type == OB_MESH || ob->type == OB_CURVE || ob->type == OB_SURF  || ob->type == OB_FONT  || ob->type == OB_MBALL
 #define EMPTY_TYPE(ob) ob->type == OB_EMPTY
 #define LIGHT_TYPE(ob) ob->type == OB_LAMP
-
-#define	ANIM_CHECK_NONE    0
-#define	ANIM_CHECK_SIMPLE  1
-#define	ANIM_CHECK_HASH    2
-#define	ANIM_CHECK_BOTH    3
 
 #ifdef _WIN32
 typedef unsigned __int8  u_int8_t;
