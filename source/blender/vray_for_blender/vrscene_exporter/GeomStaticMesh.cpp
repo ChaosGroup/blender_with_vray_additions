@@ -128,20 +128,18 @@ void GeomStaticMesh::init()
 	if(NOT(mesh))
 		return;
 
-	if(NOT(mesh->totface)) {
-		FreeRenderMesh(m_main, mesh);
-		return;
-	}
+	// NOTE: Mesh could actually have no data.
+	// This could be fine for mesh animated with "Build" mod, for example.
 
 	initVertices();
 	initFaces();
 	initMapChannels();
 	initAttributes();
 
-	FreeRenderMesh(m_main, mesh);
-
 	preInit();
 	initHash();
+
+	FreeRenderMesh(m_main, mesh);
 }
 
 
@@ -158,6 +156,8 @@ void GeomStaticMesh::preInit()
 
 void GeomStaticMesh::freeData()
 {
+	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"GeomStaticMesh::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
+
 	if(vertices) {
 		delete [] vertices;
 		vertices = NULL;
@@ -263,6 +263,12 @@ const MChan* GeomStaticMesh::getMapChannel(const size_t i) const
 
 void GeomStaticMesh::initVertices()
 {
+	if(NOT(mesh->totvert)) {
+		vertices = new char[1];
+		vertices[0] = '\0';
+		return;
+	}
+
 	size_t  vertsArraySize = 3 * mesh->totvert * sizeof(float);
 	float  *vertsArray = new float[vertsArraySize];
 
@@ -281,8 +287,15 @@ void GeomStaticMesh::initVertices()
 }
 
 
+
 void GeomStaticMesh::initFaces()
 {
+	if(NOT(mesh->totpoly)) {
+		faces = new char[1];
+		faces[0] = '\0';
+		return;
+	}
+
 	// Assume all faces are 4-vertex => 2 tri-faces:
 	//   6 vertex indices
 	//   6 normals of 3 coords
@@ -419,6 +432,9 @@ void GeomStaticMesh::initFaces()
 
 void GeomStaticMesh::initMapChannels()
 {
+	if(NOT(mesh->totpoly) || NOT(mesh->totvert))
+		return;
+
 	CustomData *fdata = &mesh->fdata;
 	int         channelCount = 0;
 
@@ -534,7 +550,7 @@ void GeomStaticMesh::initAttributes()
 
 void GeomStaticMesh::initHash()
 {
-#if 0
+#if CGR_USE_MURMUR_HASH
 	u_int32_t vertexHash[4];
 	u_int32_t facesHash[4];
 
@@ -543,7 +559,15 @@ void GeomStaticMesh::initHash()
 
 	PRINT_INFO("Object: %s => hash = 0x%X", object->id.name+2, hash);
 #else
-	m_hash = HashCode(vertices);
+	m_hash = 1;
+	if(mesh->totvert)
+		m_hash ^= HashCode(vertices);
+	if(mesh->totface)
+		m_hash ^= HashCode(faces);
+	if(useSmooth)
+		m_hash ^= HashCode(m_pluginSmooth.str().c_str());
+	if(useDisplace)
+		m_hash ^= HashCode(m_pluginDisplace.str().c_str());
 #endif
 }
 
@@ -554,11 +578,10 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 
 	size_t mCompSize = meshComponentNames.size();
 
-	std::stringstream ss;
-	ss << "\n" << "GeomStaticSmoothedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
-	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
+	m_pluginSmooth << "\n" << "GeomStaticSmoothedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
+	m_pluginSmooth << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
 
-	writeAttributes(smoothRna.getPtr(), m_pluginDesc.getTree("GeomStaticSmoothedMesh"), ss);
+	writeAttributes(smoothRna.getPtr(), m_pluginDesc.getTree("GeomStaticSmoothedMesh"), m_pluginSmooth);
 
 	if(useDisplace) {
 		RnaAccess::RnaValue dispRna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
@@ -566,40 +589,40 @@ void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
 		StrSet skipDispAttrs;
 		skipDispAttrs.insert("map_channel");
 
-		writeAttributes(dispRna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss, skipDispAttrs);
+		writeAttributes(dispRna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), m_pluginSmooth, skipDispAttrs);
 
 		// Overrider type settings
 		//
 		int displace_type = dispRna.getEnum("type");
 
 		if(displace_type == 1) {
-			ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-			ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+			m_pluginSmooth << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+			m_pluginSmooth << "\n\t" << "vector_displacement" << "=" << 0 << ";";
 		}
 		else if(displace_type == 0) {
-			ss << "\n\t" << "displace_2d"         << "=" << 1 << ";";
-			ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+			m_pluginSmooth << "\n\t" << "displace_2d"         << "=" << 1 << ";";
+			m_pluginSmooth << "\n\t" << "vector_displacement" << "=" << 0 << ";";
 		}
 		else if(displace_type == 2) {
-			ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-			ss << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+			m_pluginSmooth << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+			m_pluginSmooth << "\n\t" << "vector_displacement" << "=" << 1 << ";";
 		}
 
 		if(displace_type == 2) {
-			ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+			m_pluginSmooth << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
 		}
 		else {
-			ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
+			m_pluginSmooth << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
 		}
 
 		// Use first channel for displace
-		ss << "\n\t" << "map_channel" << "=" << 0 << ";";
+		m_pluginSmooth << "\n\t" << "map_channel" << "=" << 0 << ";";
 	}
-	ss << "\n}\n";
+	m_pluginSmooth << "\n}\n";
 
 	meshComponentNames.pop_back();
 
-	PYTHON_PRINT(output, ss.str().c_str());
+	PYTHON_PRINT(output, m_pluginSmooth.str().c_str());
 }
 
 
@@ -613,11 +636,10 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	StrSet skipDispAttrs;
 	skipDispAttrs.insert("map_channel");
 
-	std::stringstream ss;
-	ss << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
-	ss << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
+	m_pluginDisplace << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
+	m_pluginDisplace << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
 
-	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), ss, skipDispAttrs);
+	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), m_pluginDisplace, skipDispAttrs);
 
 	meshComponentNames.pop_back();
 
@@ -626,30 +648,30 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 	int displace_type = rna.getEnum("type");
 
 	if(displace_type == 1) {
-		ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-		ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+		m_pluginDisplace << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+		m_pluginDisplace << "\n\t" << "vector_displacement" << "=" << 0 << ";";
 	}
 	else if(displace_type == 0) {
-		ss << "\n\t" << "displace_2d"         << "=" << 1 << ";";
-		ss << "\n\t" << "vector_displacement" << "=" << 0 << ";";
+		m_pluginDisplace << "\n\t" << "displace_2d"         << "=" << 1 << ";";
+		m_pluginDisplace << "\n\t" << "vector_displacement" << "=" << 0 << ";";
 	}
 	else if(displace_type == 2) {
-		ss << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-		ss << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+		m_pluginDisplace << "\n\t" << "displace_2d"         << "=" << 0 << ";";
+		m_pluginDisplace << "\n\t" << "vector_displacement" << "=" << 1 << ";";
 	}
 
 	if(displace_type == 2) {
-		ss << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
+		m_pluginDisplace << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
 	}
 	else {
-		ss << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
+		m_pluginDisplace << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
 	}
 
 	// Use first channel for displace
-	ss << "\n\t" << "map_channel" << "=" << 0 << ";";
-	ss << "\n}\n";
+	m_pluginDisplace << "\n\t" << "map_channel" << "=" << 0 << ";";
+	m_pluginDisplace << "\n}\n";
 
-	PYTHON_PRINT(output, ss.str().c_str());
+	PYTHON_PRINT(output, m_pluginDisplace.str().c_str());
 }
 
 
@@ -666,23 +688,35 @@ void GeomStaticMesh::writeData(PyObject *output)
 
 	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", meshComponentNames[mCompSize-1].c_str());
 	PYTHON_PRINTF(output, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(output, getVertices());
+	PYTHON_PRINT(output, vertices);
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
 	PYTHON_PRINTF(output, "\n\tfaces=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, getFaces());
+	PYTHON_PRINT(output, faces);
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(output, getNormals());
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, getFaceNormals());
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, getFaceMtlIDs());
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, getEdgeVisibility());
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+
+	if(normals) {
+		PYTHON_PRINTF(output, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
+		PYTHON_PRINT(output, normals);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	}
+
+	if(faceNormals) {
+		PYTHON_PRINTF(output, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
+		PYTHON_PRINT(output, getFaceNormals());
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	}
+
+	if(face_mtlIDs) {
+		PYTHON_PRINTF(output, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
+		PYTHON_PRINT(output, getFaceMtlIDs());
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	}
+
+	if(edge_visibility) {
+		PYTHON_PRINTF(output, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
+		PYTHON_PRINT(output, edge_visibility);
+		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	}
 
 	size_t mapChannelCount = getMapChannelCount();
 	if(mapChannelCount) {
