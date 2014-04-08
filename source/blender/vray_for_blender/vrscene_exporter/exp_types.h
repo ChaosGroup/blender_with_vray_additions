@@ -54,6 +54,9 @@ extern "C" {
 #include <Python.h>
 
 
+typedef std::stringstream sstream;
+
+
 namespace BL {
 
 typedef Array<float, 16>  Transform;
@@ -108,7 +111,7 @@ struct ExpoterSettings {
 		m_customFrame = 0;
 	}
 
-	int               checkUpdates();
+	int               DoUpdateCheck();
 
 	Scene            *m_sce;
 	Main             *m_main;
@@ -152,58 +155,41 @@ typedef AnimationCache<VRayExportable>  ExpCache;
 
 class VRayExportable {
 public:
-	VRayExportable() {
-		m_name = "";
-		m_hash = 0;
-
-		m_sce  = NULL;
-		m_main = NULL;
-		m_ob   = NULL;
-
-		m_propGroup = NULL;
-		m_checkUpdated = true;
-
-		initInterpolate(0);
-	}
-
-	VRayExportable(Scene *scene, Main *main, Object *ob) {
-		m_name = "";
-		m_hash = 0;
-
-		m_sce  = scene;
-		m_main = main;
-		m_ob   = ob;
-
-		m_propGroup = NULL;
-		m_checkUpdated = true;
-
-		initInterpolate(0);
-	}
+	VRayExportable();
+	VRayExportable(Scene *scene, Main *main, Object *ob);
 
 	virtual      ~VRayExportable()=0;
 
-	MHash         getHash() const { return m_hash; }
-	const char   *getName() const { return m_name.c_str(); }
-	const std::string getMName() const { return m_name; }
-
-	virtual void  initHash()=0;
+	// Inits plugin name
 	virtual void  initName(const std::string &name="")=0;
+
+	// Inits plugin hash for tracking actual data changes
+	//
+	virtual void  initHash()=0;
+
+	// Writes plugin data
+	//
 	virtual void  writeData(PyObject *output)=0;
 
-	virtual void  writeFakeData(PyObject *output) {}
+	// Checks if object was recalculated by Blender.
+	//
+	virtual int   isUpdated() { return m_ob->id.pad2; }
 
-	virtual int isUpdated() {
-		return m_ob->id.pad2;
-	}
-
+	// Inits some very basic settings like object name, geometry type, etc.
+	//
 	virtual void preInit() {
 		initName();
 		initHash();
 	}
 
+	// Inits actual data, like building vertex list etc.
+	//
 	virtual void init() {
 		preInit();
 	}
+
+	MHash         getHash() const { return m_hash; }
+	const char   *getName() const { return m_name.c_str(); }
 
 	// This function will check if there is a cached plugin and export it before
 	// the current one to keep animation consistent between interpolate().
@@ -218,11 +204,7 @@ public:
 		m_propGroup = propGroup;
 	}
 
-	bool checkUpdated(const int &frame) {
-		// Data is exported first time - force export
-		if(m_expCache.count(m_name) == 0)
-			return false;
-		m_expCache.insert(m_name);
+	bool needUpdateCheck(const int &frame) {
 		return frame > m_sce->r.sfra;
 	}
 
@@ -231,7 +213,7 @@ public:
 		m_checkAnimated = checkAnimated;
 	}
 
-	static void clearCache()  { m_expCache.clear();      }
+	static void clearCache()  { m_exportNameCache.clear();      }
 	static void clearFrames() { m_frameCache.freeData(); }
 
 	static void initPluginDesc(const std::string &dirPath) { m_pluginDesc.init(dirPath); }
@@ -313,7 +295,7 @@ public:
 	static ExpoterSettings *m_exportSettings;
 
 protected:
-	static StrSet           m_expCache;
+	static StrSet           m_exportNameCache;
 	static ExpCache         m_frameCache;
 	static VRayPluginsDesc  m_pluginDesc;
 
@@ -326,8 +308,6 @@ protected:
 	Object                 *m_ob;
 
 	PyObject               *m_propGroup;
-
-	int                     m_checkUpdated;
 
 	PYTHON_PRINT_BUF;
 
