@@ -69,7 +69,6 @@ set(SRC
 	vrscene_exporter/exp_nodes.cpp
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.cpp
-	vrscene_exporter/exp_hair_interp.cpp
 	vrscene_exporter/exp_smoke.cpp
 
 	vrscene_exporter/vrscene_api.h
