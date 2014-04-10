@@ -458,12 +458,16 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		int writeObject = true;
 		if(checkUpdated && m_settings->DoUpdateCheck())
 			writeObject = node->isObjectUpdated();
-		if(writeObject)
-			node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+		if(writeObject) {
+			int toDelete = node->write(m_settings->m_fileObject, m_settings->m_sce->r.cfra);
+			if(toDelete) {
+				delete node;
+			}
+		}
 	}
-
-	if(NOT(VRayExportable::m_animation) || (VRayExportable::m_animation && NOT(VRayExportable::m_checkAnimated)))
+	else {
 		delete node;
+	}
 }
 
 
@@ -471,11 +475,15 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 {
 	Light *light = new Light(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
-	if(VRayExportable::m_exportNodes)
-		light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
-
-	if(NOT(VRayExportable::m_animation) || (VRayExportable::m_animation && NOT(VRayExportable::m_checkAnimated)))
+	if(NOT(VRayExportable::m_exportNodes)) {
 		delete light;
+	}
+	else {
+		int toDelete = light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
+		if(toDelete) {
+			delete light;
+		}
+	}
 }
 
 

@@ -101,6 +101,7 @@ public:
 
 	char           *getTransform() const;
 	int             getObjectID() const;
+	const char     *getDataName() const { return m_geometryName.c_str(); }
 
 	int             isMeshLight();
 	int             isSmokeDomain();
@@ -123,7 +124,6 @@ private:
 	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 	std::string     writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName);
 
-	const char     *getDataName() const { return m_geometry->getName(); }
 
 	// Export options
 	std::string     m_materialOverride;
@@ -134,6 +134,7 @@ private:
 	char            m_transform[CGR_TRANSFORM_HEX_SIZE];
 	VRayExportable *m_geometry;
 	GeomType        m_geometryType;
+	std::string     m_geometryName;
 
 	RenderStats     m_renderStatsOverride;
 

@@ -29,17 +29,15 @@
 
 int ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup)
 {
-	VRayScene::GeomStaticMesh geomStaticMesh(sce, main, ob, false);
-	geomStaticMesh.init();
-	geomStaticMesh.initName(pluginName);
+	VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(sce, main, ob, false);
+	geomStaticMesh->init();
+	geomStaticMesh->initName(pluginName);
+	geomStaticMesh->setPropGroup(propGroup);
+	geomStaticMesh->initAttributes();
 
-	geomStaticMesh.setPropGroup(propGroup);
-	geomStaticMesh.initAttributes();
-
-	if(NOT(geomStaticMesh.getHash()))
-		return 1;
-
-	geomStaticMesh.write(outputFile, sce->r.cfra);
+	int toDelete = geomStaticMesh->write(outputFile, sce->r.cfra);
+	if(toDelete)
+		delete geomStaticMesh;
 
 	return 0;
 }
