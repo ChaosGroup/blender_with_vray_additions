@@ -283,15 +283,9 @@ static PyObject* mExportHair(PyObject *self, PyObject *args)
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
 
-#if CGR_MANUAL_HAIR_INTERP
-	if(ExportGeomMayaHairInterpolate(fileObject, sce, main, ob, psys, pluginName)) {
-		return NULL;
-	}
-#else
 	if(ExportGeomMayaHair(fileObject, sce, main, ob, psys, pluginName)) {
 		return NULL;
 	}
-#endif
 
 	Py_RETURN_NONE;
 }
