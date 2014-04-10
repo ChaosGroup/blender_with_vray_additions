@@ -196,7 +196,7 @@ public:
 	// Is will call virtual writeData() for actual data write.
 	// It will also setup interpolate statements prefix and suffix for animation.
 	//
-	void write(PyObject *output, int frame=INT_MIN);
+	int write(PyObject *output, int frame=INT_MIN);
 
 	// Set property group; used to get plugin parameters from Blender Node's propertry groups
 	//
@@ -213,11 +213,11 @@ public:
 		m_checkAnimated = checkAnimated;
 	}
 
-	static void clearCache()  { m_exportNameCache.clear();      }
-	static void clearFrames() { m_frameCache.freeData(); }
+	static void clearCache()  { m_exportNameCache.clear(); }
+	static void clearFrames() { m_frameCache.freeData();   }
 
 	static void initPluginDesc(const std::string &dirPath) { m_pluginDesc.init(dirPath); }
-	static void freePluginDesc()                           { m_pluginDesc.freeData(); }
+	static void freePluginDesc()                           { m_pluginDesc.freeData();    }
 
 	static void initInterpolate(int frame) {
 		if(m_animation) {

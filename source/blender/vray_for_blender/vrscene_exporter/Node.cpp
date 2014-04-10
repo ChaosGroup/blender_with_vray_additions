@@ -138,6 +138,10 @@ int VRayScene::Node::preInitGeometry(int useDisplaceSubdiv)
 		else if(m_geometryType == VRayScene::eGeometryPlane)
 			m_geometry = new GeomPlane(m_sce, m_main, m_ob);
 		m_geometry->preInit();
+
+		// We will delete geometry as soon as possible,
+		// so store name here
+		m_geometryName = m_geometry->getName();
 	}
 
 	return meshValid;
@@ -455,7 +459,11 @@ int VRayScene::Node::isMeshLight()
 
 void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 {
-	m_geometry->write(output, frame);
+	int toDelete = m_geometry->write(output, frame);
+	if(toDelete) {
+		delete m_geometry;
+		m_geometry = NULL;
+	}
 }
 
 
@@ -469,14 +477,18 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 			if(psys->part->ren_as != PART_DRAW_PATH)
 				continue;
 
+			int           toDelete = false;
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, m_ob);
 			geomMayaHair->init(psys);
 			if(m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
 			if(m_exportGeometry)
-				geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
-			if(NOT(m_animation))
+				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
+			if(toDelete) {
 				delete geomMayaHair;
+				delete m_geometry;
+				m_geometry = NULL;
+			}
 		}
 	}
 }
