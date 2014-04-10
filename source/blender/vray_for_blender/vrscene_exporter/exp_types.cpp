@@ -140,15 +140,15 @@ void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const
 }
 
 
-void VRayExportable::write(PyObject *output, int frame) {
+int VRayExportable::write(PyObject *output, int frame) {
 	if(NOT(getHash()))
-		return;
+		return 1;
 
 	// Allows to skip already exported data,
 	// useful when using dupli.
 	//
 	if(m_exportNameCache.find(m_name) != m_exportNameCache.end())
-		return;
+		return 1;
 	m_exportNameCache.insert(m_name);
 
 	if(NOT(m_animation)) {
@@ -156,23 +156,28 @@ void VRayExportable::write(PyObject *output, int frame) {
 	}
 	else {
 		if(NOT(m_checkAnimated)) {
-			initInterpolate(frame);
+			// initInterpolate(frame);
 			writeData(output);
 		}
 		else {
+			MHash currentHash = getHash();
+
 			if(frame == m_sce->r.sfra) {
 				initInterpolate(frame);
 				writeData(output);
-				m_frameCache.update(m_name, this->getHash(), frame, this);
+				m_frameCache.update(m_name, currentHash, frame, this);
+				return 0;
 			}
 			else {
 				if(NOT(isUpdated()))
-					return;
+					return 1;
 
-				MHash currHash = getHash();
-				MHash prevHash = m_frameCache.getHash(m_name);
+				MHash previousHash = m_frameCache.getHash(m_name);
 
-				if(currHash != prevHash) {
+				if(currentHash == previousHash) {
+					return 1;
+				}
+				else {
 					int cacheFrame = m_frameCache.getFrame(m_name);
 					int prevFrame  = frame - m_sce->r.frame_step;
 
@@ -185,11 +190,15 @@ void VRayExportable::write(PyObject *output, int frame) {
 					initInterpolate(frame);
 					writeData(output);
 
-					m_frameCache.update(m_name, currHash, frame, this);
+					m_frameCache.update(m_name, currentHash, frame, this);
+
+					return 0;
 				}
 			}
 		}
 	}
+
+	return 1;
 }
 
 

@@ -29,14 +29,13 @@
 
 int ExportGeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName)
 {
-	VRayScene::GeomMayaHair geomMayaHair(sce, main, ob);
-	geomMayaHair.init(psys);
-	geomMayaHair.initName(pluginName);
+	VRayScene::GeomMayaHair *geomMayaHair = new VRayScene::GeomMayaHair(sce, main, ob);
+	geomMayaHair->init(psys);
+	geomMayaHair->initName(pluginName);
 
-	if(NOT(geomMayaHair.getHash()))
-		return 1;
-
-	geomMayaHair.write(outputFile, sce->r.cfra);
+	int toDelete = geomMayaHair->write(outputFile, sce->r.cfra);
+	if(toDelete)
+		delete geomMayaHair;
 
 	return 0;
 }
