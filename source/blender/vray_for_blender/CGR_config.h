@@ -56,7 +56,6 @@
 #define CGR_USE_RNA_API          0
 #define CGR_NTREE_DRIVER         0
 #define CGR_USE_DUPLI_INSTANCER  0
-#define CGR_MANUAL_HAIR_INTERP   0
 #define CGR_USE_MURMUR_HASH      0
 
 #define CGR_MAX_PLUGIN_NAME  1024
