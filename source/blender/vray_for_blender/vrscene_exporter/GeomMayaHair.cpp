@@ -503,7 +503,7 @@ void GeomMayaHair::writeNode(PyObject *output, int frame)
 }
 
 
-void GeomMayaHair::writeData(PyObject *output)
+void GeomMayaHair::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", m_name.c_str());
 

@@ -44,7 +44,7 @@ public:
 	virtual void       preInit() {}
 	virtual void       initHash();
 	virtual void       initName(const std::string &name="");
-	virtual void       writeData(PyObject *output);
+	virtual void       writeData(PyObject *output, VRayExportable *prevState, bool keyFrame=false);
 
 private:
 	void               initType();

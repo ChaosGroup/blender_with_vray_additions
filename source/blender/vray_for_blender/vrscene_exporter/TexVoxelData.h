@@ -65,7 +65,7 @@ public:
 	virtual           ~TexVoxelData() { freeData(); }
 	virtual void       initHash();
 	virtual void       initName(const std::string &name="");
-	virtual void       writeData(PyObject *output);
+	virtual void       writeData(PyObject *output, VRayExportable *prevState, bool keyFrame=false);
 
 	void               init(SmokeModifierData *smd);
 	void               freeData();
