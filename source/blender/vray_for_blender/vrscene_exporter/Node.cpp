@@ -282,12 +282,6 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 }
 
 
-#define HIDE_FROM_VIEW(frame, value) \
-	"interpolate(" \
-	<< "(" << 0 << "," << 1 << ")," \
-	<< "(" << frame << "," << value << ")" \
-	<< ")"
-
 std::string VRayScene::Node::writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName)
 {
 	std::stringstream ss;
@@ -319,7 +313,7 @@ std::string VRayScene::Node::writeHideFromView(PyObject *output, const std::stri
 }
 
 
-void VRayScene::Node::writeData(PyObject *output)
+void VRayScene::Node::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	std::string material = writeMtlMulti(output);
 	material = writeMtlOverride(output, material);

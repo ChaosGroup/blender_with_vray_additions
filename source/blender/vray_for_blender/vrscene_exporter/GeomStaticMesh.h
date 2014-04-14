@@ -50,6 +50,10 @@ public:
 	int          cloned;
 	char        *uv_vertices;
 	char        *uv_faces;
+
+	MHash        hash;
+	MHash        hashUvVertices;
+	MHash        hashUvFaces;
 };
 
 typedef std::vector<MChan*> MChans;
@@ -62,7 +66,7 @@ public:
 	virtual      ~GeomStaticMesh() { freeData(); }
 	virtual void  initHash();
 	virtual void  initName(const std::string &name="");
-	virtual void  writeData(PyObject *output);
+	virtual void  writeData(PyObject *output, VRayExportable *prevState, bool keyFrame=false);
 
 	virtual void  preInit();
 	virtual void  init();
@@ -70,12 +74,19 @@ public:
 
 	void          initAttributes();
 
-	char*         getVertices() const       { return vertices; }
-	char*         getFaces() const          { return faces; }
-	char*         getNormals() const        { return normals; }
-	char*         getFaceNormals() const    { return faceNormals; }
-	char*         getFaceMtlIDs() const     { return face_mtlIDs; }
-	char*         getEdgeVisibility() const { return edge_visibility; }
+	char*         getVertices() const       { return m_vertices; }
+	char*         getFaces() const          { return m_faces; }
+	char*         getNormals() const        { return m_normals; }
+	char*         getFaceNormals() const    { return m_faceNormals; }
+	char*         getFaceMtlIDs() const     { return m_faceMtlIDs; }
+	char*         getEdgeVisibility() const { return m_edge_visibility; }
+
+	MHash         getVerticesHash() const       { return m_hashVertices; }
+	MHash         getFacesHash() const          { return m_hashFaces; }
+	MHash         getNormalsHash() const        { return m_hashNormals; }
+	MHash         getFaceNormalsHash() const    { return m_hashFaceNormals; }
+	MHash         getFaceMtlIDsHash() const     { return m_hashFaceMtlIDs; }
+	MHash         getEdgeVisibilityHash() const { return m_hashEdgeVisibility; }
 
 	size_t        getMapChannelCount() const { return map_channels.size(); }
 	const MChan*  getMapChannel(const size_t i) const;
@@ -93,21 +104,33 @@ private:
 	void          initDisplace();
 	void          initSmooth();
 
+	int           mapChannelsUpdated(GeomStaticMesh *prevMesh);
+
 	Mesh         *mesh;
 	StrVector     meshComponentNames;
 
-	char         *vertices;
+	char         *m_vertices;
 	size_t        coordIndex;
 
-	char         *faces;
+	char         *m_faces;
 	size_t        vertIndex;
 
-	char         *normals;
-	char         *faceNormals;
-	char         *face_mtlIDs;
-	char         *edge_visibility;
+	char         *m_normals;
+	char         *m_faceNormals;
+	char         *m_faceMtlIDs;
+	char         *m_edge_visibility;
 
 	MChans        map_channels;
+
+	// Additional hashes
+	// Allows exporting only the changed
+	// mesh parts
+	MHash         m_hashVertices;
+	MHash         m_hashFaces;
+	MHash         m_hashNormals;
+	MHash         m_hashFaceNormals;
+	MHash         m_hashFaceMtlIDs;
+	MHash         m_hashEdgeVisibility;
 
 	// Export options
 	int           m_useZip;

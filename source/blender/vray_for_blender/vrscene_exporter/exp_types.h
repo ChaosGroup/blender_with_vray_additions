@@ -169,7 +169,7 @@ public:
 
 	// Writes plugin data
 	//
-	virtual void  writeData(PyObject *output)=0;
+	virtual void  writeData(PyObject *output, VRayExportable *prevState, bool keyFrame=false)=0;
 
 	// Checks if object was recalculated by Blender.
 	//

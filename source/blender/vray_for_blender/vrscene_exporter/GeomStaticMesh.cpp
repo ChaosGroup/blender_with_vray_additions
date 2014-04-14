@@ -90,16 +90,16 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkCo
 {
 	mesh = NULL;
 
-	vertices = NULL;
+	m_vertices = NULL;
 	coordIndex = 0;
 
-	faces = NULL;
+	m_faces = NULL;
 	vertIndex = 0;
 
-	normals = NULL;
-	faceNormals = NULL;
-	face_mtlIDs = NULL;
-	edge_visibility = NULL;
+	m_normals = NULL;
+	m_faceNormals = NULL;
+	m_faceMtlIDs = NULL;
+	m_edge_visibility = NULL;
 
 	map_channels.clear();
 
@@ -119,6 +119,13 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkCo
 	m_useZip = true;
 
 	m_checkComponents = checkComponents;
+
+	m_hashVertices = 1;
+	m_hashFaces = 1;
+	m_hashNormals = 1;
+	m_hashFaceNormals = 1;
+	m_hashFaceMtlIDs = 1;
+	m_hashEdgeVisibility = 1;
 }
 
 
@@ -158,29 +165,29 @@ void GeomStaticMesh::freeData()
 {
 	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"GeomStaticMesh::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
 
-	if(vertices) {
-		delete [] vertices;
-		vertices = NULL;
+	if(m_vertices) {
+		delete [] m_vertices;
+		m_vertices = NULL;
 	}
-	if(faces) {
-		delete [] faces;
-		faces = NULL;
+	if(m_faces) {
+		delete [] m_faces;
+		m_faces = NULL;
 	}
-	if(normals) {
-		delete [] normals;
-		normals = NULL;
+	if(m_normals) {
+		delete [] m_normals;
+		m_normals = NULL;
 	}
-	if(faceNormals) {
-		delete [] faceNormals;
-		faceNormals = NULL;
+	if(m_faceNormals) {
+		delete [] m_faceNormals;
+		m_faceNormals = NULL;
 	}
-	if(face_mtlIDs) {
-		delete [] face_mtlIDs;
-		face_mtlIDs = NULL;
+	if(m_faceMtlIDs) {
+		delete [] m_faceMtlIDs;
+		m_faceMtlIDs = NULL;
 	}
-	if(edge_visibility) {
-		delete [] edge_visibility;
-		edge_visibility = NULL;
+	if(m_edge_visibility) {
+		delete [] m_edge_visibility;
+		m_edge_visibility = NULL;
 	}
 
 	for(int i = 0; i < map_channels.size(); ++i) {
@@ -253,6 +260,30 @@ void GeomStaticMesh::initSmooth()
 }
 
 
+int GeomStaticMesh::mapChannelsUpdated(GeomStaticMesh *prevMesh)
+{
+	if(NOT(prevMesh))
+		return 1;
+
+	if(NOT(map_channels.size()))
+		return 0;
+
+	size_t mapChannelCount = map_channels.size();
+	for(size_t i = 0; i < mapChannelCount; ++i) {
+		const MChan *curChan = this->getMapChannel(i);
+		const MChan *prevChan = prevMesh->getMapChannel(i);
+
+		if(prevChan == NULL)
+			continue;
+
+		if(curChan->hash != prevChan->hash)
+			return 1;
+	}
+
+	return 0;
+}
+
+
 const MChan* GeomStaticMesh::getMapChannel(const size_t i) const
 {
 	if(i >= map_channels.size())
@@ -264,8 +295,7 @@ const MChan* GeomStaticMesh::getMapChannel(const size_t i) const
 void GeomStaticMesh::initVertices()
 {
 	if(NOT(mesh->totvert)) {
-		vertices = new char[1];
-		vertices[0] = '\0';
+		EMPTY_HEX_DATA(m_vertices);
 		return;
 	}
 
@@ -281,18 +311,20 @@ void GeomStaticMesh::initVertices()
 		coordIndex += 3;
 	}
 
-	vertices = m_useZip ? GetStringZip((u_int8_t*)vertsArray, coordIndex * sizeof(float)) : GetHex((u_int8_t*)vertsArray, coordIndex * sizeof(float));
+	m_vertices = m_useZip ? GetStringZip((u_int8_t*)vertsArray, coordIndex * sizeof(float)) : GetHex((u_int8_t*)vertsArray, coordIndex * sizeof(float));
 
 	delete [] vertsArray;
 }
 
 
-
 void GeomStaticMesh::initFaces()
 {
 	if(NOT(mesh->totpoly)) {
-		faces = new char[1];
-		faces[0] = '\0';
+		EMPTY_HEX_DATA(m_faces);
+		EMPTY_HEX_DATA(m_normals);
+		EMPTY_HEX_DATA(m_faceNormals);
+		EMPTY_HEX_DATA(m_faceMtlIDs);
+		EMPTY_HEX_DATA(m_edge_visibility);
 		return;
 	}
 
@@ -416,11 +448,11 @@ void GeomStaticMesh::initFaces()
 	if(k)
 		evArray[evIndex++] = ev;
 
-	faces           = m_useZip ? GetStringZip((u_int8_t*)facesArray,       vertIndex      * sizeof(int))   : GetHex((u_int8_t*)facesArray,       vertIndex      * sizeof(int));
-	normals         = m_useZip ? GetStringZip((u_int8_t*)normalsArray,     normIndex      * sizeof(float)) : GetHex((u_int8_t*)normalsArray,     normIndex      * sizeof(float));
-	faceNormals     = m_useZip ? GetStringZip((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int))   : GetHex((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int));
-	face_mtlIDs     = m_useZip ? GetStringZip((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int))   : GetHex((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int));
-	edge_visibility = m_useZip ? GetStringZip((u_int8_t*)evArray,          evIndex        * sizeof(int))   : GetHex((u_int8_t*)evArray,          evIndex        * sizeof(int));
+	m_faces           = m_useZip ? GetStringZip((u_int8_t*)facesArray,       vertIndex      * sizeof(int))   : GetHex((u_int8_t*)facesArray,       vertIndex      * sizeof(int));
+	m_normals         = m_useZip ? GetStringZip((u_int8_t*)normalsArray,     normIndex      * sizeof(float)) : GetHex((u_int8_t*)normalsArray,     normIndex      * sizeof(float));
+	m_faceNormals     = m_useZip ? GetStringZip((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int))   : GetHex((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int));
+	m_faceMtlIDs      = m_useZip ? GetStringZip((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int))   : GetHex((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int));
+	m_edge_visibility = m_useZip ? GetStringZip((u_int8_t*)evArray,          evIndex        * sizeof(int))   : GetHex((u_int8_t*)evArray,          evIndex        * sizeof(int));
 
 	delete [] facesArray;
 	delete [] normalsArray;
@@ -432,9 +464,6 @@ void GeomStaticMesh::initFaces()
 
 void GeomStaticMesh::initMapChannels()
 {
-	if(NOT(mesh->totpoly) || NOT(mesh->totvert))
-		return;
-
 	CustomData *fdata = &mesh->fdata;
 	int         channelCount = 0;
 
@@ -453,74 +482,88 @@ void GeomStaticMesh::initMapChannels()
 		mapChannel->name  = fdata->layers[l].name;
 		mapChannel->index = uv_layer_id++;
 
-		// Collect vertices
-		//
-		size_t  mapVertexArraySize = 4 * 3 * mesh->totface * sizeof(float);
-		float  *mapVertex = new float[mapVertexArraySize];
+		if(mesh->totface) {
+			// Collect vertices
+			//
+			size_t  mapVertexArraySize = 4 * 3 * mesh->totface * sizeof(float);
+			float  *mapVertex = new float[mapVertexArraySize];
 
-		MTFace *mtface = (MTFace*)fdata->layers[l].data;
-		MCol   *mcol   = (MCol*)fdata->layers[l].data;
+			MTFace *mtface = (MTFace*)fdata->layers[l].data;
+			MCol   *mcol   = (MCol*)fdata->layers[l].data;
 
-		MFace  *face = mesh->mface;
-		int     coordIndex = 0;
-		for(int f = 0; f < mesh->totface; ++face, ++f) {
-			int verts = face->v4 ? 4 : 3;
+			MFace  *face = mesh->mface;
+			int     coordIndex = 0;
+			for(int f = 0; f < mesh->totface; ++face, ++f) {
+				int verts = face->v4 ? 4 : 3;
 
-			for(int i = 0; i < verts; i++) {
-				if(fdata->layers[l].type == CD_MTFACE) {
-					mapVertex[coordIndex++] = mtface[f].uv[i][0];
-					mapVertex[coordIndex++] = mtface[f].uv[i][1];
-					mapVertex[coordIndex++] = 0.0f;
-				}
-				else {
-					mapVertex[coordIndex++] = (float)mcol[f * 4 + i].b / 255.0;
-					mapVertex[coordIndex++] = (float)mcol[f * 4 + i].g / 255.0;
-					mapVertex[coordIndex++] = (float)mcol[f * 4 + i].r / 255.0;
+				for(int i = 0; i < verts; i++) {
+					if(fdata->layers[l].type == CD_MTFACE) {
+						mapVertex[coordIndex++] = mtface[f].uv[i][0];
+						mapVertex[coordIndex++] = mtface[f].uv[i][1];
+						mapVertex[coordIndex++] = 0.0f;
+					}
+					else {
+						mapVertex[coordIndex++] = (float)mcol[f * 4 + i].b / 255.0;
+						mapVertex[coordIndex++] = (float)mcol[f * 4 + i].g / 255.0;
+						mapVertex[coordIndex++] = (float)mcol[f * 4 + i].r / 255.0;
+					}
 				}
 			}
-		}
 
-		// Collect faces
-		// Face topology is always the same so we could reuse first created channel
-		//
-		if(map_channels.size()) {
-			mapChannel->uv_faces = map_channels[0]->uv_faces;
-			mapChannel->cloned   = 1;
+			// Collect faces
+			// Face topology is always the same so we could reuse first created channel
+			//
+			if(map_channels.size()) {
+				mapChannel->uv_faces    = map_channels[0]->uv_faces;
+				mapChannel->hashUvFaces = map_channels[0]->hashUvFaces;
+				mapChannel->cloned = 1;
+			}
+			else {
+				size_t  mapFacesArraySize  = 4 * mesh->totface * sizeof(int);
+				int    *mapFaces = new int[mapFacesArraySize];
+
+				int vertIndex = 0;
+				int k = 0;
+				int u = 0;
+
+				face = mesh->mface;
+				for(int f = 0; f < mesh->totface; ++face, ++f) {
+					if(face->v4) {
+						mapFaces[vertIndex++] = u; k = u+1;
+						mapFaces[vertIndex++] = k; k = u+2;
+						mapFaces[vertIndex++] = k;
+						mapFaces[vertIndex++] = k; k = u+3;
+						mapFaces[vertIndex++] = k;
+						mapFaces[vertIndex++] = u;
+						u += 4;
+					} else {
+						mapFaces[vertIndex++] = u; k = u+1;
+						mapFaces[vertIndex++] = k; k = u+2;
+						mapFaces[vertIndex++] = k;
+						u += 3;
+					}
+				}
+
+				mapChannel->uv_faces = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int));
+				mapChannel->hashUvFaces = HashCode(mapChannel->uv_faces);
+
+				delete [] mapFaces;
+			}
+
+			mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, coordIndex * sizeof(float));
+			mapChannel->hashUvVertices = HashCode(mapChannel->uv_vertices);
+
+			delete [] mapVertex;
 		}
 		else {
-			size_t  mapFacesArraySize  = 4 * mesh->totface * sizeof(int);
-			int    *mapFaces = new int[mapFacesArraySize];
+			EMPTY_HEX_DATA(mapChannel->uv_faces);
+			EMPTY_HEX_DATA(mapChannel->uv_vertices);
 
-			int vertIndex = 0;
-			int k = 0;
-			int u = 0;
-
-			face = mesh->mface;
-			for(int f = 0; f < mesh->totface; ++face, ++f) {
-				if(face->v4) {
-					mapFaces[vertIndex++] = u; k = u+1;
-					mapFaces[vertIndex++] = k; k = u+2;
-					mapFaces[vertIndex++] = k;
-					mapFaces[vertIndex++] = k; k = u+3;
-					mapFaces[vertIndex++] = k;
-					mapFaces[vertIndex++] = u;
-					u += 4;
-				} else {
-					mapFaces[vertIndex++] = u; k = u+1;
-					mapFaces[vertIndex++] = k; k = u+2;
-					mapFaces[vertIndex++] = k;
-					u += 3;
-				}
-			}
-
-			mapChannel->uv_faces = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int));
-
-			delete [] mapFaces;
+			mapChannel->hashUvVertices = 1;
+			mapChannel->hashUvFaces = 1;
 		}
 
-		mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, coordIndex * sizeof(float));
-
-		delete [] mapVertex;
+		mapChannel->hash = mapChannel->hashUvVertices ^ mapChannel->hashUvFaces;
 
 		map_channels.push_back(mapChannel);
 	}
@@ -560,10 +603,32 @@ void GeomStaticMesh::initHash()
 	PRINT_INFO("Object: %s => hash = 0x%X", object->id.name+2, hash);
 #else
 	m_hash = 1;
-	if(mesh->totvert)
-		m_hash ^= HashCode(vertices);
-	if(mesh->totface)
-		m_hash ^= HashCode(faces);
+
+	if(m_vertices) {
+		m_hashVertices = HashCode(m_vertices);
+		m_hash ^= m_hashVertices;
+	}
+	if(m_normals) {
+		m_hashNormals = HashCode(m_normals);
+		m_hash ^= m_hashNormals;
+	}
+	if(m_faces) {
+		m_hashFaces = HashCode(m_faces);
+		m_hash ^= m_hashFaces;
+	}
+	if(m_faceNormals) {
+		m_hashFaceNormals = HashCode(m_faceNormals);
+		m_hash ^= m_hashFaceNormals;
+	}
+	if(m_faceMtlIDs) {
+		m_hashFaceMtlIDs = HashCode(m_faceMtlIDs);
+		m_hash ^= m_hashFaceMtlIDs;
+	}
+	if(m_edge_visibility) {
+		m_hashEdgeVisibility = HashCode(m_edge_visibility);
+		m_hash ^= m_hashEdgeVisibility;
+	}
+
 	if(useSmooth)
 		m_hash ^= HashCode(m_pluginSmooth.str().c_str());
 	if(useDisplace)
@@ -675,7 +740,7 @@ void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
 }
 
 
-void GeomStaticMesh::writeData(PyObject *output)
+void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	if(useSmooth && useDisplace)
 		writeGeomStaticSmoothedMesh(output);
@@ -684,77 +749,102 @@ void GeomStaticMesh::writeData(PyObject *output)
 	else if(useDisplace)
 		writeGeomDisplacedMesh(output);
 
-	size_t mCompSize = meshComponentNames.size();
+	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
+	int             prevFrame = m_sce->r.cfra - m_sce->r.frame_step;
 
-	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", meshComponentNames[mCompSize-1].c_str());
-	PYTHON_PRINTF(output, "\n\tvertices=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(output, vertices);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-	PYTHON_PRINTF(output, "\n\tfaces=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, faces);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	size_t      compSize = meshComponentNames.size();
+	std::string geomName = meshComponentNames[compSize-1];
 
-	if(normals) {
-		PYTHON_PRINTF(output, "\n\tnormals=%sListVectorHex(\"", m_interpStart);
-		PYTHON_PRINT(output, normals);
-		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", geomName.c_str());
+
+	PYTHON_PRINT_DATA(output, "vertices", "ListVectorHex",
+					  m_vertices, m_hashVertices,
+					  prevMesh,
+					  prevMesh->getVertices(), prevMesh->getVerticesHash());
+
+	PYTHON_PRINT_DATA(output, "faces", "ListIntHex",
+					  m_faces, m_hashFaces,
+					  prevMesh,
+					  prevMesh->getFaces(), prevMesh->getFacesHash());
+
+	if(m_normals) {
+		PYTHON_PRINT_DATA(output, "normals", "ListVectorHex",
+						  m_normals, m_hashNormals,
+						  prevMesh,
+						  prevMesh->getNormals(), prevMesh->getNormalsHash());
 	}
 
-	if(faceNormals) {
-		PYTHON_PRINTF(output, "\n\tfaceNormals=%sListIntHex(\"", m_interpStart);
-		PYTHON_PRINT(output, getFaceNormals());
-		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	if(m_faceNormals) {
+		PYTHON_PRINT_DATA(output, "faceNormals", "ListVectorHex",
+						  m_faceNormals, m_hashFaceNormals,
+						  prevMesh,
+						  prevMesh->getFaceNormals(), prevMesh->getFaceNormalsHash());
 	}
 
-	if(face_mtlIDs) {
-		PYTHON_PRINTF(output, "\n\tface_mtlIDs=%sListIntHex(\"", m_interpStart);
-		PYTHON_PRINT(output, getFaceMtlIDs());
-		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	if(m_faceMtlIDs) {
+		PYTHON_PRINT_DATA(output, "face_mtlIDs", "ListIntHex",
+						  m_faceMtlIDs, m_hashFaceMtlIDs,
+						  prevMesh,
+						  prevMesh->getFaceMtlIDs(), prevMesh->getFaceMtlIDsHash());
 	}
 
-	if(edge_visibility) {
-		PYTHON_PRINTF(output, "\n\tedge_visibility=%sListIntHex(\"", m_interpStart);
-		PYTHON_PRINT(output, edge_visibility);
-		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	if(m_edge_visibility) {
+		PYTHON_PRINT_DATA(output, "edge_visibility", "ListIntHex",
+						  m_edge_visibility, m_hashEdgeVisibility,
+						  prevMesh,
+						  prevMesh->getEdgeVisibility(), prevMesh->getEdgeVisibilityHash());
 	}
 
 	size_t mapChannelCount = getMapChannelCount();
 	if(mapChannelCount) {
-		PYTHON_PRINT(output, "\n\tmap_channels_names=List(");
-		for(size_t i = 0; i < mapChannelCount; ++i) {
-			const MChan *mapChannel = this->getMapChannel(i);
-			if(NOT(mapChannel))
-				continue;
+		// No need to export this every frame
+		if(NOT(prevMesh)) {
+			PYTHON_PRINT(output, "\n\tmap_channels_names=List(");
+			for(size_t i = 0; i < mapChannelCount; ++i) {
+				const MChan *mapChannel = this->getMapChannel(i);
+				if(NOT(mapChannel))
+					continue;
 
-			PYTHON_PRINTF(output, "\"%s\"", mapChannel->name.c_str());
-			if(i < mapChannelCount-1)
-				PYTHON_PRINT(output, ",");
+				PYTHON_PRINTF(output, "\"%s\"", mapChannel->name.c_str());
+				if(i < mapChannelCount-1)
+					PYTHON_PRINT(output, ",");
+			}
+			PYTHON_PRINT(output, ");");
 		}
-		PYTHON_PRINT(output, ");");
 
+		// TODO: Keyframes
+		if(mapChannelsUpdated(prevMesh)) {
+			PYTHON_PRINTF(output, "\n\tmap_channels=%sList(", m_interpStart);
+			for(size_t i = 0; i < mapChannelCount; ++i) {
+				const MChan *mapChannel = this->getMapChannel(i);
+				if(NOT(mapChannel))
+					continue;
+
+				PYTHON_PRINTF(output, "List(%i,ListVectorHex(\"", mapChannel->index);
+				PYTHON_PRINT(output, mapChannel->uv_vertices);
+				PYTHON_PRINT(output, "\"),ListIntHex(\"");
+				PYTHON_PRINT(output, mapChannel->uv_faces);
+				PYTHON_PRINT(output, "\"))");
+
+				if(i < mapChannelCount-1)
+					PYTHON_PRINT(output, ",");
+			}
+			PYTHON_PRINTF(output, ")%s;", m_interpEnd);
+		}
+	}
+	else {
 		PYTHON_PRINTF(output, "\n\tmap_channels=%sList(", m_interpStart);
-		for(size_t i = 0; i < mapChannelCount; ++i) {
-			const MChan *mapChannel = this->getMapChannel(i);
-			if(NOT(mapChannel))
-				continue;
-
-			PYTHON_PRINTF(output, "List(%i,ListVectorHex(\"", mapChannel->index);
-			PYTHON_PRINT(output, mapChannel->uv_vertices);
-			PYTHON_PRINT(output, "\"),ListIntHex(\"");
-			PYTHON_PRINT(output, mapChannel->uv_faces);
-			PYTHON_PRINT(output, "\"))");
-
-			if(i < mapChannelCount-1)
-				PYTHON_PRINT(output, ",");
-		}
 		PYTHON_PRINTF(output, ")%s;", m_interpEnd);
 	}
 
-	PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
-	PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
-	PYTHON_PRINTF(output, "\n\tosd_subdiv_level=%i;", osd_subdiv_level);
-	PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);
-	PYTHON_PRINTF(output, "\n\tosd_subdiv_uvs=%i;",   osd_subdiv_uvs);
-	PYTHON_PRINTF(output, "\n\tweld_threshold=%.3f;", weld_threshold);
+	if(NOT(prevMesh)) {
+		PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
+		PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
+		PYTHON_PRINTF(output, "\n\tosd_subdiv_level=%i;", osd_subdiv_level);
+		PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);
+		PYTHON_PRINTF(output, "\n\tosd_subdiv_uvs=%i;",   osd_subdiv_uvs);
+		PYTHON_PRINTF(output, "\n\tweld_threshold=%.3f;", weld_threshold);
+	}
+
 	PYTHON_PRINT(output,  "\n}\n");
 }

@@ -49,7 +49,7 @@ void VRayScene::GeomPlane::initName(const std::string &name)
 }
 
 
-void VRayScene::GeomPlane::writeData(PyObject *output)
+void VRayScene::GeomPlane::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	PYTHON_PRINTF(output, "\nGeomPlane %s {}", m_name.c_str());
 }

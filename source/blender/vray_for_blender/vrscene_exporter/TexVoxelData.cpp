@@ -228,7 +228,7 @@ void TexVoxelData::initSmoke()
 }
 
 
-void TexVoxelData::writeData(PyObject *output)
+void TexVoxelData::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	if(m_asFluid) {
 		int interpolation_type = m_propGroup ? GetPythonAttrInt(m_propGroup, "interpolation_type") : 0;

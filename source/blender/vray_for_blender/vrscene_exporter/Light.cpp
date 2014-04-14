@@ -287,7 +287,7 @@ void VRayScene::Light::initHash()
 }
 
 
-void VRayScene::Light::writeData(PyObject *output)
+void VRayScene::Light::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	PYTHON_PRINT(output, m_plugin.str().c_str());
 }

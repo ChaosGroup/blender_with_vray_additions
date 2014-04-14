@@ -152,19 +152,18 @@ int VRayExportable::write(PyObject *output, int frame) {
 	m_exportNameCache.insert(m_name);
 
 	if(NOT(m_animation)) {
-		writeData(output);
+		writeData(output, NULL);
 	}
 	else {
 		if(NOT(m_checkAnimated)) {
-			// initInterpolate(frame);
-			writeData(output);
+			writeData(output, NULL);
 		}
 		else {
 			MHash currentHash = getHash();
 
 			if(frame == m_sce->r.sfra) {
 				initInterpolate(frame);
-				writeData(output);
+				writeData(output, NULL);
 				m_frameCache.update(m_name, currentHash, frame, this);
 				return 0;
 			}
@@ -172,23 +171,20 @@ int VRayExportable::write(PyObject *output, int frame) {
 				if(NOT(isUpdated()))
 					return 1;
 
-				MHash previousHash = m_frameCache.getHash(m_name);
+				MHash           prevHash  = m_frameCache.getHash(m_name);
+				VRayExportable *prevState = m_frameCache.getData(m_name);
 
-				if(currentHash == previousHash) {
+				if(currentHash == prevHash) {
 					return 1;
 				}
 				else {
 					int cacheFrame = m_frameCache.getFrame(m_name);
 					int prevFrame  = frame - m_sce->r.frame_step;
 
-					// Write previous frame if hash is more then 'frame_step' back.
-					if(cacheFrame < prevFrame) {
-						initInterpolate(prevFrame);
-						m_frameCache.getData(m_name)->writeData(output);
-					}
+					int needKeyFrame = cacheFrame < prevFrame;
 
 					initInterpolate(frame);
-					writeData(output);
+					writeData(output, prevState, needKeyFrame);
 
 					m_frameCache.update(m_name, currentHash, frame, this);
 
