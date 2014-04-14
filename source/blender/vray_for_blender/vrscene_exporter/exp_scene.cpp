@@ -432,7 +432,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		}
 	}
 
-	// This will check if object's mesh is valid
+	// This will also check if object's mesh is valid
 	if(NOT(node->preInitGeometry(VRayExportable::m_exportSettings->m_useDisplaceSubdiv))) {
 		delete node;
 		return;
@@ -440,8 +440,10 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 	if(node->hasHair()) {
 		node->writeHair(m_settings);
-		if(NOT(node->doRenderEmitter()))
+		if(NOT(node->doRenderEmitter())) {
+			delete node;
 			return;
+		}
 	}
 
 	if(VRayExportable::m_exportGeometry) {

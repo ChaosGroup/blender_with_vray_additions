@@ -105,6 +105,12 @@ GeomMayaHair::GeomMayaHair(Scene *scene, Main *main, Object *ob):
 
 	geom_splines = 0;
 	geom_tesselation_mult = 1.0;
+
+	m_hashHairVertices = 1;
+	m_hashNumHairVertices = 1;
+	m_hashWidths = 1;
+	m_hashTransparency = 1;
+	m_hashStrandUVW = 1;
 }
 
 
@@ -476,7 +482,22 @@ void GeomMayaHair::initHash()
 	if(NOT(hair_vertices))
 		return;
 
-	m_hash = HashCode(hair_vertices);
+	if(hair_vertices)
+		m_hashHairVertices    = HashCode(hair_vertices);
+	if(num_hair_vertices)
+		m_hashNumHairVertices = HashCode(num_hair_vertices);
+	if(widths)
+		m_hashWidths          = HashCode(widths);
+	if(strand_uvw)
+		m_hashStrandUVW       = HashCode(strand_uvw);
+	if(transparency)
+		m_hashTransparency    = HashCode(transparency);
+
+	m_hash = m_hashHairVertices    ^
+			 m_hashNumHairVertices ^
+			 m_hashWidths          ^
+			 m_hashStrandUVW       ^
+			 m_hashTransparency;
 
 	m_nodePlugin.str("");
 	m_nodePlugin << "\n"   << "Node" << " " << m_nodeName << " {";
@@ -505,29 +526,39 @@ void GeomMayaHair::writeNode(PyObject *output, int frame)
 
 void GeomMayaHair::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
+	GeomMayaHair *prevHair  = (GeomMayaHair*)prevState;
+	int           prevFrame = m_sce->r.cfra - m_sce->r.frame_step;
+
 	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", m_name.c_str());
 
-	PYTHON_PRINTF(output, "\n\tnum_hair_vertices=%sListIntHex(\"", m_interpStart);
-	PYTHON_PRINT(output, num_hair_vertices);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	PYTHON_PRINT_DATA(output, "num_hair_vertices", "ListIntHex",
+					  num_hair_vertices, m_hashNumHairVertices,
+					  prevHair,
+					  prevHair->getNumHairVertices(), prevHair->getNumHairVerticesHash());
 
-	PYTHON_PRINTF(output, "\n\thair_vertices=%sListVectorHex(\"", m_interpStart);
-	PYTHON_PRINT(output, hair_vertices);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+	PYTHON_PRINT_DATA(output, "hair_vertices", "ListVectorHex",
+					  hair_vertices, m_hashHairVertices,
+					  prevHair,
+					  prevHair->getHairVertices(), prevHair->getHairVerticesHash());
+
+	PYTHON_PRINT_DATA(output, "widths", "ListFloatHex",
+					  widths, m_hashWidths,
+					  prevHair,
+					  prevHair->getWidths(), prevHair->getWidthsHash());
 
 	if(strand_uvw) {
-		PYTHON_PRINTF(output, "\n\tstrand_uvw=%sListVectorHex(\"", m_interpStart);
-		PYTHON_PRINT(output, strand_uvw);
-		PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
+		PYTHON_PRINT_DATA(output, "strand_uvw", "ListVectorHex",
+						  strand_uvw, m_hashStrandUVW,
+						  prevHair,
+						  prevHair->getStrandUVW(), prevHair->getStrandUvwHash());
 	}
 
-	PYTHON_PRINTF(output, "\n\twidths=%sListFloatHex(\"", m_interpStart);
-	PYTHON_PRINT(output, widths);
-	PYTHON_PRINTF(output, "\")%s;", m_interpEnd);
-
-	PYTHON_PRINTF(output, "\n\topacity=%.3f;", opacity);
-	PYTHON_PRINTF(output, "\n\tgeom_splines=%i;", geom_splines);
-	PYTHON_PRINTF(output, "\n\tgeom_tesselation_mult=%.3f;",  geom_tesselation_mult);
+	if(NOT(prevHair)) {
+		PYTHON_PRINTF(output, "\n\topacity=%.3f;", opacity);
+		PYTHON_PRINTF(output, "\n\tgeom_splines=%i;", geom_splines);
+		PYTHON_PRINTF(output, "\n\tgeom_tesselation_mult=%.3f;",  geom_tesselation_mult);
+		PYTHON_PRINTF(output, "\n\tuse_global_hair_tree=%i;",  use_global_hair_tree);
+	}
 
 	PYTHON_PRINT(output, "\n}\n");
 }

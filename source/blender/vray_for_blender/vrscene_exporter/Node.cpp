@@ -126,30 +126,35 @@ int VRayScene::Node::preInitGeometry(int useDisplaceSubdiv)
 		else if(rna.getEnum("override_type") == 1)
 			m_geometryType = VRayScene::eGeometryPlane;
 
-	int meshValid = true;
-	if(m_geometryType == VRayScene::eGeometryMesh)
-		meshValid = IsMeshValid(m_sce, m_main, m_ob);
-
-	if(meshValid) {
-		if(m_geometryType == VRayScene::eGeometryMesh)
+	if(m_geometryType == VRayScene::eGeometryMesh) {
+		if(IsMeshValid(m_sce, m_main, m_ob)) {
 			m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob, useDisplaceSubdiv);
-		else if(m_geometryType == VRayScene::eGeometryProxy)
-			m_geometry = new GeomMeshFile(m_sce, m_main, m_ob);
-		else if(m_geometryType == VRayScene::eGeometryPlane)
-			m_geometry = new GeomPlane(m_sce, m_main, m_ob);
-		m_geometry->preInit();
-
-		// We will delete geometry as soon as possible,
-		// so store name here
-		m_geometryName = m_geometry->getName();
+		}
 	}
+	else if(m_geometryType == VRayScene::eGeometryProxy)
+		m_geometry = new GeomMeshFile(m_sce, m_main, m_ob);
+	else if(m_geometryType == VRayScene::eGeometryPlane)
+		m_geometry = new GeomPlane(m_sce, m_main, m_ob);
 
-	return meshValid;
+	if(NOT(m_geometry))
+		return 0;
+
+	m_geometry->preInit();
+
+	// We will delete geometry as soon as possible,
+	// so store name here
+	m_geometryName = m_geometry->getName();
+
+	return 1;
 }
 
 
 void VRayScene::Node::initGeometry()
 {
+	if(NOT(m_geometry)) {
+		PRINT_ERROR("[%s] Node::initGeometry() => m_geometry is NULL!", m_name.c_str());
+		return;
+	}
 	m_geometry->init();
 }
 
@@ -453,6 +458,11 @@ int VRayScene::Node::isMeshLight()
 
 void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 {
+	if(NOT(m_geometry)) {
+		PRINT_ERROR("[%s] Node::writeGeometry() => m_geometry is NULL!", m_name.c_str());
+		return;
+	}
+
 	int toDelete = m_geometry->write(output, frame);
 	if(toDelete) {
 		delete m_geometry;
@@ -478,11 +488,8 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
 			if(m_exportGeometry)
 				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
-			if(toDelete) {
+			if(toDelete)
 				delete geomMayaHair;
-				delete m_geometry;
-				m_geometry = NULL;
-			}
 		}
 	}
 }
