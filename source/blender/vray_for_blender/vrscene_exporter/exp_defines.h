@@ -58,4 +58,49 @@
 	GetVectorHex(v, vBuf); \
 	PYTHON_PRINTF(o, "%s", vBuf);
 
+#define HIDE_FROM_VIEW(frame, value) \
+	"interpolate(" \
+	<< "(" << 0 << "," << 1 << ")," \
+	<< "(" << frame << "," << value << ")" \
+	<< ")"
+
+#define PYTHON_PRINT_KEYFRAME(output, attr, type, curData, curHash, prevData, prevHash) \
+if(curHash != prevHash) { \
+	PYTHON_PRINT(output, "\n\t"attr"=interpolate("); \
+	PYTHON_PRINTF(output, "(%i,"type"(\"", prevFrame); \
+	PYTHON_PRINT(output, prevData); \
+	PYTHON_PRINT(output, "\")),"); \
+	PYTHON_PRINTF(output, "(%i,"type"(\"", m_sce->r.cfra); \
+	PYTHON_PRINT(output, curData); \
+	PYTHON_PRINT(output, "\"))"); \
+	PYTHON_PRINT(output, ");"); \
+}
+
+#define PYTHON_PRINT_FRAME(output, attr, type, curData, curHash, prevData, prevHash) \
+if(curHash != prevHash) { \
+	PYTHON_PRINT(output, "\n\t"attr"=interpolate("); \
+	PYTHON_PRINTF(output, "(%i,"type"(\"", m_sce->r.cfra); \
+	PYTHON_PRINT(output, curData); \
+	PYTHON_PRINT(output, "\")));"); \
+}
+
+#define PYTHON_PRINT_DATA(output, attr, type, curData, curHash, prevPtr, prevData, prevHash) \
+if(NOT(prevPtr)) { \
+	PYTHON_PRINTF(output, "\n\t"attr"=%s"type"(\"", m_interpStart); \
+	PYTHON_PRINT(output, curData); \
+	PYTHON_PRINTF(output, "\")%s;", m_interpEnd); \
+} \
+else { \
+	if(keyFrame) { \
+		PYTHON_PRINT_KEYFRAME(output, attr, type, curData, curHash, prevData, prevHash); \
+	} \
+	else { \
+		PYTHON_PRINT_FRAME(output, attr, type, curData, curHash, prevData, prevHash); \
+	} \
+}
+
+#define EMPTY_HEX_DATA(ptr) \
+	ptr = new char[1]; \
+	ptr[0] = '\0';
+
 #endif // CGR_EXP_DEFINES_H

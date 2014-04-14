@@ -83,7 +83,7 @@ void VRayScene::GeomMeshFile::initHash()
 }
 
 
-void VRayScene::GeomMeshFile::writeData(PyObject *output)
+void VRayScene::GeomMeshFile::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	PYTHON_PRINT(output, m_plugin.str().c_str());
 }
