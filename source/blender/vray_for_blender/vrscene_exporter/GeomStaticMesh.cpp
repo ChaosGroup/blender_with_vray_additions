@@ -775,7 +775,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 	}
 
 	if(m_faceNormals) {
-		PYTHON_PRINT_DATA(output, "faceNormals", "ListVectorHex",
+		PYTHON_PRINT_DATA(output, "faceNormals", "ListIntHex",
 						  m_faceNormals, m_hashFaceNormals,
 						  prevMesh,
 						  prevMesh->getFaceNormals(), prevMesh->getFaceNormalsHash());
