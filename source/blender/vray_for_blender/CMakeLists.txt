@@ -103,3 +103,5 @@ set(SRC
 )
 
 blender_add_lib(vray_for_blender "${SRC}" "${INC}" "${INC_SYS}")
+
+add_dependencies(vray_for_blender bf_rna)
