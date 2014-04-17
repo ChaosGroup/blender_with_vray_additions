@@ -156,6 +156,7 @@ private:
 
 	void                    exportNode(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const int &checkUpdated=true);
+	std::string             writeNodeFromNodeTree(BL::NodeTree ntree, BL::Node node);
 
 	BL::NodeTree            getNodeTree(Object *ob);
 
