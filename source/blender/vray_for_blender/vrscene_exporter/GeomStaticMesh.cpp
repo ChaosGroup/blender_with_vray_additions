@@ -43,6 +43,8 @@ extern "C" {
 #  include "DNA_material_types.h"
 }
 
+#include <boost/lexical_cast.hpp>
+
 
 using namespace VRayScene;
 
@@ -477,7 +479,15 @@ void GeomStaticMesh::initMapChannels()
 
 		MChan *mapChannel = new MChan();
 		mapChannel->name  = fdata->layers[l].name;
-		mapChannel->index = uv_layer_id++;
+
+		// This allows us to sync digit layer name with layer index,
+		// a little creepy, but should work =)
+		try {
+			mapChannel->index = boost::lexical_cast<int>(mapChannel->name);
+		}
+		catch(boost::bad_lexical_cast &) {
+			mapChannel->index = uv_layer_id++;
+		}
 
 		if(mesh->totface) {
 			// Collect vertices
