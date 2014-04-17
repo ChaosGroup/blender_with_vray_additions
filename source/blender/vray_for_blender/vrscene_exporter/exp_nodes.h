@@ -20,4 +20,46 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
+#ifndef CGR_EXPORT_NODES_H
+#define CGR_EXPORT_NODES_H
+
 #include "exp_scene.h"
+
+#define SKIP_TYPE(attrType) \
+	attrType == "LIST"              || \
+	attrType == "INT_LIST"          || \
+	attrType == "MATRIX"            || \
+	attrType == "TRANSFORM"         || \
+	attrType == "TRANSFORM_TEXTURE"
+
+#define OUTPUT_TYPE(attrType) \
+	attrType == "OUTPUT_PLUGIN"            || \
+	attrType == "OUTPUT_COLOR"             || \
+	attrType == "OUTPUT_FLOAT_TEXTURE"     || \
+	attrType == "OUTPUT_VECTOR_TEXTURE"    || \
+	attrType == "OUTPUT_TRANSFORM_TEXTURE" || \
+	attrType == "OUTPUT_TEXTURE"
+
+#define MAPPABLE_TYPE(attrType) \
+	attrType == "BRDF"     || \
+	attrType == "MATERIAL" || \
+	attrType == "PLUGIN"   || \
+	attrType == "TEXTURE"  || \
+	attrType == "UVWGEN"
+
+
+namespace VRayScene {
+
+class VRayNodeExporter {
+public:
+	static std::string exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node);
+	static std::string exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node);
+	static std::string exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node);
+	static std::string exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node);
+	static std::string exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node);
+	static std::string exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node);
+}; // VRayNodesExporter
+
+} // namespace VRayScene
+
+#endif // CGR_EXPORT_NODES_H
