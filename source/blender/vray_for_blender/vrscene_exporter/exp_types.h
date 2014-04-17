@@ -290,11 +290,11 @@ public:
 	static int              m_exportNodes;
 	static int              m_exportGeometry;
 	static ExpoterSettings *m_exportSettings;
+	static VRayPluginsDesc  m_pluginDesc;
 
 protected:
 	static StrSet           m_exportNameCache;
 	static ExpCache         m_frameCache;
-	static VRayPluginsDesc  m_pluginDesc;
 
 	std::string             m_name;
 	MHash                   m_hash;
