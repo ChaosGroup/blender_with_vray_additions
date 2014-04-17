@@ -22,6 +22,8 @@
 
 #include "CGR_config.h"
 
+#include <boost/lexical_cast.hpp>
+
 #include "GeomStaticMesh.h"
 
 #include "CGR_blender_data.h"
@@ -42,8 +44,6 @@ extern "C" {
 #  include "DNA_meshdata_types.h"
 #  include "DNA_material_types.h"
 }
-
-#include <boost/lexical_cast.hpp>
 
 
 using namespace VRayScene;
