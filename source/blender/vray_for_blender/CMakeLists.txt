@@ -31,6 +31,7 @@ set(INC
 	../blenloader
 	../makesdna
 	../makesrna
+	../makesrna/intern
 	../imbuf
 	../windowmanager
 	../editors/include
