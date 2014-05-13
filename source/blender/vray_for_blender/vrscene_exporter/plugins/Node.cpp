@@ -30,6 +30,8 @@
 #include "CGR_string.h"
 #include "CGR_vrscene.h"
 
+#include "exp_nodes.h"
+
 #include "GeomStaticMesh.h"
 #include "GeomMayaHair.h"
 #include "GeomMeshFile.h"
@@ -56,7 +58,8 @@ extern "C" {
 
 
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
-	VRayExportable(scene, main, ob)
+	VRayExportable(scene, main, ob),
+	m_ntree(VRayNodeExporter::getNodeTree(m_exportSettings->b_data, (ID*)ob))
 {
 	m_geometry     = NULL;
 	m_geometryType = VRayScene::eGeometryMesh;
@@ -171,30 +174,53 @@ void VRayScene::Node::initHash()
 }
 
 
-std::string VRayScene::Node::writeMtlMulti(PyObject *output)
+std::string Node::GetNodeMaterial(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)
 {
-	if(NOT(m_ob->totcol))
+	if(NOT(ob->totcol))
 		return CGR_DEFAULT_MATERIAL;
 
 	StrVector mtls_list;
 	StrVector ids_list;
 
-	for(int a = 1; a <= m_ob->totcol; ++a) {
+	for(int a = 1; a <= ob->totcol; ++a) {
 		std::string materialName = CGR_DEFAULT_MATERIAL;
-		if(NOT(m_materialOverride.empty())) {
-		   materialName = m_materialOverride;
+		if(NOT(materialOverride.empty())) {
+			materialName = materialOverride;
 		}
 
-		Material *ma = give_current_material(m_ob, a);
+		Material *ma = give_current_material(ob, a);
 		// NOTE: Slot could present, but no material is selected
 		if(ma) {
-			std::string maName = GetIDName((ID*)ma);
-			if(m_materialOverride.empty())
-				materialName = maName;
+			BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_exportSettings->b_data, (ID*)ma);
+			if(ntree) {
+				BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
+				if(maOutput) {
+					BL::Node maNode = VRayNodeExporter::getConnectedNode(ntree, maOutput, "Material");
+					if(maNode) {
+						std::string maName = StripString("NT" + ntree.name() + "N" + maNode.name());
+
+						if(materialOverride.empty())
+							materialName = maName;
+						else {
+							PointerRNA maOutputRNA;
+							RNA_id_pointer_create((ID*)maOutput.ptr.data, &maOutputRNA);
+							if(RNA_boolean_get(&maOutputRNA, "dontOverride")) {
+								materialName = maName;
+							}
+						}
+					}
+				}
+			}
 			else {
-				RnaAccess::RnaValue rna(&ma->id, "vray");
-				if(rna.getBool("dontOverride"))
+				std::string maName = GetIDName((ID*)ma);
+
+				if(materialOverride.empty())
 					materialName = maName;
+				else {
+					RnaAccess::RnaValue rna(&ma->id, "vray");
+					if(rna.getBool("dontOverride"))
+						materialName = maName;
+				}
 			}
 		}
 
@@ -209,18 +235,34 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 		return mtls_list[0];
 
 	char obMtlName[MAX_ID_NAME];
-	BLI_strncpy(obMtlName, m_ob->id.name+2, MAX_ID_NAME);
+	BLI_strncpy(obMtlName, ob->id.name+2, MAX_ID_NAME);
 	StripString(obMtlName);
 
 	std::string plugName("MM");
 	plugName.append(obMtlName);
 
-	PYTHON_PRINTF(output, "\nMtlMulti %s {", plugName.c_str());
-	PYTHON_PRINTF(output, "\n\tmtls_list=List(%s);",   boost::algorithm::join(mtls_list, ",").c_str());
-	PYTHON_PRINTF(output, "\n\tids_list=ListInt(%s);", boost::algorithm::join(ids_list, ",").c_str());
-	PYTHON_PRINT (output, "\n}\n");
+	mtlMulti["mtls_list"] = "List(" + boost::algorithm::join(mtls_list, ",") + ")";
+	mtlMulti["ids_list"]  = "ListInt(" + boost::algorithm::join(ids_list, ",") + ")";
 
 	return plugName;
+}
+
+
+std::string VRayScene::Node::writeMtlMulti(PyObject *output)
+{
+	AttributeValueMap mtlMulti;
+
+	std::string mtlName = VRayScene::Node::GetNodeMaterial(m_ob, m_materialOverride, mtlMulti);
+
+	if(mtlMulti.find("mtls_list") == mtlMulti.end())
+		return mtlName;
+
+	PYTHON_PRINTF(output, "\nMtlMulti %s {", mtlName.c_str());
+	PYTHON_PRINTF(output, "\n\tmtls_list=%s;", mtlMulti["mtls_list"].c_str());
+	PYTHON_PRINTF(output, "\n\tids_list=%s;",  mtlMulti["ids_list"].c_str());
+	PYTHON_PRINT (output, "\n}\n");
+
+	return mtlName;
 }
 
 
