@@ -63,6 +63,9 @@ typedef Array<float, 16>  Transform;
 
 namespace VRayScene {
 
+typedef std::map<std::string, std::string>        AttributeValueMap;
+typedef std::map<std::string, AttributeValueMap>  AttributeCache;
+
 
 class VRayExportable;
 
@@ -98,6 +101,8 @@ struct ExpoterSettings {
 		m_fileObject = NULL;
 		m_fileGeom   = NULL;
 		m_fileLights = NULL;
+		m_fileMat    = NULL;
+		m_fileTex    = NULL;
 
 		m_activeLayers = true;
 		m_altDInstances = false;
@@ -120,6 +125,8 @@ struct ExpoterSettings {
 	PyObject         *m_fileObject;
 	PyObject         *m_fileGeom;
 	PyObject         *m_fileLights;
+	PyObject         *m_fileMat;
+	PyObject         *m_fileTex;
 
 	int               m_activeLayers;
 	int               m_altDInstances;

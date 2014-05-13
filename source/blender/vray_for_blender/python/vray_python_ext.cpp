@@ -69,8 +69,11 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
-	PyObject *geomFile   = NULL;
-	PyObject *lightsFile = NULL;
+
+	PyObject *geomFile      = NULL;
+	PyObject *lightsFile    = NULL;
+	PyObject *materialsFile = NULL;
+	PyObject *texturesFile  = NULL;
 
 	static char *kwlist[] = {
 		_C("engine"),         // 0
@@ -80,11 +83,13 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		_C("lightsFile"),     // 4
 		_C("scene"),          // 5
 		_C("useNodes"),       // 6
+		_C("materialFile"),   // 7
+		_C("textureFile"),    // 8
 		NULL
 	};
 
-	//                                  01234 56
-	static const char  kwlistTypes[] = "OlOOO|ll";
+	//                                  01234 5678
+	static const char  kwlistTypes[] = "OlOOO|llOO";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
@@ -93,7 +98,9 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 									   &geomFile,
 									   &lightsFile,
 									   &scenePtr,
-									   &useNodes)))
+									   &useNodes,
+									   &materialsFile,
+									   &texturesFile)))
 		return NULL;
 
 	PointerRNA engineRnaPtr;
@@ -120,6 +127,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	VRayExportable::m_exportSettings->m_fileObject = obFile;
 	VRayExportable::m_exportSettings->m_fileGeom   = geomFile;
 	VRayExportable::m_exportSettings->m_fileLights = lightsFile;
+	VRayExportable::m_exportSettings->m_fileMat    = materialsFile;
+	VRayExportable::m_exportSettings->m_fileTex    = texturesFile;
 
 	VRsceneExporter *exporter = new VRsceneExporter(VRayExportable::m_exportSettings);
 

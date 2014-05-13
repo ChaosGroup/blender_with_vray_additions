@@ -26,6 +26,8 @@ set(INC
 	.
 	./utils
 	./vrscene_exporter
+	./vrscene_exporter/nodes
+	./vrscene_exporter/plugins
 	../blenlib
 	../blenkernel
 	../blenloader
@@ -64,31 +66,31 @@ set(SRC
 	utils/murmur3.cpp
 
 	# vrscene export
-	vrscene_exporter/Node.h
-	vrscene_exporter/Node.cpp
-	vrscene_exporter/Light.h
-	vrscene_exporter/Light.cpp
-	vrscene_exporter/GeomMayaHair.h
-	vrscene_exporter/GeomMayaHair.cpp
-	vrscene_exporter/GeomStaticMesh.h
-	vrscene_exporter/GeomStaticMesh.cpp
-	vrscene_exporter/GeomPlane.h
-	vrscene_exporter/GeomPlane.cpp
-	vrscene_exporter/GeomMeshFile.h
-	vrscene_exporter/GeomMeshFile.cpp
-	vrscene_exporter/TexVoxelData.h
-	vrscene_exporter/TexVoxelData.cpp
-	vrscene_exporter/exp_defines.h
-	vrscene_exporter/exp_types.h
-	vrscene_exporter/exp_types.cpp
 	vrscene_exporter/exp_anim.h
-	vrscene_exporter/exp_scene.h
-	vrscene_exporter/exp_scene.cpp
-	vrscene_exporter/exp_nodes.h
-	vrscene_exporter/exp_nodes.cpp
+	vrscene_exporter/exp_defines.h
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.cpp
+	vrscene_exporter/exp_scene.cpp
+	vrscene_exporter/exp_scene.h
 	vrscene_exporter/exp_smoke.cpp
+	vrscene_exporter/nodes/exp_nodes.cpp
+	vrscene_exporter/nodes/exp_nodes.h
+	vrscene_exporter/plugins/exp_types.cpp
+	vrscene_exporter/plugins/exp_types.h
+	vrscene_exporter/plugins/GeomMayaHair.cpp
+	vrscene_exporter/plugins/GeomMayaHair.h
+	vrscene_exporter/plugins/GeomMeshFile.cpp
+	vrscene_exporter/plugins/GeomMeshFile.h
+	vrscene_exporter/plugins/GeomPlane.cpp
+	vrscene_exporter/plugins/GeomPlane.h
+	vrscene_exporter/plugins/GeomStaticMesh.cpp
+	vrscene_exporter/plugins/GeomStaticMesh.h
+	vrscene_exporter/plugins/Light.cpp
+	vrscene_exporter/plugins/Light.h
+	vrscene_exporter/plugins/Node.cpp
+	vrscene_exporter/plugins/Node.h
+	vrscene_exporter/plugins/TexVoxelData.cpp
+	vrscene_exporter/plugins/TexVoxelData.h
 
 	vrscene_exporter/vrscene_api.h
 
