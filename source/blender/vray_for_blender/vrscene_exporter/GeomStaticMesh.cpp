@@ -472,7 +472,7 @@ void GeomStaticMesh::initMapChannels()
 	if(NOT(channelCount))
 		return;
 
-	int uv_layer_id = 0;
+	int uv_layer_id = 1;
 	for(int l = 0; l < fdata->totlayer; ++l) {
 		if(NOT(fdata->layers[l].type == CD_MTFACE || fdata->layers[l].type == CD_MCOL))
 			continue;
