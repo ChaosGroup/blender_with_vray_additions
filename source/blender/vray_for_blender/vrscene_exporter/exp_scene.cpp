@@ -29,10 +29,11 @@
 #include "utils/CGR_rna.h"
 
 #include "exp_scene.h"
+#include "exp_nodes.h"
 
-#include "vrscene_exporter/GeomMayaHair.h"
-#include "vrscene_exporter/GeomStaticMesh.h"
-#include "vrscene_exporter/Light.h"
+#include "GeomMayaHair.h"
+#include "GeomStaticMesh.h"
+#include "Light.h"
 
 #include "PIL_time.h"
 #include "BLI_string.h"
@@ -163,6 +164,8 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 	VRayExportable::m_exportNodes    = exportNodes;
 	VRayExportable::m_exportGeometry = exportGeometry;
 
+	VRayNodeExporter::m_exportSettings = VRayExportable::m_exportSettings;
+
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
@@ -249,6 +252,29 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 	exportDupli();
 
 	m_hideFromView.clear();
+
+	// Export materials
+	//
+	BL::BlendData b_data = m_settings->b_data;
+
+	// TODO: Better use node_groups_iterator and 'VRayNodeTreeMaterial' type
+	//       BL::BlendData::node_groups_iterator ngIt;
+	//
+	BL::BlendData::materials_iterator maIt;
+	for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+		BL::Material b_ma = *maIt;
+		BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
+		if(b_ma_ntree) {
+			BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
+			if(b_ma_output) {
+				std::string maName = VRayNodeExporter::exportVRayNodeGeneric(b_ma_ntree, b_ma_output);
+
+				if(maName != "NULL") {
+					PRINT_INFO("Material '%s' is exported correctly.", b_ma.name().c_str());
+				}
+			}
+		}
+	}
 
 	m_settings->b_engine.update_progress(1.0f);
 
@@ -392,9 +418,16 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 	m_exportedObject.insert(idName);
 
 	if(m_settings->m_useNodeTree) {
-		BL::NodeTree ntree = getNodeTree(ob);
+		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_settings->b_data, (ID*)ob);
 		if(ntree) {
-			exportNodeFromNodeTree(ntree, ob);
+			exportNodeFromNodeTree(ntree, ob, checkUpdated, attrs);
+			// TODO:
+			//   [ ] Hair
+			//   [ ] Hide From View
+			//   [ ]
+		}
+		else {
+			exportNode(ob, checkUpdated, attrs);
 		}
 	}
 	else {
@@ -467,6 +500,64 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	else {
 		delete node;
 	}
+}
+
+
+void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
+{
+	BL::Node nodeOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeObjectOutput");
+	if(NOT(nodeOutput)) {
+		PRINT_ERROR("Object: %s Node tree: %s => Output node not found!", ob->id.name, ntree.name().c_str());
+		return;
+	}
+
+	VRayObjectContext obContext;
+	obContext.ob   = ob;
+	obContext.sce  = m_settings->m_sce;
+	obContext.main = m_settings->m_main;
+
+	obContext.mtlOverride = m_mtlOverride;
+
+	BL::Node materialNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Material");
+	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Geometry");
+
+	if(NOT(materialNode)) {
+		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!", ob->id.name, ntree.name().c_str());
+		return;
+	}
+
+	if(NOT(materialNode)) {
+		PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!", ob->id.name, ntree.name().c_str());
+		return;
+	}
+
+	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'", ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
+	PRINT_INFO("Object: %s Node tree: %s: Geometry node: '%s'", ob->id.name, ntree.name().c_str(), geometryNode.name().c_str());
+
+	std::string  materialName = VRayNodeExporter::exportVRayNodeGeneric(ntree, materialNode, &obContext);
+	std::string  geometryName = VRayNodeExporter::exportVRayNodeGeneric(ntree, geometryNode, &obContext);
+
+	std::string nodeName = GetIDName((ID*)ob);
+
+	char nodeTm[CGR_TRANSFORM_HEX_SIZE];
+	GetTransformHex(ob->obmat, nodeTm);
+
+	int nodeVisible = true;
+	if(attrs.override) {
+		nodeVisible = attrs.visible;
+	}
+
+	sstream plugin;
+	plugin << "\n"   << "Node" << " " << nodeName << " {";
+	plugin << "\n\t" << "material" << "=" << materialName << ";";
+	plugin << "\n\t" << "geometry" << "=" << geometryName << ";";
+	plugin << "\n\t" << "objectID" << "=" << ob->index << ";";
+	plugin << "\n\t" << "visible"  << "=" << nodeVisible << ";";
+	plugin << "\n\t" << "transform" << "=";
+	plugin << "TransformHex(\"" << nodeTm << "\")" << ";";
+	plugin << "\n}\n";
+
+	PYTHON_PRINT(m_settings->m_fileObject, plugin.str().c_str());
 }
 
 

@@ -39,6 +39,7 @@ extern "C" {
 #include <string>
 #include <vector>
 
+using std::string;
 
 namespace VRayScene {
 
@@ -76,6 +77,7 @@ public:
 	static int      HasHair(Object *ob);
 	static int      DoRenderEmitter(Object *ob);
 	static int      IsUpdated(Object *ob);
+	static string   GetNodeMaterial(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
 
 	virtual        ~Node() { freeData(); }
 	virtual void    preInit() {}
@@ -121,6 +123,7 @@ private:
 	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 	std::string     writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName);
 
+	BL::NodeTree    m_ntree;
 
 	// Export options
 	std::string     m_materialOverride;
