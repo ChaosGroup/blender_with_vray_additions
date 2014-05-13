@@ -149,11 +149,10 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 		conSockAttrName = rnaStringBuf;
 	}
 
-	// NOTE: Compare with Python code and check if all output attributes are started with "out_"
-	// Afair some plugins have outputs with not so generic names
-	//
-	if(boost::starts_with(conSockAttrName, "out_")) {
-		connectedPlugin += "::" + conSockAttrName;
+	if(NOT(conSockAttrName.empty())) {
+		if(NOT(conSockAttrName == "uvwgen" || conSockAttrName == "bitmap")) {
+			connectedPlugin += "::" + conSockAttrName;
+		}
 	}
 
 	return connectedPlugin;
