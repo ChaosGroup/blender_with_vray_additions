@@ -165,6 +165,8 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 	VRayExportable::m_exportGeometry = exportGeometry;
 
 	VRayNodeExporter::m_exportSettings = VRayExportable::m_exportSettings;
+	VRayNodeExporter::m_exportSettings->m_exportNodes  = exportNodes;
+	VRayNodeExporter::m_exportSettings->m_exportMeshes = exportGeometry;
 
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
