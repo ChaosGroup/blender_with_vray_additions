@@ -79,7 +79,7 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 		manualAttrs["color_positions"] = boost::str(boost::format("ListFloat(%s)") % boost::algorithm::join(positions, ","));
 		manualAttrs["color_types"]     = boost::str(boost::format("ListInt(%s)")   % boost::algorithm::join(types, ","));
 
-		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, manualAttrs);
+		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 	}
 
 	PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with TexRemap!",

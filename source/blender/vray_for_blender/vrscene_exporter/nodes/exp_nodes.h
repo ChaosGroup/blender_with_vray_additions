@@ -23,6 +23,8 @@
 #ifndef CGR_EXPORT_NODES_H
 #define CGR_EXPORT_NODES_H
 
+#include <algorithm>
+
 #include <boost/format.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -107,13 +109,16 @@ public:
 	static std::string      exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 	// TODO: static std::string      exportVRayNodeGeneric(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 
-	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, const AttributeValueMap &manualAttrs=AttributeValueMap());
+	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 
-	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
+	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
 
 	static ExpoterSettings *m_exportSettings;
 
 private:
+	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
+	static std::string      exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
+
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
 	static AttributeCache   m_attrCache;
