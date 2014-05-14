@@ -39,11 +39,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->sce, context->main, context->ob, false);
 		geomStaticMesh->init();
 		geomStaticMesh->initName(pluginName);
-
-		// TODO: Function to set PointerRNA in addition to propGroup
-		// geomStaticMesh->setPropGroup(propGroup);
-
-		geomStaticMesh->initAttributes();
+		geomStaticMesh->initAttributes(&node.ptr);
 
 		int toDelete = geomStaticMesh->write(VRayNodeExporter::m_exportSettings->m_fileGeom, context->sce->r.cfra);
 		if(toDelete)
