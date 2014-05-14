@@ -104,6 +104,7 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkCo
 
 	dynamic_geometry = 0;
 	environment_geometry = 0;
+	primary_visibility = 1;
 
 	osd_subdiv_level = 0;
 	osd_subdiv_type = 0;
@@ -591,10 +592,24 @@ void GeomStaticMesh::initAttributes()
 	}
 	else {
 		RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticMesh");
-
-		// We only have 'dynamic_geometry' defined in vb25
 		dynamic_geometry = rna.getBool("dynamic_geometry");
 	}
+}
+
+
+void GeomStaticMesh::initAttributes(PointerRNA *ptr)
+{
+	PointerRNA geomStaticMesh = RNA_pointer_get(ptr, "GeomStaticMesh");
+
+	dynamic_geometry     = RNA_boolean_get(&geomStaticMesh, "dynamic_geometry");
+	environment_geometry = RNA_boolean_get(&geomStaticMesh, "environment_geometry");
+	primary_visibility   = RNA_boolean_get(&geomStaticMesh, "primary_visibility");
+
+	osd_subdiv_type  = RNA_enum_get(&geomStaticMesh,    "osd_subdiv_type");
+	osd_subdiv_level = RNA_int_get(&geomStaticMesh,     "osd_subdiv_level");
+	osd_subdiv_uvs   = RNA_boolean_get(&geomStaticMesh, "osd_subdiv_uvs");
+
+	weld_threshold = RNA_float_get(&geomStaticMesh, "weld_threshold");
 }
 
 
@@ -845,6 +860,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 	}
 
 	if(NOT(prevMesh)) {
+		PYTHON_PRINTF(output, "\n\tprimary_visibility=%i;", primary_visibility);
 		PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
 		PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_level=%i;", osd_subdiv_level);

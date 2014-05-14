@@ -70,6 +70,7 @@ public:
 	void          freeData();
 
 	void          initAttributes();
+	void          initAttributes(PointerRNA *ptr);
 
 	char*         getVertices() const       { return m_vertices; }
 	char*         getFaces() const          { return m_faces; }
@@ -155,6 +156,7 @@ private:
 	int           osd_subdiv_uvs;
 
 	float         weld_threshold;
+	int           primary_visibility;
 
 };
 
