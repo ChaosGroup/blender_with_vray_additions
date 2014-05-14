@@ -476,10 +476,7 @@ std::string VRayNodeExporter::exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node
 			return VRayNodeExporter::exportLinkedSocket(ntree, textureInSock);
 		}
 	}
-	else {
-		return exportVRayNodeAttributes(ntree, node, manualAttrs);
-	}
 
-	return "NULL";
+	return exportVRayNodeAttributes(ntree, node, manualAttrs);
 }
 
