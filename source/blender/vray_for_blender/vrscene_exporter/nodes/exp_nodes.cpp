@@ -191,7 +191,56 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket)
+{
+	std::string socketVRayType = socket.rna_type().identifier();
+
+	if(socketVRayType == "VRaySocketColor") {
+		float color[3];
+		RNA_float_get_array(&socket.ptr, "value", color);
+		return boost::str(boost::format("AColor(%.6f,%.6f,%.6f,1.0)")
+						  % color[0] % color[1] % color[2]);
+	}
+	else if(socketVRayType == "VRaySocketFloatColor") {
+		return boost::str(boost::format("%.6f") % RNA_float_get(&socket.ptr, "value"));
+	}
+	else if(socketVRayType == "VRaySocketInt") {
+		return boost::str(boost::format("%i") % RNA_int_get(&socket.ptr, "value"));
+	}
+	else if(socketVRayType == "VRaySocketFloat") {
+		return boost::str(boost::format("%.6f") % RNA_float_get(&socket.ptr, "value"));
+	}
+	else if(socketVRayType == "VRaySocketVector") {
+		float vector[3];
+		RNA_float_get_array(&socket.ptr, "value", vector);
+		return boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
+						  % vector[0] % vector[1] % vector[2]);
+	}
+	else if(socketVRayType == "VRaySocketFloatNoValue") {
+		// If it's not mapped simply skip it.
+	}
+	else if(socketVRayType == "VRaySocketCoords") {
+		// This is the UVWGEN socket; if it's not mapped simply skip it
+	}
+	else {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
+					ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
+	}
+
+	return "NULL";
+}
+
+
+std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context)
+{
+	if(socket.is_linked())
+		return VRayNodeExporter::exportLinkedSocket(ntree, socket, context);
+
+	return VRayNodeExporter::exportDefaultSocket(ntree, socket);
+}
+
+
+std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
 {
 	std::string pluginType;
 	std::string pluginID;
@@ -278,47 +327,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 				}
 
 				if(sock) {
-					if(sock.is_linked()) {
-						pluginSettings[attrName] = exportLinkedSocket(ntree, sock);
-					}
-					else {
-						std::string socketVRayType = sock.rna_type().identifier();
-
-						if(socketVRayType == "VRaySocketColor") {
-							float color[3];
-							RNA_float_get_array(&sock.ptr, "value", color);
-							pluginSettings[attrName] = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,1.0)")
-																  % color[0] % color[1] % color[2]);
-						}
-						else if(socketVRayType == "VRaySocketFloatColor") {
-							pluginSettings[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&sock.ptr, "value"));
-						}
-						else if(socketVRayType == "VRaySocketInt") {
-							pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_int_get(&sock.ptr, "value"));
-						}
-						else if(socketVRayType == "VRaySocketFloat") {
-							pluginSettings[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&sock.ptr, "value"));
-						}
-						else if(socketVRayType == "VRaySocketFloatNoValue") {
-							// If it's not mapped simply skip it.
-							continue;
-						}
-						else if(socketVRayType == "VRaySocketVector") {
-							float vector[3];
-							RNA_float_get_array(&sock.ptr, "value", vector);
-							pluginSettings[attrName] = boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
-																  % vector[0] % vector[1] % vector[2]);
-						}
-						else if(socketVRayType == "VRaySocketCoords") {
-							// This is the UVWGEN socket; if it's not mapped simply skip it
-							continue;
-						}
-						else {
-							PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
-										ntree.name().c_str(), node.name().c_str(), socketVRayType.c_str());
-							continue;
-						}
-					}
+					std::string socketValue = VRayNodeExporter::exportSocket(ntree, sock, context);
+					if(socketValue != "NULL")
+						pluginSettings[attrName] = socketValue;
 				}
 			}
 			else {
@@ -477,6 +488,6 @@ std::string VRayNodeExporter::exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node
 		}
 	}
 
-	return exportVRayNodeAttributes(ntree, node, manualAttrs);
+	return exportVRayNodeAttributes(ntree, node, context, manualAttrs);
 }
 

@@ -61,7 +61,7 @@ std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::
 		manualAttrs["colors"]    = boost::str(boost::format("List(%s)")      % boost::algorithm::join(colors, ","));
 		manualAttrs["positions"] = boost::str(boost::format("ListFloat(%s)") % boost::algorithm::join(positions, ","));
 
-		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, manualAttrs);
+		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 	}
 
 	PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with TexGradRamp!",
