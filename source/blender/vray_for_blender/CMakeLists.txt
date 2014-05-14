@@ -75,6 +75,18 @@ set(SRC
 	vrscene_exporter/exp_smoke.cpp
 	vrscene_exporter/nodes/exp_nodes.cpp
 	vrscene_exporter/nodes/exp_nodes.h
+	vrscene_exporter/nodes/specials/BRDFLayered.cpp
+	vrscene_exporter/nodes/specials/BitmapBuffer.cpp
+	vrscene_exporter/nodes/specials/BlenderOutputGeometry.cpp
+	vrscene_exporter/nodes/specials/BlenderOutputMaterial.cpp
+	vrscene_exporter/nodes/specials/GeomDisplacedMesh.cpp
+	vrscene_exporter/nodes/specials/LightMesh.cpp
+	vrscene_exporter/nodes/specials/SelectGroup.cpp
+	vrscene_exporter/nodes/specials/SelectNodeTree.cpp
+	vrscene_exporter/nodes/specials/SelectObject.cpp
+	vrscene_exporter/nodes/specials/TexGradRamp.cpp
+	vrscene_exporter/nodes/specials/TexLayered.cpp
+	vrscene_exporter/nodes/specials/TexRemap.cpp
 	vrscene_exporter/plugins/exp_types.cpp
 	vrscene_exporter/plugins/exp_types.h
 	vrscene_exporter/plugins/GeomMayaHair.cpp

@@ -20,21 +20,7 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
-#include <boost/format.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-
 #include "exp_nodes.h"
-
-#include "Node.h"
-#include "GeomStaticMesh.h"
-
-#include "CGR_string.h"
-#include "CGR_rna.h"
-
-#include <BLI_string.h>
-
-#include <string>
-#include <sstream>
 
 
 ExpoterSettings *VRayNodeExporter::m_exportSettings = NULL;
@@ -47,6 +33,29 @@ BL::NodeSocket VRayNodeExporter::getSocketByName(BL::Node node, const std::strin
 	for(node.inputs.begin(input); input != node.inputs.end(); ++input)
 		if(input->name() == socketName)
 			return *input;
+
+	return BL::NodeSocket(PointerRNA_NULL);
+}
+
+
+BL::NodeSocket VRayNodeExporter::getSocketByAttr(BL::Node node, const std::string &attrName)
+{
+	char rnaStringBuf[CGR_MAX_PLUGIN_NAME];
+
+	BL::Node::inputs_iterator sockIt;
+	for(node.inputs.begin(sockIt); sockIt != node.inputs.end(); ++sockIt) {
+		std::string sockAttrName;
+		if(RNA_struct_find_property(&sockIt->ptr, "vray_attr")) {
+			RNA_string_get(&sockIt->ptr, "vray_attr", rnaStringBuf);
+			sockAttrName = rnaStringBuf;
+		}
+
+		if(sockAttrName.empty())
+			continue;
+
+		if(attrName == sockAttrName)
+			return *sockIt;
+	}
 
 	return BL::NodeSocket(PointerRNA_NULL);
 }
@@ -135,12 +144,35 @@ BL::NodeTree VRayNodeExporter::getNodeTree(BL::BlendData b_data, ID *id)
 }
 
 
-std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket)
+BL::Texture VRayNodeExporter::getTextureFromIDRef(PointerRNA *ptr, const std::string &propName)
 {
-	BL::Node       conNode = getConnectedNode(ntree, socket);
-	BL::NodeSocket conSock = getConnectedSocket(ntree, socket);
+#if CGR_NTREE_DRIVER
+#else
+	if(RNA_struct_find_property(ptr, propName.c_str())) {
+		char textureName[MAX_ID_NAME];
+		RNA_string_get(ptr, propName.c_str(), textureName);
 
-	std::string connectedPlugin = exportVRayNodeGeneric(ntree, conNode);
+		BL::BlendData b_data = VRayNodeExporter::m_exportSettings->b_data;
+
+		BL::BlendData::textures_iterator texIt;
+		for(b_data.textures.begin(texIt); texIt != b_data.textures.end(); ++texIt) {
+			BL::Texture b_tex = *texIt;
+			if(b_tex.name() == textureName)
+				return b_tex;
+		}
+	}
+#endif
+
+	return BL::Texture(PointerRNA_NULL);
+}
+
+
+std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context)
+{
+	BL::Node       conNode = VRayNodeExporter::getConnectedNode(ntree, socket);
+	BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(ntree, socket);
+
+	std::string connectedPlugin = VRayNodeExporter::exportVRayNodeGeneric(ntree, conNode, context);
 
 	std::string conSockAttrName;
 	if(RNA_struct_find_property(&conSock.ptr, "vray_attr")) {
@@ -182,15 +214,13 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 		return "NULL";
 	}
 
-	PointerRNA propGroup;
 	if(NOT(RNA_struct_find_property(&node.ptr, pluginID.c_str()))) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Property group not found!",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
 	}
-	else {
-		propGroup = RNA_pointer_get(&node.ptr, pluginID.c_str());
-	}
+
+	PointerRNA propGroup = RNA_pointer_get(&node.ptr, pluginID.c_str());
 
 	boost::property_tree::ptree *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
 	if(NOT(pluginDesc)) {
@@ -208,24 +238,30 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 
-		if(v.second.count("skip"))
-			if(v.second.get<bool>("skip"))
-				continue;
-
 		if(SKIP_TYPE(attrType))
 			continue;
 
 		// PRINT_INFO("  Processing attribute: \"%s\"", attrName.c_str());
+
+		if(pluginID == "TexGradRamp") {
+			PRINT_INFO("  Processing attribute: \"%s\"", attrName.c_str());
+		}
 
 		AttributeValueMap::const_iterator manualAttrIt = manualAttrs.find(attrName);
 		if(manualAttrIt != manualAttrs.end()) {
 			pluginSettings[attrName] = manualAttrIt->second;
 		}
 		else {
+			if(v.second.count("skip"))
+				if(v.second.get<bool>("skip"))
+					continue;
+
 			if(MAPPABLE_TYPE(attrType)) {
 				BL::NodeSocket            sock(PointerRNA_NULL);
 				BL::Node::inputs_iterator sockIt;
 
+				// Go through all sockets and find the one for our attribute
+				//
 				for(node.inputs.begin(sockIt); sockIt != node.inputs.end(); ++sockIt) {
 					std::string sockAttrName;
 					if(RNA_struct_find_property(&sockIt->ptr, "vray_attr")) {
@@ -255,15 +291,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 																  % color[0] % color[1] % color[2]);
 						}
 						else if(socketVRayType == "VRaySocketFloatColor") {
-							// XXX: Check if we really need color here.
-							// Afair, I want it to be just float if it's not linked...
-							//
-#if 0
-							pluginSettings[attrName] = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,1.0)")
-																  % value % value % value);
-#else
 							pluginSettings[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&sock.ptr, "value"));
-#endif
 						}
 						else if(socketVRayType == "VRaySocketInt") {
 							pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_int_get(&sock.ptr, "value"));
@@ -275,7 +303,6 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 							// If it's not mapped simply skip it.
 							continue;
 						}
-
 						else if(socketVRayType == "VRaySocketVector") {
 							float vector[3];
 							RNA_float_get_array(&sock.ptr, "value", vector);
@@ -324,6 +351,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 					else if(attrType == "INT") {
 						pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_int_get(&propGroup, attrName.c_str()));
 					}
+					else if(attrType == "ENUM") {
+						pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_enum_get(&propGroup, attrName.c_str()));
+					}
 					else if(attrType == "FLOAT") {
 						pluginSettings[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&propGroup, attrName.c_str()));
 					}
@@ -369,51 +399,25 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 
 	plugin << "\n}\n";
 
-	if(pluginType == "TEXTURE") {
+	if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
 		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileTex, plugin.str().c_str());
 	}
-	else {
+	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
 		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileMat, plugin.str().c_str());
+	}
+	else if(pluginType == "GEOMETRY") {
+		if(pluginID == "GeomDisplacedMesh" || pluginID == "GeomStaticSmoothedMesh") {
+			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
+		}
+		else {
+			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileGeom, plugin.str().c_str());
+		}
+	}
+	else {
+		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
 	}
 
 	return pluginName;
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node)
-{
-	if(RNA_struct_find_property(&node.ptr, "texture__name__")) {
-		char textureName[MAX_ID_NAME];
-		RNA_string_get(&node.ptr, "texture__name__", textureName);
-
-		BL::ImageTexture imageTexture(PointerRNA_NULL);
-
-		BL::BlendData b_data = m_exportSettings->b_data;
-		BL::BlendData::textures_iterator texIt;
-		for(b_data.textures.begin(texIt); texIt != b_data.textures.end(); ++texIt) {
-			BL::Texture b_tex = *texIt;
-			if(b_tex.name() == textureName) {
-				imageTexture = BL::ImageTexture(b_tex.ptr);
-				break;
-			}
-		}
-
-		if(imageTexture) {
-			BL::Image image = imageTexture.image();
-
-			char absFilepath[FILE_MAX];
-			BLI_strncpy(absFilepath, image.filepath().c_str(), FILE_MAX);
-
-			BLI_path_abs(absFilepath, ID_BLEND_PATH(G.main, ((ID*)node.ptr.data)));
-
-			AttributeValueMap manualAttributes;
-			manualAttributes["file"] = boost::str(boost::format("\"%s\"") % absFilepath);
-
-			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, manualAttributes);
-		}
-	}
-
-	return "NULL";
 }
 
 
@@ -443,25 +447,34 @@ std::string VRayNodeExporter::exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node
 		return VRayNodeExporter::exportVRayNodeSelectGroup(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeSelectNodeTree") {
+		return VRayNodeExporter::exportVRayNodeSelectNodeTree(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeLightMesh") {
 		return VRayNodeExporter::exportVRayNodeLightMesh(ntree, node, context);
+	}
+	else if(nodeClass == "VRayNodeGeomDisplacedMesh") {
+		return VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(ntree, node, context);
 	}
 	else if(nodeClass == "VRayNodeBitmapBuffer") {
 		return VRayNodeExporter::exportVRayNodeBitmapBuffer(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeTexGradRamp") {
+		return VRayNodeExporter::exportVRayNodeTexGradRamp(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeTexRemap") {
+		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeOutputMaterial") {
-		BL::NodeSocket materialInSock = getSocketByName(node, "Material");
+		BL::NodeSocket materialInSock = VRayNodeExporter::getSocketByName(node, "Material");
 		if(materialInSock.is_linked()) {
-			BL::Node materialInput = getConnectedNode(ntree, materialInSock);
-			return exportVRayNodeGeneric(ntree, materialInput);
+			return VRayNodeExporter::exportLinkedSocket(ntree, materialInSock);
 		}
 	}
 	else if(nodeClass == "VRayNodeOutputTexture") {
+		BL::NodeSocket textureInSock = VRayNodeExporter::getSocketByName(node, "Texture");
+		if(textureInSock.is_linked()) {
+			return VRayNodeExporter::exportLinkedSocket(ntree, textureInSock);
+		}
 	}
 	else {
 		return exportVRayNodeAttributes(ntree, node, manualAttrs);
@@ -470,119 +483,3 @@ std::string VRayNodeExporter::exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node
 	return "NULL";
 }
 
-
-std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
-{
-	if(NOT(context)) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
-					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
-	}
-
-	AttributeValueMap mtlMulti;
-	std::string mtlName = Node::GetNodeMaterial(context->ob, context->mtlOverride, mtlMulti);
-
-	// NOTE: Function could return only one material in 'mtlName'
-	if(mtlMulti.find("mtls_list") == mtlMulti.end())
-		return mtlName;
-
-	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
-
-#if 0
-	// NOTE: INT_TEXTURE is not yet supported
-	BL::NodeSocket mtlid_gen = getSocketByName(node, "ID Generator");
-	if(mtlid_gen.is_linked()) {
-		mtlMulti["mtlid_gen"] = exportLinkedSocket(ntree, mtlid_gen);
-	}
-#endif
-
-	bool           has_mtlid_gen   = false;
-	BL::NodeSocket mtlid_gen_float = getSocketByName(node, "ID Generator");
-
-	// XXX: is_linked() crashing Blender is socket doesn't exist. Try to fix this.
-	//
-	if(mtlid_gen_float.is_linked()) {
-		mtlMulti["mtlid_gen_float"] = exportLinkedSocket(ntree, mtlid_gen_float);
-		has_mtlid_gen = true;
-	}
-
-	mtlMulti["wrap_id"] = boost::str(boost::format("%i") % RNA_int_get(&node.ptr, "wrap_id"));
-
-	sstream plugin;
-
-	plugin << "\n" << "MtlMulti" << " " << pluginName << " {";
-
-	AttributeValueMap::const_iterator attrIt;
-	for(attrIt = mtlMulti.begin(); attrIt != mtlMulti.end(); ++attrIt) {
-		const std::string attrName  = attrIt->first;
-		const std::string attrValue = attrIt->second;
-
-		if(attrName == "ids_list" && has_mtlid_gen)
-			continue;
-
-		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
-	}
-
-	plugin << "\n}\n";
-
-	PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
-
-	return pluginName;
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
-{
-	if(NOT(context)) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
-					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
-	}
-
-	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
-
-	VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->sce, context->main, context->ob, false);
-	geomStaticMesh->init();
-	geomStaticMesh->initName(pluginName);
-
-	// TODO: Function to set PointerRNA in addition to propGroup
-	// geomStaticMesh->setPropGroup(propGroup);
-
-	geomStaticMesh->initAttributes();
-
-	int toDelete = geomStaticMesh->write(VRayNodeExporter::m_exportSettings->m_fileGeom, context->sce->r.cfra);
-	if(toDelete)
-		delete geomStaticMesh;
-
-	return pluginName;
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
-{
-	return "NULL";
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node)
-{
-	return "NULL";
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node)
-{
-	return "NULL";
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node)
-{
-	return "NULL";
-}
-
-
-std::string VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node)
-{
-	return "NULL";
-}

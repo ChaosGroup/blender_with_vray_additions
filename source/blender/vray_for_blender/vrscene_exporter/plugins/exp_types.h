@@ -138,6 +138,11 @@ struct ExpoterSettings {
 	int               m_useInstancer;
 
 	int               m_customFrame;
+	int               m_animation;
+
+	int               m_exportNodes;
+	int               m_exportMeshes;
+
 };
 
 
@@ -215,6 +220,8 @@ public:
 	static void setAnimationMode(int animation, int checkAnimated) {
 		m_animation     = animation;
 		m_checkAnimated = checkAnimated;
+
+		m_exportSettings->m_animation = animation;
 	}
 
 	static void clearCache()  { m_exportNameCache.clear(); }
