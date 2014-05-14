@@ -80,5 +80,5 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 		}
 	}
 
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, manualAttrs);
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 }

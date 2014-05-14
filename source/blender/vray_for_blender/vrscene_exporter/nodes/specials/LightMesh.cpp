@@ -42,5 +42,5 @@ std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::No
 	AttributeValueMap manualAttrs;
 	manualAttrs["mesh"] = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
 
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, manualAttrs);
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 }
