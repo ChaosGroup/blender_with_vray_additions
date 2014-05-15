@@ -510,10 +510,10 @@ void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 }
 
 
-void VRayScene::Node::writeHair(ExpoterSettings *settings)
+void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 {
-	if(m_ob->particlesystem.first) {
-		for(ParticleSystem *psys = (ParticleSystem*)m_ob->particlesystem.first; psys; psys = psys->next) {
+	if(ob->particlesystem.first) {
+		for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next) {
 			ParticleSettings *pset = psys->part;
 			if(pset->type != PART_HAIR)
 				continue;
@@ -521,7 +521,7 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 				continue;
 
 			int           toDelete = false;
-			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, m_ob);
+			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
 			geomMayaHair->init(psys);
 			if(m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
@@ -531,4 +531,10 @@ void VRayScene::Node::writeHair(ExpoterSettings *settings)
 				delete geomMayaHair;
 		}
 	}
+}
+
+
+void VRayScene::Node::writeHair(ExpoterSettings *settings)
+{
+	Node::WriteHair(settings, m_ob);
 }

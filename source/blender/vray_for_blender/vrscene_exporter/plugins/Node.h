@@ -75,6 +75,7 @@ public:
 
 	static int      IsSmokeDomain(Object *ob);
 	static int      HasHair(Object *ob);
+	static void     WriteHair(ExpoterSettings *settings, Object *ob);
 	static int      DoRenderEmitter(Object *ob);
 	static int      IsUpdated(Object *ob);
 	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);

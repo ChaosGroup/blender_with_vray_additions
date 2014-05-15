@@ -36,6 +36,12 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
 
 	if(VRayNodeExporter::m_exportSettings->m_exportMeshes) {
+		if(VRayNodeExporter::m_exportSettings->m_animation) {
+			if((context->sce->r.cfra > context->sce->r.sfra) && NOT(IsObjectDataUpdated(context->ob))) {
+				return pluginName;
+			}
+		}
+
 		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->sce, context->main, context->ob, false);
 		geomStaticMesh->init();
 		geomStaticMesh->initName(pluginName);
