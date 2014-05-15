@@ -29,6 +29,7 @@
 #include "CGR_vray_for_blender.h"
 
 #include "vrscene_exporter/exp_scene.h"
+#include "vrscene_exporter/nodes/exp_nodes.h"
 #include "vrscene_exporter/vrscene_api.h"
 
 #include "DNA_material_types.h"
@@ -165,6 +166,7 @@ static PyObject* mExportClearFrames(PyObject *self)
 {
 	VRayExportable::clearFrames();
 	VRayExportable::setAnimationMode(false, false);
+	VRayNodePluginExporter::clearNodesCache();
 
 	Py_RETURN_NONE;
 }
@@ -173,6 +175,7 @@ static PyObject* mExportClearFrames(PyObject *self)
 static PyObject* mExportClearCache(PyObject *self)
 {
 	VRayExportable::clearCache();
+	VRayNodePluginExporter::clearNamesCache();
 
 	Py_RETURN_NONE;
 }

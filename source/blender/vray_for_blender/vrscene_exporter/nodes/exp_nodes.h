@@ -68,8 +68,9 @@
 namespace VRayScene {
 
 struct AttrValue {
-	int         frame;
-	std::string value;
+	int          frame;
+	std::string  value;
+	MHash        hash;
 };
 
 typedef std::map<std::string, AttrValue>  AttrCache;
@@ -78,17 +79,50 @@ typedef std::map<std::string, AttrCache>  PluginCache;
 
 class VRayNodeCache {
 public:
-	int pluginInCache(const std::string &pluginName) {
-		return m_pluginCache.find(pluginName) != m_pluginCache.end();
+	bool pluginInCache(const std::string &pluginName) {
+		return !!(m_pluginCache.find(pluginName) != m_pluginCache.end());
 	}
 
-	void addToCache(const std::string &pluginName, const std::string &attrName, const int &frame, const std::string &attrValue) {
+	void addToCache(const std::string &pluginName, const std::string &attrName, const int &frame, const std::string &attrValue, const MHash &hash) {
 		m_pluginCache[pluginName][attrName].frame = frame;
 		m_pluginCache[pluginName][attrName].value = attrValue;
+		m_pluginCache[pluginName][attrName].hash  = hash;
+	}
+
+	const int getCachedFrame(const std::string &pluginName, const std::string &attrName) {
+		return m_pluginCache[pluginName][attrName].frame;
+	}
+
+	const std::string getCachedValue(const std::string &pluginName, const std::string &attrName) {
+		return m_pluginCache[pluginName][attrName].value;
+	}
+
+	const MHash getCachedHash(const std::string &pluginName, const std::string &attrName) {
+		return m_pluginCache[pluginName][attrName].hash;
 	}
 
 	void clearCache() {
 		m_pluginCache.clear();
+	}
+
+	void showCacheContents() {
+		PluginCache::const_iterator cacheIt;
+		for(cacheIt = m_pluginCache.begin(); cacheIt != m_pluginCache.end(); ++cacheIt) {
+			const std::string  pluginName = cacheIt->first;
+			const AttrCache   &attrCache  = cacheIt->second;
+
+			std::cout << pluginName << std::endl;
+
+			AttrCache::const_iterator attrIt;
+			for(attrIt = attrCache.begin(); attrIt != attrCache.end(); ++attrIt) {
+				const std::string attrName  = attrIt->first;
+
+				const int         attrFrame = attrIt->second.frame;
+				const std::string attrValue = attrIt->second.value;
+
+				std::cout << "  " << attrName << " = " << attrValue << " [" << attrFrame << "]" << std::endl;
+			}
+		}
 	}
 
 private:

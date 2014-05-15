@@ -291,9 +291,6 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 
 	m_settings->b_engine.update_progress(1.0f);
 
-	VRayNodePluginExporter::clearNamesCache();
-	VRayNodePluginExporter::clearNodesCache();
-
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	if(G.debug) {
 		PRINT_INFO_LB("Frame %i export",  m_settings->m_sce->r.cfra);
