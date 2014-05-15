@@ -260,9 +260,6 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 	if(m_settings->m_useNodeTree) {
 		BL::BlendData b_data = m_settings->b_data;
 
-		// NOTE: May be better use node_groups_iterator and 'VRayNodeTreeMaterial' type ?
-		//       BL::BlendData::node_groups_iterator ngIt;
-		//
 		BL::BlendData::materials_iterator maIt;
 		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
 			BL::Material b_ma = *maIt;
