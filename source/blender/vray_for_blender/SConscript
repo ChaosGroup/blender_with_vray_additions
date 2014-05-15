@@ -2,7 +2,7 @@
 
 Import('env')
 
-sources = env.Glob('*/*.c') + env.Glob('*/*.cpp')
+sources = env.Glob('*/*/*.c') + env.Glob('*/*/*.cpp')
 
 includes = [
     '../../../intern/guardedalloc',
@@ -22,6 +22,8 @@ includes = [
     './python',
     './utils',
     './vrscene_exporter',
+    './vrscene_exporter/plugins',
+    './vrscene_exporter/nodes',
     './',
 ]
 
