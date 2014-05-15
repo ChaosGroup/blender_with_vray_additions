@@ -24,7 +24,9 @@
 
 
 ExpoterSettings *VRayNodeExporter::m_exportSettings = NULL;
-AttributeCache   VRayNodeExporter::m_attrCache;
+
+VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
+StrSet           VRayNodePluginExporter::m_namesCache;
 
 
 BL::NodeSocket VRayNodeExporter::getSocketByName(BL::Node node, const std::string &socketName)
@@ -172,7 +174,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 	BL::Node       conNode = VRayNodeExporter::getConnectedNode(ntree, socket);
 	BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(ntree, socket);
 
-	std::string connectedPlugin = VRayNodeExporter::exportVRayNodeGeneric(ntree, conNode, context);
+	std::string connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, conNode, context);
 
 	std::string conSockAttrName;
 	if(RNA_struct_find_property(&conSock.ptr, "vray_attr")) {
@@ -240,6 +242,13 @@ std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket so
 }
 
 
+std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayObjectContext *context)
+{
+	BL::NodeSocket socket = VRayNodeExporter::getSocketByName(node, socketName);
+	return VRayNodeExporter::exportSocket(ntree, socket, context);
+}
+
+
 std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
 {
 	std::string pluginType;
@@ -281,7 +290,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 	PRINT_INFO("  Node represents: type = \"%s\" plugin = \"%s\"", pluginType.c_str(), pluginID.c_str());
 
 	std::string        pluginName = StripString("NT" + ntree.name() + "N" + node.name());
-	AttributeValueMap  pluginSettings;
+	AttributeValueMap  pluginAttrs;
 
 	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
@@ -298,7 +307,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 
 		AttributeValueMap::const_iterator manualAttrIt = manualAttrs.find(attrName);
 		if(manualAttrIt != manualAttrs.end()) {
-			pluginSettings[attrName] = manualAttrIt->second;
+			pluginAttrs[attrName] = manualAttrIt->second;
 		}
 		else {
 			if(v.second.count("skip"))
@@ -329,7 +338,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 				if(sock) {
 					std::string socketValue = VRayNodeExporter::exportSocket(ntree, sock, context);
 					if(socketValue != "NULL")
-						pluginSettings[attrName] = socketValue;
+						pluginAttrs[attrName] = socketValue;
 				}
 			}
 			else {
@@ -353,20 +362,20 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 						}
 					}
 
-					pluginSettings[attrName] = boost::str(boost::format("\"%s\"") % value);
+					pluginAttrs[attrName] = boost::str(boost::format("\"%s\"") % value);
 				}
 				else {
 					if(attrType == "BOOL") {
-						pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_boolean_get(&propGroup, attrName.c_str()));
+						pluginAttrs[attrName] = boost::str(boost::format("%i") % RNA_boolean_get(&propGroup, attrName.c_str()));
 					}
 					else if(attrType == "INT") {
-						pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_int_get(&propGroup, attrName.c_str()));
+						pluginAttrs[attrName] = boost::str(boost::format("%i") % RNA_int_get(&propGroup, attrName.c_str()));
 					}
 					else if(attrType == "ENUM") {
-						pluginSettings[attrName] = boost::str(boost::format("%i") % RNA_enum_get(&propGroup, attrName.c_str()));
+						pluginAttrs[attrName] = boost::str(boost::format("%i") % RNA_enum_get(&propGroup, attrName.c_str()));
 					}
 					else if(attrType == "FLOAT") {
-						pluginSettings[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&propGroup, attrName.c_str()));
+						pluginAttrs[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&propGroup, attrName.c_str()));
 					}
 					else if(attrType == "VECTOR") {
 						PropertySubType propSubType = RNA_property_subtype(prop);
@@ -374,20 +383,20 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 							if(RNA_property_array_length(&propGroup, prop) == 4) {
 								float acolor[4];
 								RNA_float_get_array(&propGroup, attrName.c_str(), acolor);
-								pluginSettings[attrName] = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
+								pluginAttrs[attrName] = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
 																	  % acolor[0] % acolor[1] % acolor[2] % acolor[3]);
 							}
 							else {
 								float color[3];
 								RNA_float_get_array(&propGroup, attrName.c_str(), color);
-								pluginSettings[attrName] = boost::str(boost::format("Color(%.6f,%.6f,%.6f)")
+								pluginAttrs[attrName] = boost::str(boost::format("Color(%.6f,%.6f,%.6f)")
 																	  % color[0] % color[1] % color[2]);
 							}
 						}
 						else {
 							float vector[3];
 							RNA_float_get_array(&propGroup, attrName.c_str(), vector);
-							pluginSettings[attrName] = boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
+							pluginAttrs[attrName] = boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
 																  % vector[0] % vector[1] % vector[2]);
 						}
 					}
@@ -396,43 +405,13 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 		}
 	}
 
-	sstream plugin;
-
-	plugin << "\n" << pluginID << " " << pluginName << " {";
-
-	AttributeValueMap::const_iterator attrIt;
-	for(attrIt = pluginSettings.begin(); attrIt != pluginSettings.end(); ++attrIt) {
-		const std::string attrName  = attrIt->first;
-		const std::string attrValue = attrIt->second;
-
-		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
-	}
-
-	plugin << "\n}\n";
-
-	if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
-		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileTex, plugin.str().c_str());
-	}
-	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
-		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileMat, plugin.str().c_str());
-	}
-	else if(pluginType == "GEOMETRY") {
-		if(pluginID == "GeomDisplacedMesh" || pluginID == "GeomStaticSmoothedMesh") {
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
-		}
-		else {
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileGeom, plugin.str().c_str());
-		}
-	}
-	else {
-		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
-	}
+	VRayNodePluginExporter::exportPlugin(pluginType, pluginID, pluginName, pluginAttrs);
 
 	return pluginName;
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
 {
 	std::string nodeClass = node.bl_idname();
 
@@ -491,3 +470,65 @@ std::string VRayNodeExporter::exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node
 	return exportVRayNodeAttributes(ntree, node, context, manualAttrs);
 }
 
+
+int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const std::string &pluginID, const std::string &pluginName, const AttributeValueMap &pluginAttrs)
+{
+	// Check names cache to not export duplicated data for this frame
+	//
+
+	// Check plugin in cache for animation export to export only really changed data
+	//
+
+
+	if(m_nodeCache.pluginInCache(pluginName))
+		return 1;
+
+	std::stringstream plugin;
+
+	plugin << "\n" << pluginID << " " << pluginName << " {";
+
+	AttributeValueMap::const_iterator attrIt;
+	for(attrIt = pluginAttrs.begin(); attrIt != pluginAttrs.end(); ++attrIt) {
+		const std::string attrName  = attrIt->first;
+		const std::string attrValue = attrIt->second;
+
+		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
+
+		// Put plugin attribute into the cache
+		m_nodeCache.addToCache(pluginName, attrName, 0, attrValue);
+	}
+
+	plugin << "\n}\n";
+
+	if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
+		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileTex, plugin.str().c_str());
+	}
+	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
+		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileMat, plugin.str().c_str());
+	}
+	else if(pluginType == "GEOMETRY") {
+		if(pluginID == "GeomDisplacedMesh" || pluginID == "GeomStaticSmoothedMesh") {
+			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
+		}
+		else {
+			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileGeom, plugin.str().c_str());
+		}
+	}
+	else {
+		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
+	}
+
+	return 0;
+}
+
+
+void VRayNodePluginExporter::clearNamesCache()
+{
+	VRayNodePluginExporter::m_namesCache.clear();
+}
+
+
+void VRayNodePluginExporter::clearNodesCache()
+{
+	VRayNodePluginExporter::m_nodeCache.clearCache();
+}

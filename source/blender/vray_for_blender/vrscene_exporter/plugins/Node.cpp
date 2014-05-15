@@ -174,7 +174,7 @@ void VRayScene::Node::initHash()
 }
 
 
-std::string Node::GetNodeMaterial(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)
+std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)
 {
 	if(NOT(ob->totcol))
 		return CGR_DEFAULT_MATERIAL;
@@ -252,7 +252,7 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 {
 	AttributeValueMap mtlMulti;
 
-	std::string mtlName = VRayScene::Node::GetNodeMaterial(m_ob, m_materialOverride, mtlMulti);
+	std::string mtlName = VRayScene::Node::GetNodeMtlMulti(m_ob, m_materialOverride, mtlMulti);
 
 	if(mtlMulti.find("mtls_list") == mtlMulti.end())
 		return mtlName;

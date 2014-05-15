@@ -55,19 +55,17 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 		for(ramp.elements.begin(elIt); elIt != ramp.elements.end(); ++elIt) {
 			BL::ColorRampElement el = *elIt;
 
-			std::string       colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
-			std::stringstream colplugin;
+			std::string colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
 
 			std::string color = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
 										   % el.color()[0] % el.color()[1] % el.color()[2] % el.color()[3]);
 
 			std::string position = boost::str(boost::format("%.3f") % el.position());
 
-			colplugin << "\n"   << "TexAColor" << " " << colPluginName << " {";
-			colplugin << "\n\t" << "texture" << "=" << color << ";";
-			colplugin << "\n}\n";
+			AttributeValueMap colAttrs;
+			colAttrs["texture"] = color;
 
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileTex, colplugin.str().c_str());
+			VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColor", colPluginName, colAttrs);
 
 			colors.push_back(colPluginName);
 			positions.push_back(position);

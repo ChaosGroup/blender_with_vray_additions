@@ -39,6 +39,8 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 			AttributeValueMap manualAttributes;
 			manualAttributes["file"] = boost::str(boost::format("\"%s\"") % absFilepath);
 
+			// TODO: Copy file to DR directory if needed
+
 			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttributes);
 		}
 	}
