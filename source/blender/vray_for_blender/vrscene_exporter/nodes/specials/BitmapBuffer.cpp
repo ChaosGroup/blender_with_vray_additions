@@ -34,7 +34,7 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 			char absFilepath[FILE_MAX];
 			BLI_strncpy(absFilepath, image.filepath().c_str(), FILE_MAX);
 
-			BLI_path_abs(absFilepath, ID_BLEND_PATH(G.main, ((ID*)node.ptr.data)));
+			BLI_path_abs(absFilepath, ID_BLEND_PATH(G.main, ((ID*)ntree.ptr.data)));
 
 			AttributeValueMap manualAttributes;
 			manualAttributes["file"] = boost::str(boost::format("\"%s\"") % absFilepath);
