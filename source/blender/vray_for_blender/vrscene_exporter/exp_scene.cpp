@@ -257,28 +257,42 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 
 	// Export materials
 	//
-	BL::BlendData b_data = m_settings->b_data;
+	if(m_settings->m_useNodeTree) {
+		BL::BlendData b_data = m_settings->b_data;
 
-	// TODO: Better use node_groups_iterator and 'VRayNodeTreeMaterial' type
-	//       BL::BlendData::node_groups_iterator ngIt;
-	//
-	BL::BlendData::materials_iterator maIt;
-	for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
-		BL::Material b_ma = *maIt;
-		BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
-		if(b_ma_ntree) {
-			BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
-			if(b_ma_output) {
-				std::string maName = VRayNodeExporter::exportVRayNodeGeneric(b_ma_ntree, b_ma_output);
+		// NOTE: May be better use node_groups_iterator and 'VRayNodeTreeMaterial' type ?
+		//       BL::BlendData::node_groups_iterator ngIt;
+		//
+		BL::BlendData::materials_iterator maIt;
+		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+			BL::Material b_ma = *maIt;
 
-				if(maName != "NULL") {
-					PRINT_INFO("Material '%s' is exported correctly.", b_ma.name().c_str());
+			BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
+			if(b_ma_ntree) {
+				BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
+				if(b_ma_output) {
+					std::string maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output);
+
+					if(maName != "NULL") {
+						PRINT_INFO("Material '%s' is exported correctly.", b_ma.name().c_str());
+					}
 				}
+			}
+			else {
+				std::string maName = GetIDName((ID*)b_ma.ptr.data);
+
+				AttributeValueMap maAttrs;
+				maAttrs["brdf"] = CGR_DEFAULT_BRDF;
+
+				VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, maAttrs);
 			}
 		}
 	}
 
 	m_settings->b_engine.update_progress(1.0f);
+
+	VRayNodePluginExporter::clearNamesCache();
+	VRayNodePluginExporter::clearNodesCache();
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	if(G.debug) {
@@ -422,7 +436,7 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 	if(m_settings->m_useNodeTree) {
 		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_settings->b_data, (ID*)ob);
 		if(ntree) {
-			exportNodeFromNodeTree(ntree, ob, checkUpdated, attrs);
+			exportNodeFromNodeTree(ntree, ob, attrs);
 			// TODO:
 			//   [ ] Hair
 			//   [ ] Hide From View
@@ -505,14 +519,57 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 }
 
 
-void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
+void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const NodeAttrs &attrs)
 {
+	// TODO: Export hair
+	//
+
+	// Export object itself
+	//
 	BL::Node nodeOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeObjectOutput");
 	if(NOT(nodeOutput)) {
-		PRINT_ERROR("Object: %s Node tree: %s => Output node not found!", ob->id.name, ntree.name().c_str());
+		PRINT_ERROR("Object: %s Node tree: %s => Output node not found!",
+					ob->id.name, ntree.name().c_str());
 		return;
 	}
 
+	BL::Node materialNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Material");
+	if(NOT(materialNode)) {
+		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!",
+					ob->id.name, ntree.name().c_str());
+		return;
+	}
+
+	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Geometry");
+	if(NOT(geometryNode)) {
+		PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!",
+					ob->id.name, ntree.name().c_str());
+		return;
+	}
+
+	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'",
+			   ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
+	PRINT_INFO("Object: %s Node tree: %s: Geometry node: '%s'",
+			   ob->id.name, ntree.name().c_str(), geometryNode.name().c_str());
+
+	std::string pluginName = GetIDName((ID*)ob);
+
+	char transform[CGR_TRANSFORM_HEX_SIZE];
+	GetTransformHex(ob->obmat, transform);
+
+	int visible  = true;
+	int objectID = ob->index;
+
+	// Check if we need to override some stuff;
+	// comes from advanced dupli export.
+	//
+	if(attrs.override) {
+		visible  = attrs.visible;
+		objectID = attrs.objectID;
+	}
+
+	// Prepare object context
+	//
 	VRayObjectContext obContext;
 	obContext.ob   = ob;
 	obContext.sce  = m_settings->m_sce;
@@ -520,46 +577,33 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	obContext.mtlOverride = m_mtlOverride;
 
-	BL::Node materialNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Material");
-	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Geometry");
-
-	if(NOT(materialNode)) {
-		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!", ob->id.name, ntree.name().c_str());
+	// Export object main properties
+	//
+	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, &obContext);
+	if(material == "NULL") {
+		PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
+					ob->id.name, ntree.name().c_str());
 		return;
 	}
 
-	if(NOT(materialNode)) {
-		PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!", ob->id.name, ntree.name().c_str());
+	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, &obContext);
+	if(geometry == "NULL") {
+		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
+					ob->id.name, ntree.name().c_str());
 		return;
 	}
 
-	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'", ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
-	PRINT_INFO("Object: %s Node tree: %s: Geometry node: '%s'", ob->id.name, ntree.name().c_str(), geometryNode.name().c_str());
+	// TODO: Export 'MtlRenderStats' for "Hide From View"
+	//
 
-	std::string  materialName = VRayNodeExporter::exportVRayNodeGeneric(ntree, materialNode, &obContext);
-	std::string  geometryName = VRayNodeExporter::exportVRayNodeGeneric(ntree, geometryNode, &obContext);
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["material"]  = material;
+	pluginAttrs["geometry"]  = geometry;
+	pluginAttrs["objectID"]  = boost::str(boost::format("%i") % objectID);
+	pluginAttrs["visible"]   = boost::str(boost::format("%i") % visible);
+	pluginAttrs["transform"] = boost::str(boost::format("TransformHex(\"%s\")") % transform);
 
-	std::string nodeName = GetIDName((ID*)ob);
-
-	char nodeTm[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(ob->obmat, nodeTm);
-
-	int nodeVisible = true;
-	if(attrs.override) {
-		nodeVisible = attrs.visible;
-	}
-
-	sstream plugin;
-	plugin << "\n"   << "Node" << " " << nodeName << " {";
-	plugin << "\n\t" << "material" << "=" << materialName << ";";
-	plugin << "\n\t" << "geometry" << "=" << geometryName << ";";
-	plugin << "\n\t" << "objectID" << "=" << ob->index << ";";
-	plugin << "\n\t" << "visible"  << "=" << nodeVisible << ";";
-	plugin << "\n\t" << "transform" << "=";
-	plugin << "TransformHex(\"" << nodeTm << "\")" << ";";
-	plugin << "\n}\n";
-
-	PYTHON_PRINT(m_settings->m_fileObject, plugin.str().c_str());
+	VRayNodePluginExporter::exportPlugin("NODE", "Node", pluginName, pluginAttrs);
 }
 
 

@@ -56,9 +56,9 @@ std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::N
 	std::reverse(textures.begin(), textures.end());
 	std::reverse(blend_modes.begin(), blend_modes.end());
 
-	AttributeValueMap manualAttrs;
-	manualAttrs["textures"]    = boost::str(boost::format("List(%s)")    % boost::algorithm::join(textures, ","));
-	manualAttrs["blend_modes"] = boost::str(boost::format("ListInt(%s)") % boost::algorithm::join(blend_modes, ","));
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["textures"]    = boost::str(boost::format("List(%s)")    % boost::algorithm::join(textures, ","));
+	pluginAttrs["blend_modes"] = boost::str(boost::format("ListInt(%s)") % boost::algorithm::join(blend_modes, ","));
 
 	StrVector mappableValues;
 	mappableValues.push_back("alpha");
@@ -68,33 +68,18 @@ std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::N
 	mappableValues.push_back("color_mult");
 	mappableValues.push_back("color_offset");
 
-	StrVector::const_iterator strVecIt;
-	for(strVecIt = mappableValues.begin(); strVecIt != mappableValues.end(); ++strVecIt) {
-		const std::string attrName = *strVecIt;
+	for(StrVector::const_iterator mvIt = mappableValues.begin(); mvIt != mappableValues.end(); ++mvIt) {
+		const std::string attrName = *mvIt;
 
 		BL::NodeSocket attrSock = VRayNodeExporter::getSocketByAttr(node, attrName);
 		if(attrSock) {
 			std::string socketValue = VRayNodeExporter::exportSocket(ntree, attrSock);
 			if(socketValue != "NULL")
-				manualAttrs[attrName] = socketValue;
+				pluginAttrs[attrName] = socketValue;
 		}
 	}
 
-	std::stringstream plugin;
-
-	plugin << "\n" << "TexLayered" << " " << pluginName << " {";
-
-	AttributeValueMap::const_iterator attrIt;
-	for(attrIt = manualAttrs.begin(); attrIt != manualAttrs.end(); ++attrIt) {
-		const std::string attrName  = attrIt->first;
-		const std::string attrValue = attrIt->second;
-
-		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
-	}
-
-	plugin << "\n}\n";
-
-	PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileTex, plugin.str().c_str());
+	VRayNodePluginExporter::exportPlugin("TEXTURE", "TexLayered", pluginName, pluginAttrs);
 
 	return pluginName;
 }

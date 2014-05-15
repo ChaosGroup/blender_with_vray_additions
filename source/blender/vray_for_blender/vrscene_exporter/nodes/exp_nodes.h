@@ -40,6 +40,7 @@
 #define SKIP_TYPE(attrType) \
 	attrType == "LIST"              || \
 	attrType == "INT_LIST"          || \
+	attrType == "FLOAT_LIST"        || \
 	attrType == "MATRIX"            || \
 	attrType == "TRANSFORM"         || \
 	attrType == "TRANSFORM_TEXTURE"
@@ -66,13 +67,42 @@
 
 namespace VRayScene {
 
+struct AttrValue {
+	int         frame;
+	std::string value;
+};
+
+typedef std::map<std::string, AttrValue>  AttrCache;
+typedef std::map<std::string, AttrCache>  PluginCache;
+
+
+class VRayNodeCache {
+public:
+	int pluginInCache(const std::string &pluginName) {
+		return m_pluginCache.find(pluginName) != m_pluginCache.end();
+	}
+
+	void addToCache(const std::string &pluginName, const std::string &attrName, const int &frame, const std::string &attrValue) {
+		m_pluginCache[pluginName][attrName].frame = frame;
+		m_pluginCache[pluginName][attrName].value = attrValue;
+	}
+
+	void clearCache() {
+		m_pluginCache.clear();
+	}
+
+private:
+	PluginCache  m_pluginCache;
+
+};
+
+
 struct VRayObjectContext {
 	Scene       *sce;
 	Main        *main;
 	Object      *ob;
 
 	std::string  mtlOverride;
-
 };
 
 
@@ -87,8 +117,19 @@ public:
 
 	static BL::Node         getConnectedNode(BL::NodeTree nodeTree, BL::NodeSocket socket);
 	static BL::Node         getConnectedNode(BL::NodeTree nodeTree, BL::Node node, const std::string &socketName);
-
 	static BL::NodeSocket   getConnectedSocket(BL::NodeTree nodeTree, BL::NodeSocket socket);
+
+	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
+	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
+
+	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
+	static std::string      exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayObjectContext *context=NULL);
+
+	static ExpoterSettings *m_exportSettings;
+
+private:
+	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
+	static std::string      exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
 
 	static std::string      exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context);
 	static std::string      exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context);
@@ -106,24 +147,22 @@ public:
 	static std::string      exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node);
 
-	static std::string      exportVRayNodeGeneric(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
-	// TODO: static std::string      exportVRayNodeGeneric(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
-
-	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
-
-	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
-
-	static ExpoterSettings *m_exportSettings;
-
-private:
-	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
-	static std::string      exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
-
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
-	static AttributeCache   m_attrCache;
+};
 
-}; // VRayNodesExporter
+
+class VRayNodePluginExporter {
+public:
+	static int   exportPlugin(const std::string &pluginType, const std::string &pluginID, const std::string &pluginName, const AttributeValueMap &pluginAttrs);
+	static void  clearNamesCache();
+	static void  clearNodesCache();
+
+private:
+	static VRayNodeCache    m_nodeCache;
+	static StrSet           m_namesCache;
+
+};
 
 } // namespace VRayScene
 

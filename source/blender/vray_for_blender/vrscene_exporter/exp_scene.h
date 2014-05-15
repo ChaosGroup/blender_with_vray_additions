@@ -155,7 +155,7 @@ private:
 	void                    exportDupli();
 
 	void                    exportNode(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
-	void                    exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const NodeAttrs &attrs=NodeAttrs());
 	std::string             writeNodeFromNodeTree(BL::NodeTree ntree, BL::Node node);
 
 	StrSet                  m_exportedObject;

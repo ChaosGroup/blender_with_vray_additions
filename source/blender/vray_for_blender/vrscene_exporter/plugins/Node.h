@@ -77,7 +77,7 @@ public:
 	static int      HasHair(Object *ob);
 	static int      DoRenderEmitter(Object *ob);
 	static int      IsUpdated(Object *ob);
-	static string   GetNodeMaterial(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
+	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
 
 	virtual        ~Node() { freeData(); }
 	virtual void    preInit() {}

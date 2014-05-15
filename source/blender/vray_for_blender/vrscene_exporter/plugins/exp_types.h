@@ -64,7 +64,6 @@ typedef Array<float, 16>  Transform;
 namespace VRayScene {
 
 typedef std::map<std::string, std::string>        AttributeValueMap;
-typedef std::map<std::string, AttributeValueMap>  AttributeCache;
 
 
 class VRayExportable;

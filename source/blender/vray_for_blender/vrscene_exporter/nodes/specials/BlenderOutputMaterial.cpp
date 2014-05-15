@@ -33,53 +33,26 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree n
 		return "NULL";
 	}
 
-	AttributeValueMap mtlMulti;
-	std::string mtlName = Node::GetNodeMaterial(context->ob, context->mtlOverride, mtlMulti);
+	AttributeValueMap pluginAttrs;
+	std::string mtlName = Node::GetNodeMtlMulti(context->ob, context->mtlOverride, pluginAttrs);
 
 	// NOTE: Function could return only one material in 'mtlName'
-	if(mtlMulti.find("mtls_list") == mtlMulti.end())
+	if(pluginAttrs.find("mtls_list") == pluginAttrs.end())
 		return mtlName;
 
 	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
 
-#if 0
-	// NOTE: INT_TEXTURE is not yet supported
-	BL::NodeSocket mtlid_gen = getSocketByName(node, "ID Generator");
-	if(mtlid_gen.is_linked()) {
-		mtlMulti["mtlid_gen"] = exportLinkedSocket(ntree, mtlid_gen);
-	}
-#endif
-
-	bool           has_mtlid_gen   = false;
-	BL::NodeSocket mtlid_gen_float = getSocketByName(node, "ID Generator");
-
-	// XXX: is_linked() crashing Blender is socket doesn't exist. Try to fix this.
-	//
+	BL::NodeSocket mtlid_gen_float = VRayNodeExporter::getSocketByName(node, "ID Generator");
 	if(mtlid_gen_float.is_linked()) {
-		mtlMulti["mtlid_gen_float"] = exportLinkedSocket(ntree, mtlid_gen_float);
-		has_mtlid_gen = true;
+		pluginAttrs["mtlid_gen_float"] = VRayNodeExporter::exportLinkedSocket(ntree, mtlid_gen_float);
+
+		// NOTE: if 'ids_list' presents in the plugin description 'mtlid_gen_float' won't work for some reason...
+		pluginAttrs.erase(pluginAttrs.find("ids_list"));
 	}
 
-	mtlMulti["wrap_id"] = boost::str(boost::format("%i") % RNA_int_get(&node.ptr, "wrap_id"));
+	pluginAttrs["wrap_id"] = boost::str(boost::format("%i") % RNA_int_get(&node.ptr, "wrap_id"));
 
-	sstream plugin;
-
-	plugin << "\n" << "MtlMulti" << " " << pluginName << " {";
-
-	AttributeValueMap::const_iterator attrIt;
-	for(attrIt = mtlMulti.begin(); attrIt != mtlMulti.end(); ++attrIt) {
-		const std::string attrName  = attrIt->first;
-		const std::string attrValue = attrIt->second;
-
-		if(attrName == "ids_list" && has_mtlid_gen)
-			continue;
-
-		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
-	}
-
-	plugin << "\n}\n";
-
-	PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
+	VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlMulti", pluginName, pluginAttrs);
 
 	return pluginName;
 }

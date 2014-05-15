@@ -54,40 +54,25 @@ std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::
 			std::string weightColor = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,1.0)")
 												 % weigthValue % weigthValue % weigthValue);
 
-			std::stringstream weigthPlugin;
-			weigthPlugin << "\n"   << "TexAColor" << " " << weight << " {";
-			weigthPlugin << "\n\t" << "texture" << "=" << weightColor << ";";
-			weigthPlugin << "\n}\n";
+			AttributeValueMap weigthAttrs;
+			weigthAttrs["texture"] = weightColor;
 
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileMat, weigthPlugin.str().c_str());
+			// NOTE: Plugin type is 'TEXTURE', but we want it to be written along with 'BRDF'
+			VRayNodePluginExporter::exportPlugin("BRDF", "TexAColor", weight, weigthAttrs);
 		}
 
 		brdfs.push_back(brdf);
 		weights.push_back(weight);
 	}
 
-	AttributeValueMap manualAttrs;
-	manualAttrs["brdfs"]   = boost::str(boost::format("List(%s)") % boost::algorithm::join(brdfs, ","));
-	manualAttrs["weights"] = boost::str(boost::format("List(%s)") % boost::algorithm::join(weights, ","));
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["brdfs"]   = boost::str(boost::format("List(%s)") % boost::algorithm::join(brdfs, ","));
+	pluginAttrs["weights"] = boost::str(boost::format("List(%s)") % boost::algorithm::join(weights, ","));
 
-	manualAttrs["transparency"]  = VRayNodeExporter::exportSocket(ntree, VRayNodeExporter::getSocketByName(node, "Transparency"));
-	manualAttrs["additive_mode"] = boost::str(boost::format("%i") % RNA_boolean_get(&node.ptr, "additive_mode"));
+	pluginAttrs["transparency"]  = VRayNodeExporter::exportSocket(ntree, node, "Transparency");
+	pluginAttrs["additive_mode"] = boost::str(boost::format("%i") % RNA_boolean_get(&node.ptr, "additive_mode"));
 
-	std::stringstream plugin;
-
-	plugin << "\n" << "BRDFLayered" << " " << pluginName << " {";
-
-	AttributeValueMap::const_iterator attrIt;
-	for(attrIt = manualAttrs.begin(); attrIt != manualAttrs.end(); ++attrIt) {
-		const std::string attrName  = attrIt->first;
-		const std::string attrValue = attrIt->second;
-
-		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
-	}
-
-	plugin << "\n}\n";
-
-	PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileMat, plugin.str().c_str());
+	VRayNodePluginExporter::exportPlugin("BRDF", "BRDFLayered", pluginName, pluginAttrs);
 
 	return pluginName;
 }
