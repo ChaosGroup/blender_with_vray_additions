@@ -44,6 +44,7 @@ set(INC
 	../../../intern/guardedalloc
 	../../../intern/smoke/extern
 	../python
+	${BOOST_INCLUDE_DIR}
 )
 
 set(SRC
