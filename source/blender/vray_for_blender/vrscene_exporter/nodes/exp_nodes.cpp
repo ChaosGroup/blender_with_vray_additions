@@ -473,49 +473,92 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 
 int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const std::string &pluginID, const std::string &pluginName, const AttributeValueMap &pluginAttrs)
 {
-	// Check names cache to not export duplicated data for this frame
+	// Check names cache not to export duplicated data for this frame
 	//
-
-	// Check plugin in cache for animation export to export only really changed data
-	//
-
-
-	if(m_nodeCache.pluginInCache(pluginName))
+	if(m_namesCache.find(pluginName) != m_namesCache.end())
 		return 1;
 
-	std::stringstream plugin;
+	bool pluginIsInCache = VRayExportable::m_animation ? m_nodeCache.pluginInCache(pluginName) : false;
 
-	plugin << "\n" << pluginID << " " << pluginName << " {";
+	std::stringstream outAttributes;
+	std::stringstream outPlugin;
 
 	AttributeValueMap::const_iterator attrIt;
 	for(attrIt = pluginAttrs.begin(); attrIt != pluginAttrs.end(); ++attrIt) {
 		const std::string attrName  = attrIt->first;
 		const std::string attrValue = attrIt->second;
 
-		plugin << "\n\t" << attrName << "=" << VRayExportable::m_interpStart << attrValue << VRayExportable::m_interpEnd << ";";
-
-		// Put plugin attribute into the cache
-		m_nodeCache.addToCache(pluginName, attrName, 0, attrValue);
-	}
-
-	plugin << "\n}\n";
-
-	if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
-		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileTex, plugin.str().c_str());
-	}
-	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
-		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileMat, plugin.str().c_str());
-	}
-	else if(pluginType == "GEOMETRY") {
-		if(pluginID == "GeomDisplacedMesh" || pluginID == "GeomStaticSmoothedMesh") {
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
+		if(NOT(VRayExportable::m_animation)) {
+			outAttributes << "\n\t" << attrName << "=" << attrValue << ";";
 		}
 		else {
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileGeom, plugin.str().c_str());
+			MHash attrHash = HashCode(attrValue.c_str());
+
+			const int currentFrame = VRayExportable::m_exportSettings->m_sce->r.cfra;
+			const int prevFrame    = currentFrame - VRayExportable::m_exportSettings->m_sce->r.frame_step;
+
+			// NOTE:
+			//   Tweak the frame number variable so we could use fake frame number here for
+			//   "Hide From View" or "Still Motion Blur"
+
+			// Check if plugin is in cache
+			// If plugin is in cache check the stored attribute value
+			// and decide whether to export the keyframe
+			//
+			if(NOT(pluginIsInCache)) {
+				outAttributes << "\n\t" << attrName << "=interpolate((" << currentFrame << "," << attrValue << "));";
+			}
+			else {
+				MHash cachedHash = m_nodeCache.getCachedHash(pluginName, attrName);
+
+				if(cachedHash == attrHash)
+					continue;
+
+				const int         cachedFrame = m_nodeCache.getCachedFrame(pluginName, attrName);
+				const std::string cachedValue = m_nodeCache.getCachedValue(pluginName, attrName);
+
+				outAttributes << "\n\t" << attrName << "=interpolate(";
+				if(cachedFrame < prevFrame) {
+					// Cached value is more then 'frameStep' before the current frame
+					// need to insert keyframe
+					outAttributes << "(" << prevFrame    << "," << cachedValue << "),";
+					outAttributes << "(" << currentFrame << "," << attrValue   << ")";
+				}
+				else {
+					// It's simply the next frame - export as usual
+					outAttributes << "(" << currentFrame << "," << attrValue << ")";
+				}
+				outAttributes << ");";
+			}
+
+			// Store/update value in cache
+			m_nodeCache.addToCache(pluginName, attrName, currentFrame, attrValue, attrHash);
 		}
 	}
-	else {
-		PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, plugin.str().c_str());
+
+	if(NOT(outAttributes.str().empty())) {
+		outPlugin << "\n" << pluginID << " " << pluginName << " {";
+		outPlugin << outAttributes.str();
+		outPlugin << "\n}\n";
+
+		PyObject *output = VRayNodeExporter::m_exportSettings->m_fileObject;
+
+		if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
+			output = VRayNodeExporter::m_exportSettings->m_fileTex;
+		}
+		else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
+			output = VRayNodeExporter::m_exportSettings->m_fileMat;
+		}
+		else if(pluginType == "GEOMETRY") {
+			if(pluginID == "GeomDisplacedMesh" || pluginID == "GeomStaticSmoothedMesh") {
+				output = VRayNodeExporter::m_exportSettings->m_fileObject;
+			}
+			else {
+				output = VRayNodeExporter::m_exportSettings->m_fileGeom;
+			}
+		}
+
+		PYTHON_PRINT(output, outPlugin.str().c_str());
 	}
 
 	return 0;
