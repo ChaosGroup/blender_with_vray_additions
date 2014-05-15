@@ -302,3 +302,9 @@ int IsParentUpdated(Object *ob)
 		return IsParentUpdated(ob->parent);
 	return 0;
 }
+
+
+int IsObjectDataUpdated(Object *ob)
+{
+	return ob->id.pad2 & CGR_UPDATED_DATA;
+}

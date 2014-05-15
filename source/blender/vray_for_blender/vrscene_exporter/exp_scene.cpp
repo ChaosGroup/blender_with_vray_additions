@@ -431,10 +431,6 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_settings->b_data, (ID*)ob);
 		if(ntree) {
 			exportNodeFromNodeTree(ntree, ob, attrs);
-			// TODO:
-			//   [ ] Hair
-			//   [ ] Hide From View
-			//   [ ]
 		}
 		else {
 			exportNode(ob, checkUpdated, attrs);
@@ -515,8 +511,17 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const NodeAttrs &attrs)
 {
-	// TODO: Export hair
+	// TODO:
+	//   [x] Hair
+	//   [ ] Hide From View
+	//   [ ]
+
+	// Export hair
 	//
+	Node::WriteHair(m_settings, ob);
+
+	if(NOT(Node::DoRenderEmitter(ob)))
+		return;
 
 	// Export object itself
 	//
@@ -587,7 +592,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	// TODO: Export 'MtlRenderStats' for "Hide From View"
+	// Export 'MtlRenderStats' for "Hide From View"
 	//
 
 	AttributeValueMap pluginAttrs;
@@ -603,16 +608,14 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 {
+	if(NOT(VRayExportable::m_exportNodes))
+		return;
+
 	Light *light = new Light(m_settings->m_sce, m_settings->m_main, ob, dOb);
 
-	if(NOT(VRayExportable::m_exportNodes)) {
+	int toDelete = light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
+	if(toDelete) {
 		delete light;
-	}
-	else {
-		int toDelete = light->write(m_settings->m_fileLights, m_settings->m_sce->r.cfra);
-		if(toDelete) {
-			delete light;
-		}
 	}
 }
 
