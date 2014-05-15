@@ -550,7 +550,11 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 			output = VRayNodeExporter::m_exportSettings->m_fileMat;
 		}
 		else if(pluginType == "GEOMETRY") {
-			if(pluginID == "GeomDisplacedMesh" || pluginID == "GeomStaticSmoothedMesh") {
+			if(pluginID == "GeomDisplacedMesh"      ||
+			   pluginID == "GeomStaticSmoothedMesh" ||
+			   pluginID == "GeomPlane")
+			{
+				// Store dynamic geometry plugins in 'Node' file
 				output = VRayNodeExporter::m_exportSettings->m_fileObject;
 			}
 			else {
