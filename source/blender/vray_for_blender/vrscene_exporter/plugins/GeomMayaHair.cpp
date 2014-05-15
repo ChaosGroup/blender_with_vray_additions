@@ -479,35 +479,40 @@ void GeomMayaHair::initHash()
 	if(NOT(hair_vertices))
 		return;
 
-	if(hair_vertices)
-		m_hashHairVertices    = HashCode(hair_vertices);
-	if(num_hair_vertices)
-		m_hashNumHairVertices = HashCode(num_hair_vertices);
-	if(widths)
-		m_hashWidths          = HashCode(widths);
-	if(strand_uvw)
-		m_hashStrandUVW       = HashCode(strand_uvw);
-	if(transparency)
-		m_hashTransparency    = HashCode(transparency);
+	m_hash = 1;
 
-	m_hash = m_hashHairVertices    ^
-			 m_hashNumHairVertices ^
-			 m_hashWidths          ^
-			 m_hashStrandUVW       ^
-			 m_hashTransparency;
+	// If not animation don't waste time calculating hashes
+	if(VRayExportable::m_animation) {
+		if(hair_vertices)
+			m_hashHairVertices    = HashCode(hair_vertices);
+		if(num_hair_vertices)
+			m_hashNumHairVertices = HashCode(num_hair_vertices);
+		if(widths)
+			m_hashWidths          = HashCode(widths);
+		if(strand_uvw)
+			m_hashStrandUVW       = HashCode(strand_uvw);
+		if(transparency)
+			m_hashTransparency    = HashCode(transparency);
 
-	m_nodePlugin.str("");
-	m_nodePlugin << "\n"   << "Node" << " " << m_nodeName << " {";
-	m_nodePlugin << "\n\t" << "material" << "=" << getHairMaterialName() << ";";
-	m_nodePlugin << "\n\t" << "geometry" << "=" << m_name << ";";
-	m_nodePlugin << "\n\t" << "objectID" << "=" <<  m_ob->index << ";";
+		m_hash = m_hashHairVertices    ^
+				 m_hashNumHairVertices ^
+				 m_hashWidths          ^
+				 m_hashStrandUVW       ^
+				 m_hashTransparency;
 
-	m_nodePlugin << "\n\t" << "transform" << "=";
-	m_nodePlugin << m_interpStart << "TransformHex(\"" << m_nodeTm << "\")" << m_interpEnd << ";";
+		m_nodePlugin.str("");
+		m_nodePlugin << "\n"   << "Node" << " " << m_nodeName << " {";
+		m_nodePlugin << "\n\t" << "material" << "=" << getHairMaterialName() << ";";
+		m_nodePlugin << "\n\t" << "geometry" << "=" << m_name << ";";
+		m_nodePlugin << "\n\t" << "objectID" << "=" <<  m_ob->index << ";";
 
-	m_nodePlugin << "\n}\n";
+		m_nodePlugin << "\n\t" << "transform" << "=";
+		m_nodePlugin << m_interpStart << "TransformHex(\"" << m_nodeTm << "\")" << m_interpEnd << ";";
 
-	m_hash = m_hash ^ HashCode(m_nodePlugin.str().c_str());
+		m_nodePlugin << "\n}\n";
+
+		m_hash = m_hash ^ HashCode(m_nodePlugin.str().c_str());
+	}
 }
 
 
