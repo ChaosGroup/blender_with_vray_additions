@@ -592,7 +592,9 @@ void GeomStaticMesh::initAttributes()
 	}
 	else {
 		RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticMesh");
-		dynamic_geometry = rna.getBool("dynamic_geometry");
+		if(rna.hasProperty("dynamic_geometry")) {
+			dynamic_geometry = rna.getBool("dynamic_geometry");
+		}
 	}
 }
 
@@ -626,35 +628,38 @@ void GeomStaticMesh::initHash()
 #else
 	m_hash = 1;
 
-	if(m_vertices) {
-		m_hashVertices = HashCode(m_vertices);
-		m_hash ^= m_hashVertices;
-	}
-	if(m_normals) {
-		m_hashNormals = HashCode(m_normals);
-		m_hash ^= m_hashNormals;
-	}
-	if(m_faces) {
-		m_hashFaces = HashCode(m_faces);
-		m_hash ^= m_hashFaces;
-	}
-	if(m_faceNormals) {
-		m_hashFaceNormals = HashCode(m_faceNormals);
-		m_hash ^= m_hashFaceNormals;
-	}
-	if(m_faceMtlIDs) {
-		m_hashFaceMtlIDs = HashCode(m_faceMtlIDs);
-		m_hash ^= m_hashFaceMtlIDs;
-	}
-	if(m_edge_visibility) {
-		m_hashEdgeVisibility = HashCode(m_edge_visibility);
-		m_hash ^= m_hashEdgeVisibility;
-	}
+	// If not animation don't waste time calculating hashes
+	if(VRayExportable::m_animation) {
+		if(m_vertices) {
+			m_hashVertices = HashCode(m_vertices);
+			m_hash ^= m_hashVertices;
+		}
+		if(m_normals) {
+			m_hashNormals = HashCode(m_normals);
+			m_hash ^= m_hashNormals;
+		}
+		if(m_faces) {
+			m_hashFaces = HashCode(m_faces);
+			m_hash ^= m_hashFaces;
+		}
+		if(m_faceNormals) {
+			m_hashFaceNormals = HashCode(m_faceNormals);
+			m_hash ^= m_hashFaceNormals;
+		}
+		if(m_faceMtlIDs) {
+			m_hashFaceMtlIDs = HashCode(m_faceMtlIDs);
+			m_hash ^= m_hashFaceMtlIDs;
+		}
+		if(m_edge_visibility) {
+			m_hashEdgeVisibility = HashCode(m_edge_visibility);
+			m_hash ^= m_hashEdgeVisibility;
+		}
 
-	if(useSmooth)
-		m_hash ^= HashCode(m_pluginSmooth.str().c_str());
-	if(useDisplace)
-		m_hash ^= HashCode(m_pluginDisplace.str().c_str());
+		if(useSmooth)
+			m_hash ^= HashCode(m_pluginSmooth.str().c_str());
+		if(useDisplace)
+			m_hash ^= HashCode(m_pluginDisplace.str().c_str());
+	}
 #endif
 }
 
