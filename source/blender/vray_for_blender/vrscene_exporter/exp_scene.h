@@ -150,6 +150,7 @@ private:
 	void                    exportObjectBase(Object *ob);
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportLight(Object *ob, DupliObject *dOb=NULL);
+	void                    exportLightNoded(Object *ob, DupliObject *dOb=NULL);
 
 	void                    initDupli();
 	void                    exportDupli();

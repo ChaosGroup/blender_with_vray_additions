@@ -25,5 +25,7 @@
 
 std::string VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node)
 {
+	// NOTE: Return pluginName
+	//
 	return "NULL";
 }
