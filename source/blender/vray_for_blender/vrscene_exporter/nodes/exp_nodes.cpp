@@ -29,6 +29,98 @@ VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
 StrSet           VRayNodePluginExporter::m_namesCache;
 
 
+void VRayNodeExporter::getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable)
+{
+	boost::property_tree::ptree *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
+	if(NOT(pluginDesc)) {
+		PRINT_ERROR("Plugin '%s' description is not found!",
+					pluginID.c_str());
+		return;
+	}
+
+	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
+		std::string attrName = v.second.get_child("attr").data();
+		std::string attrType = v.second.get_child("type").data();
+
+		if(SKIP_TYPE(attrType))
+			continue;
+
+		if(v.second.count("skip"))
+			if(v.second.get<bool>("skip"))
+				continue;
+
+		if(mappable && MAPPABLE_TYPE(attrType)) {
+			attrSet.insert(attrName);
+		}
+		else {
+			attrSet.insert(attrName);
+		}
+	}
+}
+
+
+std::string VRayNodeExporter::getValueFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName)
+{
+	PropertyRNA *prop = RNA_struct_find_property(propGroup, attrName.c_str());
+	if(NOT(prop))
+		return "NULL";
+
+	PropertyType propType = RNA_property_type(prop);
+
+	if(propType == PROP_STRING) {
+		char value[FILE_MAX] = "";
+		RNA_string_get(propGroup, attrName.c_str(), value);
+
+		if(strlen(value) == 0)
+			return "NULL";
+
+		PropertySubType propSubType = RNA_property_subtype(prop);
+		if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
+			BLI_path_abs(value, ID_BLEND_PATH(G.main, holder));
+		}
+
+		return boost::str(boost::format("\"%s\"") % value);
+	}
+	else if(propType == PROP_BOOLEAN) {
+		return boost::str(boost::format("%i") % RNA_boolean_get(propGroup, attrName.c_str()));
+	}
+	else if(propType == PROP_INT) {
+		return boost::str(boost::format("%i") % RNA_int_get(propGroup, attrName.c_str()));
+	}
+	else if(propType == PROP_ENUM) {
+		return boost::str(boost::format("%i") % RNA_enum_get(propGroup, attrName.c_str()));
+	}
+	else if(propType == PROP_FLOAT) {
+		return boost::str(boost::format("%.6f") % RNA_float_get(propGroup, attrName.c_str()));
+	}
+	else {
+		PropertySubType propSubType = RNA_property_subtype(prop);
+		if(propSubType == PROP_COLOR) {
+			if(RNA_property_array_length(propGroup, prop) == 4) {
+				float acolor[4];
+				RNA_float_get_array(propGroup, attrName.c_str(), acolor);
+				return boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
+								  % acolor[0] % acolor[1] % acolor[2] % acolor[3]);
+			}
+			else {
+				float color[3];
+				RNA_float_get_array(propGroup, attrName.c_str(), color);
+				return boost::str(boost::format("Color(%.6f,%.6f,%.6f)")
+								  % color[0] % color[1] % color[2]);
+			}
+		}
+		else {
+			float vector[3];
+			RNA_float_get_array(propGroup, attrName.c_str(), vector);
+			return boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
+							  % vector[0] % vector[1] % vector[2]);
+		}
+	}
+
+	return "NULL";
+}
+
+
 BL::NodeSocket VRayNodeExporter::getSocketByName(BL::Node node, const std::string &socketName)
 {
 	BL::Node::inputs_iterator input;
@@ -109,10 +201,9 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeTree nodeTree, BL::Node node
 }
 
 
+
 BL::NodeTree VRayNodeExporter::getNodeTree(BL::BlendData b_data, ID *id)
 {
-	PRINT_INFO("ID: %s -> getNodeTree()", id->name);
-
 	RnaAccess::RnaValue VRayObject(id, "vray");
 
 #if CGR_NTREE_DRIVER
@@ -218,11 +309,12 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 		return boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
 						  % vector[0] % vector[1] % vector[2]);
 	}
-	else if(socketVRayType == "VRaySocketFloatNoValue") {
-		// If it's not mapped simply skip it.
-	}
-	else if(socketVRayType == "VRaySocketCoords") {
-		// This is the UVWGEN socket; if it's not mapped simply skip it
+	// If it's not mapped simply skip it.
+	else if(socketVRayType == "VRaySocketFloatNoValue") {}
+	else if(socketVRayType == "VRaySocketColorNoValue") {}
+	else if(socketVRayType == "VRaySocketCoords") {}
+	else if(socketVRayType == "VRaySocketObject") {
+		// TODO
 	}
 	else {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
@@ -292,6 +384,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 	std::string        pluginName = StripString("NT" + ntree.name() + "N" + node.name());
 	AttributeValueMap  pluginAttrs;
 
+	// VRayNodeContext nodeContext(ntree, node);
+	// VRayNodeExporter::getAttrsFromPropGroupAndNode(pluginAttrs, pluginID, propGroup, manualAttrs, nodeContext);
+
 	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
@@ -300,10 +395,6 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 			continue;
 
 		// PRINT_INFO("  Processing attribute: \"%s\"", attrName.c_str());
-
-		if(pluginID == "TexGradRamp") {
-			PRINT_INFO("  Processing attribute: \"%s\"", attrName.c_str());
-		}
 
 		AttributeValueMap::const_iterator manualAttrIt = manualAttrs.find(attrName);
 		if(manualAttrIt != manualAttrs.end()) {
@@ -315,26 +406,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 					continue;
 
 			if(MAPPABLE_TYPE(attrType)) {
-				BL::NodeSocket            sock(PointerRNA_NULL);
-				BL::Node::inputs_iterator sockIt;
-
-				// Go through all sockets and find the one for our attribute
-				//
-				for(node.inputs.begin(sockIt); sockIt != node.inputs.end(); ++sockIt) {
-					std::string sockAttrName;
-					if(RNA_struct_find_property(&sockIt->ptr, "vray_attr")) {
-						RNA_string_get(&sockIt->ptr, "vray_attr", rnaStringBuf);
-						sockAttrName = rnaStringBuf;
-					}
-
-					if(sockAttrName.empty())
-						continue;
-					if(attrName == sockAttrName) {
-						sock = *sockIt;
-						break;
-					}
-				}
-
+				BL::NodeSocket sock = VRayNodeExporter::getSocketByAttr(node, attrName);
 				if(sock) {
 					std::string socketValue = VRayNodeExporter::exportSocket(ntree, sock, context);
 					if(socketValue != "NULL")
@@ -342,65 +414,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 				}
 			}
 			else {
-				PropertyRNA *prop = RNA_struct_find_property(&propGroup, attrName.c_str());
-				if(NOT(prop))
-					continue;
-
-				// PropertyType propType = RNA_property_type(prop);
-
-				if(attrType == "STRING") {
-					char value[FILE_MAX] = "";
-					RNA_string_get(&propGroup, attrName.c_str(), value);
-
-					if(strlen(value) == 0)
-						continue;
-
-					if(v.second.count("subtype")) {
-						std::string subType = v.second.get_child("subtype").data();
-						if(subType == "FILE_PATH" || subType == "DIR_PATH") {
-							BLI_path_abs(value, ID_BLEND_PATH(G.main, ((ID*)node.ptr.data)));
-						}
-					}
-
-					pluginAttrs[attrName] = boost::str(boost::format("\"%s\"") % value);
-				}
-				else {
-					if(attrType == "BOOL") {
-						pluginAttrs[attrName] = boost::str(boost::format("%i") % RNA_boolean_get(&propGroup, attrName.c_str()));
-					}
-					else if(attrType == "INT") {
-						pluginAttrs[attrName] = boost::str(boost::format("%i") % RNA_int_get(&propGroup, attrName.c_str()));
-					}
-					else if(attrType == "ENUM") {
-						pluginAttrs[attrName] = boost::str(boost::format("%i") % RNA_enum_get(&propGroup, attrName.c_str()));
-					}
-					else if(attrType == "FLOAT") {
-						pluginAttrs[attrName] = boost::str(boost::format("%.6f") % RNA_float_get(&propGroup, attrName.c_str()));
-					}
-					else if(attrType == "VECTOR") {
-						PropertySubType propSubType = RNA_property_subtype(prop);
-						if(propSubType == PROP_COLOR) {
-							if(RNA_property_array_length(&propGroup, prop) == 4) {
-								float acolor[4];
-								RNA_float_get_array(&propGroup, attrName.c_str(), acolor);
-								pluginAttrs[attrName] = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
-																	  % acolor[0] % acolor[1] % acolor[2] % acolor[3]);
-							}
-							else {
-								float color[3];
-								RNA_float_get_array(&propGroup, attrName.c_str(), color);
-								pluginAttrs[attrName] = boost::str(boost::format("Color(%.6f,%.6f,%.6f)")
-																	  % color[0] % color[1] % color[2]);
-							}
-						}
-						else {
-							float vector[3];
-							RNA_float_get_array(&propGroup, attrName.c_str(), vector);
-							pluginAttrs[attrName] = boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
-																  % vector[0] % vector[1] % vector[2]);
-						}
-					}
-				}
+				std::string propValue = VRayNodeExporter::getValueFromPropGroup(&propGroup, (ID*)ntree.ptr.data, attrName.c_str());
+				if(propValue != "NULL")
+					pluginAttrs[attrName] = propValue;
 			}
 		}
 	}

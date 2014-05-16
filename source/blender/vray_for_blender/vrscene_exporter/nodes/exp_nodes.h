@@ -65,6 +65,12 @@
 	attrType == "UVWGEN"
 
 
+#define BOOST_FORMAT_FLOAT(f) boost::str(boost::format("%.6f") % f)
+#define BOOST_FORMAT_TM(tm)   boost::str(boost::format("TransformHex(\"%s\")") % tm)
+#define BOOST_FORMAT_INT(i)   boost::str(boost::format("i") % i)
+#define BOOST_FORMAT_BOOL(i)  BOOST_FORMAT_INT(i)
+
+
 namespace VRayScene {
 
 struct AttrValue {
@@ -140,8 +146,20 @@ struct VRayObjectContext {
 };
 
 
+struct VRayNodeContext {
+	VRayNodeContext(BL::NodeTree nt, BL::Node n):ntree(nt),node(n) {}
+
+	BL::NodeTree ntree;
+	BL::Node     node;
+};
+
+
 class VRayNodeExporter {
 public:
+	static void             getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable=false);
+
+	static std::string      getValueFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName);
+
 	static BL::NodeTree     getNodeTree(BL::BlendData b_data, ID *id);
 
 	static BL::Node         getNodeByType(BL::NodeTree nodeTree, const std::string &nodeType);

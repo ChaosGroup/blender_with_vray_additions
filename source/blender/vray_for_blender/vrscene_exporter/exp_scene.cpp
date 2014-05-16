@@ -45,6 +45,7 @@ extern "C" {
 #  include "DNA_particle_types.h"
 #  include "DNA_modifier_types.h"
 #  include "DNA_material_types.h"
+#  include "DNA_lamp_types.h"
 #  include "BKE_anim.h"
 #  include "DNA_windowmanager_types.h"
 }
@@ -351,8 +352,15 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
 				continue;
 
-			if(bl_duplicatedOb.type() == BL::Object::type_LAMP)
-				exportLight(ob, dupliOb);
+			if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
+				if(m_settings->m_useNodeTree) {
+#if CGR_EXPORT_LIGHTS_CPP
+					exportLightNoded(ob, dupliOb);
+#endif
+				}
+				else
+					exportLight(ob, dupliOb);
+			}
 			else {
 				std::string dupliBaseName;
 
@@ -413,8 +421,11 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		exportObject(ob);
 	}
 	else if(LIGHT_TYPE(ob)) {
-		// Export only in dupli for now...
-		// exportLight(ob);
+		if(m_settings->m_useNodeTree) {
+#if CGR_EXPORT_LIGHTS_CPP
+			exportLightNoded(ob);
+#endif
+		}
 	}
 }
 
@@ -617,6 +628,131 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 	if(toDelete) {
 		delete light;
 	}
+}
+
+void VRsceneExporter::exportLightNoded(Object *ob, DupliObject *dOb)
+{
+	// TODO: Export lights with nodes
+	//
+	Lamp *lamp = (Lamp*)ob->data;
+
+	PointerRNA lampRNA;
+	RNA_id_pointer_create((ID*)lamp, &lampRNA);
+
+	PointerRNA vrayLamp = RNA_pointer_get(&lampRNA, "vray");
+
+	std::string       pluginID;
+	AttributeValueMap pluginAttrs;
+
+	if(lamp->type == LA_AREA) {
+		pluginID = "LightRectangle";
+
+		float sizeX = lamp->area_size / 2.0f;
+		float sizeY = lamp->area_shape == LA_AREA_SQUARE ? sizeX : lamp->area_sizey / 2.0f;
+
+		pluginAttrs["u_size"] = BOOST_FORMAT_FLOAT(sizeX);
+		pluginAttrs["v_size"] = BOOST_FORMAT_FLOAT(sizeY);
+	}
+	else if(lamp->type == LA_HEMI) {
+		pluginID = "LightDome";
+	}
+	else if(lamp->type == LA_SPOT) {
+		int spotType = RNA_enum_get(&vrayLamp, "spot_type");
+		switch(spotType) {
+			case 0: {
+				pluginID = "LightSpotMax";
+
+				pluginAttrs["fallsize"] = BOOST_FORMAT_FLOAT(lamp->spotsize);
+
+				break;
+			}
+			case 1: pluginID = "LightIESMax";  break;
+		}
+	}
+	else if(lamp->type == LA_LOCAL) {
+		int omniType = RNA_enum_get(&vrayLamp, "omni_type");
+		switch(omniType) {
+			case 0: pluginID = "LightOmniMax";    break;
+			case 1: pluginID = "LightAmbientMax"; break;
+			case 2: pluginID = "LightSphere";     break;
+		}
+	}
+	else if(lamp->type == LA_SUN) {
+		int directType = RNA_enum_get(&vrayLamp, "direct_type");
+		switch(directType) {
+			case 0: pluginID = "LightDirectMax"; break;
+			case 1: pluginID = "SunLight";       break;
+		}
+	}
+	else {
+		PRINT_ERROR("Lamp: %s Type: %i => Lamp type is not supported!",
+					ob->id.name+2, lamp->type);
+		return;
+	}
+
+	std::string pluginName = GetIDName((ID*)ob);
+
+	PointerRNA        propGroup = RNA_pointer_get(&vrayLamp, pluginID.c_str());
+
+	// Get all non-mappable attribute values
+	StrSet pluginAttrNames;
+
+	VRayNodeExporter::getAttributesList(pluginID, pluginAttrNames, false);
+
+	for(StrSet::const_iterator setIt = pluginAttrNames.begin(); setIt != pluginAttrNames.end(); ++setIt) {
+		std::string attrName = *setIt;
+
+		std::string propValue = VRayNodeExporter::getValueFromPropGroup(&propGroup, (ID*)lamp, attrName.c_str());
+		if(propValue != "NULL")
+			pluginAttrs[attrName] = propValue;
+	}
+
+	// Now, get all mappable attribute values
+	//
+	BL::NodeTree lampNtree = VRayNodeExporter::getNodeTree(m_settings->b_data, (ID*)lamp);
+	if(lampNtree) {
+		std::string vrayNodeType = boost::str(boost::format("VRayNode%s") % pluginID);
+
+		BL::Node lampNode = VRayNodeExporter::getNodeByType(lampNtree, vrayNodeType);
+		if(lampNode) {
+			StrSet socketAttrNames;
+
+			VRayNodeExporter::getAttributesList(pluginID, socketAttrNames, true);
+
+			for(StrSet::const_iterator setIt = socketAttrNames.begin(); setIt != socketAttrNames.end(); ++setIt) {
+				std::string attrName = *setIt;
+
+				BL::NodeSocket sock = VRayNodeExporter::getSocketByAttr(lampNode, attrName);
+				if(sock) {
+					std::string socketValue = VRayNodeExporter::exportSocket(lampNtree, sock);
+					if(socketValue != "NULL")
+						pluginAttrs[attrName] = socketValue;
+				}
+			}
+		}
+	}
+
+	// Now, let's go through "Render Elements" and check if we have to
+	// plug our light somewhere like "Light Select"
+	//
+	BL::NodeTree sceNtree = VRayNodeExporter::getNodeTree(m_settings->b_data,
+														  (ID*)m_settings->m_sce);
+	if(sceNtree) {
+		BL::Node chanNode = VRayNodeExporter::getNodeByType(sceNtree, "VRayNodeRenderChannels");
+		if(chanNode) {
+			// TODO:
+		}
+	}
+
+	char transform[CGR_TRANSFORM_HEX_SIZE];
+	if(dOb)
+		GetTransformHex(dOb->mat, transform);
+	else
+		GetTransformHex(ob->obmat, transform);
+
+	pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
+
+	VRayNodePluginExporter::exportPlugin("LIGHT", pluginID, pluginName, pluginAttrs);
 }
 
 
