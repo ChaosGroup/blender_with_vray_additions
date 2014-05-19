@@ -241,8 +241,8 @@ std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride
 	std::string plugName("MM");
 	plugName.append(obMtlName);
 
-	mtlMulti["mtls_list"] = "List(" + boost::algorithm::join(mtls_list, ",") + ")";
-	mtlMulti["ids_list"]  = "ListInt(" + boost::algorithm::join(ids_list, ",") + ")";
+	mtlMulti["mtls_list"] = "List("    + boost::algorithm::join(mtls_list, ",") + ")";
+	mtlMulti["ids_list"]  = "ListInt(" + boost::algorithm::join(ids_list,  ",") + ")";
 
 	return plugName;
 }
@@ -257,10 +257,13 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 	if(mtlMulti.find("mtls_list") == mtlMulti.end())
 		return mtlName;
 
-	PYTHON_PRINTF(output, "\nMtlMulti %s {", mtlName.c_str());
-	PYTHON_PRINTF(output, "\n\tmtls_list=%s;", mtlMulti["mtls_list"].c_str());
-	PYTHON_PRINTF(output, "\n\tids_list=%s;",  mtlMulti["ids_list"].c_str());
-	PYTHON_PRINT (output, "\n}\n");
+	std::stringstream plugin;
+	plugin << "\nMtlMulti " << mtlName << " {";
+	plugin << "\n\tmtls_list=" << mtlMulti["mtls_list"] << ";";
+	plugin << "\n\tids_list=" << mtlMulti["ids_list"] << ";";
+	plugin << "\n}\n";
+
+	PYTHON_PRINT(output, plugin.str().c_str());
 
 	return mtlName;
 }
