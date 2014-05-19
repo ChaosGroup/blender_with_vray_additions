@@ -317,6 +317,10 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 	// If it's not mapped simply skip it.
 	else if(socketVRayType == "VRaySocketFloatNoValue") {}
 	else if(socketVRayType == "VRaySocketColorNoValue") {}
+	else if(socketVRayType == "VRaySocketBRDF") {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
+					ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
+	}
 	else if(socketVRayType == "VRaySocketCoords") {}
 	else if(socketVRayType == "VRaySocketObject") {
 		// TODO
