@@ -91,30 +91,35 @@ std::string VRayNodeExporter::getValueFromPropGroup(PointerRNA *propGroup, ID *h
 		return boost::str(boost::format("%i") % RNA_enum_get(propGroup, attrName.c_str()));
 	}
 	else if(propType == PROP_FLOAT) {
-		return boost::str(boost::format("%.6f") % RNA_float_get(propGroup, attrName.c_str()));
-	}
-	else {
-		PropertySubType propSubType = RNA_property_subtype(prop);
-		if(propSubType == PROP_COLOR) {
-			if(RNA_property_array_length(propGroup, prop) == 4) {
-				float acolor[4];
-				RNA_float_get_array(propGroup, attrName.c_str(), acolor);
-				return boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
-								  % acolor[0] % acolor[1] % acolor[2] % acolor[3]);
-			}
-			else {
-				float color[3];
-				RNA_float_get_array(propGroup, attrName.c_str(), color);
-				return boost::str(boost::format("Color(%.6f,%.6f,%.6f)")
-								  % color[0] % color[1] % color[2]);
-			}
+		if(NOT(RNA_property_array_check(prop))) {
+			return boost::str(boost::format("%.6f") % RNA_float_get(propGroup, attrName.c_str()));
 		}
 		else {
-			float vector[3];
-			RNA_float_get_array(propGroup, attrName.c_str(), vector);
-			return boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
-							  % vector[0] % vector[1] % vector[2]);
+			PropertySubType propSubType = RNA_property_subtype(prop);
+			if(propSubType == PROP_COLOR) {
+				if(RNA_property_array_length(propGroup, prop) == 4) {
+					float acolor[4];
+					RNA_float_get_array(propGroup, attrName.c_str(), acolor);
+					return boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
+									  % acolor[0] % acolor[1] % acolor[2] % acolor[3]);
+				}
+				else {
+					float color[3];
+					RNA_float_get_array(propGroup, attrName.c_str(), color);
+					return boost::str(boost::format("Color(%.6f,%.6f,%.6f)")
+									  % color[0] % color[1] % color[2]);
+				}
+			}
+			else {
+				float vector[3];
+				RNA_float_get_array(propGroup, attrName.c_str(), vector);
+				return boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")
+								  % vector[0] % vector[1] % vector[2]);
+			}
 		}
+	}
+	else {
+		PRINT_ERROR("Property '%s': Unsupported property type '%i'.", RNA_property_identifier(prop), propType);
 	}
 
 	return "NULL";
