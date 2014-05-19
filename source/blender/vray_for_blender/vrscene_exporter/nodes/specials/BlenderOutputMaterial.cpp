@@ -50,7 +50,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree n
 		pluginAttrs.erase(pluginAttrs.find("ids_list"));
 	}
 
-	pluginAttrs["wrap_id"] = boost::str(boost::format("%i") % RNA_boolean_get(&node.ptr, "wrap_id"));
+	pluginAttrs["wrap_id"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&node.ptr, "wrap_id"));
 
 	VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlMulti", pluginName, pluginAttrs);
 
