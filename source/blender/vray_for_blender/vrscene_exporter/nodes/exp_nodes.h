@@ -68,7 +68,7 @@
 #define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s);
 #define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6f") % f)
 #define BOOST_FORMAT_TM(tm)    boost::str(boost::format("TransformHex(\"%s\")") % tm)
-#define BOOST_FORMAT_INT(i)    boost::str(boost::format("i") % i)
+#define BOOST_FORMAT_INT(i)    boost::str(boost::format("%i") % i)
 #define BOOST_FORMAT_BOOL(i)   BOOST_FORMAT_INT(i)
 
 #define BOOST_FORMAT_COLOR(c)   boost::str(boost::format("Color(%.6f,%.6f,%.6f)")       % c[0] % c[1] % c[2]);
