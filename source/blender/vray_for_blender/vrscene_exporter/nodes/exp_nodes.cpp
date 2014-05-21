@@ -499,6 +499,8 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	if(m_namesCache.find(pluginName) != m_namesCache.end())
 		return 1;
 
+	m_namesCache.insert(pluginName);
+
 	bool pluginIsInCache = VRayExportable::m_animation ? m_nodeCache.pluginInCache(pluginName) : false;
 
 	std::stringstream outAttributes;
@@ -557,7 +559,14 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		}
 	}
 
-	if(NOT(outAttributes.str().empty())) {
+	if(outAttributes.str().empty()) {
+		// This plugin doesn't have any attributes
+		if(pluginID == "GeomPlane") {
+			outPlugin << "\n" << pluginID << " " << pluginName << " {}\n";
+			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, outPlugin.str().c_str());
+		}
+	}
+	else {
 		outPlugin << "\n" << pluginID << " " << pluginName << " {";
 		outPlugin << outAttributes.str();
 		outPlugin << "\n}\n";
