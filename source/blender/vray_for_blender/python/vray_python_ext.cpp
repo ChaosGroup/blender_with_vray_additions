@@ -192,7 +192,9 @@ static PyObject* mExportScene(PyObject *self, PyObject *args)
 		return NULL;
 
 	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
-	exporter->exportScene(exportNodes, exportGeometry);
+	int err = exporter->exportScene(exportNodes, exportGeometry);
+	if(err)
+		return NULL;
 
 	Py_RETURN_NONE;
 }

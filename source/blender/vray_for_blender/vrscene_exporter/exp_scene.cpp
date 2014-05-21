@@ -158,7 +158,7 @@ void VRsceneExporter::init()
 }
 
 
-void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeometry)
+int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeometry)
 {
 	PRINT_INFO("VRsceneExporter::exportScene()");
 
@@ -214,11 +214,14 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 	VRayExportable::m_exportSettings->m_customFrame = vrayExporter.getInt("customFrame");
 
 	// Export stuff
+	int exportInterrupt = false;
+
 	base = (Base*)m_settings->m_sce->base.first;
 	nObjects = 0;
 	while(base) {
 		if(m_settings->b_engine.test_break()) {
 			m_settings->b_engine.report(RPT_WARNING, "Export interrupted!");
+			exportInterrupt = true;
 			break;
 		}
 
@@ -238,6 +241,8 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 			if(NOT(ob->lay & m_settings->m_sce->lay))
 				continue;
 
+		// TODO: Custom layers support
+
 		if(m_skipObjects.count((void*)&ob->id)) {
 			PRINT_INFO("Skipping object: %s", ob->id.name);
 			continue;
@@ -252,48 +257,57 @@ void VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeome
 		}
 	}
 
-	exportDupli();
+	if(NOT(exportInterrupt)) {
+		// Export dupli/particle systems
+		//
+		exportDupli();
 
-	m_hideFromView.clear();
+		// Export materials
+		//
+		if(m_settings->m_useNodeTree) {
+			BL::BlendData b_data = m_settings->b_data;
 
-	// Export materials
-	//
-	if(m_settings->m_useNodeTree) {
-		BL::BlendData b_data = m_settings->b_data;
+			BL::BlendData::materials_iterator maIt;
+			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+				BL::Material b_ma = *maIt;
 
-		BL::BlendData::materials_iterator maIt;
-		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
-			BL::Material b_ma = *maIt;
+				BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
+				if(b_ma_ntree) {
+					BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
+					if(b_ma_output) {
+						std::string maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output);
 
-			BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
-			if(b_ma_ntree) {
-				BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
-				if(b_ma_output) {
-					std::string maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output);
-
-					if(maName != "NULL") {
-						PRINT_INFO("Material '%s' is exported correctly.", b_ma.name().c_str());
+						if(maName != "NULL") {
+							PRINT_INFO("Material '%s' is exported correctly.", b_ma.name().c_str());
+						}
 					}
 				}
-			}
-			else {
-				std::string maName = GetIDName((ID*)b_ma.ptr.data);
+				else {
+					std::string maName = GetIDName((ID*)b_ma.ptr.data);
 
-				AttributeValueMap maAttrs;
-				maAttrs["brdf"] = CGR_DEFAULT_BRDF;
+					AttributeValueMap maAttrs;
+					maAttrs["brdf"] = CGR_DEFAULT_BRDF;
 
-				VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, maAttrs);
+					VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, maAttrs);
+				}
 			}
 		}
 	}
 
 	m_settings->b_engine.update_progress(1.0f);
 
+	m_hideFromView.clear();
+
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	if(G.debug) {
 		PRINT_INFO_LB("Frame %i export",  m_settings->m_sce->r.cfra);
 	}
 	printf(" done [%s]\n", timeMeasureBuf);
+
+	if(exportInterrupt)
+		return 1;
+
+	return 0;
 }
 
 
