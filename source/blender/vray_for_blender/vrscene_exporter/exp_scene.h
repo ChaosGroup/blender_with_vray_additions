@@ -142,7 +142,7 @@ public:
 	// Used for "Hide From View" feature
 	void                    addToHideFromViewList(const std::string &listKey, void *obPtr);
 
-	void                    exportScene(const int &exportNodes, const int &exportGeometry);
+	int                     exportScene(const int &exportNodes, const int &exportGeometry);
 
 private:
 	void                    init();
