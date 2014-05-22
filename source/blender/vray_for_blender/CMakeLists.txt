@@ -74,6 +74,8 @@ set(SRC
 	vrscene_exporter/exp_scene.cpp
 	vrscene_exporter/exp_scene.h
 	vrscene_exporter/exp_smoke.cpp
+	vrscene_exporter/exp_types.cpp
+	vrscene_exporter/exp_types.h
 	vrscene_exporter/nodes/exp_nodes.cpp
 	vrscene_exporter/nodes/exp_nodes.h
 	vrscene_exporter/nodes/specials/BRDFLayered.cpp
@@ -88,8 +90,6 @@ set(SRC
 	vrscene_exporter/nodes/specials/TexGradRamp.cpp
 	vrscene_exporter/nodes/specials/TexLayered.cpp
 	vrscene_exporter/nodes/specials/TexRemap.cpp
-	vrscene_exporter/plugins/exp_types.cpp
-	vrscene_exporter/plugins/exp_types.h
 	vrscene_exporter/plugins/GeomMayaHair.cpp
 	vrscene_exporter/plugins/GeomMayaHair.h
 	vrscene_exporter/plugins/GeomMeshFile.cpp
