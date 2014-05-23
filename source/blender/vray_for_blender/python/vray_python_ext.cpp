@@ -155,10 +155,15 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 static PyObject* mExportExit(PyObject *self, PyObject *value)
 {
-	delete (VRsceneExporter*)PyLong_AsVoidPtr(value);
+	void *exporterPtr = PyLong_AsVoidPtr(value);
+	if(exporterPtr) {
+		delete (VRsceneExporter*)exporterPtr;
+	}
 
-	delete VRayExportable::m_set;
-	VRayExportable::m_set = NULL;
+	if(VRayExportable::m_set) {
+		delete VRayExportable::m_set;
+		VRayExportable::m_set = NULL;
+	}
 
 	Py_RETURN_NONE;
 }
@@ -171,7 +176,9 @@ static PyObject* mExportSetFrame(PyObject *self, PyObject *args)
 	if(NOT(PyArg_ParseTuple(args, "i", &frameCurrent)))
 		return NULL;
 
-	VRayExportable::m_set->m_frameCurrent = frameCurrent;
+	if(VRayExportable::m_set) {
+		VRayExportable::m_set->m_frameCurrent = frameCurrent;
+	}
 
 	Py_RETURN_NONE;
 }
@@ -205,10 +212,12 @@ static PyObject* mExportScene(PyObject *self, PyObject *args)
 	if(NOT(PyArg_ParseTuple(args, "lii", &exporterPtr, &exportNodes, &exportGeometry)))
 		return NULL;
 
-	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
-	int err = exporter->exportScene(exportNodes, exportGeometry);
-	if(err)
-		return NULL;
+	if(exporterPtr) {
+		VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
+		int err = exporter->exportScene(exportNodes, exportGeometry);
+		if(err)
+			return NULL;
+	}
 
 	Py_RETURN_NONE;
 }
