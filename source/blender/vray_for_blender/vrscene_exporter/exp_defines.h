@@ -67,7 +67,7 @@ if(curHash != prevHash) { \
 	PYTHON_PRINTF(output, "(%i,"type"(\"", prevFrame); \
 	PYTHON_PRINT(output, prevData); \
 	PYTHON_PRINT(output, "\")),"); \
-	PYTHON_PRINTF(output, "(%i,"type"(\"", m_sce->r.cfra); \
+	PYTHON_PRINTF(output, "(%i,"type"(\"", m_set->m_frameCurrent); \
 	PYTHON_PRINT(output, curData); \
 	PYTHON_PRINT(output, "\"))"); \
 	PYTHON_PRINT(output, ");"); \
@@ -76,7 +76,7 @@ if(curHash != prevHash) { \
 #define PYTHON_PRINT_FRAME(output, attr, type, curData, curHash, prevData, prevHash) \
 if(curHash != prevHash) { \
 	PYTHON_PRINT(output, "\n\t"attr"=interpolate("); \
-	PYTHON_PRINTF(output, "(%i,"type"(\"", m_sce->r.cfra); \
+	PYTHON_PRINTF(output, "(%i,"type"(\"", m_set->m_frameCurrent); \
 	PYTHON_PRINT(output, curData); \
 	PYTHON_PRINT(output, "\")));"); \
 }
