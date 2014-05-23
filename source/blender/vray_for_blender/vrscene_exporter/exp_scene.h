@@ -62,6 +62,15 @@ struct HideFromView {
 				camera_visibility.count(ob));
 	}
 
+	bool hasData() {
+		return (visibility.size()             ||
+				gi_visibility.size()          ||
+				reflections_visibility.size() ||
+				refractions_visibility.size() ||
+				shadows_visibility.size()     ||
+				camera_visibility.size());
+	}
+
 	PtrSet camera_visibility;
 	PtrSet gi_visibility;
 	PtrSet reflections_visibility;
@@ -133,7 +142,7 @@ public:
 	VRsceneExporter(ExpoterSettings *settings);
 	~VRsceneExporter();
 
-	static ExpoterSettings *m_settings;
+	static ExpoterSettings *m_set;
 	static std::string      m_mtlOverride;
 
 	// Used to skip Node creating of gizmo objects

@@ -28,9 +28,10 @@
 #include "CGR_vrscene.h"
 #include "CGR_vray_for_blender.h"
 
-#include "vrscene_exporter/exp_scene.h"
-#include "vrscene_exporter/nodes/exp_nodes.h"
-#include "vrscene_exporter/vrscene_api.h"
+#include "exp_scene.h"
+#include "exp_nodes.h"
+#include "exp_settings.h"
+#include "vrscene_api.h"
 
 #include "DNA_material_types.h"
 #include "BLI_math.h"
@@ -64,9 +65,12 @@ static PyObject* mExportFree(PyObject *self)
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
-	long      contextPtr = 0;
-	long      scenePtr   = 0;
-	long      useNodes   = false;
+	long      contextPtr  = 0;
+	long      scenePtr    = 0;
+	long      useNodes    = false;
+	long      isAnimation = false;
+	long      frameStart  = false;
+	long      frameStep   = false;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
@@ -86,11 +90,14 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		_C("useNodes"),       // 6
 		_C("materialFile"),   // 7
 		_C("textureFile"),    // 8
+		_C("isAnimation"),    // 9
+		_C("frameStart"),     // 10
+		_C("frameStep"),      // 11
 		NULL
 	};
 
-	//                                  01234 5678
-	static const char  kwlistTypes[] = "OlOOO|llOO";
+	//                                  01234 56789
+	static const char  kwlistTypes[] = "OlOOO|llOOlll";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
@@ -101,7 +108,10 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 									   &scenePtr,
 									   &useNodes,
 									   &materialsFile,
-									   &texturesFile)))
+									   &texturesFile,
+									   &isAnimation,
+									   &frameStart,
+									   &frameStep)))
 		return NULL;
 
 	PointerRNA engineRnaPtr;
@@ -121,17 +131,23 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	RNA_id_pointer_create((ID*)main, &dataPtr);
 	BL::BlendData data(dataPtr);
 
-	VRayExportable::m_exportSettings = new ExpoterSettings(scene, data, renderEngine);
-	VRayExportable::m_exportSettings->m_sce  = sce;
-	VRayExportable::m_exportSettings->m_main = main;
-	VRayExportable::m_exportSettings->m_useNodeTree = useNodes;
-	VRayExportable::m_exportSettings->m_fileObject = obFile;
-	VRayExportable::m_exportSettings->m_fileGeom   = geomFile;
-	VRayExportable::m_exportSettings->m_fileLights = lightsFile;
-	VRayExportable::m_exportSettings->m_fileMat    = materialsFile;
-	VRayExportable::m_exportSettings->m_fileTex    = texturesFile;
+	VRayExportable::m_set = new ExpoterSettings(scene, data, renderEngine);
+	VRayExportable::m_set->m_sce  = sce;
+	VRayExportable::m_set->m_main = main;
 
-	VRsceneExporter *exporter = new VRsceneExporter(VRayExportable::m_exportSettings);
+	VRayExportable::m_set->m_useNodeTrees = useNodes;
+
+	VRayExportable::m_set->m_fileObject = obFile;
+	VRayExportable::m_set->m_fileGeom   = geomFile;
+	VRayExportable::m_set->m_fileLights = lightsFile;
+	VRayExportable::m_set->m_fileMat    = materialsFile;
+	VRayExportable::m_set->m_fileTex    = texturesFile;
+
+	VRayExportable::m_set->m_isAnimation = isAnimation;
+	VRayExportable::m_set->m_frameStart  = frameStart;
+	VRayExportable::m_set->m_frameStep   = frameStep;
+
+	VRsceneExporter *exporter = new VRsceneExporter(VRayExportable::m_set);
 
 	return PyLong_FromVoidPtr(exporter);
 }
@@ -141,22 +157,21 @@ static PyObject* mExportExit(PyObject *self, PyObject *value)
 {
 	delete (VRsceneExporter*)PyLong_AsVoidPtr(value);
 
-	delete VRayExportable::m_exportSettings;
-	VRayExportable::m_exportSettings = NULL;
+	delete VRayExportable::m_set;
+	VRayExportable::m_set = NULL;
 
 	Py_RETURN_NONE;
 }
 
 
-static PyObject* mExportInitCache(PyObject *self, PyObject *args)
+static PyObject* mExportSetFrame(PyObject *self, PyObject *args)
 {
-	int  isAnimation   = false;
-	int  checkAnimated = false;
+	int frameCurrent = false;
 
-	if(NOT(PyArg_ParseTuple(args, "ii", &isAnimation, &checkAnimated)))
+	if(NOT(PyArg_ParseTuple(args, "i", &frameCurrent)))
 		return NULL;
 
-	VRayExportable::setAnimationMode(isAnimation, checkAnimated);
+	VRayExportable::m_set->m_frameCurrent = frameCurrent;
 
 	Py_RETURN_NONE;
 }
@@ -165,7 +180,6 @@ static PyObject* mExportInitCache(PyObject *self, PyObject *args)
 static PyObject* mExportClearFrames(PyObject *self)
 {
 	VRayExportable::clearFrames();
-	VRayExportable::setAnimationMode(false, false);
 	VRayNodePluginExporter::clearNodesCache();
 
 	Py_RETURN_NONE;
@@ -328,57 +342,6 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 }
 
 
-static PyObject* mExportNode(PyObject *self, PyObject *args)
-{
-	long      contextPtr;
-	long      objectPtr;
-	PyObject *nodeFile;
-	PyObject *geomFile;
-
-	char      pluginName[CGR_MAX_PLUGIN_NAME];
-
-	if(NOT(PyArg_ParseTuple(args, "llOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
-		return NULL;
-	}
-
-	bContext *C = (bContext*)(intptr_t)contextPtr;
-	Object *ob  = (Object*)(intptr_t)objectPtr;
-
-	Scene *sce  = CTX_data_scene(C);
-	Main  *main = CTX_data_main(C);
-
-	sprintf(pluginName, "%s", ob->id.name);
-	StripString(pluginName);
-
-	// TODO
-
-	Py_RETURN_NONE;
-}
-
-
-static PyObject* mExportDupli(PyObject *self, PyObject *args)
-{
-	long      contextPtr;
-	long      objectPtr;
-	PyObject *nodeFile;
-	PyObject *geomFile;
-
-	if(NOT(PyArg_ParseTuple(args, "llOO", &contextPtr, &objectPtr, &nodeFile, &geomFile))) {
-		return NULL;
-	}
-
-	bContext *C = (bContext*)(intptr_t)contextPtr;
-	Object *ob  = (Object*)(intptr_t)objectPtr;
-
-	Scene *sce  = CTX_data_scene(C);
-	Main  *main = CTX_data_main(C);
-
-	// TODO
-
-	Py_RETURN_NONE;
-}
-
-
 static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 {
 	if (MatrixObject_Check(value)) {
@@ -488,15 +451,13 @@ static PyMethodDef methods[] = {
 
 	{"exportScene",       mExportScene,       METH_VARARGS, "Export scene to the *.vrscene file"},
 
-	{"exportDupli",       mExportDupli,       METH_VARARGS, "Export dupli / particles"},
 	{"exportMesh",        mExportMesh,        METH_VARARGS, "Export mesh"},
 	{"exportSmoke",       mExportSmoke,       METH_VARARGS, "Export voxel data"},
 	{"exportSmokeDomain", mExportSmokeDomain, METH_VARARGS, "Export domain data"},
 	{"exportHair",        mExportHair,        METH_VARARGS, "Export hair"},
-	{"exportNode",        mExportNode,        METH_VARARGS, "Export Node description"},
 	{"exportFluid",       mExportFluid,       METH_VARARGS, "Export voxel data as TexMayaFluid"},
 
-	{"initCache",                mExportInitCache,   METH_VARARGS, "Init animation cache"},
+	{"setFrame",                 mExportSetFrame,    METH_VARARGS, "Set current frame"},
 	{"clearFrames", (PyCFunction)mExportClearFrames, METH_NOARGS,  "Clear frame cache"},
 	{"clearCache",  (PyCFunction)mExportClearCache,  METH_NOARGS,  "Clear name cache"},
 
