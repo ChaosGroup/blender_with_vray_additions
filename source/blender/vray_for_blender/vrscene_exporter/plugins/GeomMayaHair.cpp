@@ -22,7 +22,10 @@
 
 #include "CGR_config.h"
 
+#include "exp_nodes.h"
+
 #include "GeomMayaHair.h"
+#include "Node.h"
 
 #include "CGR_blender_data.h"
 #include "CGR_vrscene.h"
@@ -482,7 +485,7 @@ void GeomMayaHair::initHash()
 	m_hash = 1;
 
 	// If not animation don't waste time calculating hashes
-	if(VRayExportable::m_animation) {
+	if(VRayExportable::m_set->m_isAnimation) {
 		if(hair_vertices)
 			m_hashHairVertices    = HashCode(hair_vertices);
 		if(num_hair_vertices)
@@ -499,19 +502,6 @@ void GeomMayaHair::initHash()
 				 m_hashWidths          ^
 				 m_hashStrandUVW       ^
 				 m_hashTransparency;
-
-		m_nodePlugin.str("");
-		m_nodePlugin << "\n"   << "Node" << " " << m_nodeName << " {";
-		m_nodePlugin << "\n\t" << "material" << "=" << getHairMaterialName() << ";";
-		m_nodePlugin << "\n\t" << "geometry" << "=" << m_name << ";";
-		m_nodePlugin << "\n\t" << "objectID" << "=" <<  m_ob->index << ";";
-
-		m_nodePlugin << "\n\t" << "transform" << "=";
-		m_nodePlugin << m_interpStart << "TransformHex(\"" << m_nodeTm << "\")" << m_interpEnd << ";";
-
-		m_nodePlugin << "\n}\n";
-
-		m_hash = m_hash ^ HashCode(m_nodePlugin.str().c_str());
 	}
 }
 
@@ -520,9 +510,16 @@ void GeomMayaHair::writeNode(PyObject *output, int frame)
 {
 	// Have to manually setup frame here
 	// because this is not called from write().
-	initInterpolate(frame);
+	initInterpolate(frame); // XXX: Get rig of this for nodes?
 
-	PYTHON_PRINT(output, m_nodePlugin.str().c_str());
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["material"]  = getHairMaterialName();
+	pluginAttrs["geometry"]  = m_name;
+	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(m_ob->index); // NOTE: May be custom index?
+	pluginAttrs["visible"]   = "1";
+	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_nodeTm);
+
+	VRayNodePluginExporter::exportPlugin("NODE", "Node", m_nodeName, pluginAttrs);
 }
 
 
@@ -571,5 +568,5 @@ std::string GeomMayaHair::getHairMaterialName() const
 	Material *ma = give_current_material(m_ob, m_psys->part->omat);
 	if(NOT(ma))
 		return "MANOMATERIALISSET";
-	return GetIDName((ID*)ma);
+	return Node::GetMaterialName(ma, VRayExportable::m_set->m_mtlOverride);
 }

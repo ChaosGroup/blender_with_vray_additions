@@ -68,7 +68,6 @@ private:
 	int                use_width_fade;
 
 	// Node for hair
-	std::stringstream  m_nodePlugin;
 	std::string        m_nodeName;
 	char               m_nodeTm[CGR_TRANSFORM_HEX_SIZE];
 

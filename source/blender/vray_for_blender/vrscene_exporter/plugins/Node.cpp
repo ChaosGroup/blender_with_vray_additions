@@ -59,7 +59,7 @@ extern "C" {
 
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 	VRayExportable(scene, main, ob),
-	m_ntree(VRayNodeExporter::getNodeTree(m_exportSettings->b_data, (ID*)ob))
+	m_ntree(VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob))
 {
 	m_geometry     = NULL;
 	m_geometryType = VRayScene::eGeometryMesh;
@@ -84,7 +84,7 @@ void VRayScene::Node::freeData()
 {
 	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"Node::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
 
-	if(NOT(VRayExportable::m_animation) || (VRayExportable::m_animation && NOT(VRayExportable::m_checkAnimated))) {
+	if(NOT(VRayExportable::m_set->m_isAnimation)) {
 		if(m_geometry) {
 			delete m_geometry;
 			m_geometry = NULL;
@@ -174,6 +174,46 @@ void VRayScene::Node::initHash()
 }
 
 
+std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &materialOverride)
+{
+	std::string materialName = CGR_DEFAULT_MATERIAL;
+
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ma);
+	if(ntree) {
+		BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
+		if(maOutput) {
+			BL::Node maNode = VRayNodeExporter::getConnectedNode(ntree, maOutput, "Material");
+			if(maNode) {
+				std::string maName = StripString("NT" + ntree.name() + "N" + maNode.name());
+
+				if(materialOverride.empty())
+					materialName = maName;
+				else {
+					PointerRNA maOutputRNA;
+					RNA_id_pointer_create((ID*)maOutput.ptr.data, &maOutputRNA);
+					if(RNA_boolean_get(&maOutputRNA, "dontOverride")) {
+						materialName = maName;
+					}
+				}
+			}
+		}
+	}
+	else {
+		std::string maName = GetIDName((ID*)ma);
+
+		if(materialOverride.empty())
+			materialName = maName;
+		else {
+			RnaAccess::RnaValue rna(&ma->id, "vray");
+			if(rna.getBool("dontOverride"))
+				materialName = maName;
+		}
+	}
+
+	return materialName;
+}
+
+
 std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)
 {
 	if(NOT(ob->totcol))
@@ -191,41 +231,11 @@ std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride
 		Material *ma = give_current_material(ob, a);
 		// NOTE: Slot could present, but no material is selected
 		if(ma) {
-			BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_exportSettings->b_data, (ID*)ma);
-			if(ntree) {
-				BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
-				if(maOutput) {
-					BL::Node maNode = VRayNodeExporter::getConnectedNode(ntree, maOutput, "Material");
-					if(maNode) {
-						std::string maName = StripString("NT" + ntree.name() + "N" + maNode.name());
-
-						if(materialOverride.empty())
-							materialName = maName;
-						else {
-							PointerRNA maOutputRNA;
-							RNA_id_pointer_create((ID*)maOutput.ptr.data, &maOutputRNA);
-							if(RNA_boolean_get(&maOutputRNA, "dontOverride")) {
-								materialName = maName;
-							}
-						}
-					}
-				}
-			}
-			else {
-				std::string maName = GetIDName((ID*)ma);
-
-				if(materialOverride.empty())
-					materialName = maName;
-				else {
-					RnaAccess::RnaValue rna(&ma->id, "vray");
-					if(rna.getBool("dontOverride"))
-						materialName = maName;
-				}
-			}
+			materialName = Node::GetMaterialName(ma, materialOverride);
 		}
 
 		mtls_list.push_back(materialName);
-		ids_list.push_back(boost::lexical_cast<std::string>(a));
+		ids_list.push_back(BOOST_FORMAT_INT(a));
 	}
 
 	// No need for multi-material if only one slot
@@ -257,13 +267,7 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 	if(mtlMulti.find("mtls_list") == mtlMulti.end())
 		return mtlName;
 
-	std::stringstream plugin;
-	plugin << "\nMtlMulti " << mtlName << " {";
-	plugin << "\n\tmtls_list=" << mtlMulti["mtls_list"] << ";";
-	plugin << "\n\tids_list=" << mtlMulti["ids_list"] << ";";
-	plugin << "\n}\n";
-
-	PYTHON_PRINT(output, plugin.str().c_str());
+	VRayNodePluginExporter::exportPlugin("NODE", "MtlMulti", mtlName, mtlMulti);
 
 	return mtlName;
 }
@@ -336,13 +340,13 @@ std::string VRayScene::Node::writeHideFromView(PyObject *output, const std::stri
 
 	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
 	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
-	if(m_exportSettings->m_useCameraLoop) {
-		ss << "\n\t" << "visibility="             << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.visibility)             << ";";
-		ss << "\n\t" << "gi_visibility="          << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.gi_visibility)          << ";";
-		ss << "\n\t" << "camera_visibility="      << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.camera_visibility)      << ";";
-		ss << "\n\t" << "reflections_visibility=" << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.reflections_visibility) << ";";
-		ss << "\n\t" << "refractions_visibility=" << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.refractions_visibility) << ";";
-		ss << "\n\t" << "shadows_visibility="     << HIDE_FROM_VIEW(m_exportSettings->m_customFrame, m_renderStatsOverride.shadows_visibility)     << ";";
+	if(m_set->m_useCameraLoop) {
+		ss << "\n\t" << "visibility="             << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.visibility)             << ";";
+		ss << "\n\t" << "gi_visibility="          << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.gi_visibility)          << ";";
+		ss << "\n\t" << "camera_visibility="      << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.camera_visibility)      << ";";
+		ss << "\n\t" << "reflections_visibility=" << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.reflections_visibility) << ";";
+		ss << "\n\t" << "refractions_visibility=" << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.refractions_visibility) << ";";
+		ss << "\n\t" << "shadows_visibility="     << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.shadows_visibility)     << ";";
 	}
 	else {
 		ss << "\n\t" << "visibility="             << m_renderStatsOverride.visibility             << ";";
@@ -367,16 +371,17 @@ void VRayScene::Node::writeData(PyObject *output, VRayExportable *prevState, boo
 	material = writeMtlWrapper(output, material);
 	material = writeMtlRenderStats(output, material);
 
-	if(m_exportSettings->m_useCameraLoop)
+	if(m_set->m_useCameraLoop)
 		material = writeHideFromView(output, material, getName());
 
-	PYTHON_PRINTF(output, "\nNode %s {", getName());
-	PYTHON_PRINTF(output, "\n\tobjectID=%i;", getObjectID());
-	PYTHON_PRINTF(output, "\n\tgeometry=%s;", getDataName());
-	PYTHON_PRINTF(output, "\n\tmaterial=%s;", material.c_str());
-	PYTHON_PRINTF(output, "\n\tvisible=%s%i%s;", m_interpStart, m_visible, m_interpEnd);
-	PYTHON_PRINTF(output, "\n\ttransform=%sTransformHex(\"%s\")%s;", m_interpStart, m_transform, m_interpEnd);
-	PYTHON_PRINT (output, "\n}\n");
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["material"]  = material.c_str();
+	pluginAttrs["geometry"]  = getDataName();
+	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(getObjectID());
+	pluginAttrs["visible"]   = BOOST_FORMAT_INT(m_visible);
+	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_transform);
+
+	VRayNodePluginExporter::exportPlugin("NODE", "Node", getName(), pluginAttrs);
 }
 
 
@@ -515,6 +520,12 @@ void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 
 void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 {
+	if(VRayNodeExporter::m_set->m_isAnimation) {
+		if((VRayNodeExporter::m_set->m_sce->r.cfra > VRayNodeExporter::m_set->m_sce->r.sfra) && NOT(IsObjectDataUpdated(ob))) {
+			return;
+		}
+	}
+
 	if(ob->particlesystem.first) {
 		for(ParticleSystem *psys = (ParticleSystem*)ob->particlesystem.first; psys; psys = psys->next) {
 			ParticleSettings *pset = psys->part;
@@ -526,10 +537,11 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 			int           toDelete = false;
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
 			geomMayaHair->init(psys);
-			if(m_exportNodes)
+			if(VRayExportable::m_set->m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
-			if(m_exportGeometry)
+			if(VRayExportable::m_set->m_exportMeshes) {
 				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
+			}
 			if(toDelete)
 				delete geomMayaHair;
 		}

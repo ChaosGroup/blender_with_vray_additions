@@ -37,23 +37,23 @@
 #include <BLI_string.h>
 
 
-#define SKIP_TYPE(attrType) \
+#define SKIP_TYPE(attrType) (\
 	attrType == "LIST"              || \
 	attrType == "INT_LIST"          || \
 	attrType == "FLOAT_LIST"        || \
 	attrType == "MATRIX"            || \
 	attrType == "TRANSFORM"         || \
-	attrType == "TRANSFORM_TEXTURE"
+	attrType == "TRANSFORM_TEXTURE")
 
-#define OUTPUT_TYPE(attrType) \
+#define OUTPUT_TYPE(attrType) (\
 	attrType == "OUTPUT_PLUGIN"            || \
 	attrType == "OUTPUT_COLOR"             || \
 	attrType == "OUTPUT_FLOAT_TEXTURE"     || \
 	attrType == "OUTPUT_VECTOR_TEXTURE"    || \
 	attrType == "OUTPUT_TRANSFORM_TEXTURE" || \
-	attrType == "OUTPUT_TEXTURE"
+	attrType == "OUTPUT_TEXTURE")
 
-#define MAPPABLE_TYPE(attrType) \
+#define MAPPABLE_TYPE(attrType) (\
 	attrType == "BRDF"          || \
 	attrType == "MATERIAL"      || \
 	attrType == "GEOMETRY"      || \
@@ -62,8 +62,13 @@
 	attrType == "FLOAT_TEXTURE" || \
 	attrType == "INT_TEXTURE"   || \
 	attrType == "VECTOR"        || \
-	attrType == "UVWGEN"
+	attrType == "UVWGEN")
 
+#define NOT_ANIMATABLE_TYPE(attrType) (\
+	attrType == "BRDF"     || \
+	attrType == "MATERIAL" || \
+	attrType == "GEOMETRY" || \
+	attrType == "PLUGIN")
 
 #define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s);
 #define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6f") % f)
@@ -183,7 +188,7 @@ public:
 	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
 	static std::string      exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayObjectContext *context=NULL);
 
-	static ExpoterSettings *m_exportSettings;
+	static ExpoterSettings *m_set;
 
 private:
 	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);

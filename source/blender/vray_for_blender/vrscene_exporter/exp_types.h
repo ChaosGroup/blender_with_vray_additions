@@ -25,6 +25,7 @@
 
 #include "exp_defines.h"
 #include "exp_anim.h"
+#include "exp_settings.h"
 
 #include "CGR_blender_data.h"
 #include "CGR_json_plugins.h"
@@ -85,67 +86,6 @@ struct NodeAttrs {
 	int  visible;
 	int  primary_visibility;
 	int  nsamples;
-};
-
-
-struct ExpoterSettings {
-	ExpoterSettings(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine):
-		b_scene(scene),
-		b_data(data),
-		b_engine(engine)
-	{
-		m_sce  = NULL;
-		m_main = NULL;
-
-		m_fileObject = NULL;
-		m_fileGeom   = NULL;
-		m_fileLights = NULL;
-		m_fileMat    = NULL;
-		m_fileTex    = NULL;
-
-		m_activeLayers = true;
-		m_altDInstances = false;
-
-		m_useNodeTree = false;
-		m_useCameraLoop = false;
-
-		m_customFrame = 0;
-
-		m_overrideMaterial = "";
-	}
-
-	int               DoUpdateCheck();
-
-	Scene            *m_sce;
-	Main             *m_main;
-
-	BL::Scene         b_scene;
-	BL::BlendData     b_data;
-	BL::RenderEngine  b_engine;
-
-	PyObject         *m_fileObject;
-	PyObject         *m_fileGeom;
-	PyObject         *m_fileLights;
-	PyObject         *m_fileMat;
-	PyObject         *m_fileTex;
-
-	int               m_activeLayers;
-	int               m_altDInstances;
-	int               m_useNodeTree;
-
-	int               m_useHideFromView;
-	int               m_useCameraLoop;
-	int               m_useDisplaceSubdiv;
-	int               m_useInstancer;
-
-	int               m_customFrame;
-	int               m_animation;
-
-	int               m_exportNodes;
-	int               m_exportMeshes;
-
-	std::string       m_overrideMaterial;
-
 };
 
 
@@ -216,17 +156,6 @@ public:
 		m_propGroup = propGroup;
 	}
 
-	bool needUpdateCheck(const int &frame) {
-		return frame > m_sce->r.sfra;
-	}
-
-	static void setAnimationMode(int animation, int checkAnimated) {
-		m_animation     = animation;
-		m_checkAnimated = checkAnimated;
-
-		m_exportSettings->m_animation = animation;
-	}
-
 	static void clearCache()  { m_exportNameCache.clear(); }
 	static void clearFrames() { m_frameCache.freeData();   }
 
@@ -234,7 +163,7 @@ public:
 	static void freePluginDesc()                           { m_pluginDesc.freeData();    }
 
 	static void initInterpolate(int frame) {
-		if(m_animation) {
+		if(m_set->m_isAnimation) {
 			sprintf(m_interpStart, "interpolate((%d,", frame);
 			sprintf(m_interpEnd,   "))");
 		}
@@ -302,11 +231,8 @@ public:
 
 	static char             m_interpStart[32];
 	static char             m_interpEnd[3];
-	static int              m_animation;
-	static int              m_checkAnimated;
-	static int              m_exportNodes;
-	static int              m_exportGeometry;
-	static ExpoterSettings *m_exportSettings;
+
+	static ExpoterSettings *m_set;
 	static VRayPluginsDesc  m_pluginDesc;
 
 protected:

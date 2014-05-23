@@ -629,7 +629,7 @@ void GeomStaticMesh::initHash()
 	m_hash = 1;
 
 	// If not animation don't waste time calculating hashes
-	if(VRayExportable::m_animation) {
+	if(VRayExportable::m_set->m_isAnimation) {
 		if(m_vertices) {
 			m_hashVertices = HashCode(m_vertices);
 			m_hash ^= m_hashVertices;

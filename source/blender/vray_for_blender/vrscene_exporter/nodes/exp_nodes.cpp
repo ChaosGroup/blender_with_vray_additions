@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-ExpoterSettings *VRayNodeExporter::m_exportSettings = NULL;
+ExpoterSettings *VRayNodeExporter::m_set = NULL;
 
 VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
 StrSet           VRayNodePluginExporter::m_namesCache;
@@ -247,7 +247,7 @@ BL::Texture VRayNodeExporter::getTextureFromIDRef(PointerRNA *ptr, const std::st
 		char textureName[MAX_ID_NAME];
 		RNA_string_get(ptr, propName.c_str(), textureName);
 
-		BL::BlendData b_data = VRayNodeExporter::m_exportSettings->b_data;
+		BL::BlendData b_data = VRayNodeExporter::m_set->b_data;
 
 		BL::BlendData::textures_iterator texIt;
 		for(b_data.textures.begin(texIt); texIt != b_data.textures.end(); ++texIt) {
@@ -492,6 +492,21 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 }
 
 
+static const std::string GetAttrType(boost::property_tree::ptree *pluginDesc, const std::string &attributeName)
+{
+	if(pluginDesc) {
+		BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
+			const std::string attrName = v.second.get_child("attr").data();
+			const std::string attrType = v.second.get_child("type").data();
+			if(attrName == attrName)
+				return attrType;
+		}
+	}
+
+	return "NULL";
+}
+
+
 int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const std::string &pluginID, const std::string &pluginName, const AttributeValueMap &pluginAttrs)
 {
 	// Check names cache not to export duplicated data for this frame
@@ -501,24 +516,27 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 
 	m_namesCache.insert(pluginName);
 
-	bool pluginIsInCache = VRayExportable::m_animation ? m_nodeCache.pluginInCache(pluginName) : false;
+	bool pluginIsInCache = VRayExportable::m_set->m_isAnimation ? m_nodeCache.pluginInCache(pluginName) : false;
 
 	std::stringstream outAttributes;
 	std::stringstream outPlugin;
+
+	boost::property_tree::ptree *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
 
 	AttributeValueMap::const_iterator attrIt;
 	for(attrIt = pluginAttrs.begin(); attrIt != pluginAttrs.end(); ++attrIt) {
 		const std::string attrName  = attrIt->first;
 		const std::string attrValue = attrIt->second;
+		const std::string attrType  = GetAttrType(pluginDesc, attrName);
 
-		if(NOT(VRayExportable::m_animation)) {
+		if(NOT(VRayExportable::m_set->m_isAnimation) || NOT_ANIMATABLE_TYPE(attrType)) {
 			outAttributes << "\n\t" << attrName << "=" << attrValue << ";";
 		}
 		else {
 			MHash attrHash = HashCode(attrValue.c_str());
 
-			const int currentFrame = VRayExportable::m_exportSettings->m_sce->r.cfra;
-			const int prevFrame    = currentFrame - VRayExportable::m_exportSettings->m_sce->r.frame_step;
+			const int currentFrame = VRayExportable::m_set->m_frameCurrent;
+			const int prevFrame    = currentFrame - VRayExportable::m_set->m_frameStep;
 
 			// NOTE:
 			//   Tweak the frame number variable so we could use fake frame number here for
@@ -562,8 +580,10 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	if(outAttributes.str().empty()) {
 		// This plugin doesn't have any attributes
 		if(pluginID == "GeomPlane") {
+			// NOTE: Try to make it exported only once
+			//
 			outPlugin << "\n" << pluginID << " " << pluginName << " {}\n";
-			PYTHON_PRINT(VRayNodeExporter::m_exportSettings->m_fileObject, outPlugin.str().c_str());
+			PYTHON_PRINT(VRayNodeExporter::m_set->m_fileObject, outPlugin.str().c_str());
 		}
 	}
 	else {
@@ -571,13 +591,13 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		outPlugin << outAttributes.str();
 		outPlugin << "\n}\n";
 
-		PyObject *output = VRayNodeExporter::m_exportSettings->m_fileObject;
+		PyObject *output = VRayNodeExporter::m_set->m_fileObject;
 
 		if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
-			output = VRayNodeExporter::m_exportSettings->m_fileTex;
+			output = VRayNodeExporter::m_set->m_fileTex;
 		}
 		else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
-			output = VRayNodeExporter::m_exportSettings->m_fileMat;
+			output = VRayNodeExporter::m_set->m_fileMat;
 		}
 		else if(pluginType == "GEOMETRY") {
 			if(pluginID == "GeomDisplacedMesh"      ||
@@ -585,10 +605,10 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 			   pluginID == "GeomPlane")
 			{
 				// Store dynamic geometry plugins in 'Node' file
-				output = VRayNodeExporter::m_exportSettings->m_fileObject;
+				output = VRayNodeExporter::m_set->m_fileObject;
 			}
 			else {
-				output = VRayNodeExporter::m_exportSettings->m_fileGeom;
+				output = VRayNodeExporter::m_set->m_fileGeom;
 			}
 		}
 

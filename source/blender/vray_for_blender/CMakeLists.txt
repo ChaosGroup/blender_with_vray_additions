@@ -20,6 +20,8 @@
 
 set(INC_SYS
 	${PYTHON_INCLUDE_DIRS}
+	${ZLIB_INCLUDE_DIRS}
+	${BOOST_INCLUDE_DIR}
 )
 
 set(INC
@@ -39,12 +41,10 @@ set(INC
 	../editors/include
 	../render/extern/include
 	../render/intern/include
+	../python
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
-	${ZLIB_INCLUDE_DIRS}
 	../../../intern/guardedalloc
 	../../../intern/smoke/extern
-	../python
-	${BOOST_INCLUDE_DIR}
 )
 
 set(SRC
@@ -69,6 +69,7 @@ set(SRC
 	# vrscene export
 	vrscene_exporter/exp_anim.h
 	vrscene_exporter/exp_defines.h
+	vrscene_exporter/exp_settings.h
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.cpp
 	vrscene_exporter/exp_scene.cpp

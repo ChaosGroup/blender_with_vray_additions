@@ -79,6 +79,7 @@ public:
 	static int      DoRenderEmitter(Object *ob);
 	static int      IsUpdated(Object *ob);
 	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
+	static string   GetMaterialName(Material *ma, const string &materialOverride="");
 
 	virtual        ~Node() { freeData(); }
 	virtual void    preInit() {}

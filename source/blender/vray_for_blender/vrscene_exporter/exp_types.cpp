@@ -32,11 +32,8 @@ VRayPluginsDesc  VRayExportable::m_pluginDesc;
 
 char             VRayExportable::m_interpStart[32] = "";
 char             VRayExportable::m_interpEnd[3]    = "";
-int              VRayExportable::m_animation = false;
-int              VRayExportable::m_checkAnimated = false;
-int              VRayExportable::m_exportNodes = true;
-int              VRayExportable::m_exportGeometry = true;
-ExpoterSettings *VRayExportable::m_exportSettings = NULL;
+
+ExpoterSettings *VRayExportable::m_set = NULL;
 
 
 VRayExportable::VRayExportable() {
@@ -148,17 +145,17 @@ int VRayExportable::write(PyObject *output, int frame) {
 		return 1;
 	m_exportNameCache.insert(m_name);
 
-	if(NOT(m_animation)) {
+	if(NOT(m_set->m_isAnimation)) {
 		writeData(output, NULL);
 	}
 	else {
-		if(NOT(m_checkAnimated)) {
+		if(NOT(m_set->DoUpdateCheck())) {
 			writeData(output, NULL);
 		}
 		else {
 			MHash currentHash = getHash();
 
-			if(frame == m_sce->r.sfra) {
+			if(frame == m_set->m_frameCurrent) {
 				initInterpolate(frame);
 				writeData(output, NULL);
 				m_frameCache.update(m_name, currentHash, frame, this);
@@ -176,7 +173,7 @@ int VRayExportable::write(PyObject *output, int frame) {
 				}
 				else {
 					int cacheFrame = m_frameCache.getFrame(m_name);
-					int prevFrame  = frame - m_sce->r.frame_step;
+					int prevFrame  = frame - m_set->m_frameStep;
 
 					int needKeyFrame = cacheFrame < prevFrame;
 
@@ -280,11 +277,4 @@ void VRayExportable::writeAttributes(PointerRNA *ptr, boost::property_tree::ptre
 			output << m_interpEnd << ";";
 		}
 	}
-}
-
-
-int ExpoterSettings::DoUpdateCheck() {
-	if(VRayExportable::m_animation && VRayExportable::m_checkAnimated)
-		return m_sce->r.cfra > m_sce->r.sfra;
-	return 0;
 }
