@@ -394,7 +394,8 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 
-		if(SKIP_TYPE(attrType))
+		// Skip attributes only if they are not manully specified
+		if(SKIP_TYPE(attrType) && NOT(manualAttrs.count(attrName)))
 			continue;
 
 		// PRINT_INFO("  Processing attribute: \"%s\"", attrName.c_str());
@@ -603,6 +604,9 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		}
 		else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
 			output = VRayNodeExporter::m_set->m_fileMat;
+		}
+		else if(pluginType == "LIGHT") {
+			output = VRayNodeExporter::m_set->m_fileLights;
 		}
 		else if(pluginType == "GEOMETRY") {
 			if(pluginID == "GeomDisplacedMesh"      ||
