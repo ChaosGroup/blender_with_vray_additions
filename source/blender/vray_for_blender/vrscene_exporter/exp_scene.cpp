@@ -564,13 +564,6 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::Node materialNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Material");
-	if(NOT(materialNode)) {
-		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!",
-					ob->id.name, ntree.name().c_str());
-		return;
-	}
-
 	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Geometry");
 	if(NOT(geometryNode)) {
 		PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!",
@@ -578,8 +571,6 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'",
-			   ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
 	PRINT_INFO("Object: %s Node tree: %s: Geometry node: '%s'",
 			   ob->id.name, ntree.name().c_str(), geometryNode.name().c_str());
 
@@ -610,16 +601,31 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export object main properties
 	//
-	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, &obContext);
-	if(material == "NULL") {
-		PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
+	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, &obContext);
+	if(geometry == "NULL") {
+		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
 					ob->id.name, ntree.name().c_str());
 		return;
 	}
 
-	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, &obContext);
-	if(geometry == "NULL") {
-		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
+	if(geometryNode.bl_idname() == "VRayNodeLightMesh") {
+		// No need to export Node - this object is LightMesh
+		return;
+	}
+
+	BL::Node materialNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Material");
+	if(NOT(materialNode)) {
+		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!",
+					ob->id.name, ntree.name().c_str());
+		return;
+	}
+
+	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'",
+			   ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
+
+	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, &obContext);
+	if(material == "NULL") {
+		PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
 					ob->id.name, ntree.name().c_str());
 		return;
 	}
