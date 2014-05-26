@@ -99,6 +99,7 @@ public:
 
 	void            writeGeometry(PyObject *output, int frame=0);
 	void            writeHair(ExpoterSettings *settings);
+	std::string     writeHideFromView(const std::string &baseMtl="");
 
 	char           *getTransform() const;
 	int             getObjectID() const;
@@ -123,7 +124,6 @@ private:
 	std::string     writeMtlWrapper(PyObject *output, const std::string &baseMtl);
 	std::string     writeMtlOverride(PyObject *output, const std::string &baseMtl);
 	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
-	std::string     writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName);
 
 	BL::NodeTree    m_ntree;
 
@@ -139,6 +139,7 @@ private:
 	std::string     m_geometryName;
 
 	RenderStats     m_renderStatsOverride;
+	int             m_useRenderStatsOverride;
 
 };
 

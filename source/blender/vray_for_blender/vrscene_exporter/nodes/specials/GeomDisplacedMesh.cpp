@@ -39,8 +39,13 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 		return "NULL";
 	}
 
+	const std::string meshName = VRayNodeExporter::exportLinkedSocket(ntree, meshSock, context);
+
+	if(NOT(VRayNodeExporter::m_set->m_useDisplaceSubdiv))
+		return meshName;
+
 	AttributeValueMap manualAttrs;
-	manualAttrs["mesh"] = VRayNodeExporter::exportLinkedSocket(ntree, meshSock, context);
+	manualAttrs["mesh"] = meshName;
 
 	RnaAccess::RnaValue propGroup((ID*)node.ptr.data, "GeomDisplacedMesh");
 	int displace_type = propGroup.getEnum("type");

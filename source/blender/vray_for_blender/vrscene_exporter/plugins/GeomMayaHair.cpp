@@ -526,7 +526,7 @@ void GeomMayaHair::writeNode(PyObject *output, int frame)
 void GeomMayaHair::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	GeomMayaHair *prevHair  = (GeomMayaHair*)prevState;
-	int           prevFrame = m_sce->r.cfra - m_sce->r.frame_step;
+	int           prevFrame = VRayExportable::m_set->m_frameCurrent - VRayExportable::m_set->m_frameStep;
 
 	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", m_name.c_str());
 

@@ -69,8 +69,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	long      scenePtr    = 0;
 	long      useNodes    = false;
 	long      isAnimation = false;
-	long      frameStart  = false;
-	long      frameStep   = false;
+	long      frameStart  = 1;
+	long      frameStep   = 1;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
