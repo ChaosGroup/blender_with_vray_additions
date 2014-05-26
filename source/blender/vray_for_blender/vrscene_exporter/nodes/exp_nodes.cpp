@@ -498,7 +498,7 @@ static const std::string GetAttrType(boost::property_tree::ptree *pluginDesc, co
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
 			const std::string attrName = v.second.get_child("attr").data();
 			const std::string attrType = v.second.get_child("type").data();
-			if(attrName == attrName)
+			if(attrName == attributeName)
 				return attrType;
 		}
 	}
@@ -529,7 +529,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		const std::string attrValue = attrIt->second;
 		const std::string attrType  = GetAttrType(pluginDesc, attrName);
 
-		if(NOT(VRayExportable::m_set->m_isAnimation) || NOT_ANIMATABLE_TYPE(attrType)) {
+		if(NOT(VRayExportable::m_set->m_isAnimation)) {
 			outAttributes << "\n\t" << attrName << "=" << attrValue << ";";
 		}
 		else {
@@ -538,38 +538,43 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 			const int currentFrame = VRayExportable::m_set->m_frameCurrent;
 			const int prevFrame    = currentFrame - VRayExportable::m_set->m_frameStep;
 
-			// NOTE:
-			//   Tweak the frame number variable so we could use fake frame number here for
-			//   "Hide From View" or "Still Motion Blur"
+			const int attrNonAnim = NOT_ANIMATABLE_TYPE(attrType);
 
 			// Check if plugin is in cache
 			// If plugin is in cache check the stored attribute value
 			// and decide whether to export the keyframe
 			//
 			if(NOT(pluginIsInCache)) {
-				outAttributes << "\n\t" << attrName << "=interpolate((" << currentFrame << "," << attrValue << "));";
-			}
-			else {
-				MHash cachedHash = m_nodeCache.getCachedHash(pluginName, attrName);
-
-				if(cachedHash == attrHash)
-					continue;
-
-				const int         cachedFrame = m_nodeCache.getCachedFrame(pluginName, attrName);
-				const std::string cachedValue = m_nodeCache.getCachedValue(pluginName, attrName);
-
-				outAttributes << "\n\t" << attrName << "=interpolate(";
-				if(cachedFrame < prevFrame) {
-					// Cached value is more then 'frameStep' before the current frame
-					// need to insert keyframe
-					outAttributes << "(" << prevFrame    << "," << cachedValue << "),";
-					outAttributes << "(" << currentFrame << "," << attrValue   << ")";
+				if(attrNonAnim) {
+					outAttributes << "\n\t" << attrName << "=" << attrValue << ";";
 				}
 				else {
-					// It's simply the next frame - export as usual
-					outAttributes << "(" << currentFrame << "," << attrValue << ")";
+					outAttributes << "\n\t" << attrName << "=interpolate((" << currentFrame << "," << attrValue << "));";
 				}
-				outAttributes << ");";
+			}
+			else {
+				if(NOT(attrNonAnim)) {
+					MHash cachedHash = m_nodeCache.getCachedHash(pluginName, attrName);
+
+					if(cachedHash == attrHash)
+						continue;
+
+					const int         cachedFrame = m_nodeCache.getCachedFrame(pluginName, attrName);
+					const std::string cachedValue = m_nodeCache.getCachedValue(pluginName, attrName);
+
+					outAttributes << "\n\t" << attrName << "=interpolate(";
+					if(cachedFrame < prevFrame) {
+						// Cached value is more then 'frameStep' before the current frame
+						// need to insert keyframe
+						outAttributes << "(" << prevFrame    << "," << cachedValue << "),";
+						outAttributes << "(" << currentFrame << "," << attrValue   << ")";
+					}
+					else {
+						// It's simply the next frame - export as usual
+						outAttributes << "(" << currentFrame << "," << attrValue << ")";
+					}
+					outAttributes << ");";
+				}
 			}
 
 			// Store/update value in cache

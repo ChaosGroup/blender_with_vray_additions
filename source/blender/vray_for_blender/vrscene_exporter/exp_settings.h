@@ -51,7 +51,6 @@ struct ExpoterSettings {
 
 		m_activeLayers  = true;
 		m_useNodeTrees  = false;
-		m_useCameraLoop = false;
 
 		m_isAnimation  = false;
 		m_frameCurrent = 0;
@@ -61,7 +60,7 @@ struct ExpoterSettings {
 		m_mtlOverride = "";
 	}
 
-	bool              DoUpdateCheck() { return m_frameCurrent > m_frameStart; }
+	bool              DoUpdateCheck() { return m_isAnimation && (m_frameCurrent > m_frameStart); }
 
 	Scene            *m_sce;
 	Main             *m_main;
@@ -83,8 +82,6 @@ struct ExpoterSettings {
 	int               m_activeLayers;
 	int               m_useNodeTrees;
 
-	int               m_useHideFromView;
-	int               m_useCameraLoop;
 	int               m_useDisplaceSubdiv;
 	std::string       m_mtlOverride;
 
