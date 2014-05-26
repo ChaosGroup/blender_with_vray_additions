@@ -777,7 +777,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 		writeGeomDisplacedMesh(output);
 
 	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
-	int             prevFrame = m_sce->r.cfra - m_sce->r.frame_step;
+	int             prevFrame = VRayExportable::m_set->m_frameCurrent - VRayExportable::m_set->m_frameStep;
 
 	size_t      compSize = meshComponentNames.size();
 	std::string geomName = meshComponentNames[compSize-1];

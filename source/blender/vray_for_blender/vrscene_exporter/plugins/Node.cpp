@@ -65,6 +65,8 @@ VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 	m_geometryType = VRayScene::eGeometryMesh;
 	m_objectID     = 0;
 	m_visible      = true;
+
+	m_useRenderStatsOverride = false;
 }
 
 
@@ -333,32 +335,24 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 }
 
 
-std::string VRayScene::Node::writeHideFromView(PyObject *output, const std::string &baseMtl, const std::string &nodeName)
+std::string VRayScene::Node::writeHideFromView(const std::string &baseMtl)
 {
-	std::stringstream ss;
-	std::string       pluginName = "HideFromView" + nodeName;
+	std::string pluginName = "HideFromView";
+	pluginName.append(getName());
 
-	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
-	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
-	if(m_set->m_useCameraLoop) {
-		ss << "\n\t" << "visibility="             << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.visibility)             << ";";
-		ss << "\n\t" << "gi_visibility="          << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.gi_visibility)          << ";";
-		ss << "\n\t" << "camera_visibility="      << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.camera_visibility)      << ";";
-		ss << "\n\t" << "reflections_visibility=" << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.reflections_visibility) << ";";
-		ss << "\n\t" << "refractions_visibility=" << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.refractions_visibility) << ";";
-		ss << "\n\t" << "shadows_visibility="     << HIDE_FROM_VIEW(m_set->m_frameCustom, m_renderStatsOverride.shadows_visibility)     << ";";
+	AttributeValueMap hideFromViewAttrs;
+	if(NOT(baseMtl.empty())) {
+		hideFromViewAttrs["base_mtl"] = baseMtl;
 	}
-	else {
-		ss << "\n\t" << "visibility="             << m_renderStatsOverride.visibility             << ";";
-		ss << "\n\t" << "gi_visibility="          << m_renderStatsOverride.gi_visibility          << ";";
-		ss << "\n\t" << "camera_visibility="      << m_renderStatsOverride.camera_visibility      << ";";
-		ss << "\n\t" << "reflections_visibility=" << m_renderStatsOverride.reflections_visibility << ";";
-		ss << "\n\t" << "refractions_visibility=" << m_renderStatsOverride.refractions_visibility << ";";
-		ss << "\n\t" << "shadows_visibility="     << m_renderStatsOverride.shadows_visibility     << ";";
-	}
-	ss << "\n}\n";
+	hideFromViewAttrs["visibility"]             = BOOST_FORMAT_BOOL(m_renderStatsOverride.visibility);
+	hideFromViewAttrs["gi_visibility"]          = BOOST_FORMAT_BOOL(m_renderStatsOverride.gi_visibility);
+	hideFromViewAttrs["camera_visibility"]      = BOOST_FORMAT_BOOL(m_renderStatsOverride.camera_visibility);
+	hideFromViewAttrs["reflections_visibility"] = BOOST_FORMAT_BOOL(m_renderStatsOverride.reflections_visibility);
+	hideFromViewAttrs["refractions_visibility"] = BOOST_FORMAT_BOOL(m_renderStatsOverride.refractions_visibility);
+	hideFromViewAttrs["shadows_visibility"]     = BOOST_FORMAT_BOOL(m_renderStatsOverride.shadows_visibility);
 
-	PYTHON_PRINT(output, ss.str().c_str());
+	// It's actually a material, but we will write it along with Node
+	VRayNodePluginExporter::exportPlugin("NODE", "MtlRenderStats", pluginName, hideFromViewAttrs);
 
 	return pluginName;
 }
@@ -371,8 +365,9 @@ void VRayScene::Node::writeData(PyObject *output, VRayExportable *prevState, boo
 	material = writeMtlWrapper(output, material);
 	material = writeMtlRenderStats(output, material);
 
-	if(m_set->m_useCameraLoop)
-		material = writeHideFromView(output, material, getName());
+	if(m_useRenderStatsOverride) {
+		material = writeHideFromView(material);
+	}
 
 	AttributeValueMap pluginAttrs;
 	pluginAttrs["material"]  = material.c_str();
@@ -492,7 +487,8 @@ void VRayScene::Node::setObjectID(const int &objectID)
 
 void VRayScene::Node::setHideFromView(const VRayScene::RenderStats &renderStats)
 {
-	m_renderStatsOverride = renderStats;
+	m_renderStatsOverride    = renderStats;
+	m_useRenderStatsOverride = true;
 }
 
 
@@ -520,10 +516,8 @@ void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 
 void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 {
-	if(VRayNodeExporter::m_set->m_isAnimation) {
-		if((VRayNodeExporter::m_set->m_sce->r.cfra > VRayNodeExporter::m_set->m_sce->r.sfra) && NOT(IsObjectDataUpdated(ob))) {
-			return;
-		}
+	if(VRayNodeExporter::m_set->DoUpdateCheck() && NOT(IsObjectDataUpdated(ob))) {
+		return;
 	}
 
 	if(ob->particlesystem.first) {
@@ -538,9 +532,9 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
 			geomMayaHair->init(psys);
 			if(VRayExportable::m_set->m_exportNodes)
-				geomMayaHair->writeNode(settings->m_fileObject, settings->m_sce->r.cfra);
+				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent);
 			if(VRayExportable::m_set->m_exportMeshes) {
-				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_sce->r.cfra);
+				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_frameCurrent);
 			}
 			if(toDelete)
 				delete geomMayaHair;

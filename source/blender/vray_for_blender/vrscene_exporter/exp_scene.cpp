@@ -110,6 +110,9 @@ void VRsceneExporter::addSkipObject(void *obPtr)
 
 void VRsceneExporter::addToHideFromViewList(const std::string &listKey, void *obPtr)
 {
+	PRINT_INFO("Adding object '%s' to hide list '%s'...",
+			   ((ID*)obPtr)->name, listKey.c_str());
+
 	if(listKey == "all")
 		m_hideFromView.visibility.insert(obPtr);
 	else if (listKey == "camera")
@@ -147,14 +150,8 @@ void VRsceneExporter::init()
 		}
 	}
 
-	if(m_set->m_sce->camera) {
-		RnaAccess::RnaValue vrayCamera((ID*)m_set->m_sce->camera->data, "vray");
-		VRayExportable::m_set->m_useHideFromView = vrayCamera.getBool("hide_from_view");
-	}
-
 	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, "vray.exporter");
 	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
-	VRayExportable::m_set->m_useCameraLoop     = vrayExporter.getBool("camera_loop");
 	VRayExportable::m_set->m_mtlOverride       = m_mtlOverride;
 }
 
@@ -170,7 +167,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
-	PRINT_INFO_LB("Exporting scene for frame %i...%s", m_set->m_sce->r.cfra, G.debug ? "\n" : "");
+	PRINT_INFO_LB("Exporting scene for frame %i...%s", m_set->m_frameCurrent, G.debug ? "\n" : "");
 	timeMeasure = PIL_check_seconds_timer();
 
 	Base *base = NULL;
@@ -300,7 +297,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	if(G.debug) {
-		PRINT_INFO_LB("Frame %i export",  m_set->m_sce->r.cfra);
+		PRINT_INFO_LB("Frame %i export",  m_set->m_frameCurrent);
 	}
 	printf(" done [%s]\n", timeMeasureBuf);
 
@@ -469,6 +466,9 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 
 void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
 {
+	PRINT_INFO("VRsceneExporter::exportNode(%s)",
+			   ob->id.name);
+
 	Node *node = new Node(m_set->m_sce, m_set->m_main, ob);
 	node->init(m_mtlOverride);
 	if(attrs.override) {
@@ -479,18 +479,17 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	}
 	node->initHash();
 
-	if(VRayExportable::m_set->m_useHideFromView) {
-		if(m_hideFromView.affectObject(ob)) {
-			RenderStats hideFromViewStats;
-			hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
-			hideFromViewStats.gi_visibility          = !m_hideFromView.gi_visibility.count(ob);
-			hideFromViewStats.reflections_visibility = !m_hideFromView.reflections_visibility.count(ob);
-			hideFromViewStats.refractions_visibility = !m_hideFromView.refractions_visibility.count(ob);
-			hideFromViewStats.shadows_visibility     = !m_hideFromView.shadows_visibility.count(ob);
-			hideFromViewStats.camera_visibility      = !m_hideFromView.camera_visibility.count(ob);
+	// NOTE: Write MtlRenderStats for all objects
+	if(m_hideFromView.hasData()) {
+		RenderStats hideFromViewStats;
+		hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
+		hideFromViewStats.gi_visibility          = !m_hideFromView.gi_visibility.count(ob);
+		hideFromViewStats.reflections_visibility = !m_hideFromView.reflections_visibility.count(ob);
+		hideFromViewStats.refractions_visibility = !m_hideFromView.refractions_visibility.count(ob);
+		hideFromViewStats.shadows_visibility     = !m_hideFromView.shadows_visibility.count(ob);
+		hideFromViewStats.camera_visibility      = !m_hideFromView.camera_visibility.count(ob);
 
-			node->setHideFromView(hideFromViewStats);
-		}
+		node->setHideFromView(hideFromViewStats);
 	}
 
 	// This will also check if object's mesh is valid
@@ -513,7 +512,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			writeData = node->isObjectDataUpdated();
 		if(writeData) {
 			node->initGeometry();
-			node->writeGeometry(m_set->m_fileGeom, m_set->m_sce->r.cfra);
+			node->writeGeometry(m_set->m_fileGeom, m_set->m_frameCurrent);
 		}
 	}
 
@@ -521,11 +520,17 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		int writeObject = true;
 		if(checkUpdated && m_set->DoUpdateCheck())
 			writeObject = node->isObjectUpdated();
+		int toDelete = false;
 		if(writeObject) {
-			int toDelete = node->write(m_set->m_fileObject, m_set->m_sce->r.cfra);
-			if(toDelete) {
-				delete node;
+			toDelete = node->write(m_set->m_fileObject, m_set->m_frameCurrent);
+		}
+		else {
+			if(m_hideFromView.hasData()) {
+				node->writeHideFromView();
 			}
+		}
+		if(toDelete) {
+			delete node;
 		}
 	}
 	else {
@@ -536,6 +541,9 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const NodeAttrs &attrs)
 {
+	PRINT_INFO("VRsceneExporter::exportNodeFromNodeTree(%s)",
+			   ob->id.name);
+
 	// TODO:
 	//   [x] Hair
 	//   [ ] Hide From View
@@ -618,17 +626,17 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export 'MtlRenderStats' for "Hide From View"
 	//
-	if(m_hideFromView.affectObject(ob)) {
+	if(m_hideFromView.hasData()) {
 		std::string hideFromViewName = "HideFromView" + pluginName;
 
 		AttributeValueMap hideFromViewAttrs;
 		hideFromViewAttrs["base_mtl"] = material;
-		hideFromViewAttrs["visibility"]             = !m_hideFromView.visibility.count(ob);
-		hideFromViewAttrs["gi_visibility"]          = !m_hideFromView.gi_visibility.count(ob);
-		hideFromViewAttrs["camera_visibility"]      = !m_hideFromView.camera_visibility.count(ob);
-		hideFromViewAttrs["reflections_visibility"] = !m_hideFromView.reflections_visibility.count(ob);
-		hideFromViewAttrs["refractions_visibility"] = !m_hideFromView.refractions_visibility.count(ob);
-		hideFromViewAttrs["shadows_visibility"]     = !m_hideFromView.shadows_visibility.count(ob);
+		hideFromViewAttrs["visibility"]             = BOOST_FORMAT_BOOL(!m_hideFromView.visibility.count(ob));
+		hideFromViewAttrs["gi_visibility"]          = BOOST_FORMAT_BOOL(!m_hideFromView.gi_visibility.count(ob));
+		hideFromViewAttrs["camera_visibility"]      = BOOST_FORMAT_BOOL(!m_hideFromView.camera_visibility.count(ob));
+		hideFromViewAttrs["reflections_visibility"] = BOOST_FORMAT_BOOL(!m_hideFromView.reflections_visibility.count(ob));
+		hideFromViewAttrs["refractions_visibility"] = BOOST_FORMAT_BOOL(!m_hideFromView.refractions_visibility.count(ob));
+		hideFromViewAttrs["shadows_visibility"]     = BOOST_FORMAT_BOOL(!m_hideFromView.shadows_visibility.count(ob));
 
 		// It's actually a material, but we will write it along with Node
 		VRayNodePluginExporter::exportPlugin("NODE", "MtlRenderStats", hideFromViewName, hideFromViewAttrs);
@@ -639,9 +647,9 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	AttributeValueMap pluginAttrs;
 	pluginAttrs["material"]  = material;
 	pluginAttrs["geometry"]  = geometry;
-	pluginAttrs["objectID"]  = boost::str(boost::format("%i") % objectID);
-	pluginAttrs["visible"]   = boost::str(boost::format("%i") % visible);
-	pluginAttrs["transform"] = boost::str(boost::format("TransformHex(\"%s\")") % transform);
+	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(objectID);
+	pluginAttrs["visible"]   = BOOST_FORMAT_INT(visible);
+	pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
 
 	VRayNodePluginExporter::exportPlugin("NODE", "Node", pluginName, pluginAttrs);
 }
