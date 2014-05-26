@@ -39,8 +39,12 @@ std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::No
 		return "NULL";
 	}
 
+	char transform[CGR_TRANSFORM_HEX_SIZE];
+	GetTransformHex(context->ob->obmat, transform);
+
 	AttributeValueMap manualAttrs;
-	manualAttrs["mesh"] = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
+	manualAttrs["geometry"]  = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
+	manualAttrs["transform"] = BOOST_FORMAT_TM(transform);
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 }
