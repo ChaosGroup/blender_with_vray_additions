@@ -31,14 +31,14 @@ StrSet           VRayNodePluginExporter::m_namesCache;
 
 void VRayNodeExporter::getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable)
 {
-	boost::property_tree::ptree *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
+	PluginJson *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
 	if(NOT(pluginDesc)) {
 		PRINT_ERROR("Plugin '%s' description is not found!",
 					pluginID.c_str());
 		return;
 	}
 
-	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
+	BOOST_FOREACH(PluginJson::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 
@@ -375,7 +375,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 
 	PointerRNA propGroup = RNA_pointer_get(&node.ptr, pluginID.c_str());
 
-	boost::property_tree::ptree *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
+	PluginJson *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
 	if(NOT(pluginDesc)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Node is not supported!",
 					ntree.name().c_str(), node.name().c_str());
@@ -390,7 +390,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 	// VRayNodeContext nodeContext(ntree, node);
 	// VRayNodeExporter::getAttrsFromPropGroupAndNode(pluginAttrs, pluginID, propGroup, manualAttrs, nodeContext);
 
-	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
+	BOOST_FOREACH(PluginJson::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 
@@ -493,10 +493,10 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 }
 
 
-static const std::string GetAttrType(boost::property_tree::ptree *pluginDesc, const std::string &attributeName)
+static const std::string GetAttrType(PluginJson *pluginDesc, const std::string &attributeName)
 {
 	if(pluginDesc) {
-		BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
+		BOOST_FOREACH(PluginJson::value_type &v, pluginDesc->get_child("Parameters")) {
 			const std::string attrName = v.second.get_child("attr").data();
 			const std::string attrType = v.second.get_child("type").data();
 			if(attrName == attributeName)
@@ -522,7 +522,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	std::stringstream outAttributes;
 	std::stringstream outPlugin;
 
-	boost::property_tree::ptree *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
+	PluginJson *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
 
 	AttributeValueMap::const_iterator attrIt;
 	for(attrIt = pluginAttrs.begin(); attrIt != pluginAttrs.end(); ++attrIt) {

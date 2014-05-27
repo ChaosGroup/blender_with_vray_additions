@@ -203,14 +203,14 @@ void VRayExportable::writeAttributes(PointerRNA *ptr) {
 }
 
 
-void VRayExportable::writeAttributes(PointerRNA *ptr, boost::property_tree::ptree *pluginDesc, std::stringstream &output, const StrSet &skipAttrs)
+void VRayExportable::writeAttributes(PointerRNA *ptr, PluginJson *pluginDesc, std::stringstream &output, const StrSet &skipAttrs)
 {
 	if(NOT(pluginDesc))
 		return;
 
 	PRINT_INFO("Processing attributes for: %s ", pluginDesc->get_child("ID").data().c_str());
 
-	BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pluginDesc->get_child("Parameters")) {
+	BOOST_FOREACH(PluginJson::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 

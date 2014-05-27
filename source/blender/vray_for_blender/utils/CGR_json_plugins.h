@@ -37,22 +37,21 @@
 #include <string>
 #include <map>
 
+typedef boost::property_tree::ptree         PluginJson;
+typedef std::map<std::string, PluginJson*>  PluginDesc;
 
-void  PrintTree(boost::property_tree::ptree &pt);
 
-
-typedef std::map<std::string, boost::property_tree::ptree*>  PluginDesc;
-
+void  PrintTree(PluginJson &pt);
 
 class VRayPluginsDesc {
 public:
-	void                         init(const std::string &dirPath);
-	void                         freeData();
+	void        init(const std::string &dirPath);
+	void        freeData();
 
-	boost::property_tree::ptree *getTree(const std::string &name);
+	PluginJson *getTree(const std::string &name);
 
 private:
-	PluginDesc                   m_desc;
+	PluginDesc  m_desc;
 
 };
 
