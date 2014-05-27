@@ -63,6 +63,8 @@ set(SRC
 	utils/CGR_string.cpp
 	utils/CGR_vrscene.h
 	utils/CGR_vrscene.cpp
+	utils/cgr_paths.h
+	utils/cgr_paths.cpp
 	utils/murmur3.h
 	utils/murmur3.cpp
 
