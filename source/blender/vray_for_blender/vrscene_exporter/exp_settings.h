@@ -58,6 +58,7 @@ struct ExpoterSettings {
 		m_frameStep    = 1;
 
 		m_mtlOverride = "";
+		m_drSharePath = "";
 	}
 
 	bool              DoUpdateCheck() { return m_isAnimation && (m_frameCurrent > m_frameStart); }
@@ -91,6 +92,9 @@ struct ExpoterSettings {
 	int               m_frameStart;
 	int               m_frameStep;
 	int               m_frameCustom;
+
+	// DR
+	std::string       m_drSharePath;
 
 };
 
