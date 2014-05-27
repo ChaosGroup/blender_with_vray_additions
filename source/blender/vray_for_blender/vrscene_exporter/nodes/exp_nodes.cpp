@@ -21,6 +21,7 @@
  */
 
 #include "exp_nodes.h"
+#include "cgr_paths.h"
 
 
 ExpoterSettings *VRayNodeExporter::m_set = NULL;
@@ -74,12 +75,19 @@ std::string VRayNodeExporter::getValueFromPropGroup(PointerRNA *propGroup, ID *h
 		if(strlen(value) == 0)
 			return "NULL";
 
+		std::string absFilepath = value;
+
 		PropertySubType propSubType = RNA_property_subtype(prop);
 		if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
-			BLI_path_abs(value, ID_BLEND_PATH(G.main, holder));
+			BLI_path_abs(value, ID_BLEND_PATH_EX(holder));
+
+			if(propSubType == PROP_FILEPATH) {
+				absFilepath = BlenderUtils::GetFullFilepath(value, holder);
+				absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
+			}
 		}
 
-		return BOOST_FORMAT_STRING(value);
+		return BOOST_FORMAT_STRING(absFilepath.c_str());
 	}
 	else if(propType == PROP_BOOLEAN) {
 		return BOOST_FORMAT_BOOL(RNA_boolean_get(propGroup, attrName.c_str()));
