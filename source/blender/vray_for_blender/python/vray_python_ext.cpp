@@ -71,6 +71,7 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	long      isAnimation = false;
 	long      frameStart  = 1;
 	long      frameStep   = 1;
+	char     *drSharePath = NULL;
 
 	PyObject *engine     = NULL;
 	PyObject *obFile     = NULL;
@@ -93,11 +94,12 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		_C("isAnimation"),    // 9
 		_C("frameStart"),     // 10
 		_C("frameStep"),      // 11
+		_C("drSharePath"),    // 12
 		NULL
 	};
 
 	//                                  01234 56789
-	static const char  kwlistTypes[] = "OlOOO|llOOlll";
+	static const char  kwlistTypes[] = "OlOOO|llOOllls";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &engine,
@@ -111,7 +113,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 									   &texturesFile,
 									   &isAnimation,
 									   &frameStart,
-									   &frameStep)))
+									   &frameStep,
+									   &drSharePath)))
 		return NULL;
 
 	PointerRNA engineRnaPtr;
@@ -146,6 +149,10 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	VRayExportable::m_set->m_isAnimation = isAnimation;
 	VRayExportable::m_set->m_frameStart  = frameStart;
 	VRayExportable::m_set->m_frameStep   = frameStep;
+
+	if(drSharePath) {
+		VRayExportable::m_set->m_drSharePath = drSharePath;
+	}
 
 	VRsceneExporter *exporter = new VRsceneExporter(VRayExportable::m_set);
 
