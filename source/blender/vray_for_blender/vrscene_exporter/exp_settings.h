@@ -49,7 +49,7 @@ struct ExpoterSettings {
 		m_fileMat    = NULL;
 		m_fileTex    = NULL;
 
-		m_activeLayers  = true;
+		m_activeLayers  = 0;
 		m_useNodeTrees  = false;
 
 		m_isAnimation  = false;
@@ -80,7 +80,7 @@ struct ExpoterSettings {
 	// Export options
 	int               m_exportNodes;
 	int               m_exportMeshes;
-	int               m_activeLayers;
+	unsigned int      m_activeLayers;
 	int               m_useNodeTrees;
 
 	int               m_useDisplaceSubdiv;
