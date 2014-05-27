@@ -25,8 +25,6 @@
 
 #include "exp_types.h"
 
-#include <sstream>
-
 
 namespace VRayScene {
 

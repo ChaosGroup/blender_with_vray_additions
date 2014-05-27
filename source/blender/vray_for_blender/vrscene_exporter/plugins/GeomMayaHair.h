@@ -24,7 +24,6 @@
 #define GEOM_MAYA_HAIR_H
 
 #include "exp_types.h"
-#include "CGR_vrscene.h"
 
 
 namespace VRayScene {
