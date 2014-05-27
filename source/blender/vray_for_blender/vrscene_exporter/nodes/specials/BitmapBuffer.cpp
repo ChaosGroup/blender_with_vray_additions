@@ -21,6 +21,7 @@
  */
 
 #include "exp_nodes.h"
+#include "cgr_paths.h"
 
 
 std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node)
@@ -31,15 +32,11 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 		if(imageTexture) {
 			BL::Image image = imageTexture.image();
 
-			char absFilepath[FILE_MAX];
-			BLI_strncpy(absFilepath, image.filepath().c_str(), FILE_MAX);
-
-			BLI_path_abs(absFilepath, ID_BLEND_PATH(G.main, ((ID*)ntree.ptr.data)));
+			std::string absFilepath = BlenderUtils::GetFullFilepath(image.filepath(), (ID*)ntree.ptr.data);
+			absFilepath             = BlenderUtils::CopyDRAsset(absFilepath);
 
 			AttributeValueMap manualAttributes;
-			manualAttributes["file"] = boost::str(boost::format("\"%s\"") % absFilepath);
-
-			// TODO: Copy file to DR directory if needed
+			manualAttributes["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
 
 			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttributes);
 		}
