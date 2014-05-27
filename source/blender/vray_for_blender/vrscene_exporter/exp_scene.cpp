@@ -544,10 +544,6 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	PRINT_INFO("VRsceneExporter::exportNodeFromNodeTree(%s)",
 			   ob->id.name);
 
-	// TODO:
-	//   [x] Hair
-	//   [ ] Hide From View
-
 	// Export hair
 	//
 	Node::WriteHair(m_set, ob);
