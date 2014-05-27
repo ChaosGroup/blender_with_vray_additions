@@ -162,7 +162,6 @@ void VRsceneExporter::init()
 	// Check what layers to use
 	//
 	int useLayers = vrayExporter.getEnum("activeLayers");
-	std::cout << "Active Layers " << useLayers << std::endl;
 
 	// Current active layers
 	if(useLayers == 0) {
