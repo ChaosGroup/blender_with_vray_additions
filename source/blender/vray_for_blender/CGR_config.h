@@ -159,4 +159,6 @@ typedef unsigned __int64 u_int64_t;
 
 #define _C(x) (char*)x
 
+#define CGR_TRANSFORM_HEX_SIZE  129
+
 #endif // CGR_CONFIG
