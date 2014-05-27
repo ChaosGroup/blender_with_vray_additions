@@ -22,9 +22,9 @@
 
 #include "CGR_config.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include "GeomStaticMesh.h"
+
+#include <boost/lexical_cast.hpp>
 
 #include "CGR_blender_data.h"
 #include "CGR_string.h"
