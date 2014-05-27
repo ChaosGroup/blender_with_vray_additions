@@ -27,8 +27,10 @@
 
 #include "CGR_vrscene.h"
 
-#include "DNA_modifier_types.h"
-#include "DNA_smoke_types.h"
+extern "C" {
+#  include "DNA_modifier_types.h"
+#  include "DNA_smoke_types.h"
+}
 
 #define CGR_USE_HEAT           0
 #define CGR_DEBUG_GIZMO_SHAPE  0

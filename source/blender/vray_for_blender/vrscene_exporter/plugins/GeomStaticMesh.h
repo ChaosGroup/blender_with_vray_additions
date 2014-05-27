@@ -23,14 +23,7 @@
 #ifndef GEOM_STATIC_MESH_H
 #define GEOM_STATIC_MESH_H
 
-extern "C" {
-#  include "DNA_mesh_types.h"
-}
-
 #include "exp_types.h"
-
-#include <string>
-#include <vector>
 
 
 namespace VRayScene {

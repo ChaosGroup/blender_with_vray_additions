@@ -25,11 +25,6 @@
 
 #include "exp_types.h"
 
-#include "CGR_vrscene.h"
-
-#include <sstream>
-#include <map>
-
 
 namespace VRayScene {
 

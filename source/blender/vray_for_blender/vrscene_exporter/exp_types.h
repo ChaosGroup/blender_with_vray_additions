@@ -23,6 +23,8 @@
 #ifndef CGR_EXP_TYPES_H
 #define CGR_EXP_TYPES_H
 
+#include <Python.h>
+
 #include "exp_defines.h"
 #include "exp_anim.h"
 #include "exp_settings.h"
@@ -47,9 +49,8 @@ extern "C" {
 #include <sstream>
 #include <string>
 #include <vector>
+#include <map>
 #include <set>
-
-#include <Python.h>
 
 
 typedef std::stringstream sstream;
