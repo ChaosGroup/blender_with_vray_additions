@@ -150,9 +150,41 @@ void VRsceneExporter::init()
 		}
 	}
 
-	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, "vray.exporter");
+	std::string exporterRnaProperty = "vray.exporter";
+	if(m_set->m_useNodeTrees) {
+		exporterRnaProperty = "vray.Exporter";
+	}
+
+	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, exporterRnaProperty.c_str());
 	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
 	VRayExportable::m_set->m_mtlOverride       = m_mtlOverride;
+
+	// Check what layers to use
+	//
+	int useLayers = vrayExporter.getEnum("activeLayers");
+	std::cout << "Active Layers " << useLayers << std::endl;
+
+	// Current active layers
+	if(useLayers == 0) {
+		m_set->m_activeLayers = VRayExportable::m_set->m_sce->lay;
+	}
+	// All layers
+	else if(useLayers == 1) {
+		m_set->m_activeLayers = ~(1<<21);
+	}
+	// Custom layers
+	else {
+		// Load custom render layers
+		int layer_values[20];
+		RNA_boolean_get_array(vrayExporter.getPtr(), "customRenderLayers", layer_values);
+
+		m_set->m_activeLayers = 0;
+		for(int a = 0; a < 20; ++a) {
+			if(layer_values[a]) {
+				m_set->m_activeLayers |= (1 << a);
+			}
+		}
+	}
 }
 
 
@@ -167,7 +199,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
-	PRINT_INFO_LB("Exporting scene for frame %i...%s", m_set->m_frameCurrent, G.debug ? "\n" : "");
+	PRINT_INFO_EX("Exporting data for frame %i...", m_set->m_frameCurrent);
 	timeMeasure = PIL_check_seconds_timer();
 
 	Base *base = NULL;
@@ -234,11 +266,8 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		if(ob->restrictflag & OB_RESTRICT_RENDER)
 			continue;
 
-		if(m_set->m_activeLayers)
-			if(NOT(ob->lay & m_set->m_sce->lay))
-				continue;
-
-		// TODO: Custom layers support
+		if(NOT(ob->lay & m_set->m_activeLayers))
+			continue;
 
 		if(m_skipObjects.count((void*)&ob->id)) {
 			PRINT_INFO("Skipping object: %s", ob->id.name);
@@ -296,13 +325,15 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	m_hideFromView.clear();
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
-	if(G.debug) {
-		PRINT_INFO_LB("Frame %i export",  m_set->m_frameCurrent);
-	}
-	printf(" done [%s]\n", timeMeasureBuf);
 
-	if(exportInterrupt)
+	if(exportInterrupt) {
+		PRINT_INFO_EX("Exporting data for frame %i is interruped! [%s]",
+					  m_set->m_frameCurrent, timeMeasureBuf);
 		return 1;
+	}
+
+	PRINT_INFO_EX("Exporting data for frame %i done [%s]",
+				  m_set->m_frameCurrent, timeMeasureBuf);
 
 	return 0;
 }
