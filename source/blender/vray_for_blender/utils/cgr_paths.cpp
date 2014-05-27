@@ -20,6 +20,14 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
+// XXX: This will fix compilation fail on OS X:
+//   error: 'std::toupper' cannot appear in a constant-expression
+//   error: parse error in template argument list
+//
+// TODO: Find out how to compile with boost without such hack
+//
+#include <Python.h>
+
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
