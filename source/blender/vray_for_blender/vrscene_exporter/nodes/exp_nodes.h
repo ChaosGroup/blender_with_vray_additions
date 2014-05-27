@@ -23,6 +23,8 @@
 #ifndef CGR_EXPORT_NODES_H
 #define CGR_EXPORT_NODES_H
 
+#include <Python.h>
+
 #include <algorithm>
 
 #include <boost/format.hpp>
