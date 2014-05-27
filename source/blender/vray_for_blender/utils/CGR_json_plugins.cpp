@@ -38,12 +38,12 @@
 #include "../editors/space_file/filelist.h"
 
 
-void PrintTree(boost::property_tree::ptree &pt)
+void PrintTree(PluginJson &pt)
 {
     if(pt.empty())
         return;
 
-    BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pt) {
+	BOOST_FOREACH(PluginJson::value_type &v, pt) {
         std::cout << "\"" << v.first.data() << "\" : \"" << v.second.data() << "\"" << std::endl;
         PrintTree(v.second);
     }
@@ -75,7 +75,7 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 		std::string fileName(BLI_path_basename(file->path));
 		fileName.erase(fileName.find_last_of("."), std::string::npos);
 
-		boost::property_tree::ptree *pTree = new boost::property_tree::ptree();
+		PluginJson *pTree = new PluginJson();
 
 		std::ifstream fileStream(file->path);
 		boost::property_tree::json_parser::read_json(fileStream, *pTree);
@@ -99,7 +99,7 @@ void VRayPluginsDesc::freeData()
 }
 
 
-boost::property_tree::ptree *VRayPluginsDesc::getTree(const std::string &name)
+PluginJson* VRayPluginsDesc::getTree(const std::string &name)
 {
 	if(NOT(m_desc.count(name)))
 		return NULL;

@@ -191,7 +191,7 @@ public:
 	void writeAttributes(PointerRNA *ptr);
 
 	// Write all attibutes based on JSON plugin description
-	void writeAttributes(PointerRNA *ptr, boost::property_tree::ptree *pluginDesc, std::stringstream &output, const StrSet &skipAttrs=StrSet());
+	void writeAttributes(PointerRNA *ptr, PluginJson *pluginDesc, std::stringstream &output, const StrSet &skipAttrs=StrSet());
 
 	// Manual attributes export
 	//
