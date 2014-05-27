@@ -222,8 +222,15 @@ static PyObject* mExportScene(PyObject *self, PyObject *args)
 	if(exporterPtr) {
 		VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
 		int err = exporter->exportScene(exportNodes, exportGeometry);
-		if(err)
+		if(err) {
+			if(err == 1) {
+				PyErr_SetString(PyExc_RuntimeError, "Export is interrupted by the user!");
+			}
+			else {
+				PyErr_SetString(PyExc_RuntimeError, "Unknown export error!");
+			}
 			return NULL;
+		}
 	}
 
 	Py_RETURN_NONE;
