@@ -694,7 +694,7 @@ void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 
 	Light *light = new Light(m_set->m_sce, m_set->m_main, ob, dOb);
 
-	int toDelete = light->write(m_set->m_fileLights, m_set->m_sce->r.cfra);
+	int toDelete = light->write(m_set->m_fileLights, m_set->m_frameCurrent);
 	if(toDelete) {
 		delete light;
 	}
