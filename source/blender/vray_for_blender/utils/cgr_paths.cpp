@@ -88,7 +88,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		}
 		catch(const bfs::filesystem_error &ex)
 		{
-			PRINT_ERROR("Exception %s: Error creating directory path: %s!",
+			PRINT_ERROR("Exception %s: Error creating directory path \"%s\"!",
 						ex.what(), dstDirpath.c_str());
 			return filepath;
 		}
