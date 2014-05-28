@@ -91,7 +91,7 @@ BLI_INLINE void get_particle_uvco_mcol(short from, DerivedMesh *dm, float *fuv, 
 GeomMayaHair::GeomMayaHair(Scene *scene, Main *main, Object *ob):
 	VRayExportable(scene, main, ob)
 {
-	m_hash = 0;
+	m_hash = 1;
 
 	use_width_fade = 0;
 
@@ -139,17 +139,21 @@ void GeomMayaHair::freeData()
 }
 
 
-void GeomMayaHair::init(ParticleSystem *psys)
+void GeomMayaHair::init()
+{
+	initData();
+	initHash();
+}
+
+
+void GeomMayaHair::preInit(ParticleSystem *psys)
 {
 	m_psys = psys;
 
 	GetTransformHex(m_ob->obmat, m_nodeTm);
 
-	initData();
 	initAttributes();
 	initName();
-
-	initHash();
 }
 
 
