@@ -67,7 +67,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		return filepath;
 	}
 
-	std::string fileExt = srcFilepath.extension().c_str();
+	std::string fileExt = srcFilepath.extension().string();
 	boost::algorithm::to_lower(fileExt);
 
 	std::string assetSubdir = "textures";
