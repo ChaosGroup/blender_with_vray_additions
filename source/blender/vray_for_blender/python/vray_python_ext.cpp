@@ -178,7 +178,7 @@ static PyObject* mExportExit(PyObject *self, PyObject *value)
 
 static PyObject* mExportSetFrame(PyObject *self, PyObject *args)
 {
-	int frameCurrent = false;
+	int frameCurrent = 0;
 
 	if(NOT(PyArg_ParseTuple(args, "i", &frameCurrent)))
 		return NULL;
