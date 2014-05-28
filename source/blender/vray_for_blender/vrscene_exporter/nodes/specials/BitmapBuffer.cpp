@@ -30,10 +30,13 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 	if(b_tex) {
 		BL::ImageTexture imageTexture(b_tex.ptr);
 		if(imageTexture) {
-			BL::Image image = imageTexture.image();
+			std::string absFilepath;
 
-			std::string absFilepath = BlenderUtils::GetFullFilepath(image.filepath(), (ID*)ntree.ptr.data);
-			absFilepath             = BlenderUtils::CopyDRAsset(absFilepath);
+			BL::Image image = imageTexture.image();
+			if(image) {
+				absFilepath = BlenderUtils::GetFullFilepath(image.filepath(), (ID*)ntree.ptr.data);
+				absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
+			}
 
 			AttributeValueMap manualAttributes;
 			manualAttributes["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
