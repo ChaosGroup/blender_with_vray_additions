@@ -402,6 +402,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 		std::string attrName = v.second.get_child("attr").data();
 		std::string attrType = v.second.get_child("type").data();
 
+		if(OUTPUT_TYPE(attrType))
+			continue;
+
 		// Skip attributes only if they are not manully specified
 		if(SKIP_TYPE(attrType) && NOT(manualAttrs.count(attrName)))
 			continue;
@@ -592,45 +595,41 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	}
 
 	if(outAttributes.str().empty()) {
-		// This plugin doesn't have any attributes
-		if(pluginID == "GeomPlane") {
-			// NOTE: Try to make it exported only once
-			//
-			outPlugin << "\n" << pluginID << " " << pluginName << " {}\n";
-			PYTHON_PRINT(VRayNodeExporter::m_set->m_fileObject, outPlugin.str().c_str());
+		// We have some plugins without input attributes
+		// Export then only for the first frame
+		if(VRayNodeExporter::m_set->DoUpdateCheck())
+			return 0;
+	}
+
+	outPlugin << "\n" << pluginID << " " << pluginName << " {";
+	outPlugin << outAttributes.str();
+	outPlugin << "\n}\n";
+
+	PyObject *output = VRayNodeExporter::m_set->m_fileObject;
+
+	if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
+		output = VRayNodeExporter::m_set->m_fileTex;
+	}
+	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
+		output = VRayNodeExporter::m_set->m_fileMat;
+	}
+	else if(pluginType == "LIGHT") {
+		output = VRayNodeExporter::m_set->m_fileLights;
+	}
+	else if(pluginType == "GEOMETRY") {
+		if(pluginID == "GeomDisplacedMesh"      ||
+		   pluginID == "GeomStaticSmoothedMesh" ||
+		   pluginID == "GeomPlane")
+		{
+			// Store dynamic geometry plugins in 'Node' file
+			output = VRayNodeExporter::m_set->m_fileObject;
+		}
+		else {
+			output = VRayNodeExporter::m_set->m_fileGeom;
 		}
 	}
-	else {
-		outPlugin << "\n" << pluginID << " " << pluginName << " {";
-		outPlugin << outAttributes.str();
-		outPlugin << "\n}\n";
 
-		PyObject *output = VRayNodeExporter::m_set->m_fileObject;
-
-		if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
-			output = VRayNodeExporter::m_set->m_fileTex;
-		}
-		else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
-			output = VRayNodeExporter::m_set->m_fileMat;
-		}
-		else if(pluginType == "LIGHT") {
-			output = VRayNodeExporter::m_set->m_fileLights;
-		}
-		else if(pluginType == "GEOMETRY") {
-			if(pluginID == "GeomDisplacedMesh"      ||
-			   pluginID == "GeomStaticSmoothedMesh" ||
-			   pluginID == "GeomPlane")
-			{
-				// Store dynamic geometry plugins in 'Node' file
-				output = VRayNodeExporter::m_set->m_fileObject;
-			}
-			else {
-				output = VRayNodeExporter::m_set->m_fileGeom;
-			}
-		}
-
-		PYTHON_PRINT(output, outPlugin.str().c_str());
-	}
+	PYTHON_PRINT(output, outPlugin.str().c_str());
 
 	return 0;
 }
