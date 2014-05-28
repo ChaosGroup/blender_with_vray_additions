@@ -530,10 +530,11 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 
 			int           toDelete = false;
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
-			geomMayaHair->init(psys);
+			geomMayaHair->preInit(psys);
 			if(VRayExportable::m_set->m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent);
 			if(VRayExportable::m_set->m_exportMeshes) {
+				geomMayaHair->init();
 				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_frameCurrent);
 			}
 			if(toDelete)
