@@ -33,14 +33,14 @@ public:
 	GeomMayaHair(Scene *scene, Main *main, Object *ob);
 
 	virtual           ~GeomMayaHair() { freeData(); }
-	virtual void       preInit() {}
 	virtual void       initHash();
 	virtual void       initName(const std::string &name="");
 
 	virtual void       writeData(PyObject *output, VRayExportable *prevState, bool keyFrame=false);
 	void               writeNode(PyObject *output, int frame=INT_MIN);
 
-	void               init(ParticleSystem *psys);
+	virtual void       init();
+	void               preInit(ParticleSystem *psys);
 	void               freeData();
 
 	char              *getHairVertices() const    { return hair_vertices; }

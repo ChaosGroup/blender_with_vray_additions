@@ -27,7 +27,8 @@
 int ExportGeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob, ParticleSystem *psys, const char *pluginName)
 {
 	VRayScene::GeomMayaHair *geomMayaHair = new VRayScene::GeomMayaHair(sce, main, ob);
-	geomMayaHair->init(psys);
+	geomMayaHair->preInit(psys);
+	geomMayaHair->init();
 	geomMayaHair->initName(pluginName);
 
 	int toDelete = geomMayaHair->write(outputFile, sce->r.cfra);
