@@ -119,5 +119,5 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		}
 	}
 
-	return dstFilepath.c_str();
+	return dstFilepath.string();
 }
