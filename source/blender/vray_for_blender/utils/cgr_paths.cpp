@@ -86,8 +86,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		try {
 			bfs::create_directories(dstDirpath);
 		}
-		catch(const bfs::filesystem_error &ex)
-		{
+		catch(const bfs::filesystem_error &ex) {
 			PRINT_ERROR("Exception %s: Error creating directory path \"%s\"!",
 						ex.what(), dstDirpath.c_str());
 			return filepath;
@@ -111,8 +110,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		try {
 			bfs::copy_file(srcFilepath, dstFilepath, bfs::copy_option::overwrite_if_exists);
 		}
-		catch(const bfs::filesystem_error &ex)
-		{
+		catch(const bfs::filesystem_error &ex) {
 			PRINT_ERROR("Exception %s: Error copying \"%s\" file to \"%s\"!",
 						ex.what(), fileName.c_str(), dstDirpath.c_str());
 			return filepath;
