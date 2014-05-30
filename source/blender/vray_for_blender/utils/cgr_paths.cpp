@@ -75,7 +75,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		assetSubdir = "ies";
 	else if(fileExt == "vrmesh")
 		assetSubdir = "proxy";
-	else if(fileExt == "vrmap")
+	else if(fileExt == "vrmap" || fileExt == "vrst" || fileExt == "vrsm")
 		assetSubdir = "lightmaps";
 
 	bpath drRoot(VRayScene::VRayExportable::m_set->m_drSharePath);
