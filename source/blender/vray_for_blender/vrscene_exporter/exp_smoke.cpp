@@ -110,14 +110,16 @@ void ExportSmokeDomain(PyObject          *outputFile,
 
 void  ExportVoxelDataAsFluid(PyObject *output, Scene *sce, Object *ob, SmokeModifierData *smd, PyObject *propGroup, const char *pluginName)
 {
-	VRayScene::TexVoxelData texVoxelData(sce, NULL, ob);
-	texVoxelData.initName(pluginName);
-	texVoxelData.init(smd);
-	texVoxelData.setPropGroup(propGroup);
-	texVoxelData.setAsFluid(true);
+	VRayScene::TexVoxelData *texVoxelData = new VRayScene::TexVoxelData(sce, NULL, ob);
+	texVoxelData->initName(pluginName);
+	texVoxelData->init(smd);
+	texVoxelData->setPropGroup(propGroup);
+	texVoxelData->setAsFluid(true);
 
-	if(NOT(texVoxelData.getHash()))
+	if(NOT(texVoxelData->getHash()))
 		return;
 
-	texVoxelData.write(output, sce->r.cfra);
+	int toDelete = texVoxelData->write(output, sce->r.cfra);
+	if(toDelete)
+		delete texVoxelData;
 }
