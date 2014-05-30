@@ -26,6 +26,7 @@
 
 #include "smoke_API.h"
 
+#define CGR_USE_SMOKE_DATA_DEBUG  0
 
 using namespace VRayScene;
 
@@ -213,6 +214,34 @@ void TexVoxelData::initSmoke()
 
 #if CGR_USE_HEAT
 	tot_res_low  = (size_t)m_res_low[0]  * (size_t)m_res_low[1]  * (size_t)m_res_low[2];
+#endif
+
+#if CGR_USE_SMOKE_DATA_DEBUG
+	float max_flame = 0.0;
+	float min_flame = 0.0;
+	for(size_t i = 0; i < tot_res_high; ++i) {
+		float _fl = flame[i];
+		if(_fl < min_flame) {
+			min_flame = _fl;
+		}
+		if(_fl > max_flame) {
+			max_flame = _fl;
+		}
+	}
+	PRINT_INFO_EX("Flame range: [%.3f-%.3f]", min_flame, max_flame);
+
+	float max_dens = 0.0;
+	float min_dens = 0.0;
+	for(size_t i = 0; i < tot_res_high; ++i) {
+		float _d = dens[i];
+		if(_d < min_dens) {
+			min_dens = _d;
+		}
+		if(_d > max_dens) {
+			max_dens = _d;
+		}
+	}
+	PRINT_INFO_EX("Density range: [%.3f-%.3f]", min_dens, max_dens);
 #endif
 
 	m_dens  = GetFloatArrayZip(dens,  tot_res_high);
