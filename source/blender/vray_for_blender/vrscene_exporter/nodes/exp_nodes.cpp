@@ -272,8 +272,13 @@ BL::Texture VRayNodeExporter::getTextureFromIDRef(PointerRNA *ptr, const std::st
 
 std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context)
 {
-	BL::Node       conNode = VRayNodeExporter::getConnectedNode(ntree, socket);
 	BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(ntree, socket);
+
+	// NOTE: This could happen when reconnecting nodes
+	if(NOT(conSock.ptr.data))
+		return "NULL";
+
+	BL::Node    conNode = VRayNodeExporter::getConnectedNode(ntree, socket);
 
 	std::string connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, conNode, context);
 
