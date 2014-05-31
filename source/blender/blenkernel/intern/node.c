@@ -60,6 +60,7 @@
 #include "BKE_library.h"
 #include "BKE_main.h"
 #include "BKE_node.h"
+#include "BKE_depsgraph.h"
 
 #include "BLI_ghash.h"
 #include "RNA_access.h"
@@ -70,6 +71,10 @@
 #include "NOD_composite.h"
 #include "NOD_shader.h"
 #include "NOD_texture.h"
+
+#include "WM_api.h"
+#include "WM_types.h"
+
 
 /* Fallback types for undefined tree, nodes, sockets */
 bNodeTreeType NodeTreeTypeUndefined;
@@ -2928,6 +2933,24 @@ void ntreeVerifyNodes(struct Main *main, struct ID *id)
 	} FOREACH_NODETREE_END
 }
 
+static ID *cgr_get_ntree_material(ID *id)
+{
+	Material   *ma = NULL;
+	PointerRNA  ptr;
+	char        treeName[MAX_ID_NAME];
+
+	for (ma = G.main->mat.first; ma; ma = ma->id.next) {
+		RNA_id_pointer_create((ID*)ma, &ptr);
+		ptr = RNA_pointer_get(&ptr, "vray");
+
+		RNA_string_get(&ptr, "ntree__name__", treeName);
+		if(strncmp(id->name+2, treeName, MAX_ID_NAME) == 0)
+			return (ID*)ma;
+	}
+
+	return NULL;
+}
+
 void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 {
 	bNode *node;
@@ -2979,7 +3002,21 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 		/* check link validity */
 		ntree_validate_links(ntree);
 	}
-	
+
+	if (ntree->update & (NTREE_UPDATE_LINKS | NTREE_UPDATE_NODES)) {
+		if (ntree->type == NTREE_CUSTOM) {
+			if(ntree->idname) {
+				if(strncmp(ntree->idname, "VRayNodeTreeMaterial", 20) == 0) {
+					ID *ma = cgr_get_ntree_material((ID*)ntree);
+					if(ma) {
+						DAG_id_tag_update(ma, 0);
+						WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, ma);
+					}
+				}
+			}
+		}
+	}
+
 	/* clear update flags */
 	for (node = ntree->nodes.first; node; node = node->next) {
 		node->update = 0;
