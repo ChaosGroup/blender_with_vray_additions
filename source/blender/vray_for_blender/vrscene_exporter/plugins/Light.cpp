@@ -20,6 +20,8 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
+#include "exp_nodes.h"
+
 #include "Light.h"
 #include "CGR_rna.h"
 #include "CGR_string.h"
@@ -28,8 +30,6 @@
 #include "DNA_lamp_types.h"
 
 #include "BLI_math_matrix.h"
-
-#include <boost/lexical_cast.hpp>
 
 
 #define STR_CMP(a, b) strcmp(a, b) == 0
@@ -255,7 +255,7 @@ void VRayScene::Light::initName(const std::string &name)
 			m_name = GetIDName((ID*)m_ob);
 		m_name.append(GetIDName((ID*)m_object));
 		if(m_dupliObject)
-			m_name.append(boost::lexical_cast<std::string>(m_dupliObject->persistent_id[0]));
+			m_name.append(BOOST_FORMAT_INT(m_dupliObject->persistent_id[0]));
 	}
 }
 
