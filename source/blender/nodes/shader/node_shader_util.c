@@ -39,7 +39,7 @@
 
 int sh_node_poll_default(bNodeType *UNUSED(ntype), bNodeTree *ntree)
 {
-	return STREQ(ntree->idname, "ShaderNodeTree");
+	return STREQ(ntree->idname, "ShaderNodeTree") || STREQ(ntree->idname, "VRayNodeTreeMaterial");
 }
 
 void sh_node_type_base(struct bNodeType *ntype, int type, const char *name, short nclass, short flag)
