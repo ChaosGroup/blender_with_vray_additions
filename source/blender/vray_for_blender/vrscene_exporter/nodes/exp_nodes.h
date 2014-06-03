@@ -56,14 +56,15 @@
 	attrType == "OUTPUT_TEXTURE")
 
 #define MAPPABLE_TYPE(attrType) (\
-	attrType == "BRDF"          || \
-	attrType == "MATERIAL"      || \
-	attrType == "GEOMETRY"      || \
-	attrType == "PLUGIN"        || \
-	attrType == "TEXTURE"       || \
-	attrType == "FLOAT_TEXTURE" || \
-	attrType == "INT_TEXTURE"   || \
-	attrType == "VECTOR"        || \
+	attrType == "BRDF"           || \
+	attrType == "MATERIAL"       || \
+	attrType == "GEOMETRY"       || \
+	attrType == "PLUGIN"         || \
+	attrType == "TEXTURE"        || \
+	attrType == "FLOAT_TEXTURE"  || \
+	attrType == "VECTOR_TEXTURE" || \
+	attrType == "INT_TEXTURE"    || \
+	attrType == "VECTOR"         || \
 	attrType == "UVWGEN")
 
 #define NOT_ANIMATABLE_TYPE(attrType) (\
@@ -211,6 +212,8 @@ private:
 	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node);
+
+	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node);
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
