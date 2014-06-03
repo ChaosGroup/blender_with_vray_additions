@@ -142,6 +142,17 @@ BL::NodeSocket VRayNodeExporter::getSocketByName(BL::Node node, const std::strin
 }
 
 
+BL::NodeSocket VRayNodeExporter::getOutputSocketByName(BL::Node node, const std::string &socketName)
+{
+	BL::Node::outputs_iterator input;
+	for(node.outputs.begin(input); input != node.outputs.end(); ++input)
+		if(input->name() == socketName)
+			return *input;
+
+	return BL::NodeSocket(PointerRNA_NULL);
+}
+
+
 BL::NodeSocket VRayNodeExporter::getSocketByAttr(BL::Node node, const std::string &attrName)
 {
 	char rnaStringBuf[CGR_MAX_PLUGIN_NAME];
@@ -490,15 +501,6 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeTexRemap") {
 		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node);
 	}
-	else if(nodeClass == "VRayNodeTransform") {
-		return "NULL";
-	}
-	else if(nodeClass == "VRayNodeMatrix") {
-		return "NULL";
-	}
-	else if(nodeClass == "VRayNodeVector") {
-		return VRayNodeExporter::exportVRayNodeVector(ntree, node);
-	}
 	else if(nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = VRayNodeExporter::getSocketByName(node, "Material");
 		if(materialInSock.is_linked())
@@ -512,6 +514,18 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 			return VRayNodeExporter::exportLinkedSocket(ntree, textureInSock);
 		else
 			return "NULL";
+	}
+	else if(nodeClass == "VRayNodeTransform") {
+		return "NULL";
+	}
+	else if(nodeClass == "VRayNodeMatrix") {
+		return "NULL";
+	}
+	else if(nodeClass == "VRayNodeVector") {
+		return VRayNodeExporter::exportVRayNodeVector(ntree, node);
+	}
+	else if(node.is_a(&RNA_ShaderNodeNormal)) {
+		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node);
 	}
 
 	return exportVRayNodeAttributes(ntree, node, context, manualAttrs);
