@@ -94,6 +94,7 @@ set(SRC
 	vrscene_exporter/nodes/specials/TexLayered.cpp
 	vrscene_exporter/nodes/specials/TexRemap.cpp
 	vrscene_exporter/nodes/specials/MathNodes.cpp
+	vrscene_exporter/nodes/specials/Blender.cpp
 	vrscene_exporter/plugins/GeomMayaHair.cpp
 	vrscene_exporter/plugins/GeomMayaHair.h
 	vrscene_exporter/plugins/GeomMeshFile.cpp
