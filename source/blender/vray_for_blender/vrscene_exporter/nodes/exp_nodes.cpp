@@ -490,6 +490,15 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeTexRemap") {
 		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node);
 	}
+	else if(nodeClass == "VRayNodeTransform") {
+		return "NULL";
+	}
+	else if(nodeClass == "VRayNodeMatrix") {
+		return "NULL";
+	}
+	else if(nodeClass == "VRayNodeVector") {
+		return VRayNodeExporter::exportVRayNodeVector(ntree, node);
+	}
 	else if(nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = VRayNodeExporter::getSocketByName(node, "Material");
 		if(materialInSock.is_linked())
