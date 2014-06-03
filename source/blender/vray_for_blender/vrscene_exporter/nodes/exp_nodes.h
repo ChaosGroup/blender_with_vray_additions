@@ -73,15 +73,15 @@
 	attrType == "PLUGIN")
 
 #define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s);
-#define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6f") % f)
+#define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6g") % f)
 #define BOOST_FORMAT_TM(tm)    boost::str(boost::format("TransformHex(\"%s\")") % tm)
 #define BOOST_FORMAT_INT(i)    boost::str(boost::format("%i") % i)
 #define BOOST_FORMAT_BOOL(i)   BOOST_FORMAT_INT(i)
 
-#define BOOST_FORMAT_COLOR(c)   boost::str(boost::format("Color(%.6f,%.6f,%.6f)")       % c[0] % c[1] % c[2]);
-#define BOOST_FORMAT_ACOLOR(c)  boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)") % c[0] % c[1] % c[2] % c[3]);
-#define BOOST_FORMAT_ACOLOR3(c) boost::str(boost::format("AColor(%.6f,%.6f,%.6f,1.0)")  % c[0] % c[1] % c[2]);
-#define BOOST_FORMAT_VECTOR(v)  boost::str(boost::format("Vector(%.6f,%.6f,%.6f)")      % v[0] % v[1] % v[2])
+#define BOOST_FORMAT_COLOR(c)   boost::str(boost::format("Color(%.6g,%.6g,%.6g)")       % c[0] % c[1] % c[2]);
+#define BOOST_FORMAT_ACOLOR(c)  boost::str(boost::format("AColor(%.6g,%.6g,%.6g,%.6g)") % c[0] % c[1] % c[2] % c[3]);
+#define BOOST_FORMAT_ACOLOR3(c) boost::str(boost::format("AColor(%.6g,%.6g,%.6g,1.0)")  % c[0] % c[1] % c[2]);
+#define BOOST_FORMAT_VECTOR(v)  boost::str(boost::format("Vector(%.6g,%.6g,%.6g)")      % v[0] % v[1] % v[2])
 
 
 namespace VRayScene {
