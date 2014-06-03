@@ -181,6 +181,8 @@ public:
 	static BL::NodeSocket   getSocketByName(BL::Node node, const std::string &socketName);
 	static BL::NodeSocket   getSocketByAttr(BL::Node node, const std::string &attrName);
 
+	static BL::NodeSocket   getOutputSocketByName(BL::Node node, const std::string &socketName);
+
 	static BL::Node         getConnectedNode(BL::NodeTree nodeTree, BL::NodeSocket socket);
 	static BL::Node         getConnectedNode(BL::NodeTree nodeTree, BL::Node node, const std::string &socketName);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeTree nodeTree, BL::NodeSocket socket);
@@ -214,6 +216,8 @@ private:
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node);
 
 	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node);
+
+	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node);
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
