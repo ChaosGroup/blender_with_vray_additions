@@ -39,6 +39,9 @@ void StripString(char *str)
 				str[i] = 'p';
 			else if(str[i] == '-')
 				str[i] = 'm';
+			else if(str[i] == '|' ||
+					str[i] == '@')
+				continue;
 			else if(!((str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= 'a' && str[i] <= 'z') || (str[i] >= '0' && str[i] <= '9')))
 				str[i] = '_';
 		}
