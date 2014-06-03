@@ -25,6 +25,8 @@
 #include "GeomStaticMesh.h"
 
 #include <boost/lexical_cast.hpp>
+#include <locale>
+#include <algorithm>
 
 #include "CGR_blender_data.h"
 #include "CGR_string.h"
@@ -483,10 +485,10 @@ void GeomStaticMesh::initMapChannels()
 
 		// This allows us to sync digit layer name with layer index,
 		// a little creepy, but should work =)
-		try {
+		if(std::count_if(mapChannel->name.begin(), mapChannel->name.end(), ::isdigit) == mapChannel->name.size()) {
 			mapChannel->index = boost::lexical_cast<int>(mapChannel->name);
 		}
-		catch(boost::bad_lexical_cast &) {
+		else {
 			mapChannel->index = uv_layer_id++;
 		}
 
