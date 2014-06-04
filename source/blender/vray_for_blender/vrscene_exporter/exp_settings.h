@@ -91,7 +91,6 @@ struct ExpoterSettings {
 	int               m_frameCurrent;
 	int               m_frameStart;
 	int               m_frameStep;
-	int               m_frameCustom;
 
 	// DR
 	std::string       m_drSharePath;
