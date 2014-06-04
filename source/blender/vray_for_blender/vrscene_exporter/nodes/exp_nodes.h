@@ -193,6 +193,8 @@ public:
 	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
 	static std::string      exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayObjectContext *context=NULL);
 
+	static std::string      exportMaterial(BL::BlendData b_data, BL::Material b_ma);
+
 	static ExpoterSettings *m_set;
 
 private:

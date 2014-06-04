@@ -673,3 +673,30 @@ void VRayNodePluginExporter::clearNodesCache()
 {
 	VRayNodePluginExporter::m_nodeCache.clearCache();
 }
+
+
+std::string VRayNodeExporter::exportMaterial(BL::BlendData b_data, BL::Material b_ma)
+{
+	std::string maName = "NULL";
+
+	BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
+	if(b_ma_ntree) {
+		BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
+		if(b_ma_output) {
+			 maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output);
+		}
+	}
+	else {
+		maName = GetIDName((ID*)b_ma.ptr.data);
+
+		AttributeValueMap maAttrs;
+		maAttrs["brdf"] = CGR_DEFAULT_BRDF;
+
+		VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, maAttrs);
+	}
+
+	if(maName == "NULL")
+		PRINT_ERROR("Failed to export material: '%s'", b_ma.name().c_str());
+
+	return maName;
+}

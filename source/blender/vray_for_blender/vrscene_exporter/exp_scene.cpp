@@ -237,10 +237,6 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 	}
 
-	// For "Hide From View"
-	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, "vray.exporter");
-	VRayExportable::m_set->m_frameCustom = vrayExporter.getInt("customFrame");
-
 	// Export stuff
 	int exportInterrupt = false;
 
@@ -289,33 +285,14 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 		// Export materials
 		//
-		if(m_set->m_useNodeTrees) {
-			BL::BlendData b_data = m_set->b_data;
+		BL::BlendData b_data = m_set->b_data;
+		BL::BlendData::materials_iterator maIt;
+		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+			BL::Material b_ma = *maIt;
 
-			BL::BlendData::materials_iterator maIt;
-			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
-				BL::Material b_ma = *maIt;
+			// TODO: Export only override material
 
-				BL::NodeTree b_ma_ntree = VRayNodeExporter::getNodeTree(b_data, (ID*)b_ma.ptr.data);
-				if(b_ma_ntree) {
-					BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
-					if(b_ma_output) {
-						std::string maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output);
-
-						if(maName != "NULL") {
-							PRINT_INFO("Material '%s' is exported correctly.", b_ma.name().c_str());
-						}
-					}
-				}
-				else {
-					std::string maName = GetIDName((ID*)b_ma.ptr.data);
-
-					AttributeValueMap maAttrs;
-					maAttrs["brdf"] = CGR_DEFAULT_BRDF;
-
-					VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, maAttrs);
-				}
-			}
+			VRayNodeExporter::exportMaterial(b_data, b_ma);
 		}
 	}
 
@@ -479,14 +456,9 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 		return;
 	m_exportedObject.insert(idName);
 
-	if(m_set->m_useNodeTrees) {
-		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob);
-		if(ntree) {
-			exportNodeFromNodeTree(ntree, ob, attrs);
-		}
-		else {
-			exportNode(ob, checkUpdated, attrs);
-		}
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob);
+	if(ntree) {
+		exportNodeFromNodeTree(ntree, ob, attrs);
 	}
 	else {
 		exportNode(ob, checkUpdated, attrs);
