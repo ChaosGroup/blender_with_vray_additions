@@ -488,6 +488,15 @@ void BLI_spin_lock(SpinLock *spin)
 #endif
 }
 
+void BLI_spin_trylock(SpinLock *spin)
+{
+#ifdef __APPLE__
+	OSSpinLockTry(spin);
+#else
+	pthread_spin_trylock(spin);
+#endif
+}
+
 void BLI_spin_unlock(SpinLock *spin)
 {
 #ifdef __APPLE__

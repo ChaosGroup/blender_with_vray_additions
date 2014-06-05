@@ -118,6 +118,7 @@ typedef pthread_spinlock_t SpinLock;
 
 void BLI_spin_init(SpinLock *spin);
 void BLI_spin_lock(SpinLock *spin);
+void BLI_spin_trylock(SpinLock *spin);
 void BLI_spin_unlock(SpinLock *spin);
 void BLI_spin_end(SpinLock *spin);
 

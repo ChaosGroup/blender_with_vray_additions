@@ -75,8 +75,6 @@ typedef struct IDProperty {
 #define IDP_FLOAT		2
 #define IDP_ARRAY		5
 #define IDP_GROUP		6
-/* the ID link property type hasn't been implemented yet, this will require
- * some cleanup of blenkernel, most likely.*/
 #define IDP_ID			7
 #define IDP_DOUBLE		8
 #define IDP_IDPARRAY	9

@@ -310,6 +310,17 @@ Scene *BKE_scene_copy(Scene *sce, int type)
 	return scen;
 }
 
+void BKE_scene_relink(Scene *sce)
+{
+	IDP_RelinkProperty(sce->id.properties);
+	if (sce->nodetree) {
+		bNode *node;
+		IDP_RelinkProperty(sce->nodetree->id.properties);
+		for (node = sce->nodetree->nodes.first; node; node = node->next)
+			IDP_RelinkProperty(node->prop);
+	}
+}
+
 void BKE_scene_groups_relink(Scene *sce)
 {
 	if (sce->rigidbody_world)

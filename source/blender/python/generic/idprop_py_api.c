@@ -36,6 +36,9 @@
 
 #include "BKE_idprop.h"
 
+extern bool pyrna_id_FromPyObject(PyObject *obj, ID **id);
+extern bool pyrna_id_CheckPyObject(PyObject *obj);
+extern PyObject *pyrna_id_CreatePyObject(ID *id);
 
 #define USE_STRING_COERCE
 
@@ -85,6 +88,11 @@ static PyObject *idprop_py_from_idp_group(ID *id, IDProperty *prop, IDProperty *
 	group->prop = prop;
 	group->parent = parent; /* can be NULL */
 	return (PyObject *)group;
+}
+
+static PyObject *idprop_py_from_idp_id(ID *id, IDProperty *prop)
+{
+	return pyrna_id_CreatePyObject(prop->data.pointer);
 }
 
 static PyObject *idprop_py_from_idp_array(ID *id, IDProperty *prop)
@@ -144,6 +152,7 @@ PyObject *BPy_IDGroup_WrapData(ID *id, IDProperty *prop, IDProperty *parent)
 		case IDP_GROUP:    return idprop_py_from_idp_group(id, prop, parent);
 		case IDP_ARRAY:    return idprop_py_from_idp_array(id, prop);
 		case IDP_IDPARRAY: return idprop_py_from_idp_idparray(id, prop); /* this could be better a internal type */
+		case IDP_ID:       return idprop_py_from_idp_id(id, prop);
 		default: Py_RETURN_NONE;
 	}
 }
@@ -466,6 +475,9 @@ bool BPy_IDProperty_Map_ValidateAndCreate(PyObject *name_obj, IDProperty *group,
 		}
 
 		Py_DECREF(ob_seq_fast);
+	}
+	else if (ob == Py_None || pyrna_id_FromPyObject(ob, &val.id)) {
+		prop = IDP_New(IDP_ID, &val, name);
 	}
 	else if (PyMapping_Check(ob)) {
 		PyObject *keys, *vals, *key, *pval;

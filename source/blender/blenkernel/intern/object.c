@@ -3541,6 +3541,8 @@ void BKE_object_relink(Object *ob)
 
 	ID_NEW(ob->proxy);
 	ID_NEW(ob->proxy_group);
+
+	IDP_RelinkProperty(ob->id.properties);
 }
 
 MovieClip *BKE_object_movieclip_get(Scene *scene, Object *ob, bool use_default)

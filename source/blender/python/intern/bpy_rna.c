@@ -1824,24 +1824,8 @@ static int pyrna_py_to_prop(PointerRNA *ptr, PropertyRNA *prop, void *data, PyOb
 						}
 					}
 					else {
-						/* data == NULL, assign to RNA */
-						if (value == Py_None) {
-							PointerRNA valueptr = {{NULL}};
-							RNA_property_pointer_set(ptr, prop, valueptr);
-						}
-						else if (RNA_struct_is_a(param->ptr.type, ptr_type)) {
-							RNA_property_pointer_set(ptr, prop, param->ptr);
-						}
-						else {
-							PointerRNA tmp;
-							RNA_pointer_create(NULL, ptr_type, NULL, &tmp);
-							PyErr_Format(PyExc_TypeError,
-							             "%.200s %.200s.%.200s expected a %.200s type. not %.200s",
-							             error_prefix, RNA_struct_identifier(ptr->type),
-							             RNA_property_identifier(prop), RNA_struct_identifier(tmp.type),
-							             RNA_struct_identifier(param->ptr.type));
-							Py_XDECREF(value_new); return -1;
-						}
+						/* no special case, just hand off to the property */
+						RNA_property_pointer_set(ptr, prop, value == Py_None ? PointerRNA_NULL : param->ptr);
 					}
 
 					if (raise_error) {
@@ -6457,7 +6441,7 @@ PyObject *pyrna_id_CreatePyObject(ID *id)
 
 bool pyrna_id_FromPyObject(PyObject *obj, ID **id)
 {
-	if (BPy_StructRNA_Check(obj) && (RNA_struct_is_ID(((BPy_StructRNA *)obj)->ptr.type))) {
+	if (pyrna_id_CheckPyObject(obj)) {
 		*id = ((BPy_StructRNA *)obj)->ptr.id.data;
 		return true;
 	}
@@ -6465,6 +6449,11 @@ bool pyrna_id_FromPyObject(PyObject *obj, ID **id)
 		*id = NULL;
 		return false;
 	}
+}
+
+bool pyrna_id_CheckPyObject(PyObject *obj)
+{
+	return BPy_StructRNA_Check(obj) && (RNA_struct_is_ID(((BPy_StructRNA *) obj)->ptr.type));
 }
 
 void BPY_rna_init(void)

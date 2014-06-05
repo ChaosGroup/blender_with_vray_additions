@@ -911,6 +911,11 @@ void BKE_libblock_free_data(Main *bmain, ID *id)
 	BKE_animdata_main_cb(bmain, animdata_dtar_clear_cb, (void *)id);
 }
 
+static void unlink_idp(void *userdata, IDProperty *idprop)
+{
+	IDP_UnlinkProperty(idprop);
+}
+
 /* used in headerbuttons.c image.c mesh.c screen.c sound.c and library.c */
 void BKE_libblock_free_ex(Main *bmain, void *idv, bool do_id_user)
 {
@@ -1029,6 +1034,8 @@ void BKE_libblock_free_ex(Main *bmain, void *idv, bool do_id_user)
 			BKE_paint_curve_free((PaintCurve *)id);
 			break;
 	}
+
+	IDP_foreachIDLink(id, unlink_idp, NULL);
 
 	/* avoid notifying on removed data */
 	BKE_main_lock(bmain);
