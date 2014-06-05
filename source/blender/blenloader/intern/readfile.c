@@ -8601,7 +8601,7 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 	
 	for (node = ntree->nodes.first; node; node = node->next) {
 		// NOTE: This is needed to load PointerProperty datablocks
-		// from Python nodes
+		// from Python nodes (which do not have node->id)
 		if (node->prop)
 			expand_idprops(fd, mainvar, node->prop);
 
@@ -8610,6 +8610,7 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 
 			for (sock = node->inputs.first; sock; sock = sock->next)
 				expand_doit(fd, mainvar, sock->prop);
+
 			for (sock = node->outputs.first; sock; sock = sock->next)
 				expand_doit(fd, mainvar, sock->prop);
 		}
