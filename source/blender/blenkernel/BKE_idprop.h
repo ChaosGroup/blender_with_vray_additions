@@ -87,7 +87,6 @@ void IDP_FreeString(struct IDProperty *prop) ATTR_NONNULL();
 void IDP_init(void);
 /* Shuts down the ID Property system and frees memory */
 void IDP_exit(void);
-
 /* Restores LIB_FAKEUSER flag after append */
 void IDP_restore_fake_user(void);
 

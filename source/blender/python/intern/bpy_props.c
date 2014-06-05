@@ -2884,7 +2884,7 @@ static PyObject *BPy_EnumProperty(PyObject *self, PyObject *args, PyObject *kw)
 static StructRNA *pointer_type_from_py(PyObject *value, const char *error_prefix)
 {
 	StructRNA *srna;
-
+	
 	srna = srna_from_self(value, "");
 	if (!srna) {
 		if (PyErr_Occurred()) {
