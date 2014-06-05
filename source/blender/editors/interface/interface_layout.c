@@ -1292,7 +1292,8 @@ void uiItemFullR(uiLayout *layout, PointerRNA *ptr, PropertyRNA *prop, int index
 	/* property with separate label */
 	else if (type == PROP_ENUM || type == PROP_STRING || type == PROP_POINTER) {
 		but = ui_item_with_label(layout, block, name, icon, ptr, prop, index, 0, 0, w, h, flag);
-		ui_but_add_search(but, ptr, prop, NULL, NULL);
+		if (but)
+			ui_but_add_search(but, ptr, prop, NULL, NULL);
 		
 		if (layout->redalert)
 			UI_but_flag_enable(but, UI_BUT_REDALERT);

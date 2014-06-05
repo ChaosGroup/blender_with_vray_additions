@@ -71,6 +71,7 @@
 #include "BKE_global.h"
 #include "BKE_group.h"
 #include "BKE_fcurve.h"
+#include "BKE_idprop.h"
 #include "BKE_lamp.h"
 #include "BKE_lattice.h"
 #include "BKE_library.h"
@@ -1914,6 +1915,8 @@ static void single_obdata_users(Main *bmain, Scene *scene, const int flag)
 
 				id->us--;
 				id->newid = ob->data;
+				
+				IDP_RelinkProperty(id->newid->properties);
 			}
 		}
 	}
@@ -2087,6 +2090,7 @@ void ED_object_single_users(Main *bmain, Scene *scene, const bool full, const bo
 		single_tex_users_expand(bmain);
 	}
 
+	BKE_scene_relink(scene);
 	BKE_main_id_clear_newpoins(bmain);
 }
 
