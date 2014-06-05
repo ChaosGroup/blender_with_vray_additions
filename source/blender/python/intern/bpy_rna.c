@@ -1843,6 +1843,7 @@ static int pyrna_py_to_prop(PointerRNA *ptr, PropertyRNA *prop, void *data, PyOb
 							             RNA_property_identifier(prop), RNA_struct_identifier(tmp.type),
 							             RNA_struct_identifier(param->ptr.type));
 						}
+
 						Py_XDECREF(value_new); return -1;
 					}
 				}
@@ -6452,7 +6453,7 @@ PyObject *pyrna_id_CreatePyObject(ID *id)
 
 bool pyrna_id_FromPyObject(PyObject *obj, ID **id)
 {
-	if (BPy_StructRNA_Check(obj) && (RNA_struct_is_ID(((BPy_StructRNA *)obj)->ptr.type))) {
+	if (pyrna_id_CheckPyObject(obj)) {
 		*id = ((BPy_StructRNA *)obj)->ptr.id.data;
 		return true;
 	}
@@ -6460,6 +6461,11 @@ bool pyrna_id_FromPyObject(PyObject *obj, ID **id)
 		*id = NULL;
 		return false;
 	}
+}
+
+bool pyrna_id_CheckPyObject(PyObject *obj)
+{
+	return BPy_StructRNA_Check(obj) && (RNA_struct_is_ID(((BPy_StructRNA *) obj)->ptr.type));
 }
 
 void BPY_rna_init(void)
