@@ -25,7 +25,7 @@
 
 std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node)
 {
-	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture__name__");
+	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
 		std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
 
