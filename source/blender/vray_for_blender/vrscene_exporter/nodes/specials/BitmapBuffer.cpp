@@ -26,7 +26,7 @@
 
 std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node)
 {
-	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture__name__");
+	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
 		BL::ImageTexture imageTexture(b_tex.ptr);
 		if(imageTexture) {

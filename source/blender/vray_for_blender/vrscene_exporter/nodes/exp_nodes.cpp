@@ -227,32 +227,17 @@ BL::NodeTree VRayNodeExporter::getNodeTree(BL::BlendData b_data, ID *id)
 {
 	RnaAccess::RnaValue VRayObject(id, "vray");
 
-#if CGR_NTREE_DRIVER
-	if(VRayObject.hasProperty("ntree__enum__")) {
-		int ntreePtr = VRayObject.getEnum("ntree__enum__");
-		if(ntreePtr != -1) {
-			bNodeTree *ntree = (bNodeTree*)(intptr_t)ntreePtr;
-			PointerRNA ntreeRNA;
-			RNA_id_pointer_create((ID*)(&ntree->id), &ntreeRNA);
-			return BL::NodeTree(ntreePtr);
+	PointerRNA  *ptr  = VRayObject.getPtr();
+	PropertyRNA *prop = RNA_struct_find_property(ptr, "ntree");
+	if(prop) {
+		PropertyType propType = RNA_property_type(prop);
+		if(propType == PROP_POINTER) {
+			PointerRNA ntree = RNA_pointer_get(ptr, "ntree");
+			BL::NodeTree nodeTree(ntree);
+			if(nodeTree)
+				return nodeTree;
 		}
 	}
-#else
-	if(VRayObject.hasProperty("ntree__name__")) {
-		std::string ntreeName = VRayObject.getString("ntree__name__");
-		if(NOT(ntreeName.empty())) {
-			PRINT_INFO("ID: '%s' -> node tree is '%s'", id->name, ntreeName.c_str());
-
-			BL::BlendData::node_groups_iterator nodeGroupIt;
-			for(b_data.node_groups.begin(nodeGroupIt); nodeGroupIt != b_data.node_groups.end(); ++nodeGroupIt) {
-				BL::NodeTree nodeTree = *nodeGroupIt;
-				if(nodeTree.name() == ntreeName) {
-					return nodeTree;
-				}
-			}
-		}
-	}
-#endif
 
 	return BL::NodeTree(PointerRNA_NULL);
 }
@@ -260,22 +245,16 @@ BL::NodeTree VRayNodeExporter::getNodeTree(BL::BlendData b_data, ID *id)
 
 BL::Texture VRayNodeExporter::getTextureFromIDRef(PointerRNA *ptr, const std::string &propName)
 {
-#if CGR_NTREE_DRIVER
-#else
-	if(RNA_struct_find_property(ptr, propName.c_str())) {
-		char textureName[MAX_ID_NAME];
-		RNA_string_get(ptr, propName.c_str(), textureName);
-
-		BL::BlendData b_data = VRayNodeExporter::m_set->b_data;
-
-		BL::BlendData::textures_iterator texIt;
-		for(b_data.textures.begin(texIt); texIt != b_data.textures.end(); ++texIt) {
-			BL::Texture b_tex = *texIt;
-			if(b_tex.name() == textureName)
-				return b_tex;
+	PropertyRNA *prop = RNA_struct_find_property(ptr, propName.c_str());
+	if(prop) {
+		PropertyType propType = RNA_property_type(prop);
+		if(propType == PROP_POINTER) {
+			PointerRNA texPtr = RNA_pointer_get(ptr, propName.c_str());
+			BL::Texture texture(texPtr);
+			if(texture)
+				return texture;
 		}
 	}
-#endif
 
 	return BL::Texture(PointerRNA_NULL);
 }
@@ -695,8 +674,9 @@ std::string VRayNodeExporter::exportMaterial(BL::BlendData b_data, BL::Material 
 		VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, maAttrs);
 	}
 
-	if(maName == "NULL")
+	if(maName == "NULL") {
 		PRINT_ERROR("Failed to export material: '%s'", b_ma.name().c_str());
+	}
 
 	return maName;
 }
