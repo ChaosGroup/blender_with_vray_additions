@@ -8173,6 +8173,12 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 		expand_doit(fd, mainvar, ntree->gpd);
 	
 	for (node = ntree->nodes.first; node; node = node->next) {
+		// NOTE: This is needed to load PointerProperty datablocks
+		// from Python nodes
+		if (!node->id && node->prop) {
+			expand_idprops(fd, mainvar, node->prop);
+		}
+
 		if (node->id && node->type != CMP_NODE_R_LAYERS) {
 			expand_doit(fd, mainvar, node->id);
 
