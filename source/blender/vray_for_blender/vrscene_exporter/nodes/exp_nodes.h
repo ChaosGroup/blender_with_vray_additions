@@ -40,12 +40,9 @@
 
 
 #define SKIP_TYPE(attrType) (\
-	attrType == "LIST"              || \
-	attrType == "INT_LIST"          || \
-	attrType == "FLOAT_LIST"        || \
-	attrType == "MATRIX"            || \
-	attrType == "TRANSFORM"         || \
-	attrType == "TRANSFORM_TEXTURE")
+	attrType == "LIST"     || \
+	attrType == "INT_LIST" || \
+	attrType == "FLOAT_LIST")
 
 #define OUTPUT_TYPE(attrType) (\
 	attrType == "OUTPUT_PLUGIN"            || \
@@ -56,15 +53,17 @@
 	attrType == "OUTPUT_TEXTURE")
 
 #define MAPPABLE_TYPE(attrType) (\
-	attrType == "BRDF"           || \
-	attrType == "MATERIAL"       || \
-	attrType == "GEOMETRY"       || \
-	attrType == "PLUGIN"         || \
-	attrType == "TEXTURE"        || \
-	attrType == "FLOAT_TEXTURE"  || \
-	attrType == "VECTOR_TEXTURE" || \
-	attrType == "INT_TEXTURE"    || \
-	attrType == "VECTOR"         || \
+	attrType == "BRDF"              || \
+	attrType == "MATERIAL"          || \
+	attrType == "GEOMETRY"          || \
+	attrType == "PLUGIN"            || \
+	attrType == "TEXTURE"           || \
+	attrType == "TRANSFORM"         || \
+	attrType == "TRANSFORM_TEXTURE" || \
+	attrType == "FLOAT_TEXTURE"     || \
+	attrType == "VECTOR_TEXTURE"    || \
+	attrType == "INT_TEXTURE"       || \
+	attrType == "VECTOR"            || \
 	attrType == "UVWGEN")
 
 #define NOT_ANIMATABLE_TYPE(attrType) (\
@@ -83,6 +82,15 @@
 #define BOOST_FORMAT_ACOLOR(c)  boost::str(boost::format("AColor(%.6g,%.6g,%.6g,%.6g)") % c[0] % c[1] % c[2] % c[3]);
 #define BOOST_FORMAT_ACOLOR3(c) boost::str(boost::format("AColor(%.6g,%.6g,%.6g,1.0)")  % c[0] % c[1] % c[2]);
 #define BOOST_FORMAT_VECTOR(v)  boost::str(boost::format("Vector(%.6g,%.6g,%.6g)")      % v[0] % v[1] % v[2])
+
+#define BOOST_FORMAT_MATRIX(m) boost::str(boost::format( \
+	"Matrix(Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g))") \
+	% m[0][0] % m[1][0] % m[2][0] % m[0][1] % m[1][1] % m[2][1] % m[0][2] % m[1][2] % m[2][2])
+
+#define BOOST_FORMAT_LIST_BASE(type, data) boost::str(boost::format(type"(%s)") % boost::algorithm::join(data, ","))
+#define BOOST_FORMAT_LIST(data)       BOOST_FORMAT_LIST_BASE("List",      data)
+#define BOOST_FORMAT_LIST_INT(data)   BOOST_FORMAT_LIST_BASE("ListInt",   data)
+#define BOOST_FORMAT_LIST_FLOAT(data) BOOST_FORMAT_LIST_BASE("ListFloat", data)
 
 
 namespace VRayScene {
@@ -207,9 +215,9 @@ private:
 	static std::string      exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context);
 	static std::string      exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context);
 
-	static std::string      exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node);
-	static std::string      exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node);
-	static std::string      exportVRayNodeSelectNodeTree(BL::NodeTree ntree, BL::Node node);
+	static BL::Object       exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node);
+	static BL::Group        exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node);
+	static BL::NodeTree     exportVRayNodeSelectNodeTree(BL::NodeTree ntree, BL::Node node);
 
 	static std::string      exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node);
@@ -217,6 +225,10 @@ private:
 	static std::string      exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node);
 
+	static std::string      exportVRayNodeUVWGenProjection(BL::NodeTree ntree, BL::Node node);
+
+	static std::string      exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node);
+	static std::string      exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node);
 
 	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node);
