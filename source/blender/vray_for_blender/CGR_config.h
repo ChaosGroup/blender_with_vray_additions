@@ -110,17 +110,17 @@
     }
 #endif
 
-#define PRINT_ERROR(...) \
+#define PRINT_ERROR(...) {\
     fprintf(stdout, OUTPUT_ERROR_PROMPT); \
     fprintf(stdout, __VA_ARGS__); \
     fprintf(stdout, "\n"); \
-	fflush(stdout);
+	fflush(stdout); }
 
-#define PRINT_INFO_EX(...) \
+#define PRINT_INFO_EX(...) {\
 	fprintf(stdout, OUTPUT_PROMPT); \
 	fprintf(stdout, __VA_ARGS__); \
 	fprintf(stdout, "\n"); \
-	fflush(stdout);
+	fflush(stdout); }
 
 #define PRINT_INFO(...) \
 	if(G.debug) {\
@@ -130,10 +130,10 @@
 	fflush(stdout);\
 	}
 
-#define PRINT_INFO_LB(...) \
+#define PRINT_INFO_LB(...) {\
 	fprintf(stdout, OUTPUT_PROMPT); \
 	fprintf(stdout, __VA_ARGS__); \
-	fflush(stdout);
+	fflush(stdout); }
 
 #if CGR_USE_DEBUG == 0
 #  define PRINT_TM4(label, tm) ()
