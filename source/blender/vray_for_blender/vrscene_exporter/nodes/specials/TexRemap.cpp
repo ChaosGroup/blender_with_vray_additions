@@ -45,7 +45,7 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 			case BL::ColorRamp::interpolation_B_SPLINE: interp = 4; break;
 			default:                                    interp = 1;
 		}
-		interpType = boost::str(boost::format("%i") % interp);
+		interpType = BOOST_FORMAT_INT(interp);
 
 		BL::ColorRamp::elements_iterator elIt;
 		int                              elNum = 0;
@@ -57,10 +57,8 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 
 			std::string colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
 
-			std::string color = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
-										   % el.color()[0] % el.color()[1] % el.color()[2] % el.color()[3]);
-
-			std::string position = boost::str(boost::format("%.3f") % el.position());
+			std::string color    = BOOST_FORMAT_ACOLOR(el.color());
+			std::string position = BOOST_FORMAT_FLOAT(el.position());
 
 			AttributeValueMap colAttrs;
 			colAttrs["texture"] = color;
@@ -73,9 +71,9 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 		}
 
 		AttributeValueMap manualAttrs;
-		manualAttrs["color_colors"]    = boost::str(boost::format("List(%s)")      % boost::algorithm::join(colors, ","));
-		manualAttrs["color_positions"] = boost::str(boost::format("ListFloat(%s)") % boost::algorithm::join(positions, ","));
-		manualAttrs["color_types"]     = boost::str(boost::format("ListInt(%s)")   % boost::algorithm::join(types, ","));
+		manualAttrs["color_colors"]    = BOOST_FORMAT_LIST(colors);
+		manualAttrs["color_positions"] = BOOST_FORMAT_LIST_FLOAT(positions);
+		manualAttrs["color_types"]     = BOOST_FORMAT_LIST_INT(types);
 
 		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 	}

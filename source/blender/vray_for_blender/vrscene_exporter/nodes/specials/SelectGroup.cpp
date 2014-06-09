@@ -23,9 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node)
+BL::Group VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node)
 {
-	// NOTE: Return List() of pluginNames
-	//
-	return "NULL";
+	return BL::Group(PointerRNA_NULL);
 }
