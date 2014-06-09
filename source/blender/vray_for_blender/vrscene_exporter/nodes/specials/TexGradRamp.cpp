@@ -41,10 +41,8 @@ std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::
 
 			std::string colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
 
-			std::string color = boost::str(boost::format("AColor(%.6f,%.6f,%.6f,%.6f)")
-										   % el.color()[0] % el.color()[1] % el.color()[2] % el.color()[3]);
-
-			std::string position = boost::str(boost::format("%.3f") % el.position());
+			std::string color    = BOOST_FORMAT_ACOLOR(el.color());
+			std::string position = BOOST_FORMAT_FLOAT(el.position());
 
 			AttributeValueMap colAttrs;
 			colAttrs["texture"] = color;
@@ -56,8 +54,8 @@ std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::
 		}
 
 		AttributeValueMap manualAttrs;
-		manualAttrs["colors"]    = boost::str(boost::format("List(%s)")      % boost::algorithm::join(colors, ","));
-		manualAttrs["positions"] = boost::str(boost::format("ListFloat(%s)") % boost::algorithm::join(positions, ","));
+		manualAttrs["colors"]    = BOOST_FORMAT_LIST(colors);
+		manualAttrs["positions"] = BOOST_FORMAT_LIST_FLOAT(positions);
 
 		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
 	}

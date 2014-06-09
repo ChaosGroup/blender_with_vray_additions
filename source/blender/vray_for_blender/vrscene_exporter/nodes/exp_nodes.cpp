@@ -318,6 +318,7 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 	}
 	// These sockets do not have default value, they must be linked or skipped otherwise.
 	//
+	else if(socketVRayType == "VRaySocketTransform") {}
 	else if(socketVRayType == "VRaySocketFloatNoValue") {}
 	else if(socketVRayType == "VRaySocketColorNoValue") {}
 	else if(socketVRayType == "VRaySocketCoords") {}
@@ -385,7 +386,8 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 		return "NULL";
 	}
 
-	PRINT_INFO("  Node represents: type = \"%s\" plugin = \"%s\"", pluginType.c_str(), pluginID.c_str());
+	PRINT_INFO("  Node represents plugin \"%s\" [\"%s\"]",
+			   pluginID.c_str(), pluginType.c_str());
 
 	std::string        pluginName = StripString("NT" + ntree.name() + "N" + node.name());
 	AttributeValueMap  pluginAttrs;
@@ -441,8 +443,8 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 {
 	std::string nodeClass = node.bl_idname();
 
-	PRINT_INFO("Exporting: ntree = \"%s\" node = \"%s\"", ntree.name().c_str(), node.name().c_str());
-	PRINT_INFO("  Class: node = \"%s\"", nodeClass.c_str());
+	PRINT_INFO("Exporting \"%s\" from \"%s\"...",
+			   node.name().c_str(), ntree.name().c_str());
 
 	if(nodeClass == "VRayNodeBlenderOutputMaterial") {
 		return VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(ntree, node, context);
@@ -457,13 +459,29 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 		return VRayNodeExporter::exportVRayNodeTexLayered(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeSelectObject") {
-		return VRayNodeExporter::exportVRayNodeSelectObject(ntree, node);
+		BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, node);
+		if(NOT(b_ob))
+			return "NULL";
+		return GetIDName((ID*)b_ob.ptr.data);
 	}
 	else if(nodeClass == "VRayNodeSelectGroup") {
-		return VRayNodeExporter::exportVRayNodeSelectGroup(ntree, node);
+		BL::Group b_gr = VRayNodeExporter::exportVRayNodeSelectGroup(ntree, node);
+		if(NOT(b_gr))
+			return "List()";
+
+		StrVector obNames;
+
+		BL::Group::objects_iterator obIt;
+		for(b_gr.objects.begin(obIt); obIt != b_gr.objects.end(); ++obIt) {
+			BL::Object b_ob = *obIt;
+
+			obNames.push_back(GetIDName((ID*)b_ob.ptr.data));
+		}
+
+		return BOOST_FORMAT_LIST(obNames);
 	}
 	else if(nodeClass == "VRayNodeSelectNodeTree") {
-		return VRayNodeExporter::exportVRayNodeSelectNodeTree(ntree, node);
+		// return VRayNodeExporter::exportVRayNodeSelectNodeTree(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeLightMesh") {
 		return VRayNodeExporter::exportVRayNodeLightMesh(ntree, node, context);
@@ -495,14 +513,17 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 			return "NULL";
 	}
 	else if(nodeClass == "VRayNodeTransform") {
-		return "NULL";
+		return VRayNodeExporter::exportVRayNodeTransform(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeMatrix") {
-		return "NULL";
+		return VRayNodeExporter::exportVRayNodeMatrix(ntree, node);
 	}
 	else if(nodeClass == "VRayNodeVector") {
 		return VRayNodeExporter::exportVRayNodeVector(ntree, node);
 	}
+//	else if(nodeClass == "VRayNodeUVWGenProjection") {
+//		return VRayNodeExporter::exportVRayNodeUVWGenProjection(ntree, node);
+//	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node);
 	}
