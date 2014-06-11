@@ -599,7 +599,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export object main properties
 	//
-	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, &obContext);
+	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, BL::NodeSocket(PointerRNA_NULL), &obContext);
 	if(geometry == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
 					ob->id.name, ntree.name().c_str());
@@ -621,7 +621,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'",
 			   ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
 
-	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, &obContext);
+	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, BL::NodeSocket(PointerRNA_NULL), &obContext);
 	if(material == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
 					ob->id.name, ntree.name().c_str());

@@ -36,6 +36,7 @@
 #include "CGR_string.h"
 #include "CGR_rna.h"
 
+#include <DNA_node_types.h>
 #include <BLI_string.h>
 
 
@@ -108,7 +109,7 @@ typedef std::map<std::string, AttrCache>  PluginCache;
 class VRayNodeCache {
 public:
 	bool pluginInCache(const std::string &pluginName) {
-		return !!(m_pluginCache.find(pluginName) != m_pluginCache.end());
+		return m_pluginCache.find(pluginName) != m_pluginCache.end();
 	}
 
 	void addToCache(const std::string &pluginName, const std::string &attrName, const int &frame, const std::string &attrValue, const MHash &hash) {
@@ -169,10 +170,27 @@ struct VRayObjectContext {
 
 
 struct VRayNodeContext {
-	VRayNodeContext(BL::NodeTree nt, BL::Node n):ntree(nt),node(n) {}
+	VRayNodeContext():
+		ntree(PointerRNA_NULL),
+		node(PointerRNA_NULL),
+		parent(PointerRNA_NULL),
+		group(PointerRNA_NULL)
+	{
+		obCtx = NULL;
+	}
 
-	BL::NodeTree ntree;
-	BL::Node     node;
+	BL::NodeTree       ntree;
+	BL::Node           node;
+
+	// If we are exporting group node we have to treat
+	// group ntree's nodes as nodes of the current tree
+	// to prevent plugin overriding.
+	//
+	BL::NodeTree       parent;
+	BL::NodeGroup      group;
+	
+	AttributeValueMap  attrs;
+	VRayObjectContext *obCtx;
 };
 
 
@@ -191,11 +209,11 @@ public:
 
 	static BL::NodeSocket   getOutputSocketByName(BL::Node node, const std::string &socketName);
 
-	static BL::Node         getConnectedNode(BL::NodeTree nodeTree, BL::NodeSocket socket);
+	static BL::Node         getConnectedNode(BL::NodeTree ntree, BL::NodeSocket socket);
 	static BL::Node         getConnectedNode(BL::NodeTree nodeTree, BL::Node node, const std::string &socketName);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeTree nodeTree, BL::NodeSocket socket);
 
-	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
+	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket socket=BL::NodeSocket(PointerRNA_NULL), VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 
 	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context=NULL);
@@ -217,7 +235,6 @@ private:
 
 	static BL::Object       exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node);
 	static BL::Group        exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node);
-	static BL::NodeTree     exportVRayNodeSelectNodeTree(BL::NodeTree ntree, BL::Node node);
 
 	static std::string      exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node);
@@ -230,6 +247,10 @@ private:
 	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node);
 
 	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node);
+	static std::string      exportBlenderNodeGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket);
+	static std::string      exportBlenderNodeGroupInput(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket);
+	static std::string      exportBlenderNodeGroupOutput(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket);
+	static std::string      exportBlenderNodeReroute(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket);
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
