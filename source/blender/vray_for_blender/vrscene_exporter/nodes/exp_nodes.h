@@ -225,8 +225,6 @@ private:
 	static std::string      exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node);
 
-	static std::string      exportVRayNodeUVWGenProjection(BL::NodeTree ntree, BL::Node node);
-
 	static std::string      exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node);
 	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node);
