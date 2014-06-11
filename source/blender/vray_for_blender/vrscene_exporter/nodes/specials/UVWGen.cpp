@@ -21,9 +21,3 @@
  */
 
 #include "exp_nodes.h"
-
-
-std::string VRayNodeExporter::exportVRayNodeUVWGenProjection(BL::NodeTree ntree, BL::Node node)
-{
-	
-}
