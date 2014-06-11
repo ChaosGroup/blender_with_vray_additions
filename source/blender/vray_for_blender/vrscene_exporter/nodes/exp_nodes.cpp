@@ -352,14 +352,12 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 	std::string connectedPlugin = "NULL";
 
 	BL::NodeSocket toSocket = VRayNodeExporter::getConnectedSocket(fromSocket);
-	// NOTE: This could happen when reconnecting nodes
-	// while material preview
+	// NOTE: This could happen while reconnecting nodes and material preview is active
 	if(NOT(toSocket.ptr.data))
 		return "NULL";
 
 	BL::Node toNode = VRayNodeExporter::getConnectedNode(fromSocket);
-	// NOTE: This could happen when reconnecting nodes
-	// while material preview
+	// NOTE: This could happen while reconnecting nodes and material preview is active
 	if(NOT(toNode.ptr.data))
 		return "NULL";
 
@@ -378,7 +376,11 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 
 		// Get real socket / node to export
 		toSocket = VRayNodeExporter::getNodeGroupSocketReal(toNode, toSocket);
-		toNode   = toSocket.node();
+		// NOTE: This could happen while reconnecting nodes and material preview is active
+		if(NOT(toSocket.ptr.data))
+			return "NULL";
+
+		toNode = toSocket.node();
 
 		connectedPlugin = VRayNodeExporter::exportVRayNode(groupTree, toNode, fromSocket, context);
 
