@@ -161,6 +161,14 @@ private:
 
 
 struct VRayObjectContext {
+	VRayObjectContext() {
+		sce  = NULL;
+		main = NULL;
+		ob   = NULL;
+
+		mtlOverride = "";
+	}
+
 	Scene       *sce;
 	Main        *main;
 	Object      *ob;
@@ -173,14 +181,19 @@ struct VRayNodeContext {
 	VRayNodeContext():
 		ntree(PointerRNA_NULL),
 		node(PointerRNA_NULL),
+		fromSocket(PointerRNA_NULL),
 		parent(PointerRNA_NULL),
 		group(PointerRNA_NULL)
 	{
-		obCtx = NULL;
+		ctx = NULL;
 	}
 
 	BL::NodeTree       ntree;
 	BL::Node           node;
+	BL::NodeSocket     fromSocket;
+
+	AttributeValueMap  attrs;
+	VRayObjectContext *ctx;
 
 	// If we are exporting group node we have to treat
 	// group ntree's nodes as nodes of the current tree
@@ -188,9 +201,6 @@ struct VRayNodeContext {
 	//
 	BL::NodeTree       parent;
 	BL::NodeGroup      group;
-	
-	AttributeValueMap  attrs;
-	VRayObjectContext *obCtx;
 };
 
 
