@@ -24,16 +24,16 @@
 #include "BLI_math.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	float tm[4][4];
 	float itm[4][4];
 
 	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
 	if(objectSock && objectSock.is_linked()) {
-		BL::Node selectObjectNode = VRayNodeExporter::getConnectedNode(ntree, objectSock);
+		BL::Node selectObjectNode = VRayNodeExporter::getConnectedNode(objectSock);
 		if(selectObjectNode && (selectObjectNode.bl_idname() == "VRayNodeSelectObject")) {
-			BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, selectObjectNode);
+			BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, selectObjectNode, objectSock, context);
 			if(b_ob) {
 				Object *ob = (Object*)b_ob.ptr.data;
 
@@ -76,7 +76,7 @@ std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::No
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	float rot[3] = {0.0f, 0.0f, 0.0f};
 	float sca[3] = {0.0f, 0.0f, 0.0f};
@@ -103,7 +103,7 @@ std::string VRayNodeExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeVector(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	float vector[3] = {0.0f, 0.0f, 0.0f};
 
