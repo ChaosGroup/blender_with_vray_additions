@@ -21,9 +21,3 @@
  */
 
 #include "exp_nodes.h"
-
-
-BL::NodeTree VRayNodeExporter::exportVRayNodeSelectNodeTree(BL::NodeTree ntree, BL::Node node)
-{
-	return BL::NodeTree(PointerRNA_NULL);
-}
