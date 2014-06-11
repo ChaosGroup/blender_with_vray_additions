@@ -23,9 +23,9 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
 	StrVector brdfs;
 	StrVector weights;
@@ -40,12 +40,12 @@ std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::
 		if(NOT(brdfSock.is_linked()))
 			continue;
 
-		std::string brdf   = VRayNodeExporter::exportLinkedSocket(ntree, brdfSock);
+		std::string brdf   = VRayNodeExporter::exportLinkedSocket(ntree, brdfSock, context);
 		std::string weight = "1.0";
 
 		BL::NodeSocket weightSock = VRayNodeExporter::getSocketByName(node, weigthSockName);
 		if(weightSock.is_linked()) {
-			weight = VRayNodeExporter::exportLinkedSocket(ntree, weightSock);
+			weight = VRayNodeExporter::exportLinkedSocket(ntree, weightSock, context);
 		}
 		else {
 			weight = boost::str(boost::format("%sW%i") % pluginName % i);
@@ -66,11 +66,11 @@ std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::
 	}
 
 	AttributeValueMap pluginAttrs;
-	pluginAttrs["brdfs"]   = boost::str(boost::format("List(%s)") % boost::algorithm::join(brdfs, ","));
-	pluginAttrs["weights"] = boost::str(boost::format("List(%s)") % boost::algorithm::join(weights, ","));
+	pluginAttrs["brdfs"]   = BOOST_FORMAT_LIST(brdfs);
+	pluginAttrs["weights"] = BOOST_FORMAT_LIST(weights);
 
 	pluginAttrs["transparency"]  = VRayNodeExporter::exportSocket(ntree, node, "Transparency");
-	pluginAttrs["additive_mode"] = boost::str(boost::format("%i") % RNA_boolean_get(&node.ptr, "additive_mode"));
+	pluginAttrs["additive_mode"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&node.ptr, "additive_mode"));
 
 	VRayNodePluginExporter::exportPlugin("BRDF", "BRDFLayered", pluginName, pluginAttrs);
 

@@ -184,7 +184,7 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 	if(ntree) {
 		BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
 		if(maOutput) {
-			BL::Node maNode = VRayNodeExporter::getConnectedNode(ntree, maOutput, "Material");
+			BL::Node maNode = VRayNodeExporter::getConnectedNode(maOutput, "Material");
 			if(maNode) {
 				std::string maName = StripString("NT" + ntree.name() + "N" + maNode.name());
 

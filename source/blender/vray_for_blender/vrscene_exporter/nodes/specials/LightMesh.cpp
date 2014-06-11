@@ -23,9 +23,9 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
+std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context)) {
+	if(NOT(context->obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
@@ -40,11 +40,11 @@ std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::No
 	}
 
 	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(context->ob->obmat, transform);
+	GetTransformHex(context->obCtx.ob->obmat, transform);
 
 	AttributeValueMap manualAttrs;
 	manualAttrs["geometry"]  = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
 	manualAttrs["transform"] = BOOST_FORMAT_TM(transform);
 
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }

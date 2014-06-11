@@ -24,7 +24,7 @@
 #include "cgr_paths.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
@@ -41,7 +41,7 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 			AttributeValueMap manualAttributes;
 			manualAttributes["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
 
-			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttributes);
+			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttributes);
 		}
 	}
 

@@ -30,6 +30,23 @@ VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
 StrSet           VRayNodePluginExporter::m_namesCache;
 
 
+std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext *context)
+{
+	std::string pluginName = "NT" + ntree.name() + "N" + node.name();
+
+	if(context) {
+		BL::NodeTree  parent = context->getNodeTree();
+		BL::NodeGroup group  = context->getGroupNode();
+		if(parent)
+			pluginName += "NP" + parent.name();
+		if(group)
+			pluginName += "GR" + group.name();
+	}
+
+	return StripString(pluginName);
+}
+
+
 void VRayNodeExporter::getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable)
 {
 	PluginJson *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
@@ -187,60 +204,39 @@ BL::Node VRayNodeExporter::getNodeByType(BL::NodeTree nodeTree, const std::strin
 }
 
 
-BL::Node VRayNodeExporter::getConnectedNode(BL::NodeTree /*ntree*/, BL::NodeSocket socket)
+BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket socket)
 {
-#if 1
 	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
 	bNodeLink   *link = bSocket->link;
 	if(link) {
 		PointerRNA nodePtr;
-		RNA_pointer_create(NULL, &RNA_Node, link->fromnode, &nodePtr);
+		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_Node, link->fromnode, &nodePtr);
 		return BL::Node(nodePtr);
 	}
-#else
-	// XXX: For some reason Python's Node has 'links' attribute,
-	// but here we have to iterate thought tree's 'links'
-	//
-	BL::NodeTree::links_iterator link;
-	for(nodeTree.links.begin(link); link != nodeTree.links.end(); ++link)
-		if(socket.ptr.data == link->to_socket().ptr.data)
-			return link->from_node();
-#endif
-
 	return BL::Node(PointerRNA_NULL);
 }
 
 
-BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeTree /*nodeTree*/, BL::NodeSocket socket)
+BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeSocket socket)
 {
-#if 1
 	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
 	bNodeLink   *link = bSocket->link;
 	if(link) {
 		PointerRNA socketPtr;
-		RNA_pointer_create(NULL, &RNA_NodeSocket, link->fromsock, &socketPtr);
+		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_NodeSocket, link->fromsock, &socketPtr);
 		return BL::NodeSocket(socketPtr);
 	}
-#else
-	BL::NodeTree::links_iterator link;
-	for(nodeTree.links.begin(link); link != nodeTree.links.end(); ++link)
-		if(socket.ptr.data == link->to_socket().ptr.data)
-			return link->from_socket();
-#endif
-
 	return BL::NodeSocket(PointerRNA_NULL);
 }
 
 
-BL::Node VRayNodeExporter::getConnectedNode(BL::NodeTree nodeTree, BL::Node node, const std::string &socketName)
+BL::Node VRayNodeExporter::getConnectedNode(BL::Node node, const std::string &socketName)
 {
-	BL::NodeSocket socket = getSocketByName(node, socketName);
+	BL::NodeSocket socket = VRayNodeExporter::getSocketByName(node, socketName);
 	if(NOT(socket.is_linked()))
 		return BL::Node(PointerRNA_NULL);
-
-	return getConnectedNode(nodeTree, socket);
+	return VRayNodeExporter::getConnectedNode(socket);
 }
-
 
 
 BL::NodeTree VRayNodeExporter::getNodeTree(BL::BlendData b_data, ID *id)
@@ -280,22 +276,126 @@ BL::Texture VRayNodeExporter::getTextureFromIDRef(PointerRNA *ptr, const std::st
 }
 
 
-std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context)
+BL::NodeTree VRayNodeExporter::getNodeGroupTree(BL::Node node)
 {
-	BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(ntree, socket);
+	BL::NodeTree groupTree = BL::NodeTree(PointerRNA_NULL);
+	if(node.is_a(&RNA_ShaderNodeGroup)) {
+		BL::NodeGroup groupNode(node);
+		groupTree = groupNode.node_tree();
+	}
+	else {
+		BL::NodeCustomGroup groupNode(node);
+		groupTree = groupNode.node_tree();
+	}
+	return groupTree;
+}
 
+
+BL::NodeSocket VRayNodeExporter::getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket)
+{
+	BL::NodeTree groupTree = VRayNodeExporter::getNodeGroupTree(node);
+	if(NOT(groupTree)) {
+		PRINT_ERROR("Group node name: %s => Tree not found!",
+					node.name().c_str());
+		return BL::NodeSocket(PointerRNA_NULL);
+	}
+	BL::NodeGroupOutput groupOutput(PointerRNA_NULL);
+	BL::NodeTree::nodes_iterator nodeIt;
+	for(groupTree.nodes.begin(nodeIt); nodeIt != groupTree.nodes.end(); ++nodeIt) {
+		BL::Node gNode = *nodeIt;
+
+		if(gNode.is_a(&RNA_NodeGroupOutput)) {
+			BL::NodeGroupOutput gOutput(gNode);
+			if(gOutput.is_active_output()) {
+				groupOutput = gOutput;
+				break;
+			}
+		}
+	}
+	if(NOT(groupOutput)) {
+		PRINT_ERROR("Node tree: %s => Active output not found!",
+					groupTree.name().c_str());
+		return BL::NodeSocket(PointerRNA_NULL);
+	}
+
+	// fromSocket is a socket on the Group node.
+	// We have to find a corresponding socket on a GroupOutput node
+	// Searching by name atm...
+	//
+	BL::NodeSocket toSocket(PointerRNA_NULL);
+	BL::Node::inputs_iterator inIt;
+	for(groupOutput.inputs.begin(inIt); inIt != groupOutput.inputs.end(); ++inIt ) {
+		BL::NodeSocket sock = *inIt;
+		if(sock.name().empty())
+			continue;
+		if(fromSocket.name() == sock.name()) {
+			toSocket = sock;
+			break;
+		}
+	}
+	if(NOT(toSocket)) {
+		PRINT_ERROR("Node tree: %s => Group node name: %s => Input socket not found!",
+					groupTree.name().c_str(), node.name().c_str());
+		return BL::NodeSocket(PointerRNA_NULL);
+	}
+
+	// Finally get the socket connected to the Group Output socket
+	//
+	toSocket = VRayNodeExporter::getConnectedSocket(toSocket);
+
+	return toSocket;
+}
+
+
+std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	std::string connectedPlugin = "NULL";
+
+	BL::NodeSocket toSocket = VRayNodeExporter::getConnectedSocket(fromSocket);
 	// NOTE: This could happen when reconnecting nodes
-	if(NOT(conSock.ptr.data))
+	// while material preview
+	if(NOT(toSocket.ptr.data))
 		return "NULL";
 
-	BL::Node    conNode = VRayNodeExporter::getConnectedNode(ntree, socket);
+	BL::Node toNode = VRayNodeExporter::getConnectedNode(fromSocket);
+	// NOTE: This could happen when reconnecting nodes
+	// while material preview
+	if(NOT(toNode.ptr.data))
+		return "NULL";
 
-	std::string connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, conNode, socket, context);
+	// If we are connected to the Group node,
+	// we have to found the actual socket/node from the group node tree
+	//
+	if(toNode.is_a(&RNA_ShaderNodeGroup) || toNode.is_a(&RNA_NodeCustomGroup)) {
+		// Get group tree
+		BL::NodeTree groupTree = VRayNodeExporter::getNodeGroupTree(toNode);
+
+		// Setting nested context
+		if(context) {
+			context->pushGroupNode(toNode.ptr);
+			context->pushParentTree(ntree);
+		}
+
+		// Get real socket / node to export
+		toSocket = VRayNodeExporter::getNodeGroupSocketReal(toNode, toSocket);
+		toNode   = toSocket.node();
+
+		connectedPlugin = VRayNodeExporter::exportVRayNode(groupTree, toNode, fromSocket, context);
+
+		// Restoring context
+		if(context) {
+			context->popParentTree();
+			context->popGroupNode();
+		}
+	}
+	else {
+		connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, toNode, fromSocket, context);
+	}
 
 	std::string conSockAttrName;
-	if(RNA_struct_find_property(&conSock.ptr, "vray_attr")) {
+	if(RNA_struct_find_property(&toSocket.ptr, "vray_attr")) {
 		char rnaStringBuf[CGR_MAX_PLUGIN_NAME];
-		RNA_string_get(&conSock.ptr, "vray_attr", rnaStringBuf);
+		RNA_string_get(&toSocket.ptr, "vray_attr", rnaStringBuf);
 		conSockAttrName = rnaStringBuf;
 	}
 
@@ -352,7 +452,7 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 }
 
 
-std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayObjectContext *context)
+std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context)
 {
 	if(socket.is_linked())
 		return VRayNodeExporter::exportLinkedSocket(ntree, socket, context);
@@ -361,14 +461,14 @@ std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket so
 }
 
 
-std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayObjectContext *context)
+std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayNodeContext *context)
 {
 	BL::NodeSocket socket = VRayNodeExporter::getSocketByName(node, socketName);
 	return VRayNodeExporter::exportSocket(ntree, socket, context);
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context, const AttributeValueMap &manualAttrs)
 {
 	std::string pluginType;
 	std::string pluginID;
@@ -409,10 +509,10 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 	PRINT_INFO("  Node represents plugin \"%s\" [\"%s\"]",
 			   pluginID.c_str(), pluginType.c_str());
 
-	std::string        pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+	std::string        pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 	AttributeValueMap  pluginAttrs;
 
-	// VRayNodeContext nodeContext(ntree, node);
+	// VRayNodeContext nodeContext(ntree, node, fromSocket, context);
 	// VRayNodeExporter::getAttrsFromPropGroupAndNode(pluginAttrs, pluginID, propGroup, manualAttrs, nodeContext);
 
 	BOOST_FOREACH(PluginJson::value_type &v, pluginDesc->get_child("Parameters")) {
@@ -459,7 +559,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 }
 
 
-std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket socket, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context, const AttributeValueMap &manualAttrs)
 {
 	std::string nodeClass = node.bl_idname();
 
@@ -467,25 +567,25 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 			   node.name().c_str(), ntree.name().c_str());
 
 	if(nodeClass == "VRayNodeBlenderOutputMaterial") {
-		return VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(ntree, node, context);
+		return VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeBlenderOutputGeometry") {
-		return VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(ntree, node, context);
+		return VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeBRDFLayered") {
-		return VRayNodeExporter::exportVRayNodeBRDFLayered(ntree, node);
+		return VRayNodeExporter::exportVRayNodeBRDFLayered(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeTexLayered") {
-		return VRayNodeExporter::exportVRayNodeTexLayered(ntree, node);
+		return VRayNodeExporter::exportVRayNodeTexLayered(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeSelectObject") {
-		BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, node);
+		BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, node, fromSocket, context);
 		if(NOT(b_ob))
 			return "NULL";
 		return GetIDName((ID*)b_ob.ptr.data);
 	}
 	else if(nodeClass == "VRayNodeSelectGroup") {
-		BL::Group b_gr = VRayNodeExporter::exportVRayNodeSelectGroup(ntree, node);
+		BL::Group b_gr = VRayNodeExporter::exportVRayNodeSelectGroup(ntree, node, fromSocket, context);
 		if(NOT(b_gr))
 			return "List()";
 
@@ -501,60 +601,54 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 		return BOOST_FORMAT_LIST(obNames);
 	}
 	else if(nodeClass == "VRayNodeLightMesh") {
-		return VRayNodeExporter::exportVRayNodeLightMesh(ntree, node, context);
+		return VRayNodeExporter::exportVRayNodeLightMesh(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeGeomDisplacedMesh") {
-		return VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(ntree, node, context);
+		return VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeBitmapBuffer") {
-		return VRayNodeExporter::exportVRayNodeBitmapBuffer(ntree, node);
+		return VRayNodeExporter::exportVRayNodeBitmapBuffer(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeTexGradRamp") {
-		return VRayNodeExporter::exportVRayNodeTexGradRamp(ntree, node);
+		return VRayNodeExporter::exportVRayNodeTexGradRamp(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeTexRemap") {
-		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node);
+		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = VRayNodeExporter::getSocketByName(node, "Material");
 		if(materialInSock.is_linked())
-			return VRayNodeExporter::exportLinkedSocket(ntree, materialInSock);
+			return VRayNodeExporter::exportLinkedSocket(ntree, materialInSock, context);
 		else
 			return "NULL";
 	}
 	else if(nodeClass == "VRayNodeOutputTexture") {
 		BL::NodeSocket textureInSock = VRayNodeExporter::getSocketByName(node, "Texture");
 		if(textureInSock.is_linked())
-			return VRayNodeExporter::exportLinkedSocket(ntree, textureInSock);
+			return VRayNodeExporter::exportLinkedSocket(ntree, textureInSock, context);
 		else
 			return "NULL";
 	}
 	else if(nodeClass == "VRayNodeTransform") {
-		return VRayNodeExporter::exportVRayNodeTransform(ntree, node);
+		return VRayNodeExporter::exportVRayNodeTransform(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeMatrix") {
-		return VRayNodeExporter::exportVRayNodeMatrix(ntree, node);
+		return VRayNodeExporter::exportVRayNodeMatrix(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeVector") {
-		return VRayNodeExporter::exportVRayNodeVector(ntree, node);
+		return VRayNodeExporter::exportVRayNodeVector(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
-		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node);
-	}
-	else if(node.is_a(&RNA_ShaderNodeGroup) || node.is_a(&RNA_NodeCustomGroup)) {
-		return VRayNodeExporter::exportBlenderNodeGroup(ntree, node, socket);
+		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_NodeGroupInput)) {
-		return VRayNodeExporter::exportBlenderNodeGroupInput(ntree, node, socket);
-	}
-	else if(node.is_a(&RNA_NodeGroupOutput)) {
-		return VRayNodeExporter::exportBlenderNodeGroupOutput(ntree, node, socket);
+		return VRayNodeExporter::exportBlenderNodeGroupInput(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_NodeReroute)) {
-		return VRayNodeExporter::exportBlenderNodeReroute(ntree, node, socket);
+		return VRayNodeExporter::exportBlenderNodeReroute(ntree, node, fromSocket, context);
 	}
 
-	return exportVRayNodeAttributes(ntree, node, context, manualAttrs);
+	return exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }
 
 
@@ -709,7 +803,8 @@ std::string VRayNodeExporter::exportMaterial(BL::BlendData b_data, BL::Material 
 	if(b_ma_ntree) {
 		BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
 		if(b_ma_output) {
-			 maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output);
+			VRayNodeContext ctx;
+			maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output, PointerRNA_NULL, &ctx);
 		}
 	}
 	else {
