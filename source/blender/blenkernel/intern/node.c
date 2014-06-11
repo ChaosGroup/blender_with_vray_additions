@@ -3012,7 +3012,7 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 	if (ntree->update & (NTREE_UPDATE_LINKS | NTREE_UPDATE_NODES)) {
 		if (ntree->type == NTREE_CUSTOM) {
 			if(ntree->idname) {
-				if(strncmp(ntree->idname, "VRayNodeTreeMaterial", 20) == 0) {
+				if(STREQ(ntree->idname, "VRayNodeTreeMaterial")) {
 					ID *ma = cgr_get_ntree_material((ID*)ntree);
 					if(ma) {
 						DAG_id_tag_update(ma, 0);
