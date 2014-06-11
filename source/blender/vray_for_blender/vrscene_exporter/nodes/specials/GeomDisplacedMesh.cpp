@@ -23,9 +23,9 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
+std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context)) {
+	if(NOT(context->obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
@@ -66,7 +66,7 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 	if(displace_type == 2) {
 		BL::NodeSocket displacement_tex_color = VRayNodeExporter::getSocketByAttr(node, "displacement_tex_color");
 		if(displacement_tex_color.is_linked()) {
-			manualAttrs["displacement_tex_color"] = VRayNodeExporter::exportLinkedSocket(ntree, displacement_tex_color);
+			manualAttrs["displacement_tex_color"] = VRayNodeExporter::exportLinkedSocket(ntree, displacement_tex_color, context);
 
 		}
 		else {
@@ -77,7 +77,7 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 	else {
 		BL::NodeSocket displacement_tex_float = VRayNodeExporter::getSocketByAttr(node, "displacement_tex_float");
 		if(displacement_tex_float.is_linked()) {
-			manualAttrs["displacement_tex_float"] = VRayNodeExporter::exportLinkedSocket(ntree, displacement_tex_float);
+			manualAttrs["displacement_tex_float"] = VRayNodeExporter::exportLinkedSocket(ntree, displacement_tex_float, context);
 		}
 		else {
 			PRINT_ERROR("Node tree: %s => Node name: %s => Normal/2D displacement is selected, but no float texture presents!",
@@ -85,5 +85,5 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 		}
 	}
 
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }

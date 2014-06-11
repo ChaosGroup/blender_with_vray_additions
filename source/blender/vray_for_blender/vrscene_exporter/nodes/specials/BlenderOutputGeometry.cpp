@@ -25,24 +25,24 @@
 #include "GeomStaticMesh.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
+std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context)) {
+	if(NOT(context->obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
 	}
 
-	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
 	if(VRayNodeExporter::m_set->m_exportMeshes) {
 		if(VRayNodeExporter::m_set->m_isAnimation) {
-			if(VRayNodeExporter::m_set->DoUpdateCheck() && NOT(IsObjectDataUpdated(context->ob))) {
+			if(VRayNodeExporter::m_set->DoUpdateCheck() && NOT(IsObjectDataUpdated(context->obCtx.ob))) {
 				return pluginName;
 			}
 		}
 
-		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->sce, context->main, context->ob, false);
+		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob, false);
 		geomStaticMesh->init();
 		geomStaticMesh->initName(pluginName);
 		geomStaticMesh->initAttributes(&node.ptr);

@@ -23,11 +23,11 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
-		std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+		std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
 		BL::ColorRamp ramp = b_tex.color_ramp();
 
@@ -57,7 +57,7 @@ std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::
 		manualAttrs["colors"]    = BOOST_FORMAT_LIST(colors);
 		manualAttrs["positions"] = BOOST_FORMAT_LIST_FLOAT(positions);
 
-		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
+		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 	}
 
 	PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with TexGradRamp!",

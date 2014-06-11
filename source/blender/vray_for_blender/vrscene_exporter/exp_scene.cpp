@@ -562,7 +562,8 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Geometry");
+	BL::NodeSocket geometrySocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
+	BL::Node       geometryNode   = VRayNodeExporter::getConnectedNode(geometrySocket);
 	if(NOT(geometryNode)) {
 		PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!",
 					ob->id.name, ntree.name().c_str());
@@ -590,16 +591,15 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Prepare object context
 	//
-	VRayObjectContext obContext;
-	obContext.ob   = ob;
-	obContext.sce  = m_set->m_sce;
-	obContext.main = m_set->m_main;
-
-	obContext.mtlOverride = m_mtlOverride;
+	VRayNodeContext nodeCtx;
+	nodeCtx.obCtx.ob   = ob;
+	nodeCtx.obCtx.sce  = m_set->m_sce;
+	nodeCtx.obCtx.main = m_set->m_main;
+	nodeCtx.obCtx.mtlOverride = m_mtlOverride;
 
 	// Export object main properties
 	//
-	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, BL::NodeSocket(PointerRNA_NULL), &obContext);
+	std::string geometry = VRayNodeExporter::exportVRayNode(ntree, geometryNode, geometrySocket, &nodeCtx);
 	if(geometry == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
 					ob->id.name, ntree.name().c_str());
@@ -611,7 +611,8 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::Node materialNode = VRayNodeExporter::getConnectedNode(ntree, nodeOutput, "Material");
+	BL::NodeSocket materialSocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
+	BL::Node       materialNode   = VRayNodeExporter::getConnectedNode(materialSocket);
 	if(NOT(materialNode)) {
 		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!",
 					ob->id.name, ntree.name().c_str());
@@ -621,7 +622,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	PRINT_INFO("Object: %s Node tree: %s: Material node: '%s'",
 			   ob->id.name, ntree.name().c_str(), materialNode.name().c_str());
 
-	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, BL::NodeSocket(PointerRNA_NULL), &obContext);
+	std::string material = VRayNodeExporter::exportVRayNode(ntree, materialNode, materialSocket, &nodeCtx);
 	if(material == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
 					ob->id.name, ntree.name().c_str());

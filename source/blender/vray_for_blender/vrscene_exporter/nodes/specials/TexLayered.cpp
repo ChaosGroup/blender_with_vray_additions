@@ -23,9 +23,9 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
 	StrVector textures;
 	StrVector blend_modes;
@@ -40,7 +40,7 @@ std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::N
 		if(NOT(texSock.is_linked()))
 			continue;
 
-		std::string texture = VRayNodeExporter::exportLinkedSocket(ntree, texSock);
+		std::string texture = VRayNodeExporter::exportLinkedSocket(ntree, texSock, context);
 
 		// NOTE: For some reason TexLayered doesn't like ::out_smth
 		size_t semiPos = texture.find("::");
@@ -57,8 +57,8 @@ std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::N
 	std::reverse(blend_modes.begin(), blend_modes.end());
 
 	AttributeValueMap pluginAttrs;
-	pluginAttrs["textures"]    = boost::str(boost::format("List(%s)")    % boost::algorithm::join(textures, ","));
-	pluginAttrs["blend_modes"] = boost::str(boost::format("ListInt(%s)") % boost::algorithm::join(blend_modes, ","));
+	pluginAttrs["textures"]    = BOOST_FORMAT_LIST(textures);
+	pluginAttrs["blend_modes"] = BOOST_FORMAT_LIST_INT(blend_modes);
 
 	StrVector mappableValues;
 	mappableValues.push_back("alpha");

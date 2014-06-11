@@ -25,26 +25,26 @@
 #include "Node.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context)
+std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context)) {
+	if(NOT(context->obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
 	}
 
 	AttributeValueMap pluginAttrs;
-	std::string mtlName = Node::GetNodeMtlMulti(context->ob, context->mtlOverride, pluginAttrs);
+	std::string mtlName = Node::GetNodeMtlMulti(context->obCtx.ob, context->obCtx.mtlOverride, pluginAttrs);
 
 	// NOTE: Function could return only one material in 'mtlName'
 	if(pluginAttrs.find("mtls_list") == pluginAttrs.end())
 		return mtlName;
 
-	std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
 	BL::NodeSocket mtlid_gen_float = VRayNodeExporter::getSocketByName(node, "ID Generator");
 	if(mtlid_gen_float.is_linked()) {
-		pluginAttrs["mtlid_gen_float"] = VRayNodeExporter::exportLinkedSocket(ntree, mtlid_gen_float);
+		pluginAttrs["mtlid_gen_float"] = VRayNodeExporter::exportLinkedSocket(ntree, mtlid_gen_float, context);
 
 		// NOTE: if 'ids_list' presents in the plugin description 'mtlid_gen_float' won't work for some reason...
 		pluginAttrs.erase(pluginAttrs.find("ids_list"));

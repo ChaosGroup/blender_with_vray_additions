@@ -23,11 +23,11 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node)
+std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
-		std::string pluginName = StripString("NT" + ntree.name() + "N" + node.name());
+		std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
 		BL::ColorRamp ramp = b_tex.color_ramp();
 
@@ -75,7 +75,7 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 		manualAttrs["color_positions"] = BOOST_FORMAT_LIST_FLOAT(positions);
 		manualAttrs["color_types"]     = BOOST_FORMAT_LIST_INT(types);
 
-		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, NULL, manualAttrs);
+		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 	}
 
 	PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with TexRemap!",
