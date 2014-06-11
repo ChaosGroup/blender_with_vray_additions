@@ -2933,19 +2933,25 @@ void ntreeVerifyNodes(struct Main *main, struct ID *id)
 	} FOREACH_NODETREE_END
 }
 
-static ID *cgr_get_ntree_material(ID *id)
+static ID *cgr_get_ntree_material(ID *ntree)
 {
-	Material   *ma = NULL;
-	PointerRNA  ptr;
-	char        treeName[MAX_ID_NAME];
+	Material    *ma = NULL;
+	PropertyRNA *prop = NULL;
+	PointerRNA   ptr;
 
 	for (ma = G.main->mat.first; ma; ma = ma->id.next) {
 		RNA_id_pointer_create((ID*)ma, &ptr);
 		ptr = RNA_pointer_get(&ptr, "vray");
 
-		RNA_string_get(&ptr, "ntree__name__", treeName);
-		if(strncmp(id->name+2, treeName, MAX_ID_NAME) == 0)
-			return (ID*)ma;
+		prop = RNA_struct_find_property(&ptr, "ntree");
+		if(prop) {
+			PropertyType propType = RNA_property_type(prop);
+			if(propType == PROP_POINTER) {
+				PointerRNA ntreeRNA = RNA_pointer_get(&ptr, "ntree");
+				if((void*)ntree == ntreeRNA.data)
+					return (ID*)ma;
+			}
+		}
 	}
 
 	return NULL;
