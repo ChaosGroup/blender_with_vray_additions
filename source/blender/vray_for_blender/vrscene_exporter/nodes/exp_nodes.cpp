@@ -187,8 +187,17 @@ BL::Node VRayNodeExporter::getNodeByType(BL::NodeTree nodeTree, const std::strin
 }
 
 
-BL::Node VRayNodeExporter::getConnectedNode(BL::NodeTree nodeTree, BL::NodeSocket socket)
+BL::Node VRayNodeExporter::getConnectedNode(BL::NodeTree /*ntree*/, BL::NodeSocket socket)
 {
+#if 1
+	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
+	bNodeLink   *link = bSocket->link;
+	if(link) {
+		PointerRNA nodePtr;
+		RNA_pointer_create(NULL, &RNA_Node, link->fromnode, &nodePtr);
+		return BL::Node(nodePtr);
+	}
+#else
 	// XXX: For some reason Python's Node has 'links' attribute,
 	// but here we have to iterate thought tree's 'links'
 	//
@@ -196,17 +205,28 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeTree nodeTree, BL::NodeSocke
 	for(nodeTree.links.begin(link); link != nodeTree.links.end(); ++link)
 		if(socket.ptr.data == link->to_socket().ptr.data)
 			return link->from_node();
+#endif
 
 	return BL::Node(PointerRNA_NULL);
 }
 
 
-BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeTree nodeTree, BL::NodeSocket socket)
+BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeTree /*nodeTree*/, BL::NodeSocket socket)
 {
+#if 1
+	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
+	bNodeLink   *link = bSocket->link;
+	if(link) {
+		PointerRNA socketPtr;
+		RNA_pointer_create(NULL, &RNA_NodeSocket, link->fromsock, &socketPtr);
+		return BL::NodeSocket(socketPtr);
+	}
+#else
 	BL::NodeTree::links_iterator link;
 	for(nodeTree.links.begin(link); link != nodeTree.links.end(); ++link)
 		if(socket.ptr.data == link->to_socket().ptr.data)
 			return link->from_socket();
+#endif
 
 	return BL::NodeSocket(PointerRNA_NULL);
 }
@@ -270,7 +290,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 
 	BL::Node    conNode = VRayNodeExporter::getConnectedNode(ntree, socket);
 
-	std::string connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, conNode, context);
+	std::string connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, conNode, socket, context);
 
 	std::string conSockAttrName;
 	if(RNA_struct_find_property(&conSock.ptr, "vray_attr")) {
@@ -439,7 +459,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 }
 
 
-std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket socket, VRayObjectContext *context, const AttributeValueMap &manualAttrs)
 {
 	std::string nodeClass = node.bl_idname();
 
@@ -480,9 +500,6 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 
 		return BOOST_FORMAT_LIST(obNames);
 	}
-	else if(nodeClass == "VRayNodeSelectNodeTree") {
-		// return VRayNodeExporter::exportVRayNodeSelectNodeTree(ntree, node);
-	}
 	else if(nodeClass == "VRayNodeLightMesh") {
 		return VRayNodeExporter::exportVRayNodeLightMesh(ntree, node, context);
 	}
@@ -521,11 +538,20 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeVector") {
 		return VRayNodeExporter::exportVRayNodeVector(ntree, node);
 	}
-//	else if(nodeClass == "VRayNodeUVWGenProjection") {
-//		return VRayNodeExporter::exportVRayNodeUVWGenProjection(ntree, node);
-//	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node);
+	}
+	else if(node.is_a(&RNA_ShaderNodeGroup) || node.is_a(&RNA_NodeCustomGroup)) {
+		return VRayNodeExporter::exportBlenderNodeGroup(ntree, node, socket);
+	}
+	else if(node.is_a(&RNA_NodeGroupInput)) {
+		return VRayNodeExporter::exportBlenderNodeGroupInput(ntree, node, socket);
+	}
+	else if(node.is_a(&RNA_NodeGroupOutput)) {
+		return VRayNodeExporter::exportBlenderNodeGroupOutput(ntree, node, socket);
+	}
+	else if(node.is_a(&RNA_NodeReroute)) {
+		return VRayNodeExporter::exportBlenderNodeReroute(ntree, node, socket);
 	}
 
 	return exportVRayNodeAttributes(ntree, node, context, manualAttrs);
@@ -624,7 +650,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 
 	if(outAttributes.str().empty()) {
 		// We have some plugins without input attributes
-		// Export then only for the first frame
+		// Export them only for the first frame
 		if(VRayNodeExporter::m_set->DoUpdateCheck())
 			return 0;
 	}
