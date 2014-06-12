@@ -611,7 +611,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::NodeSocket materialSocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
+	BL::NodeSocket materialSocket = VRayNodeExporter::getSocketByName(nodeOutput, "Material");
 	BL::Node       materialNode   = VRayNodeExporter::getConnectedNode(materialSocket);
 	if(NOT(materialNode)) {
 		PRINT_ERROR("Object: %s Node tree: %s => Material node is not set!",
