@@ -38,15 +38,17 @@ void ExportTexVoxelData(PyObject          *output,
 						const char        *pluginName,
 						short              interpolation)
 {
-	VRayScene::TexVoxelData texVoxelData(sce, NULL, ob);
-	texVoxelData.initName(pluginName);
-	texVoxelData.init(smd);
-	texVoxelData.setInterpolation(interpolation);
+	VRayScene::TexVoxelData *texVoxelData = new VRayScene::TexVoxelData(sce, NULL, ob);
+	texVoxelData->initName(pluginName);
+	texVoxelData->init(smd);
+	texVoxelData->setInterpolation(interpolation);
 
-	if(NOT(texVoxelData.getHash()))
+	if(NOT(texVoxelData->getHash()))
 		return;
 
-	texVoxelData.write(output, sce->r.cfra);
+	int toDelete = texVoxelData->write(output, VRayScene::VRayExportable::m_set->m_frameCurrent);
+	if(toDelete)
+		delete texVoxelData;
 }
 
 
