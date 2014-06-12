@@ -262,36 +262,38 @@ private:
 																VRayNodeContext *context);
 	static std::string      exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 																VRayNodeContext *context);
+
 	static std::string      exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													VRayNodeContext *context);
 	static std::string      exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 															VRayNodeContext *context);
+
 	static BL::Object       exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													   VRayNodeContext *context);
 	static BL::Group        exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													  VRayNodeContext *context);
+
 	static std::string      exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													  VRayNodeContext *context);
+
 	static std::string      exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													 VRayNodeContext *context);
-	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													   VRayNodeContext *context);
 	static std::string      exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													  VRayNodeContext *context);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
+	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+											           VRayNodeContext *context);
+
 	static std::string      exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													VRayNodeContext *context);
 	static std::string      exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 												 VRayNodeContext *context);
 	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 												 VRayNodeContext *context);
+
 	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													VRayNodeContext *context);
-	static std::string      exportBlenderNodeGroupInput(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-														VRayNodeContext *context);
-	static std::string      exportBlenderNodeReroute(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													 VRayNodeContext *context);
 
 private: 
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);
