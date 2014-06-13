@@ -51,7 +51,7 @@
 #include "BLI_listbase.h"
 #include "BLI_path_util.h"
 #include "BLI_utildefines.h"
-
+#include "BLI_callbacks.h"
 #include "BLF_translation.h"
 
 #include "BKE_animsys.h"
@@ -3018,6 +3018,9 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 						DAG_id_tag_update(ma, 0);
 						WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, ma);
 					}
+				}
+				if(STREQLEN(ntree->idname, "VRayNodeTree", 12)) {
+					BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
 				}
 			}
 		}
