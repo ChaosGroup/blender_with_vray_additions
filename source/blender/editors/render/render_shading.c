@@ -43,6 +43,7 @@
 
 #include "BLI_blenlib.h"
 #include "BLI_utildefines.h"
+#include "BLI_callbacks.h"
 
 #include "BLF_translation.h"
 
@@ -390,6 +391,8 @@ static int new_material_exec(bContext *C, wmOperator *UNUSED(op))
 			ED_node_shader_default(C, &ma->id);
 			ma->use_nodes = true;
 		}
+
+		BLI_callback_exec(NULL, &ma->id, BLI_CB_EVT_NEW_MATERIAL);
 	}
 
 	/* hook into UI */
