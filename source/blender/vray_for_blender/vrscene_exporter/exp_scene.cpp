@@ -46,6 +46,7 @@ extern "C" {
 #  include "DNA_modifier_types.h"
 #  include "DNA_material_types.h"
 #  include "DNA_lamp_types.h"
+#  include "DNA_camera_types.h"
 #  include "BKE_anim.h"
 #  include "DNA_windowmanager_types.h"
 }
@@ -183,6 +184,25 @@ void VRsceneExporter::init()
 				m_set->m_activeLayers |= (1 << a);
 			}
 		}
+	}
+
+	// Find if we need hide from view here
+	int animationMode = vrayExporter.getEnum("animation_mode");
+
+	// If "Camera Loop"
+	if(animationMode == 4) {
+		for(Camera *ca = (Camera*)m_set->m_main->camera.first; ca; ca = (Camera*)ca->id.next) {
+			RnaAccess::RnaValue vrayCamera((ID*)ca, "vray");
+			int useHideFromView = vrayCamera.getBool("hide_from_view");
+			if(useHideFromView) {
+				m_set->m_useHideFromView = true;
+				break;
+			}
+		}
+	}
+	else {
+		RnaAccess::RnaValue vrayCamera((ID*)m_set->m_sce->camera->data, "vray");
+		m_set->m_useHideFromView = vrayCamera.getBool("hide_from_view");
 	}
 }
 
@@ -481,8 +501,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	}
 	node->initHash();
 
-	// NOTE: Write MtlRenderStats for all objects
-	if(m_hideFromView.hasData()) {
+	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
 		RenderStats hideFromViewStats;
 		hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
 		hideFromViewStats.gi_visibility          = !m_hideFromView.gi_visibility.count(ob);
@@ -631,7 +650,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export 'MtlRenderStats' for "Hide From View"
 	//
-	if(m_hideFromView.hasData()) {
+	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
 		std::string hideFromViewName = "HideFromView" + pluginName;
 
 		AttributeValueMap hideFromViewAttrs;
