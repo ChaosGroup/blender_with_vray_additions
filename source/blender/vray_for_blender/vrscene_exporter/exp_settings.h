@@ -82,6 +82,7 @@ struct ExpoterSettings {
 	int               m_exportMeshes;
 	unsigned int      m_activeLayers;
 	int               m_useNodeTrees;
+	int               m_useHideFromView;
 
 	int               m_useDisplaceSubdiv;
 	std::string       m_mtlOverride;
