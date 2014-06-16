@@ -64,6 +64,7 @@ static PyStructSequence_Field app_cb_info_fields[] = {
 	{(char *)"object_update",     (char *)"on updating an object"},
 	{(char *)"object_data_update", (char *)"on updating an object's data"},
 	{(char *)"node_tree_update",  (char *)"on updating a node tree"},
+	{(char *)"new_material",      (char *)"on creating new material"},
 	{(char *)"game_pre",          (char *)"on starting the game engine"},
 	{(char *)"game_post",         (char *)"on ending the game engine"},
 	{(char *)"version_update",    (char *)"on ending the versioning code"},
