@@ -21,6 +21,11 @@ import bpy
 
 
 class NodeCategory():
+    # Whether to split items into columns
+    # Integer, if not None specifies the number of items
+    # in the column
+    split_items = None
+
     @classmethod
     def poll(cls, context):
         return True
@@ -103,8 +108,9 @@ def register_node_categories(identifier, cat_list):
         layout = self.layout.row()
         col = layout.column()
         for i,item in enumerate(sorted(self.category.items(context), key=lambda t: getattr(bpy.types, t.nodetype).bl_rna.name)):
-            if i and i % 15 == 0:
-                col = layout.column()
+            if self.category.split_items is not None:
+                if i and i % self.category.split_items == 0:
+                    col = layout.column()
             item.draw(item, col, context)
 
     def draw_node_panel_item(self, context):
