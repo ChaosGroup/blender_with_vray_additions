@@ -30,52 +30,53 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 	if(b_tex) {
 		BL::ImageTexture imageTexture(b_tex.ptr);
 		if(imageTexture) {
-			std::string absFilepath;
+			AttributeValueMap  attrs;
+			std::string        absFilepath;
 
 			BL::Image image = imageTexture.image();
 			if(image) {
 				absFilepath = BlenderUtils::GetFullFilepath(image.filepath(), (ID*)ntree.ptr.data);
 				absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
-			}
 
-			AttributeValueMap manualAttributes;
-			manualAttributes["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
+				if(image.source() == BL::Image::source_SEQUENCE) {
+					BL::ImageUser imageUser = imageTexture.image_user();
+	
+					int seqFrame = 0;
 
-			BL::ImageUser imageUser = imageTexture.image_user();
-			if(image.source() == BL::Image::source_SEQUENCE) {
-				int seqFrame = 0;
+					int seqOffset = imageUser.frame_offset();
+					int seqLength = imageUser.frame_duration();
+					int seqStart  = imageUser.frame_start();
+					int seqEnd    = seqLength - seqStart + 1;
 
-				int seqOffset = imageUser.frame_offset();
-				int seqLength = imageUser.frame_duration();
-				int seqStart  = imageUser.frame_start();
-				int seqEnd    = seqLength - seqStart + 1;
-
-				if(imageUser.use_cyclic()) {
-					seqFrame = ((m_set->m_frameCurrent - seqStart) % seqLength) + 1;
-				}
-				else {
-					if(m_set->m_frameCurrent < seqStart){
-						seqFrame = seqStart;
-					}
-					else if(m_set->m_frameCurrent > seqEnd) {
-						seqFrame = seqEnd;
+					if(imageUser.use_cyclic()) {
+						seqFrame = ((m_set->m_frameCurrent - seqStart) % seqLength) + 1;
 					}
 					else {
-						seqFrame = seqStart + m_set->m_frameCurrent - 1;
+						if(m_set->m_frameCurrent < seqStart){
+							seqFrame = seqStart;
+						}
+						else if(m_set->m_frameCurrent > seqEnd) {
+							seqFrame = seqEnd;
+						}
+						else {
+							seqFrame = seqStart + m_set->m_frameCurrent - 1;
+						}
 					}
-				}
-				if(seqOffset < 0) {
-					if((seqFrame - abs(seqOffset)) < 0) {
-						seqFrame += seqLength;
+					if(seqOffset < 0) {
+						if((seqFrame - abs(seqOffset)) < 0) {
+							seqFrame += seqLength;
+						}
 					}
-				}
 
-				manualAttributes["frame_sequence"] = "1";
-				manualAttributes["frame_offset"] = BOOST_FORMAT_INT(seqOffset);
-				manualAttributes["frame_number"] = BOOST_FORMAT_INT(seqFrame);
+					attrs["frame_sequence"] = "1";
+					attrs["frame_offset"] = BOOST_FORMAT_INT(seqOffset);
+					attrs["frame_number"] = BOOST_FORMAT_INT(seqFrame);
+				}
 			}
 
-			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttributes);
+			attrs["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
+
+			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, attrs);
 		}
 	}
 
