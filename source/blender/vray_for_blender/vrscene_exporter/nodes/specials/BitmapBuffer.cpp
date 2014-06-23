@@ -41,6 +41,40 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 			AttributeValueMap manualAttributes;
 			manualAttributes["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
 
+			BL::ImageUser imageUser = imageTexture.image_user();
+			if(image.source() == BL::Image::source_SEQUENCE) {
+				int seqFrame = 0;
+
+				int seqOffset = imageUser.frame_offset();
+				int seqLength = imageUser.frame_duration();
+				int seqStart  = imageUser.frame_start();
+				int seqEnd    = seqLength - seqStart + 1;
+
+				if(imageUser.use_cyclic()) {
+					seqFrame = ((m_set->m_frameCurrent - seqStart) % seqLength) + 1;
+				}
+				else {
+					if(m_set->m_frameCurrent < seqStart){
+						seqFrame = seqStart;
+					}
+					else if(m_set->m_frameCurrent > seqEnd) {
+						seqFrame = seqEnd;
+					}
+					else {
+						seqFrame = seqStart + m_set->m_frameCurrent - 1;
+					}
+				}
+				if(seqOffset < 0) {
+					if((seqFrame - abs(seqOffset)) < 0) {
+						seqFrame += seqLength;
+					}
+				}
+
+				manualAttributes["frame_sequence"] = "1";
+				manualAttributes["frame_offset"] = BOOST_FORMAT_INT(seqOffset);
+				manualAttributes["frame_number"] = BOOST_FORMAT_INT(seqFrame);
+			}
+
 			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttributes);
 		}
 	}
