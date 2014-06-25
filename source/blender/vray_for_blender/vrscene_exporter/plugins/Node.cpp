@@ -184,9 +184,10 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 	if(ntree) {
 		BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
 		if(maOutput) {
-			BL::Node maNode = VRayNodeExporter::getConnectedNode(maOutput, "Material");
-			if(maNode) {
-				std::string maName = StripString("NT" + ntree.name() + "N" + maNode.name());
+			BL::NodeSocket materialSocket = VRayNodeExporter::getSocketByName(maOutput, "Material");
+			if(materialSocket && materialSocket.is_linked()) {
+				VRayNodeContext ctx;
+				std::string maName = VRayNodeExporter::getConnectedNodePluginName(ntree, materialSocket, &ctx);
 
 				if(materialOverride.empty())
 					materialName = maName;

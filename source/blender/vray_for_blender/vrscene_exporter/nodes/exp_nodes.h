@@ -242,6 +242,8 @@ public:
 	static BL::Node         getConnectedNode(BL::Node node, const std::string &socketName);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeSocket socket);
 
+	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
+
 	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 										   VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
