@@ -992,6 +992,8 @@ class BlenderEnvironment(SConsEnvironment):
                 print bc.HEADER+'Configuring library '+bc.ENDC+bc.OKGREEN+libname + bc.ENDC
             lenv = self.Clone()
             lenv.Append(CPPPATH=includes)
+            if lenv['OURPLATFORM'] in ('win32-vc', 'win64-vc'):
+                lenv.Append(CPPPATH=lenv['BF_PTHREADS_INC'])
             lenv.Append(CPPDEFINES=defines)
             if lenv['BF_DEBUG'] or (libname in quickdebug):
                 lenv.Append(CFLAGS = lenv['BF_DEBUG_CFLAGS'])

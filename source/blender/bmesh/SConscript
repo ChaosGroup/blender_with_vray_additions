@@ -44,10 +44,6 @@ incs = [
     '#/extern/rangetree',
     '#/intern/opennl/extern'
     ]
-incs = ' '.join(incs)
-
-if env['OURPLATFORM'] in ('win32-vc', 'win32-mingw', 'linuxcross', 'win64-vc', 'win64-mingw'):
-    incs += ' ' + env['BF_PTHREADS_INC']
 
 defs = []
 
