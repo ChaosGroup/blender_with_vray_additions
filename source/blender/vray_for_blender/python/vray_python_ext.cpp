@@ -365,6 +365,37 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mExportNode(PyObject *self, PyObject *args)
+{
+	long  ntreePtr;
+	long  nodePtr;
+	long  socketPtr;
+
+	if(NOT(PyArg_ParseTuple(args, "lll", &ntreePtr, &nodePtr, &socketPtr))) {
+		return NULL;
+	}
+
+	PointerRNA ntreeRNA;
+	RNA_id_pointer_create((ID*)(intptr_t)ntreePtr, &ntreeRNA);
+	BL::NodeTree ntree(ntreeRNA);
+
+	PointerRNA nodeRNA;
+	RNA_id_pointer_create((ID*)(intptr_t)nodePtr, &nodeRNA);
+	BL::Node node(nodeRNA);
+
+	PointerRNA   socketRNA;
+	bNodeSocket *nodeSocket = (bNodeSocket*)(intptr_t)socketPtr;
+	RNA_pointer_create((ID*)node.ptr.id.data, &RNA_NodeSocket, nodeSocket, &socketRNA);
+	BL::NodeSocket fromSocket(socketRNA);
+
+	std::string pluginName = VRayNodeExporter::exportVRayNode(ntree, node, fromSocket);
+
+	// TODO: Return result plugin name
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 {
 	if (MatrixObject_Check(value)) {
@@ -479,6 +510,8 @@ static PyMethodDef methods[] = {
 	{"exportSmokeDomain", mExportSmokeDomain, METH_VARARGS, "Export domain data"},
 	{"exportHair",        mExportHair,        METH_VARARGS, "Export hair"},
 	{"exportFluid",       mExportFluid,       METH_VARARGS, "Export voxel data as TexMayaFluid"},
+
+	{"exportNode",        mExportNode,        METH_VARARGS, "Export node tree node"},
 
 	{"setFrame",                 mExportSetFrame,    METH_VARARGS, "Set current frame"},
 	{"clearFrames", (PyCFunction)mExportClearFrames, METH_NOARGS,  "Clear frame cache"},
