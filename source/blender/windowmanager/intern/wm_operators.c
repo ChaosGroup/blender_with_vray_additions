@@ -2596,6 +2596,9 @@ static int wm_link_append_exec(bContext *C, wmOperator *op)
 	/* XXX TODO: align G.lib with other directory storage (like last opened image etc...) */
 	BLI_strncpy(G.lib, dir, FILE_MAX);
 
+	/* restore fake user for ID PointerProperty */
+	IDP_restore_fake_user();
+
 	WM_event_add_notifier(C, NC_WINDOW, NULL);
 
 	return OPERATOR_FINISHED;
