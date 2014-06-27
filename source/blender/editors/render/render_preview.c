@@ -1193,6 +1193,7 @@ void ED_preview_icon_job(const bContext *C, void *owner, ID *id, unsigned int *r
 	WM_jobs_start(CTX_wm_manager(C), wm_job);
 }
 
+
 void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, MTex *slot, int sizex, int sizey, int method)
 {
 	Object *ob = CTX_data_active_object(C);
