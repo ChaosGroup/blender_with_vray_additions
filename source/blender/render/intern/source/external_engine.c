@@ -43,6 +43,8 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_camera.h"
+#include "BLO_readfile.h"
+
 #include "BKE_global.h"
 #include "BKE_report.h"
 #include "BKE_scene.h"
@@ -142,6 +144,13 @@ RenderEngine *RE_engine_create_ex(RenderEngineType *type, bool use_for_viewport)
 {
 	RenderEngine *engine = MEM_callocN(sizeof(RenderEngine), "RenderEngine");
 	engine->type = type;
+
+	/* initialize additional preview_main properties */
+	/* has to be here to be sure, that external renderer addon is fully loaded */
+	if (type->preview_main && !type->preview_main_initialized) {
+		BLO_verify_custom_data(type->preview_main);
+		type->preview_main_initialized = true;
+	}
 
 	if (use_for_viewport) {
 		engine->flag |= RE_ENGINE_USED_FOR_VIEWPORT;
