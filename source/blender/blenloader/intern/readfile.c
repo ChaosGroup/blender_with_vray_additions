@@ -9473,3 +9473,21 @@ BlendFileData *blo_read_blendafterruntime(int file, const char *name, int actual
 	
 	return bfd;
 }
+
+struct Main *BLO_load_main_from_file(const char *filepath)
+{
+	const int fileflags = G.fileflags;
+	Main *bmain = NULL;
+	BlendFileData *bfd;
+
+	G.fileflags |= G_FILE_NO_UI;
+	bfd = BLO_read_from_file(filepath, NULL);
+	if (bfd) {
+		bmain = bfd->main;
+
+		MEM_freeN(bfd);
+	}
+	G.fileflags = fileflags;
+
+	return bmain;
+}

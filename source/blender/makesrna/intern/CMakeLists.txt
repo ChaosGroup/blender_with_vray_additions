@@ -274,6 +274,7 @@ blender_include_dirs(
 	..
 	../../blenkernel
 	../../blenlib
+	../../blenloader
 	../../bmesh
 	../../blenfont
 	../../gpu

@@ -45,6 +45,7 @@
 #include "BKE_global.h"
 #include "BKE_report.h"
 #include "BKE_scene.h"
+#include "BKE_library.h"
 
 #include "IMB_imbuf.h"
 #include "IMB_imbuf_types.h"
@@ -102,6 +103,9 @@ void RE_engines_exit(void)
 		next = type->next;
 
 		BLI_remlink(&R_engines, type);
+
+		if (type->preview_main)
+			BKE_main_free(type->preview_main);
 
 		if (!(type->flag & RE_INTERNAL)) {
 			if (type->ext.free)

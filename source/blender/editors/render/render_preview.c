@@ -46,6 +46,7 @@
 #include "BLI_math.h"
 #include "BLI_blenlib.h"
 #include "BLI_utildefines.h"
+#include "BLI_threads.h"
 
 #include "BLO_readfile.h"
 
@@ -88,6 +89,7 @@
 #include "PIL_time.h"
 
 #include "RE_pipeline.h"
+#include "RE_engine.h"
 
 #include "WM_api.h"
 #include "WM_types.h"
@@ -1131,12 +1133,14 @@ void ED_preview_icon_job(const bContext *C, void *owner, ID *id, unsigned int *r
 	WM_jobs_start(CTX_wm_manager(C), wm_job);
 }
 
+
 void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, MTex *slot, int sizex, int sizey, int method)
 {
 	Object *ob = CTX_data_active_object(C);
 	wmJob *wm_job;
 	ShaderPreview *sp;
 	Scene *scene = CTX_data_scene(C);
+	RenderEngineType *et = RE_engines_find(scene->r.engine);
 	short id_type = GS(id->name);
 	bool use_new_shading = BKE_scene_use_new_shading_nodes(scene);
 
@@ -1159,14 +1163,12 @@ void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, M
 	sp->parent = parent;
 	sp->slot = slot;
 
-	/* hardcoded preview .blend for cycles/internal, this should be solved
-	 * once with custom preview .blend path for external engines */
-	if ((method != PR_NODE_RENDER) && id_type != ID_TE && use_new_shading) {
+	if (et && et->render && et->preview_main)
+		sp->pr_main = et->preview_main;
+	else if ((method != PR_NODE_RENDER) && id_type != ID_TE && use_new_shading)
 		sp->pr_main = G_pr_main_cycles;
-	}
-	else {
+	else
 		sp->pr_main = G_pr_main;
-	}
 
 	if (ob && ob->totcol) copy_v4_v4(sp->col, ob->col);
 	else sp->col[0] = sp->col[1] = sp->col[2] = sp->col[3] = 1.0f;

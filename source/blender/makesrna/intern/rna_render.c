@@ -31,6 +31,8 @@
 #include "BLI_utildefines.h"
 #include "BLI_path_util.h"
 
+#include "BLO_readfile.h"
+
 #include "RNA_define.h"
 #include "RNA_enum_types.h"
 
@@ -288,6 +290,11 @@ static StructRNA *rna_RenderEngine_register(Main *bmain, ReportList *reports, vo
 	et->view_update = (have_function[3]) ? engine_view_update : NULL;
 	et->view_draw = (have_function[4]) ? engine_view_draw : NULL;
 	et->update_script_node = (have_function[5]) ? engine_update_script_node : NULL;
+
+	/* load preview file */
+	if (strlen(et->preview_filepath)) {
+		et->preview_main = BLO_load_main_from_file(et->preview_filepath);
+	}
 
 	BLI_addtail(&R_engines, et);
 
@@ -582,6 +589,10 @@ static void rna_def_render_engine(BlenderRNA *brna)
 
 	prop = RNA_def_property(srna, "bl_use_preview", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "type->flag", RE_USE_PREVIEW);
+	RNA_def_property_flag(prop, PROP_REGISTER_OPTIONAL);
+
+	prop = RNA_def_property(srna, "bl_preview_filepath", PROP_STRING, PROP_NONE);
+	RNA_def_property_string_sdna(prop, NULL, "type->preview_filepath");
 	RNA_def_property_flag(prop, PROP_REGISTER_OPTIONAL);
 
 	prop = RNA_def_property(srna, "bl_use_postprocess", PROP_BOOLEAN, PROP_NONE);
