@@ -282,6 +282,9 @@ void BLO_update_defaults_startup_blend(struct Main *mainvar);
 /* Loads Main from file. Used for preview file loading */
 struct Main *BLO_load_main_from_file(const char *filepath);
 
+/* Verifies Python node types, ID PointerProperties, etc. */
+void BLO_verify_custom_data(struct Main *bmain);
+
 #ifdef __cplusplus
 } 
 #endif

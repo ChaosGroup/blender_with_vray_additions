@@ -9491,3 +9491,11 @@ struct Main *BLO_load_main_from_file(const char *filepath)
 
 	return bmain;
 }
+
+
+void BLO_verify_custom_data(struct Main *bmain)
+{
+	lib_verify_nodetree(bmain, false);
+
+	IDP_restore_fake_user();
+}
