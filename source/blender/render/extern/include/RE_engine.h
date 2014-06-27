@@ -88,6 +88,7 @@ typedef struct RenderEngineType {
 
 	char preview_filepath[PATH_MAX];
 	struct Main *preview_main;
+	bool preview_main_initialized;
 
 	void (*update)(struct RenderEngine *engine, struct Main *bmain, struct Scene *scene);
 	void (*render)(struct RenderEngine *engine, struct Scene *scene);
