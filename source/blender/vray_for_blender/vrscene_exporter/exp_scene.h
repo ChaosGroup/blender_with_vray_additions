@@ -143,7 +143,8 @@ public:
 	~VRsceneExporter();
 
 	static ExpoterSettings *m_set;
-	static std::string      m_mtlOverride;
+	static BL::Material     m_mtlOverride;
+	static std::string      m_mtlOverrideName;
 
 	// Used to skip Node creating of gizmo objects
 	void                    addSkipObject(void *obPtr);
