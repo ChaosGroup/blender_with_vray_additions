@@ -65,7 +65,7 @@ incs = [
     '../../blenfont',
     '../../blenkernel',
     '../../blenlib',
-    ' ../../blenloader',
+    '../../blenloader',
     '../../bmesh',
     '../../depsgraph',
     '../../editors/include',
