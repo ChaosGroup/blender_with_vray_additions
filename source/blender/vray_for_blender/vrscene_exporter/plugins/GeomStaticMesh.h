@@ -151,6 +151,9 @@ private:
 	float         weld_threshold;
 	int           primary_visibility;
 
+	int           smooth_uv;
+	int           smooth_uv_borders;
+
 };
 
 }
