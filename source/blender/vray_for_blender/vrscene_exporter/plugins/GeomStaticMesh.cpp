@@ -614,6 +614,9 @@ void GeomStaticMesh::initAttributes(PointerRNA *ptr)
 	osd_subdiv_uvs   = RNA_boolean_get(&geomStaticMesh, "osd_subdiv_uvs");
 
 	weld_threshold = RNA_float_get(&geomStaticMesh, "weld_threshold");
+
+	smooth_uv         = RNA_boolean_get(&geomStaticMesh, "smooth_uv");
+	smooth_uv_borders = RNA_boolean_get(&geomStaticMesh, "smooth_uv_borders");
 }
 
 
@@ -874,6 +877,9 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_uvs=%i;",   osd_subdiv_uvs);
 		PYTHON_PRINTF(output, "\n\tweld_threshold=%.3f;", weld_threshold);
+
+		PYTHON_PRINTF(output, "\n\tsmooth_uv=%i;",         smooth_uv);
+		PYTHON_PRINTF(output, "\n\tsmooth_uv_borders=%i;", smooth_uv_borders);
 	}
 
 	PYTHON_PRINT(output,  "\n}\n");
