@@ -37,7 +37,7 @@ public:
 	virtual void       initName(const std::string &name="");
 
 	virtual void       writeData(PyObject *output, VRayExportable *prevState, bool keyFrame=false);
-	void               writeNode(PyObject *output, int frame=INT_MIN);
+	void               writeNode(PyObject *output, int frame=INT_MIN, const NodeAttrs &attrs=NodeAttrs());
 
 	virtual void       init();
 	void               preInit(ParticleSystem *psys);
