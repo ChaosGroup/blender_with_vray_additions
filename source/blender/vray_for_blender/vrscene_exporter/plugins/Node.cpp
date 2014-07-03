@@ -59,14 +59,15 @@ extern "C" {
 
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 	VRayExportable(scene, main, ob),
-	m_ntree(VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob))
+	m_ntree(VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob)),
+	m_dupliHolder(PointerRNA_NULL)
 {
 	m_geometry     = NULL;
 	m_geometryType = VRayScene::eGeometryMesh;
 	m_objectID     = 0;
 	m_visible      = true;
 
-	m_useRenderStatsOverride = false;
+	m_useHideFromView = false;
 }
 
 
@@ -217,6 +218,8 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 }
 
 
+
+
 std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)
 {
 	if(NOT(ob->totcol))
@@ -276,23 +279,34 @@ std::string VRayScene::Node::writeMtlMulti(PyObject *output)
 }
 
 
-std::string VRayScene::Node::writeMtlWrapper(PyObject *output, const std::string &baseMtl)
+std::string Node::WriteMtlWrapper(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl)
 {
-	RnaAccess::RnaValue rna(&m_ob->id, "vray.MtlWrapper");
-	if(NOT(rna.getBool("use")))
+	PointerRNA mtlWrapper = RNA_pointer_get(vrayPtr, "MtlWrapper");
+
+	if(NOT(RNA_boolean_get(&mtlWrapper, "use")))
 		return baseMtl;
 
-	std::string pluginName = "MtlWrapper" + baseMtl;
+	std::string mtlWrapperName = "MtlWrapper@" + objectName;
 
-	std::stringstream ss;
-	ss << "\n" << "MtlWrapper" << " " << pluginName << " {";
-	ss << "\n\t" << "base_material=" << baseMtl << ";";
-	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("MtlWrapper"), ss);
-	ss << "\n}\n";
+	AttributeValueMap mtlWrapperAttrs;
+	mtlWrapperAttrs["base_material"] = baseMtl;
 
-	PYTHON_PRINT(output, ss.str().c_str());
+	StrSet mtlWrapperAttrNames;
+	VRayNodeExporter::getAttributesList("MtlWrapper", mtlWrapperAttrNames, false);
 
-	return pluginName;
+	for(StrSet::const_iterator setIt = mtlWrapperAttrNames.begin(); setIt != mtlWrapperAttrNames.end(); ++setIt) {
+		const std::string &attrName = *setIt;
+		if(attrName == "base_material")
+			continue;
+		std::string propValue = VRayNodeExporter::getValueFromPropGroup(&mtlWrapper, propHolder, attrName);
+		if(propValue != "NULL")
+			mtlWrapperAttrs[attrName] = propValue;
+	}
+
+	// It's actually a material, but we will write it along with Node
+	VRayNodePluginExporter::exportPlugin("NODE", "MtlWrapper", mtlWrapperName, mtlWrapperAttrs);
+
+	return mtlWrapperName;
 }
 
 
@@ -316,23 +330,34 @@ std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::strin
 }
 
 
-std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::string &baseMtl)
+std::string Node::WriteMtlRenderStats(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl)
 {
-	RnaAccess::RnaValue rna(&m_ob->id, "vray.MtlRenderStats");
-	if(NOT(rna.getBool("use")))
+	PointerRNA mtlRenderStats = RNA_pointer_get(vrayPtr, "MtlRenderStats");
+
+	if(NOT(RNA_boolean_get(&mtlRenderStats, "use")))
 		return baseMtl;
 
-	std::string pluginName = "MtlRenderStats@" + baseMtl;
+	std::string mtlRenderStatsName = "MtlRenderStats@" + objectName;
 
-	std::stringstream ss;
-	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
-	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
-	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("MtlRenderStats"), ss);
-	ss << "\n}\n";
+	AttributeValueMap mtlRenderStatsAttrs;
+	mtlRenderStatsAttrs["base_mtl"] = baseMtl;
 
-	PYTHON_PRINT(output, ss.str().c_str());
+	StrSet mtlRenderStatsAttrNames;
+	VRayNodeExporter::getAttributesList("MtlRenderStats", mtlRenderStatsAttrNames, false);
 
-	return pluginName;
+	for(StrSet::const_iterator setIt = mtlRenderStatsAttrNames.begin(); setIt != mtlRenderStatsAttrNames.end(); ++setIt) {
+		const std::string &attrName = *setIt;
+		if(attrName == "base_mtl")
+			continue;
+		std::string propValue = VRayNodeExporter::getValueFromPropGroup(&mtlRenderStats, propHolder, attrName);
+		if(propValue != "NULL")
+			mtlRenderStatsAttrs[attrName] = propValue;
+	}
+
+	// It's actually a material, but we will write it along with Node
+	VRayNodePluginExporter::exportPlugin("NODE", "MtlRenderStats", mtlRenderStatsName, mtlRenderStatsAttrs);
+
+	return mtlRenderStatsName;
 }
 
 
@@ -361,23 +386,37 @@ std::string VRayScene::Node::writeHideFromView(const std::string &baseMtl)
 
 void VRayScene::Node::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
-	std::string material = writeMtlMulti(output);
-	material = writeMtlOverride(output, material);
-	material = writeMtlWrapper(output, material);
-	material = writeMtlRenderStats(output, material);
+	PointerRNA vrayPtr = RNA_pointer_get(&m_bl_ob.ptr, "vray");
 
-	if(m_useRenderStatsOverride) {
-		material = writeHideFromView(material);
+	std::string pluginName = getName();
+	std::string materialPluginName = writeMtlMulti(output);
+	std::string geometryPluginName = getDataName();
+
+	materialPluginName = writeMtlOverride(output, materialPluginName);
+	materialPluginName = Node::WriteMtlWrapper(&vrayPtr, &m_ob->id, pluginName, materialPluginName);
+	materialPluginName = Node::WriteMtlRenderStats(&vrayPtr, &m_ob->id, pluginName, materialPluginName);
+
+	if(m_useHideFromView) {
+		materialPluginName = writeHideFromView(materialPluginName);
+	}
+
+	if(m_dupliHolder) {
+		PointerRNA vrayObject = RNA_pointer_get(&m_dupliHolder.ptr, "vray");
+
+		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)m_dupliHolder.ptr.data);
+
+		materialPluginName = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, materialPluginName);
+		materialPluginName = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, materialPluginName);
 	}
 
 	AttributeValueMap pluginAttrs;
-	pluginAttrs["material"]  = material.c_str();
-	pluginAttrs["geometry"]  = getDataName();
-	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(getObjectID());
+	pluginAttrs["material"]  = materialPluginName;
+	pluginAttrs["geometry"]  = geometryPluginName;
+	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(m_objectID);
 	pluginAttrs["visible"]   = BOOST_FORMAT_INT(m_visible);
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_transform);
 
-	VRayNodePluginExporter::exportPlugin("NODE", "Node", getName(), pluginAttrs);
+	VRayNodePluginExporter::exportPlugin("NODE", "Node", pluginName, pluginAttrs);
 }
 
 
@@ -486,10 +525,16 @@ void VRayScene::Node::setObjectID(const int &objectID)
 }
 
 
+void VRayScene::Node::setDupliHolder(BL::Object ob)
+{
+	m_dupliHolder = ob;
+}
+
+
 void VRayScene::Node::setHideFromView(const VRayScene::RenderStats &renderStats)
 {
 	m_renderStatsOverride    = renderStats;
-	m_useRenderStatsOverride = true;
+	m_useHideFromView = true;
 }
 
 
@@ -515,7 +560,7 @@ void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 }
 
 
-void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
+void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob, const NodeAttrs &attrs)
 {
 	if(VRayNodeExporter::m_set->DoUpdateCheck() && NOT(IsObjectDataUpdated(ob))) {
 		return;
@@ -533,7 +578,7 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
 			geomMayaHair->preInit(psys);
 			if(VRayExportable::m_set->m_exportNodes)
-				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent);
+				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent, attrs);
 			if(VRayExportable::m_set->m_exportMeshes) {
 				geomMayaHair->init();
 				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_frameCurrent);
@@ -545,7 +590,7 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob)
 }
 
 
-void VRayScene::Node::writeHair(ExpoterSettings *settings)
+void VRayScene::Node::writeHair(ExpoterSettings *settings, const NodeAttrs &attrs)
 {
-	Node::WriteHair(settings, m_ob);
+	Node::WriteHair(settings, m_ob, attrs);
 }

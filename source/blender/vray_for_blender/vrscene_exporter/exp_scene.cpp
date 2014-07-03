@@ -385,6 +385,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		dupliAttrs.override = true;
 		dupliAttrs.visible  = false; // Dupli are shown via Instancer
 		dupliAttrs.objectID = override_objectID;
+		dupliAttrs.dupliHolder = bl_ob;
 
 		BL::Object::dupli_list_iterator b_dup;
 		for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
@@ -513,6 +514,9 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		if(attrs.objectID > -1) {
 			node->setObjectID(attrs.objectID);
 		}
+		if(attrs.dupliHolder.ptr.data) {
+			node->setDupliHolder(attrs.dupliHolder);
+		}
 	}
 	node->initHash();
 
@@ -620,14 +624,6 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	int visible  = true;
 	int objectID = ob->index;
 
-	// Check if we need to override some stuff;
-	// comes from advanced dupli export.
-	//
-	if(attrs.override) {
-		visible  = attrs.visible;
-		objectID = attrs.objectID;
-	}
-
 	// Prepare object context
 	//
 	VRayNodeContext nodeCtx;
@@ -668,6 +664,13 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
+	// Add MtlRenderStats and MtlWrapper from Object level for "one click" things
+	//
+	PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
+
+	material = Node::WriteMtlWrapper(&vrayObject, NULL, pluginName, material);
+	material = Node::WriteMtlRenderStats(&vrayObject, NULL, pluginName, material);
+
 	// Export 'MtlRenderStats' for "Hide From View"
 	//
 	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
@@ -688,58 +691,19 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		material = hideFromViewName;
 	}
 
-	// Add MtlRenderStats and MtlWrapper from Object level for "one click" things
+	// Check if we need to override some stuff;
+	// comes from advanced DupliGroup export.
 	//
-	PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
-	PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
-	PointerRNA mtlWrapper     = RNA_pointer_get(&vrayObject, "MtlWrapper");
+	if(attrs.override) {
+		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
 
-	if(RNA_boolean_get(&mtlRenderStats, "use")) {
-		std::string mtlRenderStatsName = "MtlRenderStats@" + pluginName;
+		PointerRNA vrayObject = RNA_pointer_get((PointerRNA*)&attrs.dupliHolder.ptr, "vray");
 
-		AttributeValueMap mtlRenderStatsAttrs;
-		mtlRenderStatsAttrs["base_mtl"] = material;
+		visible  = attrs.visible;
+		objectID = attrs.objectID;
 
-		StrSet mtlRenderStatsAttrNames;
-		VRayNodeExporter::getAttributesList("MtlRenderStats", mtlRenderStatsAttrNames, false);
-
-		for(StrSet::const_iterator setIt = mtlRenderStatsAttrNames.begin(); setIt != mtlRenderStatsAttrNames.end(); ++setIt) {
-			const std::string &attrName = *setIt;
-			if(attrName == "base_mtl")
-				continue;
-			std::string propValue = VRayNodeExporter::getValueFromPropGroup(&mtlWrapper, &ob->id, attrName);
-			if(propValue != "NULL")
-				mtlRenderStatsAttrs[attrName] = propValue;
-		}
-
-		// It's actually a material, but we will write it along with Node
-		VRayNodePluginExporter::exportPlugin("NODE", "MtlRenderStats", mtlRenderStatsName, mtlRenderStatsAttrs);
-
-		material = mtlRenderStatsName;
-	}
-
-	if(RNA_boolean_get(&mtlWrapper, "use")) {
-		std::string mtlWrapperName = "MtlWrapper@" + pluginName;
-
-		AttributeValueMap mtlWrapperAttrs;
-		mtlWrapperAttrs["base_material"] = material;
-
-		StrSet mtlWrapperAttrNames;
-		VRayNodeExporter::getAttributesList("MtlWrapper", mtlWrapperAttrNames, false);
-
-		for(StrSet::const_iterator setIt = mtlWrapperAttrNames.begin(); setIt != mtlWrapperAttrNames.end(); ++setIt) {
-			const std::string &attrName = *setIt;
-			if(attrName == "base_material")
-				continue;
-			std::string propValue = VRayNodeExporter::getValueFromPropGroup(&mtlWrapper, &ob->id, attrName);
-			if(propValue != "NULL")
-				mtlWrapperAttrs[attrName] = propValue;
-		}
-
-		// It's actually a material, but we will write it along with Node
-		VRayNodePluginExporter::exportPlugin("NODE", "MtlWrapper", mtlWrapperName, mtlWrapperAttrs);
-
-		material = mtlWrapperName;
+		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
+		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
 	}
 
 	AttributeValueMap pluginAttrs;
@@ -938,7 +902,7 @@ void VRsceneExporter::exportDupli()
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
 				const MyParticle *pa = *paIt;
 
-				PYTHON_PRINTF(out, "List(%i,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
+				PYTHON_PRINTF(out, "List("SIZE_T_FORMAT",TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
 
 				if(paIt != --parts->m_particles.end()) {
 					PYTHON_PRINT(out, ",");

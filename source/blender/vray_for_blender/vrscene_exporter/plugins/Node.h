@@ -75,11 +75,14 @@ public:
 
 	static int      IsSmokeDomain(Object *ob);
 	static int      HasHair(Object *ob);
-	static void     WriteHair(ExpoterSettings *settings, Object *ob);
+	static void     WriteHair(ExpoterSettings *settings, Object *ob, const NodeAttrs &attrs=NodeAttrs());
 	static int      DoRenderEmitter(Object *ob);
 	static int      IsUpdated(Object *ob);
 	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
 	static string   GetMaterialName(Material *ma, const string &materialOverride="");
+
+	static string   WriteMtlWrapper(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl);
+	static string   WriteMtlRenderStats(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl);
 
 	virtual        ~Node() { freeData(); }
 	virtual void    preInit() {}
@@ -98,7 +101,7 @@ public:
 	void            freeData();
 
 	void            writeGeometry(PyObject *output, int frame=0);
-	void            writeHair(ExpoterSettings *settings);
+	void            writeHair(ExpoterSettings *settings, const NodeAttrs &attrs=NodeAttrs());
 	std::string     writeHideFromView(const std::string &baseMtl="");
 
 	char           *getTransform() const;
@@ -113,6 +116,7 @@ public:
 	void            setVisiblity(const int &visible=true);
 	void            setObjectID(const int &objectID=0);
 	void            setHideFromView(const RenderStats &renderStats);
+	void            setDupliHolder(BL::Object ob);
 
 private:
 	void            initTransform();
@@ -121,14 +125,16 @@ private:
 	std::string     writeGeomStaticSmoothedMesh(PyObject *output, const std::string &meshName);
 
 	std::string     writeMtlMulti(PyObject *output);
-	std::string     writeMtlWrapper(PyObject *output, const std::string &baseMtl);
 	std::string     writeMtlOverride(PyObject *output, const std::string &baseMtl);
-	std::string     writeMtlRenderStats(PyObject *output, const std::string &baseMtl);
 
 	BL::NodeTree    m_ntree;
 
 	// Export options
 	std::string     m_materialOverride;
+
+	// Dupli holder
+	// Used to set additional override options
+	BL::Object      m_dupliHolder;
 
 	// Node properties
 	int             m_objectID;
@@ -139,7 +145,7 @@ private:
 	std::string     m_geometryName;
 
 	RenderStats     m_renderStatsOverride;
-	int             m_useRenderStatsOverride;
+	int             m_useHideFromView;
 
 };
 

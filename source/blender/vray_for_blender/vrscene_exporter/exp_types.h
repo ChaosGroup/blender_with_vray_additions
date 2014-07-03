@@ -111,6 +111,12 @@ extern "C" {
 #define BOOST_FORMAT_LIST_INT(data)   BOOST_FORMAT_LIST_BASE("ListInt",   data)
 #define BOOST_FORMAT_LIST_FLOAT(data) BOOST_FORMAT_LIST_BASE("ListFloat", data)
 
+#ifdef WIN32
+#  define SIZE_T_FORMAT "%i"
+#else
+#  define SIZE_T_FORMAT "%zu"
+#endif
+
 
 namespace VRayScene {
 
@@ -120,7 +126,8 @@ class VRayExportable;
 
 
 struct NodeAttrs {
-	NodeAttrs() {
+	NodeAttrs():dupliHolder(PointerRNA_NULL)
+	{
 		override = false;
 
 		objectID = 0;
@@ -135,6 +142,8 @@ struct NodeAttrs {
 	int  visible;
 	int  primary_visibility;
 	int  nsamples;
+
+	BL::Object dupliHolder;
 };
 
 
@@ -296,6 +305,8 @@ protected:
 	Scene                  *m_sce;
 	Main                   *m_main;
 	Object                 *m_ob;
+	
+	BL::Object              m_bl_ob;
 
 	PyObject               *m_propGroup;
 

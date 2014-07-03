@@ -510,17 +510,36 @@ void GeomMayaHair::initHash()
 }
 
 
-void GeomMayaHair::writeNode(PyObject *output, int frame)
+void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs)
 {
 	// Have to manually setup frame here
 	// because this is not called from write().
 	initInterpolate(frame); // XXX: Get rig of this for nodes?
 
+	PointerRNA vrayObject = RNA_pointer_get(&m_bl_ob.ptr, "vray");
+
+	int          visible  = 1;
+	int          objectID = m_ob->index;
+	std::string  material = getHairMaterialName();
+
+	material = Node::WriteMtlWrapper(&vrayObject, NULL, m_nodeName, material);
+	material = Node::WriteMtlRenderStats(&vrayObject, NULL, m_nodeName, material);
+
+	if(attrs.override) {
+		std::string overrideBaseName = m_nodeName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
+
+		visible  = attrs.visible;
+		objectID = attrs.objectID;
+
+		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
+		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
+	}
+
 	AttributeValueMap pluginAttrs;
-	pluginAttrs["material"]  = getHairMaterialName();
+	pluginAttrs["material"]  = material;
 	pluginAttrs["geometry"]  = m_name;
-	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(m_ob->index); // NOTE: May be custom index?
-	pluginAttrs["visible"]   = "1";
+	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(objectID);
+	pluginAttrs["visible"]   = BOOST_FORMAT_INT(visible);
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_nodeTm);
 
 	VRayNodePluginExporter::exportPlugin("NODE", "Node", m_nodeName, pluginAttrs);
