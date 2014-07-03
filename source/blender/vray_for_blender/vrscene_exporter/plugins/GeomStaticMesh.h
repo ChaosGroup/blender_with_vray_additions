@@ -128,8 +128,8 @@ private:
 
 	// Options
 	int           m_checkComponents;
-	sstream       m_pluginDisplace;
-	sstream       m_pluginSmooth;
+	std::stringstream  m_pluginDisplace;
+	std::stringstream  m_pluginSmooth;
 
 	int           useSmooth;
 	std::string   smoothName;
