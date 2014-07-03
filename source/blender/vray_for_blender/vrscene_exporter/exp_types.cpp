@@ -67,6 +67,65 @@ VRayExportable::VRayExportable(Scene *scene, Main *main, Object *ob) {
 VRayExportable::~VRayExportable() {}
 
 
+std::string VRayExportable::getAttributeValue(PointerRNA *ptr, PropertyRNA *prop, const char *propName)
+{
+	PropertyType propType = RNA_property_type(prop);
+
+	if(propType == PROP_BOOLEAN) {
+		return BOOST_FORMAT_BOOL(RNA_boolean_get(ptr, propName));
+	}
+	else if(propType == PROP_INT) {
+		return BOOST_FORMAT_INT(RNA_int_get(ptr, propName));
+	}
+	else if(propType == PROP_FLOAT) {
+		if(RNA_property_array_check(prop)) {
+			PropertySubType propSubType = RNA_property_subtype(prop);
+			if(propSubType == PROP_COLOR) {
+				if(RNA_property_array_length(ptr, prop) == 4) {
+					float acolor[4];
+					RNA_float_get_array(ptr, propName, acolor);
+					return BOOST_FORMAT_ACOLOR(acolor);
+				}
+				else {
+					float color[3];
+					RNA_float_get_array(ptr, propName, color);
+					return BOOST_FORMAT_COLOR(color);
+				}
+			}
+			else {
+				float vector[3];
+				RNA_float_get_array(ptr, propName, vector);
+				return BOOST_FORMAT_VECTOR(vector);
+			}
+		}
+		else {
+			return BOOST_FORMAT_FLOAT(RNA_float_get(ptr, propName));
+		}
+	}
+	else if(propType == PROP_ENUM) {
+		return BOOST_FORMAT_INT(RNA_enum_get(ptr, propName));
+	}
+	else if(propType == PROP_STRING) {
+		char value[FILE_MAX] = "";
+
+		RNA_string_get(ptr, propName, value);
+
+		PropertySubType propSubType = RNA_property_subtype(prop);
+		if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
+			BLI_path_abs(value, G.main->name);
+			return BOOST_FORMAT_STRING(value);
+		}
+		else if(propSubType == PROP_FILENAME) {
+			return BOOST_FORMAT_STRING(value);
+		}
+		else {
+			return BOOST_FORMAT_STRING(value);
+		}
+	}
+
+	return "NULL";
+}
+
 void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const char *rnaPropName)
 {
 	const char *rnaPropetryName = rnaPropName ? rnaPropName : propName;
@@ -75,62 +134,7 @@ void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const
 	if(NOT(prop))
 		return;
 
-	PropertyType propType = RNA_property_type(prop);
-
-	m_plugin << "\n\t" << propName << "=" << m_interpStart;
-
-	if(propType == PROP_BOOLEAN) {
-		m_plugin << RNA_boolean_get(ptr, rnaPropetryName);
-	}
-	else if(propType == PROP_INT) {
-		m_plugin << RNA_int_get(ptr, rnaPropetryName);
-	}
-	else if(propType == PROP_FLOAT) {
-		if(RNA_property_array_check(prop)) {
-			PropertySubType propSubType = RNA_property_subtype(prop);
-			if(propSubType == PROP_COLOR) {
-				if(RNA_property_array_length(ptr, prop) == 4) {
-					float acolor[4];
-					RNA_float_get_array(ptr, rnaPropetryName, acolor);
-					m_plugin << "AColor(" << acolor[0] << "," << acolor[1] << "," << acolor[2] << "," << acolor[3] << ")";
-				}
-				else {
-					float color[3];
-					RNA_float_get_array(ptr, rnaPropetryName, color);
-					m_plugin << "Color(" << color[0] << "," << color[1] << "," << color[2] << ")";
-				}
-			}
-			else {
-				float vector[3];
-				RNA_float_get_array(ptr, rnaPropetryName, vector);
-				m_plugin << "Vector(" << vector[0] << "," << vector[1] << "," << vector[2] << ")";
-			}
-		}
-		else {
-			m_plugin << RNA_float_get(ptr, rnaPropetryName);
-		}
-	}
-	else if(propType == PROP_ENUM) {
-		m_plugin << RNA_enum_get(ptr, rnaPropetryName);
-	}
-	else if(propType == PROP_STRING) {
-		char value[FILE_MAX] = "";
-
-		RNA_string_get(ptr, rnaPropetryName, value);
-
-		PropertySubType propSubType = RNA_property_subtype(prop);
-		if(propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
-			BLI_path_abs(value, G.main->name);
-			m_plugin << "\"" << value << "\"";
-		}
-		else if(propSubType == PROP_FILENAME) {
-			m_plugin << "\"" << value << "\"";
-		}
-		else {
-			m_plugin << value;
-		}
-	}
-	m_plugin << m_interpEnd << ";";
+	m_plugin << "\n\t" << propName << "=" << m_interpStart << getAttributeValue(ptr, prop, rnaPropetryName) << m_interpEnd << ";";
 }
 
 
@@ -203,6 +207,8 @@ void VRayExportable::writeAttributes(PointerRNA *ptr) {
 }
 
 
+// This function is used only to export simple attribute values
+//
 void VRayExportable::writeAttributes(PointerRNA *ptr, PluginJson *pluginDesc, std::stringstream &output, const StrSet &skipAttrs)
 {
 	if(NOT(pluginDesc))
@@ -226,55 +232,11 @@ void VRayExportable::writeAttributes(PointerRNA *ptr, PluginJson *pluginDesc, st
 		if(NOT(prop))
 			continue;
 
-		if(attrType == "LIST"      ||
-		   attrType == "COLOR"     ||
-		   attrType == "VECTOR"    ||
-		   attrType == "TRANSFORM")
+		if(MAPPABLE_TYPE(attrType))
 			continue;
 
 		PRINT_INFO("  Processing attribute: %s [%s]", attrName.c_str(), attrType.c_str());
 
-		if(attrType == "STRING" || attrType == "MATERIAL" || attrType == "TEXTURE") {
-			char value[FILE_MAX] = "";
-			RNA_string_get(ptr, attrName.c_str(), value);
-
-			if(strlen(value) == 0)
-				continue;
-
-			output << "\n\t" << attrName << "=" << m_interpStart;
-
-			if(attrType == "MATERIAL") {
-				output << "MA" << value;
-			}
-			else if(attrType == "TEXTURE") {
-				output << "TE" << value;
-			}
-			else {
-				if(v.second.count("subtype")) {
-					std::string subType = v.second.get_child("subtype").data();
-					if(subType == "FILE_PATH" || subType == "DIR_PATH") {
-						BLI_path_abs(value, ID_BLEND_PATH(G.main, ((ID*)ptr->id.data)));
-					}
-				}
-				output << "\"" << value << "\"";
-			}
-
-			output << m_interpEnd << ";";
-		}
-		else {
-			output << "\n\t" << attrName << "=" << m_interpStart;
-
-			if(attrType == "BOOL") {
-				output << RNA_boolean_get(ptr, attrName.c_str());
-			}
-			else if(attrType == "INT") {
-				output << RNA_int_get(ptr, attrName.c_str());
-			}
-			else if(attrType == "FLOAT") {
-				output << RNA_float_get(ptr, attrName.c_str());
-			}
-
-			output << m_interpEnd << ";";
-		}
+		output << "\n\t" << attrName << "=" << m_interpStart << getAttributeValue(ptr, prop, attrName.c_str()) << m_interpEnd << ";";
 	}
 }

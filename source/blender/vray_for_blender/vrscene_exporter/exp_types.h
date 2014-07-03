@@ -25,6 +25,12 @@
 
 #include <Python.h>
 
+#include <algorithm>
+
+#include <boost/format.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/join.hpp>
+
 #include "exp_defines.h"
 #include "exp_anim.h"
 #include "exp_settings.h"
@@ -52,21 +58,63 @@ extern "C" {
 #include <map>
 #include <set>
 
+#define SKIP_TYPE(attrType) (\
+	attrType == "LIST"     || \
+	attrType == "INT_LIST" || \
+	attrType == "FLOAT_LIST")
 
-typedef std::stringstream sstream;
+#define OUTPUT_TYPE(attrType) (\
+	attrType == "OUTPUT_PLUGIN"            || \
+	attrType == "OUTPUT_COLOR"             || \
+	attrType == "OUTPUT_FLOAT_TEXTURE"     || \
+	attrType == "OUTPUT_VECTOR_TEXTURE"    || \
+	attrType == "OUTPUT_TRANSFORM_TEXTURE" || \
+	attrType == "OUTPUT_TEXTURE")
 
+#define MAPPABLE_TYPE(attrType) (\
+	attrType == "BRDF"              || \
+	attrType == "MATERIAL"          || \
+	attrType == "GEOMETRY"          || \
+	attrType == "PLUGIN"            || \
+	attrType == "TEXTURE"           || \
+	attrType == "TRANSFORM"         || \
+	attrType == "TRANSFORM_TEXTURE" || \
+	attrType == "FLOAT_TEXTURE"     || \
+	attrType == "VECTOR_TEXTURE"    || \
+	attrType == "INT_TEXTURE"       || \
+	attrType == "VECTOR"            || \
+	attrType == "UVWGEN")
 
-namespace BL {
+#define NOT_ANIMATABLE_TYPE(attrType) (\
+	attrType == "BRDF"     || \
+	attrType == "MATERIAL" || \
+	attrType == "GEOMETRY" || \
+	attrType == "PLUGIN")
 
-typedef Array<float, 16>  Transform;
+#define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s);
+#define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6g") % f)
+#define BOOST_FORMAT_TM(tm)    boost::str(boost::format("TransformHex(\"%s\")") % tm)
+#define BOOST_FORMAT_INT(i)    boost::str(boost::format("%i") % i)
+#define BOOST_FORMAT_BOOL(i)   BOOST_FORMAT_INT(i)
 
-}
+#define BOOST_FORMAT_COLOR(c)   boost::str(boost::format("Color(%.6g,%.6g,%.6g)")       % c[0] % c[1] % c[2]);
+#define BOOST_FORMAT_ACOLOR(c)  boost::str(boost::format("AColor(%.6g,%.6g,%.6g,%.6g)") % c[0] % c[1] % c[2] % c[3]);
+#define BOOST_FORMAT_ACOLOR3(c) boost::str(boost::format("AColor(%.6g,%.6g,%.6g,1.0)")  % c[0] % c[1] % c[2]);
+#define BOOST_FORMAT_VECTOR(v)  boost::str(boost::format("Vector(%.6g,%.6g,%.6g)")      % v[0] % v[1] % v[2])
+
+#define BOOST_FORMAT_MATRIX(m) boost::str(boost::format( \
+	"Matrix(Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g))") \
+	% m[0][0] % m[1][0] % m[2][0] % m[0][1] % m[1][1] % m[2][1] % m[0][2] % m[1][2] % m[2][2])
+
+#define BOOST_FORMAT_LIST_BASE(type, data) boost::str(boost::format(type"(%s)") % boost::algorithm::join(data, ","))
+#define BOOST_FORMAT_LIST(data)       BOOST_FORMAT_LIST_BASE("List",      data)
+#define BOOST_FORMAT_LIST_INT(data)   BOOST_FORMAT_LIST_BASE("ListInt",   data)
+#define BOOST_FORMAT_LIST_FLOAT(data) BOOST_FORMAT_LIST_BASE("ListFloat", data)
 
 
 namespace VRayScene {
 
-typedef std::map<std::string, std::string>        AttributeValueMap;
-
+typedef std::map<std::string, std::string> AttributeValueMap;
 
 class VRayExportable;
 
@@ -104,7 +152,6 @@ typedef std::set<std::string>           StrSet;
 
 typedef AnimationCache<VRayExportable>  ExpCache;
 
-// NOTE: Cache all params?
 
 class VRayExportable {
 public:
@@ -196,6 +243,8 @@ public:
 
 	// Manual attributes export
 	//
+	std::string getAttributeValue(PointerRNA *ptr, PropertyRNA *prop, const char *propName);
+	
 	void writeAttribute(const char *name, const int &value) {
 		m_plugin << "\n\t" << name << "=" << m_interpStart;
 		m_plugin << value;

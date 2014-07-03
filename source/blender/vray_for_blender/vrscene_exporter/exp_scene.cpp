@@ -520,6 +520,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		RenderStats hideFromViewStats;
 		hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
 		hideFromViewStats.gi_visibility          = !m_hideFromView.gi_visibility.count(ob);
+
 		hideFromViewStats.reflections_visibility = !m_hideFromView.reflections_visibility.count(ob);
 		hideFromViewStats.refractions_visibility = !m_hideFromView.refractions_visibility.count(ob);
 		hideFromViewStats.shadows_visibility     = !m_hideFromView.shadows_visibility.count(ob);
@@ -579,6 +580,10 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 {
 	PRINT_INFO("VRsceneExporter::exportNodeFromNodeTree(%s)",
 			   ob->id.name);
+
+	PointerRNA objectRNA;
+	RNA_id_pointer_create((ID*)ob, &objectRNA);
+	BL::Object bl_ob(objectRNA);
 
 	// Export hair
 	//
@@ -666,7 +671,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	// Export 'MtlRenderStats' for "Hide From View"
 	//
 	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
-		std::string hideFromViewName = "HideFromView" + pluginName;
+		std::string hideFromViewName = "HideFromView@" + pluginName;
 
 		AttributeValueMap hideFromViewAttrs;
 		hideFromViewAttrs["base_mtl"] = material;
@@ -681,6 +686,60 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		VRayNodePluginExporter::exportPlugin("NODE", "MtlRenderStats", hideFromViewName, hideFromViewAttrs);
 
 		material = hideFromViewName;
+	}
+
+	// Add MtlRenderStats and MtlWrapper from Object level for "one click" things
+	//
+	PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
+	PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
+	PointerRNA mtlWrapper     = RNA_pointer_get(&vrayObject, "MtlWrapper");
+
+	if(RNA_boolean_get(&mtlRenderStats, "use")) {
+		std::string mtlRenderStatsName = "MtlRenderStats@" + pluginName;
+
+		AttributeValueMap mtlRenderStatsAttrs;
+		mtlRenderStatsAttrs["base_mtl"] = material;
+
+		StrSet mtlRenderStatsAttrNames;
+		VRayNodeExporter::getAttributesList("MtlRenderStats", mtlRenderStatsAttrNames, false);
+
+		for(StrSet::const_iterator setIt = mtlRenderStatsAttrNames.begin(); setIt != mtlRenderStatsAttrNames.end(); ++setIt) {
+			const std::string &attrName = *setIt;
+			if(attrName == "base_mtl")
+				continue;
+			std::string propValue = VRayNodeExporter::getValueFromPropGroup(&mtlWrapper, &ob->id, attrName);
+			if(propValue != "NULL")
+				mtlRenderStatsAttrs[attrName] = propValue;
+		}
+
+		// It's actually a material, but we will write it along with Node
+		VRayNodePluginExporter::exportPlugin("NODE", "MtlRenderStats", mtlRenderStatsName, mtlRenderStatsAttrs);
+
+		material = mtlRenderStatsName;
+	}
+
+	if(RNA_boolean_get(&mtlWrapper, "use")) {
+		std::string mtlWrapperName = "MtlWrapper@" + pluginName;
+
+		AttributeValueMap mtlWrapperAttrs;
+		mtlWrapperAttrs["base_material"] = material;
+
+		StrSet mtlWrapperAttrNames;
+		VRayNodeExporter::getAttributesList("MtlWrapper", mtlWrapperAttrNames, false);
+
+		for(StrSet::const_iterator setIt = mtlWrapperAttrNames.begin(); setIt != mtlWrapperAttrNames.end(); ++setIt) {
+			const std::string &attrName = *setIt;
+			if(attrName == "base_material")
+				continue;
+			std::string propValue = VRayNodeExporter::getValueFromPropGroup(&mtlWrapper, &ob->id, attrName);
+			if(propValue != "NULL")
+				mtlWrapperAttrs[attrName] = propValue;
+		}
+
+		// It's actually a material, but we will write it along with Node
+		VRayNodePluginExporter::exportPlugin("NODE", "MtlWrapper", mtlWrapperName, mtlWrapperAttrs);
+
+		material = mtlWrapperName;
 	}
 
 	AttributeValueMap pluginAttrs;

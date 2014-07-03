@@ -302,7 +302,7 @@ std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::strin
 	if(NOT(rna.getBool("use")))
 		return baseMtl;
 
-	std::string pluginName = "MtlOverride" + baseMtl;
+	std::string pluginName = "MtlOverride@" + baseMtl;
 
 	std::stringstream ss;
 	ss << "\n" << "MtlOverride" << " " << pluginName << " {";
@@ -322,7 +322,7 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 	if(NOT(rna.getBool("use")))
 		return baseMtl;
 
-	std::string pluginName = "MtlRenderStats" + baseMtl;
+	std::string pluginName = "MtlRenderStats@" + baseMtl;
 
 	std::stringstream ss;
 	ss << "\n" << "MtlRenderStats" << " " << pluginName << " {";
@@ -338,7 +338,7 @@ std::string VRayScene::Node::writeMtlRenderStats(PyObject *output, const std::st
 
 std::string VRayScene::Node::writeHideFromView(const std::string &baseMtl)
 {
-	std::string pluginName = "HideFromView";
+	std::string pluginName = "HideFromView@";
 	pluginName.append(getName());
 
 	AttributeValueMap hideFromViewAttrs;
