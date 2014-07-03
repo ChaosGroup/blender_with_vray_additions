@@ -36,7 +36,9 @@ char             VRayExportable::m_interpEnd[3]    = "";
 ExpoterSettings *VRayExportable::m_set = NULL;
 
 
-VRayExportable::VRayExportable() {
+VRayExportable::VRayExportable():
+	m_bl_ob(PointerRNA_NULL)
+{
 	m_name = "";
 	m_hash = 0;
 
@@ -50,7 +52,9 @@ VRayExportable::VRayExportable() {
 }
 
 
-VRayExportable::VRayExportable(Scene *scene, Main *main, Object *ob) {
+VRayExportable::VRayExportable(Scene *scene, Main *main, Object *ob):
+	m_bl_ob(PointerRNA_NULL)
+{
 	m_name = "";
 	m_hash = 0;
 
@@ -59,6 +63,10 @@ VRayExportable::VRayExportable(Scene *scene, Main *main, Object *ob) {
 	m_ob   = ob;
 
 	m_propGroup = NULL;
+
+	PointerRNA objectRNA;
+	RNA_id_pointer_create((ID*)ob, &objectRNA);
+	m_bl_ob = BL::Object(objectRNA);
 
 	initInterpolate(0);
 }
