@@ -391,9 +391,9 @@ static int new_material_exec(bContext *C, wmOperator *UNUSED(op))
 			ED_node_shader_default(C, &ma->id);
 			ma->use_nodes = true;
 		}
-
-		BLI_callback_exec(NULL, &ma->id, BLI_CB_EVT_NEW_MATERIAL);
 	}
+
+	BLI_callback_exec(NULL, &ma->id, BLI_CB_EVT_NEW_MATERIAL);
 
 	/* hook into UI */
 	uiIDContextProperty(C, &ptr, &prop);
