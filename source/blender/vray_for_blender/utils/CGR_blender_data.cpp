@@ -73,7 +73,7 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
 	CustomDataMask    mask = CD_MASK_MESH;
 	EvaluationContext eval_ctx = {0};
 
-	eval_ctx.for_render = true;
+	eval_ctx.mode = DAG_EVAL_RENDER;
 
 	switch(ob->type) {
 		case OB_FONT:
