@@ -113,6 +113,9 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkCo
 	osd_subdiv_uvs = 0;
 	weld_threshold = -1.0f;
 
+	smooth_uv         = true;
+	smooth_uv_borders = true;
+
 	useDisplace = false;
 	useSmooth   = false;
 
@@ -780,6 +783,11 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 		writeGeomStaticSmoothedMesh(output);
 	else if(useDisplace)
 		writeGeomDisplacedMesh(output);
+
+	if(useSmooth || useDisplace) {
+		smooth_uv         = true;
+		smooth_uv_borders = true;
+	}
 
 	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
 	int             prevFrame = VRayExportable::m_set->m_frameCurrent - VRayExportable::m_set->m_frameStep;
