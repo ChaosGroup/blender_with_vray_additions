@@ -50,6 +50,6 @@ int   IsMeshValid(Scene *sce, Main *main, Object *ob);
 
 int   IsParentUpdated(Object *ob);
 
-std::string GetIDName(ID *id, const std::string prefix="");
+std::string GetIDName(ID *id, const std::string &prefix="");
 
 #endif // CGR_BLENDER_UTILS_H
