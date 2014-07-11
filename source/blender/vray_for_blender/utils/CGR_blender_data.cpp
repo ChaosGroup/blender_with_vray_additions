@@ -238,10 +238,16 @@ int IsMeshAnimated(Object *ob)
 }
 
 
-std::string GetIDName(ID *id, const std::string prefix)
+std::string GetIDName(ID *id, const std::string &prefix)
 {
 	char baseName[MAX_ID_NAME];
-	BLI_strncpy(baseName, id->name, MAX_ID_NAME);
+	if (prefix.empty()) {
+		BLI_strncpy(baseName, id->name, MAX_ID_NAME);
+	}
+	else {
+		// NOTE: Skip internal prefix
+		BLI_strncpy(baseName, id->name+2, MAX_ID_NAME);
+	}
 	StripString(baseName);
 
 	std::string idName = prefix + baseName;
