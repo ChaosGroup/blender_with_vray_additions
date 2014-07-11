@@ -110,6 +110,8 @@ set(SRC
 	vrscene_exporter/plugins/Node.h
 	vrscene_exporter/plugins/TexVoxelData.cpp
 	vrscene_exporter/plugins/TexVoxelData.h
+	vrscene_exporter/plugins/LightLinker.cpp
+	vrscene_exporter/plugins/LightLinker.h
 
 	vrscene_exporter/vrscene_api.h
 
