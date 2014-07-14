@@ -85,6 +85,7 @@ struct ExpoterSettings {
 	int               m_useHideFromView;
 
 	int               m_useDisplaceSubdiv;
+	int               m_useInstancerForGroup;
 	std::string       m_mtlOverride;
 
 	// Animation options
