@@ -29,6 +29,7 @@
 #include "exp_types.h"
 
 #include "Node.h"
+#include "LightLinker.h"
 
 #include "BKE_depsgraph.h"
 #include "MEM_guardedalloc.h"
@@ -174,6 +175,8 @@ private:
 	PtrSet                  m_skipObjects;
 
 	HideFromView            m_hideFromView;
+
+	LightLinker             m_lightLinker;
 
 	PYTHON_PRINT_BUF;
 

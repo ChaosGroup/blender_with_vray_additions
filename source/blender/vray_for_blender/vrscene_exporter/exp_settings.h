@@ -51,6 +51,7 @@ struct ExpoterSettings {
 
 		m_activeLayers  = 0;
 		m_useNodeTrees  = false;
+		m_useInstancerForGroup = false;
 
 		m_isAnimation  = false;
 		m_frameCurrent = 0;

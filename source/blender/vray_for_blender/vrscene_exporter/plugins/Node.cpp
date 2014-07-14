@@ -64,10 +64,11 @@ VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 {
 	m_geometry     = NULL;
 	m_geometryType = VRayScene::eGeometryMesh;
-	m_objectID     = 0;
+	m_objectID     = m_ob->index;
 	m_visible      = true;
-
 	m_useHideFromView = false;
+
+	copy_m4_m4(m_tm, m_ob->obmat);
 }
 
 
@@ -75,7 +76,6 @@ void VRayScene::Node::init(const std::string &mtlOverrideName)
 {
 	m_materialOverride = mtlOverrideName;
 
-	setObjectID(m_ob->index);
 	initTransform();
 
 	initName();
@@ -111,9 +111,9 @@ int VRayScene::Node::getObjectID() const
 void VRayScene::Node::initName(const std::string &name)
 {
 	if(NOT(name.empty()))
-		m_name = name;
+		m_name = m_namePrefix + name;
 	else
-		m_name = GetIDName((ID*)m_ob);
+		m_name = m_namePrefix + GetIDName((ID*)m_ob);
 }
 
 
@@ -164,7 +164,7 @@ void VRayScene::Node::initGeometry()
 
 void VRayScene::Node::initTransform()
 {
-	GetTransformHex(m_ob->obmat, m_transform);
+	GetTransformHex(m_tm, m_transform);
 }
 
 
@@ -257,8 +257,8 @@ std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride
 	std::string plugName("MM");
 	plugName.append(obMtlName);
 
-	mtlMulti["mtls_list"] = "List("    + boost::algorithm::join(mtls_list, ",") + ")";
-	mtlMulti["ids_list"]  = "ListInt(" + boost::algorithm::join(ids_list,  ",") + ")";
+	mtlMulti["mtls_list"] = BOOST_FORMAT_LIST(mtls_list);
+	mtlMulti["ids_list"]  = BOOST_FORMAT_LIST_INT(ids_list);
 
 	return plugName;
 }
@@ -535,6 +535,18 @@ void VRayScene::Node::setHideFromView(const VRayScene::RenderStats &renderStats)
 {
 	m_renderStatsOverride    = renderStats;
 	m_useHideFromView = true;
+}
+
+
+void Node::setNamePrefix(const std::string &name_prefix)
+{
+	m_namePrefix = name_prefix;
+}
+
+
+void Node::setTransform(float tm[4][4])
+{
+	copy_m4_m4(m_tm, tm);
 }
 
 
