@@ -106,6 +106,7 @@ extern "C" {
 	"Matrix(Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g))") \
 	% m[0][0] % m[1][0] % m[2][0] % m[0][1] % m[1][1] % m[2][1] % m[0][2] % m[1][2] % m[2][2])
 
+#define BOOST_FORMAT_LIST_JOIN(data)       boost::str(boost::format("%s") % boost::algorithm::join(data, ","))
 #define BOOST_FORMAT_LIST_BASE(type, data) boost::str(boost::format(type"(%s)") % boost::algorithm::join(data, ","))
 #define BOOST_FORMAT_LIST(data)       BOOST_FORMAT_LIST_BASE("List",      data)
 #define BOOST_FORMAT_LIST_INT(data)   BOOST_FORMAT_LIST_BASE("ListInt",   data)
@@ -134,6 +135,8 @@ struct NodeAttrs {
 		visible  = true;
 		primary_visibility = true;
 		nsamples = 0;
+
+		namePrefix = "";
 	}
 
 	int  override;
@@ -143,7 +146,11 @@ struct NodeAttrs {
 	int  primary_visibility;
 	int  nsamples;
 
-	BL::Object dupliHolder;
+	// For DupliGroup without Instancer
+	std::string  namePrefix;
+	BL::Object   dupliHolder;
+	float        tm[4][4];
+
 };
 
 

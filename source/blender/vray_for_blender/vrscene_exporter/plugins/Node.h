@@ -117,6 +117,8 @@ public:
 	void            setObjectID(const int &objectID=0);
 	void            setHideFromView(const RenderStats &renderStats);
 	void            setDupliHolder(BL::Object ob);
+	void            setNamePrefix(const std::string &name_prefix);
+	void            setTransform(float tm[4][4]);
 
 private:
 	void            initTransform();
@@ -131,6 +133,8 @@ private:
 
 	// Export options
 	std::string     m_materialOverride;
+	std::string     m_namePrefix;
+	float           m_tm[4][4];
 
 	// Dupli holder
 	// Used to set additional override options
