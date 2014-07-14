@@ -164,6 +164,10 @@ void VRsceneExporter::init()
 	VRayExportable::m_set->m_mtlOverride       = m_mtlOverrideName;
 	VRayExportable::m_set->m_useInstancerForGroup = vrayExporter.getBool("instancer_dupli_group");
 
+	// Prepass LightLinker
+	m_lightLinker.init(m_set->b_data, m_set->b_scene);
+	m_lightLinker.prepass();
+
 	// Check what layers to use
 	//
 	int useLayers = vrayExporter.getEnum("activeLayers");
@@ -332,6 +336,8 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 	}
 
+	m_lightLinker.write(m_set->m_fileObject);
+
 	m_set->b_engine.update_progress(1.0f);
 
 	m_hideFromView.clear();
@@ -382,9 +388,16 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		RnaAccess::RnaValue bl_obRNA((ID*)ob, "vray");
 		int override_objectID = bl_obRNA.getInt("dupliGroupIDOverride");
 
+		int useInstancer = true;
+		if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
+			useInstancer = m_set->m_useInstancerForGroup;
+		}
+
 		NodeAttrs dupliAttrs;
 		dupliAttrs.override = true;
-		dupliAttrs.visible  = false; // Dupli are shown via Instancer
+		// If dupli are shown via Instancer we need to hide
+		// original object
+		dupliAttrs.visible  = NOT(useInstancer);
 		dupliAttrs.objectID = override_objectID;
 		dupliAttrs.dupliHolder = bl_ob;
 
@@ -417,37 +430,54 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					exportLight(ob, dupliOb);
 			}
 			else {
-				std::string dupliBaseName;
+				if(NOT(useInstancer)) {
+					dupliAttrs.namePrefix = bl_ob.name() + "@" + BOOST_FORMAT_INT(dupliOb->persistent_id[0]);
+					dupliAttrs.namePrefix = StripString(dupliAttrs.namePrefix);
+					copy_m4_m4(dupliAttrs.tm, dupliOb->mat);
 
-				BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
-				if(NOT(bl_psys))
-					dupliBaseName = bl_ob.name();
-				else {
-					BL::ParticleSettings bl_pset = bl_psys.settings();
-					dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+					// If LightLinker contain duplicator,
+					// we need to exclude it's objects
+					//
+					StrSet *excludeList = m_lightLinker.contain(bl_ob);
+					if(excludeList) {
+						std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
+						excludeList->insert(pluginName);
+					}
+					exportObject(dupliOb->ob, true, dupliAttrs);
 				}
+				else {
+					std::string dupliBaseName;
 
-				MyPartSystem *mySys = m_psys.get(dupliBaseName);
+					BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
+					if(NOT(bl_psys))
+						dupliBaseName = bl_ob.name();
+					else {
+						BL::ParticleSettings bl_pset = bl_psys.settings();
+						dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+					}
 
-				MyParticle *myPa = new MyParticle();
-				myPa->nodeName = GetIDName(&dupliOb->ob->id);
-				myPa->particleId = dupliOb->persistent_id[0];
+					MyPartSystem *mySys = m_psys.get(dupliBaseName);
+					MyParticle *myPa = new MyParticle();
+					myPa->nodeName = GetIDName(&dupliOb->ob->id);
+					myPa->particleId = dupliOb->persistent_id[0];
+					// Instancer use original object's transform,
+					// so apply inverse matrix here.
+					// When linking from file 'imat' is not valid,
+					// so better to always calculate inverse matrix ourselves.
+					//
+					float duplicatedTmInv[4][4];
+					copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
+					invert_m4(duplicatedTmInv);
+					float dupliTm[4][4];
+					mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
+					GetTransformHex(dupliTm, myPa->transform);
 
-				// Instancer use original object's transform,
-				// so apply inverse matrix here.
-				// When linking from file 'imat' is not valid,
-				// so better to always calculate inverse matrix ourselves.
-				//
-				float duplicatedTmInv[4][4];
-				copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
-				invert_m4(duplicatedTmInv);
-				float dupliTm[4][4];
-				mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
-				GetTransformHex(dupliTm, myPa->transform);
+					mySys->append(myPa);
 
-				mySys->append(myPa);
-
-				exportObject(dupliOb->ob, false, dupliAttrs);
+					// Set original object transform
+					copy_m4_m4(dupliAttrs.tm, dupliOb->ob->obmat);
+					exportObject(dupliOb->ob, false, dupliAttrs);
+				}
 			}
 		}
 
@@ -487,7 +517,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
 {
-	const std::string idName = GetIDName(&ob->id);
+	const std::string idName = attrs.namePrefix + GetIDName(&ob->id);
 
 	if(m_exportedObject.count(idName))
 		return;
@@ -509,8 +539,10 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			   ob->id.name);
 
 	Node *node = new Node(m_set->m_sce, m_set->m_main, ob);
-	node->init(m_mtlOverrideName);
+	node->setNamePrefix(attrs.namePrefix);
 	if(attrs.override) {
+		NodeAttrs &_attrs = const_cast<NodeAttrs&>(attrs);
+		node->setTransform(_attrs.tm);
 		node->setVisiblity(attrs.visible);
 		if(attrs.objectID > -1) {
 			node->setObjectID(attrs.objectID);
@@ -519,6 +551,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			node->setDupliHolder(attrs.dupliHolder);
 		}
 	}
+	node->init(m_mtlOverrideName);
 	node->initHash();
 
 	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
@@ -617,7 +650,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	PRINT_INFO("Object: %s Node tree: %s: Geometry node: '%s'",
 			   ob->id.name, ntree.name().c_str(), geometryNode.name().c_str());
 
-	std::string pluginName = GetIDName((ID*)ob);
+	const std::string pluginName = attrs.namePrefix + GetIDName((ID*)ob);
 
 	char transform[CGR_TRANSFORM_HEX_SIZE];
 	GetTransformHex(ob->obmat, transform);
