@@ -162,6 +162,7 @@ void VRsceneExporter::init()
 	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, exporterRnaProperty.c_str());
 	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
 	VRayExportable::m_set->m_mtlOverride       = m_mtlOverrideName;
+	VRayExportable::m_set->m_useInstancerForGroup = vrayExporter.getBool("instancer_dupli_group");
 
 	// Check what layers to use
 	//
