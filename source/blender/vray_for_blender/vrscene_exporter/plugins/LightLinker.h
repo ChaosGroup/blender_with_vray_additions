@@ -23,9 +23,10 @@
 #ifndef CGR_LIGHT_LINKER_H
 #define CGR_LIGHT_LINKER_H
 
+#include "exp_types.h"
+
 #include <boost/unordered/unordered_set.hpp>
 
-#include "exp_types.h"
 #include "CGR_vrscene.h"
 
 
