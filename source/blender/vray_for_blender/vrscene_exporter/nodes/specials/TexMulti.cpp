@@ -54,7 +54,7 @@ std::string VRayNodeExporter::exportVRayNodeTexMulti(BL::NodeTree ntree, BL::Nod
 	pluginAttrs["ids_list"]        = BOOST_FORMAT_LIST_INT(textures_ids);
 	pluginAttrs["mode"]            = BOOST_FORMAT_INT(RNA_enum_get(&node.ptr, "mode"));
 	pluginAttrs["default_texture"] = VRayNodeExporter::exportLinkedSocket(ntree, textureDefaultSock, context);
-	
+
 	VRayNodePluginExporter::exportPlugin("TEXTURE", "TexMulti", pluginName, pluginAttrs);
 
 	return pluginName;
