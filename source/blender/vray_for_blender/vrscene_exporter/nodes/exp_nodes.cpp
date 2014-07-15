@@ -794,6 +794,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeTexLayered") {
 		return VRayNodeExporter::exportVRayNodeTexLayered(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeTexMulti") {
+		return VRayNodeExporter::exportVRayNodeTexMulti(ntree, node, fromSocket, context);
+	}
 	else if(nodeClass == "VRayNodeSelectObject") {
 		BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, node, fromSocket, context);
 		if(NOT(b_ob))
