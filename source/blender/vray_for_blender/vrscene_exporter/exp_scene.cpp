@@ -736,6 +736,9 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		visible  = attrs.visible;
 		objectID = attrs.objectID;
 
+		NodeAttrs &_attrs = const_cast<NodeAttrs&>(attrs);
+		GetTransformHex(_attrs.tm, transform);
+
 		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
 		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
 	}
