@@ -97,7 +97,11 @@ private:
 
 	int           mapChannelsUpdated(GeomStaticMesh *prevMesh);
 
-	Mesh         *mesh;
+	BL::BlendData b_data;
+	BL::Scene     b_scene;
+	BL::Object    b_object;
+	BL::Mesh      b_mesh;
+
 	StrVector     meshComponentNames;
 
 	char         *m_vertices;
