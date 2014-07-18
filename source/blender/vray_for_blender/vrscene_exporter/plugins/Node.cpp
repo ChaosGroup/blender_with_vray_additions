@@ -193,9 +193,7 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 				if(materialOverride.empty())
 					materialName = maName;
 				else {
-					PointerRNA maOutputRNA;
-					RNA_id_pointer_create((ID*)maOutput.ptr.data, &maOutputRNA);
-					if(RNA_boolean_get(&maOutputRNA, "dontOverride")) {
+					if(RNA_boolean_get(&maOutput.ptr, "dontOverride")) {
 						materialName = maName;
 					}
 				}
