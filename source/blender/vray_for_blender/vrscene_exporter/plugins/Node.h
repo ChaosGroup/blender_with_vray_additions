@@ -32,6 +32,7 @@ extern "C" {
 #include "DNA_scene_types.h"
 
 #include "exp_types.h"
+#include "LightLinker.h"
 
 #include "utils/CGR_vrscene.h"
 #include "utils/murmur3.h"
@@ -119,6 +120,8 @@ public:
 	void            setDupliHolder(BL::Object ob);
 	void            setNamePrefix(const std::string &name_prefix);
 	void            setTransform(float tm[4][4]);
+
+	static LightLinker *m_lightLinker;
 
 private:
 	void            initTransform();

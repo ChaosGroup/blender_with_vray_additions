@@ -25,6 +25,8 @@
 
 #include "exp_types.h"
 
+#include "LightLinker.h"
+
 
 namespace VRayScene {
 
@@ -54,6 +56,8 @@ public:
 	MHash              getWidthsHash() const          { return m_hashWidths; }
 	MHash              getTransparencyHash() const    { return m_hashTransparency; }
 	MHash              getStrandUvwHash() const       { return m_hashStrandUVW; }
+
+	void               setLightLinker(LightLinker *lightLinker);
 
 private:
 	void               initData();
@@ -89,6 +93,8 @@ private:
 	int                geom_splines;
 	float              geom_tesselation_mult;
 	float              opacity;
+
+	LightLinker       *m_lightLinker;
 
 };
 
