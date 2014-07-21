@@ -58,12 +58,9 @@ public:
 	
 	void           prepass();
 	void           write(PyObject *output);
-	
-	void           excludeObject(const std::string &lightName, const std::string &obName);
-	void           includeObject(const std::string &lightName, const std::string &obName);
 
-	StrSet        *contain(BL::Object ob);
-	
+	void           excludePlugin(BL::Object ob, const std::string &obName);
+
 private:
 	void           getObject(const std::string &name, ObjectList &list);
 	void           getGroupObjects(const std::string &name, ObjectList &list);

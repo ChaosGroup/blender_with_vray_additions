@@ -111,6 +111,8 @@ GeomMayaHair::GeomMayaHair(Scene *scene, Main *main, Object *ob):
 	m_hashWidths = 1;
 	m_hashTransparency = 1;
 	m_hashStrandUVW = 1;
+
+	m_lightLinker = NULL;
 }
 
 
@@ -143,6 +145,12 @@ void GeomMayaHair::init()
 {
 	initData();
 	initHash();
+}
+
+
+void GeomMayaHair::setLightLinker(LightLinker *lightLinker)
+{
+	m_lightLinker = lightLinker;
 }
 
 
@@ -541,6 +549,14 @@ void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs
 	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(objectID);
 	pluginAttrs["visible"]   = BOOST_FORMAT_INT(visible);
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_nodeTm);
+
+	if(m_lightLinker) {
+		PointerRNA objectRNA;
+		RNA_id_pointer_create((ID*)m_ob, &objectRNA);
+		BL::Object bl_ob(objectRNA);
+
+		m_lightLinker->excludePlugin(bl_ob, m_nodeName);
+	}
 
 	VRayNodePluginExporter::exportPlugin("NODE", "Node", m_nodeName, pluginAttrs);
 }

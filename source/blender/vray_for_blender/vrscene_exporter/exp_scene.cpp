@@ -167,6 +167,7 @@ void VRsceneExporter::init()
 	// Prepass LightLinker
 	m_lightLinker.init(m_set->b_data, m_set->b_scene);
 	m_lightLinker.prepass();
+	Node::m_lightLinker = &m_lightLinker;
 
 	// Check what layers to use
 	//
@@ -438,11 +439,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					// If LightLinker contain duplicator,
 					// we need to exclude it's objects
 					//
-					StrSet *excludeList = m_lightLinker.contain(bl_ob);
-					if(excludeList) {
-						std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
-						excludeList->insert(pluginName);
-					}
+					std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
+					m_lightLinker.excludePlugin(bl_ob, pluginName);
+
 					exportObject(dupliOb->ob, true, dupliAttrs);
 				}
 				else {
@@ -625,7 +624,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export hair
 	//
-	Node::WriteHair(m_set, ob);
+	Node::WriteHair(m_set, ob, attrs);
 
 	if(NOT(Node::DoRenderEmitter(ob)))
 		return;

@@ -160,30 +160,17 @@ void LightLinker::prepass()
 }
 
 
-void LightLinker::excludeObject(const std::string &lightName, const std::string &obName)
-{
-	m_ignored_lights[lightName].insert(obName);
-}
-
-
-void LightLinker::includeObject(const std::string &lightName, const std::string &obName)
-{
-	m_ignored_lights[lightName].insert(obName);
-}
-
-
-StrSet *LightLinker::contain(BL::Object ob)
+void LightLinker::excludePlugin(BL::Object ob, const std::string &obName)
 {
 	LightLink::const_iterator linkIt;
 	for (linkIt = m_exclude.begin(); linkIt != m_exclude.end(); ++linkIt) {
 		const std::string &lightName = linkIt->first;
 		const ObjectList  &obList    = linkIt->second;
 
-		if (obList.count(ob))
-			return &m_ignored_lights[lightName];
+		if (obList.count(ob)) {
+			m_ignored_lights[lightName].insert(obName);
+		}
 	}
-
-	return NULL;
 }
 
 
