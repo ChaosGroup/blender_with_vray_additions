@@ -57,6 +57,9 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 
 
+LightLinker *VRayScene::Node::m_lightLinker = NULL;
+
+
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 	VRayExportable(scene, main, ob),
 	m_ntree(VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob)),
@@ -587,6 +590,7 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob, const Nod
 			int           toDelete = false;
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
 			geomMayaHair->preInit(psys);
+			geomMayaHair->setLightLinker(m_lightLinker);
 			if(VRayExportable::m_set->m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent, attrs);
 			if(VRayExportable::m_set->m_exportMeshes) {
