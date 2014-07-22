@@ -194,6 +194,8 @@ public:
 
 	static std::string      exportMaterial(BL::BlendData b_data, BL::Material b_ma);
 
+	static void             getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
+
 	static ExpoterSettings *m_set;
 
 private:

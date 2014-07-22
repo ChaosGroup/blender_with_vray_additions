@@ -742,12 +742,21 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
 	}
 
+	PointerRNA vrayNode = RNA_pointer_get(&vrayObject, "Node");
+
+	StrVector user_attributes;
+	VRayNodeExporter::getUserAttributes(&vrayNode, user_attributes);
+
 	AttributeValueMap pluginAttrs;
 	pluginAttrs["material"]  = material;
 	pluginAttrs["geometry"]  = geometry;
 	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(objectID);
 	pluginAttrs["visible"]   = BOOST_FORMAT_INT(visible);
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
+
+	if (user_attributes.size()) {
+		pluginAttrs["user_attributes"] = BOOST_FORMAT_STRING(BOOST_FORMAT_LIST_JOIN_SEP(user_attributes, ";"));
+	}
 
 	VRayNodePluginExporter::exportPlugin("NODE", "Node", pluginName, pluginAttrs);
 }
