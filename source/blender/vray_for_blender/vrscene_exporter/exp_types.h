@@ -106,7 +106,8 @@ extern "C" {
 	"Matrix(Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g))") \
 	% m[0][0] % m[1][0] % m[2][0] % m[0][1] % m[1][1] % m[2][1] % m[0][2] % m[1][2] % m[2][2])
 
-#define BOOST_FORMAT_LIST_JOIN(data)       boost::str(boost::format("%s") % boost::algorithm::join(data, ","))
+#define BOOST_FORMAT_LIST_JOIN_SEP(data, sep) boost::str(boost::format("%s") % boost::algorithm::join(data, sep))
+#define BOOST_FORMAT_LIST_JOIN(data)  BOOST_FORMAT_LIST_JOIN_SEP(data, ",")
 #define BOOST_FORMAT_LIST_BASE(type, data) boost::str(boost::format(type"(%s)") % boost::algorithm::join(data, ","))
 #define BOOST_FORMAT_LIST(data)       BOOST_FORMAT_LIST_BASE("List",      data)
 #define BOOST_FORMAT_LIST_INT(data)   BOOST_FORMAT_LIST_BASE("ListInt",   data)
