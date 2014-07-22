@@ -410,12 +410,21 @@ void VRayScene::Node::writeData(PyObject *output, VRayExportable *prevState, boo
 		materialPluginName = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, materialPluginName);
 	}
 
+	PointerRNA vrayNodePtr = RNA_pointer_get(&vrayPtr, "Node");
+
+	StrVector user_attributes;
+	VRayNodeExporter::getUserAttributes(&vrayNodePtr, user_attributes);
+
 	AttributeValueMap pluginAttrs;
 	pluginAttrs["material"]  = materialPluginName;
 	pluginAttrs["geometry"]  = geometryPluginName;
 	pluginAttrs["objectID"]  = BOOST_FORMAT_INT(m_objectID);
 	pluginAttrs["visible"]   = BOOST_FORMAT_INT(m_visible);
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_transform);
+
+	if (user_attributes.size()) {
+		pluginAttrs["user_attributes"] = BOOST_FORMAT_STRING(BOOST_FORMAT_LIST_JOIN_SEP(user_attributes, ";"));
+	}
 
 	VRayNodePluginExporter::exportPlugin("NODE", "Node", pluginName, pluginAttrs);
 }

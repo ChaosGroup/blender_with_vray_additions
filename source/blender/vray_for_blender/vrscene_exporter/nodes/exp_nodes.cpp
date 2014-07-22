@@ -1035,3 +1035,45 @@ std::string VRayNodeExporter::exportMaterial(BL::BlendData b_data, BL::Material 
 
 	return maName;
 }
+
+
+void VRayNodeExporter::getUserAttributes(PointerRNA *ptr, StrVector &user_attributes)
+{
+	RNA_BEGIN(ptr, itemptr, "user_attributes")
+	{
+		bool useAttr = RNA_boolean_get(&itemptr, "use");
+		if (NOT(useAttr))
+			continue;
+
+		char buf[MAX_ID_NAME];
+		RNA_string_get(&itemptr, "name", buf);
+
+		std::string attrName  = buf;
+		std::string attrValue = "0";
+
+		int attrType = RNA_enum_get(&itemptr, "value_type");
+		switch (attrType) {
+			case 0:
+				attrValue = BOOST_FORMAT_INT(RNA_int_get(&itemptr, "value_int"));
+				break;
+			case 1:
+				attrValue = BOOST_FORMAT_FLOAT(RNA_float_get(&itemptr, "value_float"));
+				break;
+			case 2:
+				float color[3];
+				RNA_float_get_array(&itemptr, "value_color", color);
+				attrValue = BOOST_FORMAT_COLOR(color);
+				break;
+			case 3:
+				RNA_string_get(&itemptr, "value_string", buf);
+				attrValue = buf;
+				break;
+			default:
+				break;
+		}
+
+		std::string userAttr = attrName + "=" + attrValue;
+		user_attributes.push_back(userAttr);
+	}
+	RNA_END;
+}
