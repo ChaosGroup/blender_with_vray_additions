@@ -148,6 +148,9 @@ void LightLinker::write(PyObject *output)
 		const std::string &lightName   = linkIt->first;
 		const StrSet      &obNamesList = linkIt->second;
 
+		if (NOT(obNamesList.size()))
+			continue;
+
 		plugin << "List(" << lightName << "," << BOOST_FORMAT_LIST_JOIN(obNamesList) << ")";
 		if (linkIt != --m_ignored_lights.end())
 			plugin << ",";
