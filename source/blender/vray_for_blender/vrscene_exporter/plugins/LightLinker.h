@@ -23,10 +23,9 @@
 #ifndef CGR_LIGHT_LINKER_H
 #define CGR_LIGHT_LINKER_H
 
-#include "exp_types.h"
-
 #include <boost/unordered/unordered_set.hpp>
 
+#include "exp_types.h"
 #include "CGR_vrscene.h"
 
 
@@ -46,10 +45,15 @@ struct BLObjectHash : std::unary_function<BL::Object, std::size_t>
 
 typedef boost::unordered_set<BL::Object, BLObjectHash> ObjectList;
 
+struct LightList {
+	ObjectList  obList;
+	int         obListType;
+	int         flags;
+};
 
 class LightLinker {
-	typedef std::map<std::string, ObjectList> LightLink;
-	typedef std::map<std::string, StrSet> LightIgnore;
+	typedef std::map<std::string, LightList> LightLink;
+	typedef std::map<std::string, StrSet>    LightIgnore;
 
 public:
 	LightLinker();
@@ -59,16 +63,22 @@ public:
 	void           prepass();
 	void           write(PyObject *output);
 
-	void           excludePlugin(BL::Object ob, const std::string &obName);
+	void           excludePlugin(BL::Object refOb, const std::string &pluginName);
+
+	void           setSceneSet(StrSet *ptr) { m_scene_nodes = ptr; }
 
 private:
 	void           getObject(const std::string &name, ObjectList &list);
 	void           getGroupObjects(const std::string &name, ObjectList &list);
-	
+
 	BL::Scene      m_sce;
 	BL::BlendData  m_data;
 
-	LightLink      m_exclude;
+	LightLink      m_include_exclude;
+	LightIgnore    m_manual_exclude;
+
+	StrSet        *m_scene_nodes;
+
 	LightIgnore    m_ignored_lights;
 
 };
