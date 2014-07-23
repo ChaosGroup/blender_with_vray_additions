@@ -167,6 +167,7 @@ void VRsceneExporter::init()
 	// Prepass LightLinker
 	m_lightLinker.init(m_set->b_data, m_set->b_scene);
 	m_lightLinker.prepass();
+	m_lightLinker.setSceneSet(&m_exportedObject);
 	Node::m_lightLinker = &m_lightLinker;
 
 	// Check what layers to use
