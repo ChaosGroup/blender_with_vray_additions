@@ -551,11 +551,9 @@ void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(m_nodeTm);
 
 	if(m_lightLinker) {
-		PointerRNA objectRNA;
-		RNA_id_pointer_create((ID*)m_ob, &objectRNA);
-		BL::Object bl_ob(objectRNA);
+		const std::string &baseObjectName = GetIDName(&m_ob->id);
 
-		m_lightLinker->excludePlugin(bl_ob, m_nodeName);
+		m_lightLinker->excludePlugin(baseObjectName, m_nodeName);
 	}
 
 	VRayNodePluginExporter::exportPlugin("NODE", "Node", m_nodeName, pluginAttrs);

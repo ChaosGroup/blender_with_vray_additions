@@ -36,20 +36,20 @@ void LightLinker::init(BL::BlendData data, BL::Scene sce)
 }
 
 
-void LightLinker::getObject(const std::string &name, ObjectList &list)
+void LightLinker::getObject(const std::string &name, StrSet &list)
 {
 	BL::Scene::objects_iterator obIt;
 	for (m_sce.objects.begin(obIt); obIt != m_sce.objects.end(); ++obIt) {
 		BL::Object ob = *obIt;
 		if (ob.name() == name) {
-			list.insert(ob);
+			list.insert(GetIDName(ob));
 			break;
 		}
 	}
 }
 
 
-void LightLinker::getGroupObjects(const std::string &name, ObjectList &list)
+void LightLinker::getGroupObjects(const std::string &name, StrSet &list)
 {
 	BL::BlendData::groups_iterator grIt;
 	for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
@@ -57,7 +57,8 @@ void LightLinker::getGroupObjects(const std::string &name, ObjectList &list)
 		if (gr.name() == name) {
 			BL::Group::objects_iterator grObIt;
 			for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
-				list.insert(*grObIt);
+				BL::Object ob = *grObIt;
+				list.insert(GetIDName(ob));
 			}
 			break;
 		}
@@ -106,15 +107,14 @@ void LightLinker::prepass()
 }
 
 
-void LightLinker::excludePlugin(BL::Object refOb, const std::string &pluginName)
+void LightLinker::excludePlugin(const std::string &refObName, const std::string &pluginName)
 {
-	LightLink::const_iterator linkIt;
+	LightLink::iterator linkIt;
 	for (linkIt = m_include_exclude.begin(); linkIt != m_include_exclude.end(); ++linkIt) {
-		const std::string &lightName = linkIt->first;
-		const ObjectList  &obList    = linkIt->second.obList;
+		StrSet &obList = linkIt->second.obList;
 
-		if (obList.count(refOb)) {
-			m_manual_exclude[lightName].insert(pluginName);
+		if (obList.count(refObName)) {
+			obList.insert(pluginName);
 		}
 	}
 }
@@ -129,52 +129,15 @@ void LightLinker::write(PyObject *output)
 		const std::string &lightName = incExclIt->first;
 		const LightList   &lightList = incExclIt->second;
 
-		const ObjectList &obList = lightList.obList;
+		const StrSet &obList = lightList.obList;
 
 		if (lightList.obListType == 1) {
-			ObjectList::const_iterator obIt;
-			for (obIt = obList.begin(); obIt != obList.end(); ++obIt) {
-				m_ignored_lights[lightName].insert(GetIDName((ID*)obIt->ptr.data));
-			}
-
-			if (m_manual_exclude.count(lightName)) {
-				const StrSet &manualExclude = m_manual_exclude[lightName];
-				StrSet::const_iterator nameIt;
-				for (nameIt = manualExclude.begin(); nameIt != manualExclude.end(); ++nameIt) {
-					m_ignored_lights[lightName].insert(*nameIt);
-				}
-			}
+			std::copy(obList.begin(), obList.end(),
+					  std::inserter(m_ignored_lights[lightName], m_ignored_lights[lightName].begin()));
 		}
 		else if (lightList.obListType == 2) {
-			BL::Scene::objects_iterator sceneObIt;
-			for (m_sce.objects.begin(sceneObIt); sceneObIt != m_sce.objects.end(); ++sceneObIt) {
-				BL::Object sceneOb = *sceneObIt;
-
-				ObjectList::const_iterator obIt;
-				for (obIt = obList.begin(); obIt != obList.end(); ++obIt) {
-					BL::Object includeOb = *obIt;
-					if (NOT(sceneOb == includeOb)) {
-						m_ignored_lights[lightName].insert(GetIDName((ID*)obIt->ptr.data));
-					}
-				}
-			}
-
-			if (m_manual_exclude.count(lightName)) {
-				const StrSet &manualExclude = m_manual_exclude[lightName];
-
-				StrSet::const_iterator nameIt;
-				for (nameIt = manualExclude.begin(); nameIt != manualExclude.end(); ++nameIt) {
-					const std::string &includePluginName = *nameIt;
-
-					StrSet::const_iterator scenePluginIt;
-					for (scenePluginIt = m_scene_nodes->begin(); scenePluginIt != m_scene_nodes->end(); ++scenePluginIt) {
-						const std::string &scenePluginName = *scenePluginIt;
-						if (NOT(scenePluginName == includePluginName)) {
-							m_ignored_lights[lightName].insert(*scenePluginIt);
-						}
-					}
-				}
-			}
+			boost::set_difference(*m_scene_nodes, obList,
+								  std::inserter(m_ignored_lights[lightName], m_ignored_lights[lightName].begin()));
 		}
 	}
 
