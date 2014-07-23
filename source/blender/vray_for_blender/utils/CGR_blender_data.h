@@ -23,6 +23,8 @@
 #ifndef CGR_BLENDER_UTILS_H
 #define CGR_BLENDER_UTILS_H
 
+#include <Python.h>
+
 extern "C" {
 #  include "DNA_mesh_types.h"
 }
@@ -30,6 +32,10 @@ extern "C" {
 #include "BKE_main.h"
 #include "DNA_scene_types.h"
 #include "DNA_object_types.h"
+
+#include "BKE_depsgraph.h"
+#include "MEM_guardedalloc.h"
+#include "RNA_blender_cpp.h"
 
 #include <string>
 
@@ -51,5 +57,6 @@ int   IsMeshValid(Scene *sce, Main *main, Object *ob);
 int   IsParentUpdated(Object *ob);
 
 std::string GetIDName(ID *id, const std::string &prefix="");
+std::string GetIDName(BL::Pointer ptr, const std::string &prefix="");
 
 #endif // CGR_BLENDER_UTILS_H

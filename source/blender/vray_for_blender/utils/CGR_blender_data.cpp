@@ -268,6 +268,12 @@ std::string GetIDName(ID *id, const std::string &prefix)
 }
 
 
+std::string GetIDName(BL::Pointer ptr, const std::string &prefix)
+{
+	return GetIDName((ID*)ptr.ptr.data, prefix);
+}
+
+
 int IsMeshValid(Scene *sce, Main *main, Object *ob)
 {
 	switch(ob->type) {
