@@ -52,7 +52,6 @@ struct ExpoterSettings {
 		m_activeLayers  = 0;
 		m_useNodeTrees  = false;
 		m_useInstancerForGroup = false;
-		m_useInstancerForParticles = true;
 
 		m_isAnimation  = false;
 		m_frameCurrent = 0;
@@ -88,7 +87,6 @@ struct ExpoterSettings {
 
 	int               m_useDisplaceSubdiv;
 	int               m_useInstancerForGroup;
-	int               m_useInstancerForParticles;
 	std::string       m_mtlOverride;
 
 	// Animation options
