@@ -403,6 +403,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		dupliAttrs.objectID = override_objectID;
 		dupliAttrs.dupliHolder = bl_ob;
 
+		const std::string &duplicatorName = GetIDName(bl_ob);
+
 		BL::Object::dupli_list_iterator b_dup;
 		for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
 			if(m_set->b_engine.test_break())
@@ -441,7 +443,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					// we need to exclude it's objects
 					//
 					std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
-					m_lightLinker.excludePlugin(bl_ob, pluginName);
+					m_lightLinker.excludePlugin(duplicatorName, pluginName);
 
 					exportObject(dupliOb->ob, true, dupliAttrs);
 				}
