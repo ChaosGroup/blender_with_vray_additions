@@ -163,6 +163,7 @@ void VRsceneExporter::init()
 	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
 	VRayExportable::m_set->m_mtlOverride       = m_mtlOverrideName;
 	VRayExportable::m_set->m_useInstancerForGroup = vrayExporter.getBool("instancer_dupli_group");
+	VRayExportable::m_set->m_useInstancerForParticles = vrayExporter.getBool("instancer_particles");
 
 	// Prepass LightLinker
 	m_lightLinker.init(m_set->b_data, m_set->b_scene);
@@ -393,6 +394,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		int useInstancer = true;
 		if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
 			useInstancer = m_set->m_useInstancerForGroup;
+		}
+		else {
+			useInstancer = m_set->m_useInstancerForParticles;
 		}
 
 		NodeAttrs dupliAttrs;
