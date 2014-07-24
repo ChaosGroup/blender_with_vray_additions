@@ -122,6 +122,7 @@ public:
 	void            setTransform(float tm[4][4]);
 
 	static LightLinker *m_lightLinker;
+	static StrSet      *m_scene_nodes;
 
 private:
 	void            initTransform();

@@ -164,8 +164,9 @@ void VRsceneExporter::init()
 	// Prepass LightLinker
 	m_lightLinker.init(m_set->b_data, m_set->b_scene);
 	m_lightLinker.prepass();
-	m_lightLinker.setSceneSet(&m_exportedObject);
+	m_lightLinker.setSceneSet(&m_exportedObjects);
 	Node::m_lightLinker = &m_lightLinker;
+	Node::m_scene_nodes = &m_exportedObjects;
 
 	// Check what layers to use
 	//
@@ -252,7 +253,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	}
 
 	// Clear caches
-	m_exportedObject.clear();
+	m_exportedObjects.clear();
 	m_psys.clear();
 
 	// Create particle system data
@@ -519,9 +520,9 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 {
 	const std::string idName = attrs.namePrefix + GetIDName(&ob->id);
 
-	if(m_exportedObject.count(idName))
+	if(m_exportedObjects.count(idName))
 		return;
-	m_exportedObject.insert(idName);
+	m_exportedObjects.insert(idName);
 
 	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob);
 	if(ntree) {

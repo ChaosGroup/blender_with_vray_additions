@@ -124,6 +124,11 @@ void LightLinker::write(PyObject *output)
 {
 	std::stringstream plugin;
 
+	StrSet::const_iterator nameIt;
+	for (nameIt = m_scene_nodes->begin(); nameIt != m_scene_nodes->end(); ++nameIt) {
+		std::cout << "Scene plugin " << *nameIt << std::endl;
+	}
+
 	LightLink::const_iterator incExclIt;
 	for (incExclIt = m_include_exclude.begin(); incExclIt != m_include_exclude.end(); ++incExclIt) {
 		const std::string &lightName = incExclIt->first;
