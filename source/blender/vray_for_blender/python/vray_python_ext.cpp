@@ -65,10 +65,10 @@ static PyObject* mExportFree(PyObject *self)
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
-	PyObject *enginePtr  = NULL;
-	PyObject *contextPtr = NULL;
-	PyObject *scenePtr   = NULL;
-	PyObject *dataPtr    = NULL;
+	PyObject *py_engine     = NULL;
+	PyObject *py_context    = NULL;
+	PyObject *py_scene      = NULL;
+	PyObject *py_data       = NULL;
 
 	PyObject *obFile        = NULL;
 	PyObject *geomFile      = NULL;
@@ -76,11 +76,11 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *materialsFile = NULL;
 	PyObject *texturesFile  = NULL;
 
-	int       isAnimation = false;
-	int       frameStart  = 1;
-	int       frameStep   = 1;
+	int       isAnimation   = false;
+	int       frameStart    = 1;
+	int       frameStep     = 1;
 
-	char     *drSharePath = NULL;
+	char     *drSharePath   = NULL;
 
 	static char *kwlist[] = {
 		_C("engine"),         // 0
@@ -104,10 +104,10 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	static const char  kwlistTypes[] = "OOOOOOOOOiiis";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
-									   &enginePtr,
-									   &contextPtr,
-									   &scenePtr,
-									   &dataPtr,
+									   &py_engine,
+									   &py_context,
+									   &py_scene,
+									   &py_data,
 									   &obFile,
 									   &geomFile,
 									   &lightsFile,
@@ -120,21 +120,21 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		return NULL;
 
 	PointerRNA engineRNA;
-	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(enginePtr), &engineRNA);
+	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(py_engine), &engineRNA);
 	BL::RenderEngine bl_engine(engineRNA);
 
 #if 0
 	PointerRNA contextRNA;
-	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(contextPtr), &contextRNA);
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_context), &contextRNA);
 	BL::Context bl_context(contextRNA);
 #endif
 
 	PointerRNA sceneRNA;
-	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(scenePtr), &sceneRNA);
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_scene), &sceneRNA);
 	BL::Scene bl_scene(sceneRNA);
 
 	PointerRNA dataRNA;
-	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(dataPtr), &dataRNA);
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_data), &dataRNA);
 	BL::BlendData bl_data(dataRNA);
 
 	VRayExportable::m_set = new ExpoterSettings(bl_scene, bl_data, bl_engine);
@@ -212,25 +212,27 @@ static PyObject* mExportClearCache(PyObject *self)
 
 static PyObject* mExportScene(PyObject *self, PyObject *args)
 {
-	long exporterPtr   = 0;
+	PyObject *py_exporter = NULL;
 
 	int exportNodes    = true;
 	int exportGeometry = true;
 
-	if(NOT(PyArg_ParseTuple(args, "lii", &exporterPtr, &exportNodes, &exportGeometry)))
+	if(NOT(PyArg_ParseTuple(args, "Oii", &py_exporter, &exportNodes, &exportGeometry)))
 		return NULL;
 
-	if(exporterPtr) {
-		VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
-		int err = exporter->exportScene(exportNodes, exportGeometry);
-		if(err) {
-			if(err == 1) {
-				PyErr_SetString(PyExc_RuntimeError, "Export is interrupted by the user!");
+	if(py_exporter) {
+		VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
+		if(exporter) {
+			int err = exporter->exportScene(exportNodes, exportGeometry);
+			if(err) {
+				if(err == 1) {
+					PyErr_SetString(PyExc_RuntimeError, "Export is interrupted by the user!");
+				}
+				else {
+					PyErr_SetString(PyExc_RuntimeError, "Unknown export error!");
+				}
+				return NULL;
 			}
-			else {
-				PyErr_SetString(PyExc_RuntimeError, "Unknown export error!");
-			}
-			return NULL;
 		}
 	}
 
@@ -240,20 +242,20 @@ static PyObject* mExportScene(PyObject *self, PyObject *args)
 
 static PyObject* mExportSmokeDomain(PyObject *self, PyObject *args)
 {
-	long        contextPtr;
-	long        objectPtr;
-	long        smdPtr;
-	const char *pluginName;
-	const char *lights;
-	PyObject   *fileObject;
+	PyObject   *py_context = NULL;
+	PyObject   *py_object  = NULL;
+	PyObject   *py_smd     = NULL;
+	const char *pluginName = NULL;
+	const char *lights     = NULL;
+	PyObject   *fileObject = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "lllssO", &contextPtr, &objectPtr, &smdPtr, &pluginName, &lights, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "OOOssO", &py_context, &py_object, &py_smd, &pluginName, &lights, &fileObject))) {
 		return NULL;
 	}
 
-	bContext          *C   = (bContext*)(intptr_t)contextPtr;
-	Object            *ob  = (Object*)(intptr_t)objectPtr;
-	SmokeModifierData *smd = (SmokeModifierData*)(intptr_t)smdPtr;
+	bContext          *C   = (bContext*)PyLong_AsVoidPtr(py_context);
+	Object            *ob  = (Object*)PyLong_AsVoidPtr(py_object);
+	SmokeModifierData *smd = (SmokeModifierData*)PyLong_AsVoidPtr(py_smd);
 
 	Scene *sce = CTX_data_scene(C);
 
@@ -265,24 +267,24 @@ static PyObject* mExportSmokeDomain(PyObject *self, PyObject *args)
 
 static PyObject* mExportSmoke(PyObject *self, PyObject *args)
 {
-	long        contextPtr;
-	long        objectPtr;
-	long        smdPtr;
-	const char *pluginName;
-	PyObject   *fileObject;
-	int         p_interpolation;
+	PyObject   *py_context    = NULL;
+	PyObject   *py_object     = NULL;
+	PyObject   *py_smd        = NULL;
+	int         interpolation = 0;
+	const char *pluginName    = NULL;
+	PyObject   *fileObject    = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "lllisO", &contextPtr, &objectPtr, &smdPtr, &p_interpolation, &pluginName, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "OOOisO", &py_context, &py_object, &py_smd, &interpolation, &pluginName, &fileObject))) {
 		return NULL;
 	}
 
-	bContext          *C   = (bContext*)(intptr_t)contextPtr;
-	Object            *ob  = (Object*)(intptr_t)objectPtr;
-	SmokeModifierData *smd = (SmokeModifierData*)(intptr_t)smdPtr;
+	bContext          *C   = (bContext*)PyLong_AsVoidPtr(py_context);
+	Object            *ob  = (Object*)PyLong_AsVoidPtr(py_object);
+	SmokeModifierData *smd = (SmokeModifierData*)PyLong_AsVoidPtr(py_smd);
 
 	Scene *sce = CTX_data_scene(C);
 
-	ExportTexVoxelData(fileObject, sce, ob, smd, pluginName, p_interpolation);
+	ExportTexVoxelData(fileObject, sce, ob, smd, pluginName, interpolation);
 
 	Py_RETURN_NONE;
 }
@@ -290,20 +292,20 @@ static PyObject* mExportSmoke(PyObject *self, PyObject *args)
 
 static PyObject* mExportFluid(PyObject *self, PyObject *args)
 {
-	long        contextPtr;
-	long        objectPtr;
-	long        smdPtr;
-	PyObject   *propGroup;
-	const char *pluginName;
-	PyObject   *fileObject;
+	PyObject   *py_context = NULL;
+	PyObject   *py_object  = NULL;
+	PyObject   *py_smd     = NULL;
+	PyObject   *propGroup  = NULL;
+	const char *pluginName = NULL;
+	PyObject   *fileObject = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "lllOsO", &contextPtr, &objectPtr, &smdPtr, &propGroup, &pluginName, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "OOOOsO", &py_context, &py_object, &py_smd, &propGroup, &pluginName, &fileObject))) {
 		return NULL;
 	}
 
-	bContext          *C   = (bContext*)(intptr_t)contextPtr;
-	Object            *ob  = (Object*)(intptr_t)objectPtr;
-	SmokeModifierData *smd = (SmokeModifierData*)(intptr_t)smdPtr;
+	bContext          *C   = (bContext*)PyLong_AsVoidPtr(py_context);
+	Object            *ob  = (Object*)PyLong_AsVoidPtr(py_object);
+	SmokeModifierData *smd = (SmokeModifierData*)PyLong_AsVoidPtr(py_smd);
 
 	Scene *sce = CTX_data_scene(C);
 
@@ -315,19 +317,19 @@ static PyObject* mExportFluid(PyObject *self, PyObject *args)
 
 static PyObject* mExportHair(PyObject *self, PyObject *args)
 {
-	long        contextPtr;
-	long        objectPtr;
-	long        psysPtr;
-	const char *pluginName;
-	PyObject   *fileObject;
+	PyObject   *py_context = NULL;
+	PyObject   *py_object  = NULL;
+	PyObject   *py_psys    = NULL;
+	const char *pluginName = NULL;
+	PyObject   *fileObject = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "lllsO", &contextPtr, &objectPtr, &psysPtr, &pluginName, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "OOOsO", &py_context, &py_object, &py_psys, &pluginName, &fileObject))) {
 		return NULL;
 	}
 
-	bContext       *C    = (bContext*)(intptr_t)contextPtr;
-	Object         *ob   = (Object*)(intptr_t)objectPtr;
-	ParticleSystem *psys = (ParticleSystem*)(intptr_t)psysPtr;
+	bContext       *C    = (bContext*)PyLong_AsVoidPtr(py_context);
+	Object         *ob   = (Object*)PyLong_AsVoidPtr(py_object);
+	ParticleSystem *psys = (ParticleSystem*)PyLong_AsVoidPtr(py_psys);
 
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
@@ -342,18 +344,18 @@ static PyObject* mExportHair(PyObject *self, PyObject *args)
 
 static PyObject* mExportMesh(PyObject *self, PyObject *args)
 {
-	long        contextPtr;
-	long        objectPtr;
-	const char *pluginName;
-	PyObject   *propGroup;
-	PyObject   *fileObject;
+	PyObject   *py_context = NULL;
+	PyObject   *py_object  = NULL;
+	const char *pluginName = NULL;
+	PyObject   *propGroup  = NULL;
+	PyObject   *fileObject = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "llsOO", &contextPtr, &objectPtr, &pluginName, &propGroup, &fileObject))) {
+	if(NOT(PyArg_ParseTuple(args, "OOsOO", &py_context, &py_object, &pluginName, &propGroup, &fileObject))) {
 		return NULL;
 	}
 
-	bContext *C = (bContext*)(intptr_t)contextPtr;
-	Object   *ob = (Object*)(intptr_t)objectPtr;
+	bContext *C = (bContext*)PyLong_AsVoidPtr(py_context);
+	Object   *ob = (Object*)PyLong_AsVoidPtr(py_object);
 
 	Scene *sce  = CTX_data_scene(C);
 	Main  *main = CTX_data_main(C);
@@ -368,24 +370,24 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 
 static PyObject* mExportNode(PyObject *self, PyObject *args)
 {
-	long  ntreePtr;
-	long  nodePtr;
-	long  socketPtr;
+	PyObject *ntreePtr  = NULL;
+	PyObject *nodePtr   = NULL;
+	PyObject *socketPtr = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "lll", &ntreePtr, &nodePtr, &socketPtr))) {
+	if(NOT(PyArg_ParseTuple(args, "OOO", &ntreePtr, &nodePtr, &socketPtr))) {
 		return NULL;
 	}
 
 	PointerRNA ntreeRNA;
-	RNA_id_pointer_create((ID*)(intptr_t)ntreePtr, &ntreeRNA);
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(ntreePtr), &ntreeRNA);
 	BL::NodeTree ntree(ntreeRNA);
 
 	PointerRNA nodeRNA;
-	RNA_id_pointer_create((ID*)(intptr_t)nodePtr, &nodeRNA);
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(nodePtr), &nodeRNA);
 	BL::Node node(nodeRNA);
 
 	PointerRNA   socketRNA;
-	bNodeSocket *nodeSocket = (bNodeSocket*)(intptr_t)socketPtr;
+	bNodeSocket *nodeSocket = (bNodeSocket*)PyLong_AsVoidPtr(socketPtr);
 	RNA_pointer_create((ID*)node.ptr.id.data, &RNA_NodeSocket, nodeSocket, &socketRNA);
 	BL::NodeSocket fromSocket(socketRNA);
 
@@ -423,13 +425,13 @@ static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 
 static PyObject* mSetSkipObjects(PyObject *self, PyObject *args)
 {
-	Py_ssize_t  exporterPtr;
-	PyObject   *skipList;
+	PyObject *exporterPtr = NULL;
+	PyObject *skipList    = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "nO", &exporterPtr, &skipList)))
+	if(NOT(PyArg_ParseTuple(args, "OO", &exporterPtr, &skipList)))
 		return NULL;
 
-	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
+	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(exporterPtr);
 
 	if(PySequence_Check(skipList)) {
 		int listSize = PySequence_Size(skipList);
@@ -452,13 +454,13 @@ static PyObject* mSetSkipObjects(PyObject *self, PyObject *args)
 
 static PyObject* mSetHideFromView(PyObject *self, PyObject *args)
 {
-	Py_ssize_t  exporterPtr;
-	PyObject   *hideFromViewDict;
+	PyObject *exporterPtr      = NULL;
+	PyObject *hideFromViewDict = NULL;
 
-	if(NOT(PyArg_ParseTuple(args, "nO", &exporterPtr, &hideFromViewDict)))
+	if(NOT(PyArg_ParseTuple(args, "OO", &exporterPtr, &hideFromViewDict)))
 		return NULL;
 
-	VRsceneExporter *exporter = (VRsceneExporter*)(intptr_t)exporterPtr;
+	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(exporterPtr);
 
 	const char *hideFromViewKeys[] = {
 		"all",
