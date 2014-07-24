@@ -50,7 +50,6 @@ struct ExpoterSettings {
 		m_fileTex    = NULL;
 
 		m_activeLayers  = 0;
-		m_useNodeTrees  = false;
 		m_useInstancerForGroup = false;
 
 		m_isAnimation  = false;
@@ -82,7 +81,6 @@ struct ExpoterSettings {
 	int               m_exportNodes;
 	int               m_exportMeshes;
 	unsigned int      m_activeLayers;
-	int               m_useNodeTrees;
 	int               m_useHideFromView;
 
 	int               m_useDisplaceSubdiv;

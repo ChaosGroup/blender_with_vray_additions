@@ -65,30 +65,31 @@ static PyObject* mExportFree(PyObject *self)
 
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
-	long      contextPtr  = 0;
-	long      scenePtr    = 0;
-	long      useNodes    = false;
-	long      isAnimation = false;
-	long      frameStart  = 1;
-	long      frameStep   = 1;
-	char     *drSharePath = NULL;
+	PyObject *enginePtr  = NULL;
+	PyObject *contextPtr = NULL;
+	PyObject *scenePtr   = NULL;
+	PyObject *dataPtr    = NULL;
 
-	PyObject *engine     = NULL;
-	PyObject *obFile     = NULL;
-
+	PyObject *obFile        = NULL;
 	PyObject *geomFile      = NULL;
 	PyObject *lightsFile    = NULL;
 	PyObject *materialsFile = NULL;
 	PyObject *texturesFile  = NULL;
 
+	int       isAnimation = false;
+	int       frameStart  = 1;
+	int       frameStep   = 1;
+
+	char     *drSharePath = NULL;
+
 	static char *kwlist[] = {
 		_C("engine"),         // 0
 		_C("context"),        // 1
-		_C("objectFile"),     // 2
-		_C("geometryFile"),   // 3
-		_C("lightsFile"),     // 4
-		_C("scene"),          // 5
-		_C("useNodes"),       // 6
+		_C("scene"),          // 2
+		_C("data"),           // 3
+		_C("objectFile"),     // 4
+		_C("geometryFile"),   // 5
+		_C("lightsFile"),     // 6
 		_C("materialFile"),   // 7
 		_C("textureFile"),    // 8
 		_C("isAnimation"),    // 9
@@ -98,17 +99,18 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		NULL
 	};
 
-	//                                  01234 56789
-	static const char  kwlistTypes[] = "OlOOO|llOOllls";
+	//                                  0123456789111
+	//                                            012
+	static const char  kwlistTypes[] = "OOOOOOOOOiiis";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
-									   &engine,
+									   &enginePtr,
 									   &contextPtr,
+									   &scenePtr,
+									   &dataPtr,
 									   &obFile,
 									   &geomFile,
 									   &lightsFile,
-									   &scenePtr,
-									   &useNodes,
 									   &materialsFile,
 									   &texturesFile,
 									   &isAnimation,
@@ -117,28 +119,27 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 									   &drSharePath)))
 		return NULL;
 
-	PointerRNA engineRnaPtr;
-	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(engine), &engineRnaPtr);
-	BL::RenderEngine renderEngine(engineRnaPtr);
+	PointerRNA engineRNA;
+	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(enginePtr), &engineRNA);
+	BL::RenderEngine bl_engine(engineRNA);
 
-	bContext *C = (bContext*)(intptr_t)contextPtr;
+#if 0
+	PointerRNA contextRNA;
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(contextPtr), &contextRNA);
+	BL::Context bl_context(contextRNA);
+#endif
 
-	Scene *sce  = scenePtr ? (Scene*)(intptr_t)scenePtr : CTX_data_scene(C);
-	Main  *main = CTX_data_main(C);
+	PointerRNA sceneRNA;
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(scenePtr), &sceneRNA);
+	BL::Scene bl_scene(sceneRNA);
 
-	PointerRNA sceneRnaPtr;
-	RNA_id_pointer_create((ID*)sce, &sceneRnaPtr);
-	BL::Scene scene(sceneRnaPtr);
+	PointerRNA dataRNA;
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(dataPtr), &dataRNA);
+	BL::BlendData bl_data(dataRNA);
 
-	PointerRNA dataPtr;
-	RNA_id_pointer_create((ID*)main, &dataPtr);
-	BL::BlendData data(dataPtr);
-
-	VRayExportable::m_set = new ExpoterSettings(scene, data, renderEngine);
-	VRayExportable::m_set->m_sce  = sce;
-	VRayExportable::m_set->m_main = main;
-
-	VRayExportable::m_set->m_useNodeTrees = useNodes;
+	VRayExportable::m_set = new ExpoterSettings(bl_scene, bl_data, bl_engine);
+	VRayExportable::m_set->m_sce  = (Scene*)bl_scene.ptr.data;
+	VRayExportable::m_set->m_main = (Main*)bl_data.ptr.data;
 
 	VRayExportable::m_set->m_fileObject = obFile;
 	VRayExportable::m_set->m_fileGeom   = geomFile;
