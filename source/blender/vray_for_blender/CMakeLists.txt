@@ -18,6 +18,10 @@
 #
 # ***** END GPL LICENSE BLOCK *****
 
+add_definitions(
+	${BOOST_DEFINITIONS}
+)
+
 set(INC_SYS
 	${PYTHON_INCLUDE_DIRS}
 	${ZLIB_INCLUDE_DIRS}
