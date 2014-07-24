@@ -58,6 +58,8 @@ extern "C" {
 
 
 LightLinker *VRayScene::Node::m_lightLinker = NULL;
+StrSet      *VRayScene::Node::m_scene_nodes = NULL;
+
 
 
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
@@ -600,6 +602,7 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob, const Nod
 			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
 			geomMayaHair->preInit(psys);
 			geomMayaHair->setLightLinker(m_lightLinker);
+			geomMayaHair->setSceneSet(m_scene_nodes);
 			if(VRayExportable::m_set->m_exportNodes)
 				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent, attrs);
 			if(VRayExportable::m_set->m_exportMeshes) {

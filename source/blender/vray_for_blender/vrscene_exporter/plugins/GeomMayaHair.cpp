@@ -553,6 +553,7 @@ void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs
 	if(m_lightLinker) {
 		const std::string &baseObjectName = GetIDName(&m_ob->id);
 
+		m_scene_nodes->insert(m_nodeName);
 		m_lightLinker->excludePlugin(baseObjectName, m_nodeName);
 	}
 
