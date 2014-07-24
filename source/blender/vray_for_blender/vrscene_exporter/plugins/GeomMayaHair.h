@@ -58,6 +58,7 @@ public:
 	MHash              getStrandUvwHash() const       { return m_hashStrandUVW; }
 
 	void               setLightLinker(LightLinker *lightLinker);
+	void               setSceneSet(StrSet *ptr) { m_scene_nodes = ptr; }
 
 private:
 	void               initData();
@@ -95,6 +96,7 @@ private:
 	float              opacity;
 
 	LightLinker       *m_lightLinker;
+	StrSet            *m_scene_nodes;
 
 };
 

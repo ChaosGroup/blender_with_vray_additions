@@ -170,7 +170,7 @@ private:
 	void                    exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const NodeAttrs &attrs=NodeAttrs());
 	std::string             writeNodeFromNodeTree(BL::NodeTree ntree, BL::Node node);
 
-	StrSet                  m_exportedObject;
+	StrSet                  m_exportedObjects;
 	MyParticles             m_psys;
 	PtrSet                  m_skipObjects;
 
