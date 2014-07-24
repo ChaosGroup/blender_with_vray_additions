@@ -154,10 +154,7 @@ void VRsceneExporter::init()
 		}
 	}
 
-	std::string exporterRnaProperty = "vray.exporter";
-	if(m_set->m_useNodeTrees) {
-		exporterRnaProperty = "vray.Exporter";
-	}
+	std::string exporterRnaProperty = "vray.Exporter";
 
 	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, exporterRnaProperty.c_str());
 	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
@@ -430,13 +427,11 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 				continue;
 
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
-				if(m_set->m_useNodeTrees) {
 #if CGR_EXPORT_LIGHTS_CPP
-					exportLightNoded(ob, dupliOb);
+				exportLightNoded(ob, dupliOb);
+#else
+				exportLight(ob, dupliOb);
 #endif
-				}
-				else
-					exportLight(ob, dupliOb);
 			}
 			else {
 				if(NOT(useInstancer)) {
@@ -513,11 +508,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		exportObject(ob);
 	}
 	else if(LIGHT_TYPE(ob)) {
-		if(m_set->m_useNodeTrees) {
 #if CGR_EXPORT_LIGHTS_CPP
-			exportLightNoded(ob);
+		exportLightNoded(ob);
 #endif
-		}
 	}
 }
 
