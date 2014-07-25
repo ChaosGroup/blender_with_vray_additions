@@ -143,15 +143,23 @@ void LightLinker::write(PyObject *output)
 
 	plugin << "\nSettingsLightLinker SettingsLightLinker {";
 	plugin << "\n\t" << "ignored_lights=List(";
+
+	// Remove empty items
+	LightIgnore::iterator linkRemoveIt;
+	for(linkRemoveIt = m_ignored_lights.begin(); linkRemoveIt != m_ignored_lights.end();) {
+		if(NOT(linkRemoveIt->second.size()))
+			m_ignored_lights.erase(linkRemoveIt++);
+		else
+			++linkRemoveIt;
+	}
+
 	LightIgnore::const_iterator linkIt;
 	for (linkIt = m_ignored_lights.begin(); linkIt != m_ignored_lights.end(); ++linkIt) {
 		const std::string &lightName   = linkIt->first;
 		const StrSet      &obNamesList = linkIt->second;
 
-		if (NOT(obNamesList.size()))
-			continue;
-
 		plugin << "List(" << lightName << "," << BOOST_FORMAT_LIST_JOIN(obNamesList) << ")";
+
 		if (linkIt != --m_ignored_lights.end())
 			plugin << ",";
 	}
