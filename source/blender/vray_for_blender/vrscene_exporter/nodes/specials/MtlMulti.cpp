@@ -59,7 +59,7 @@ std::string VRayNodeExporter::exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Nod
 	else if(mtlid_gen_float_sock.is_linked()) {
 		pluginAttrs["mtlid_gen_float"] = VRayNodeExporter::exportLinkedSocket(ntree, mtlid_gen_float_sock, context);
 	}
-	pluginAttrs["wrap_id"] = BOOST_FORMAT_INT(RNA_int_get(&node.ptr, "wrap_id"));
+	pluginAttrs["wrap_id"] = BOOST_FORMAT_INT(RNA_boolean_get(&node.ptr, "wrap_id"));
 
 	VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlMulti", pluginName, pluginAttrs);
 
