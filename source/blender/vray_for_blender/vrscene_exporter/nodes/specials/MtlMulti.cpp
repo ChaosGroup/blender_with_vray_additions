@@ -66,3 +66,40 @@ std::string VRayNodeExporter::exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Nod
 	return pluginName;
 }
 
+
+std::string VRayNodeExporter::exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob)
+{
+	std::string pluginName = "MtlMulti@" + GetIDName(bl_ob);
+
+	StrVector mtls_list;
+	StrVector ids_list;
+
+	BL::Object::material_slots_iterator maSlotIt;
+	int i = 0;
+	for (bl_ob.material_slots.begin(maSlotIt); maSlotIt != bl_ob.material_slots.end(); ++maSlotIt, ++i) {
+		BL::MaterialSlot maSlot = *maSlotIt;
+		if (NOT(maSlot))
+			continue;
+
+		BL::Material ma = maSlot.material();
+		if (NOT(ma))
+			continue;
+
+		mtls_list.push_back(Node::GetMaterialName((Material*)ma.ptr.data, m_set->m_mtlOverride));
+		ids_list.push_back(BOOST_FORMAT_INT(i));
+	}
+
+	if (mtls_list.size() == 0)
+		return "NULL";
+	else if (mtls_list.size() == 1)
+		return mtls_list[0];
+
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["mtls_list"] = BOOST_FORMAT_LIST(mtls_list);
+	pluginAttrs["ids_list"]  = BOOST_FORMAT_LIST_INT(ids_list);
+	pluginAttrs["wrap_id"] = "1";
+
+	VRayNodePluginExporter::exportPlugin("Node", "MtlMulti", pluginName, pluginAttrs);
+
+	return pluginName;
+}
