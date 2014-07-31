@@ -189,6 +189,8 @@ public:
 	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													 VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 
+	static void             exportVRayClipper(BL::BlendData bl_data, BL::Object bl_ob);
+
 	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context=NULL);
 	static std::string      exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayNodeContext *context=NULL);
 
