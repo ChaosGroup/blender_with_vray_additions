@@ -524,12 +524,24 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 		return;
 	m_exportedObjects.insert(idName);
 
-	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob);
-	if(ntree) {
-		exportNodeFromNodeTree(ntree, ob, attrs);
+	PointerRNA objectRNA;
+	RNA_id_pointer_create((ID*)ob, &objectRNA);
+	BL::Object bl_ob(objectRNA);
+
+	PointerRNA vrayObject  = RNA_pointer_get(&bl_ob.ptr, "vray");
+	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+	if(RNA_boolean_get(&vrayClipper, "enabled")) {
+		VRayNodeExporter::exportVRayClipper(m_set->b_data, bl_ob);
 	}
 	else {
-		exportNode(ob, checkUpdated, attrs);
+		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob);
+		if(ntree) {
+			exportNodeFromNodeTree(ntree, ob, attrs);
+		}
+		else {
+			exportNode(ob, checkUpdated, attrs);
+		}
 	}
 }
 
