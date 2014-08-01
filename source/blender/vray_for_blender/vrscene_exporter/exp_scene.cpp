@@ -61,7 +61,6 @@ const char* MyParticle::velocity = "00000000000000000000000000000000000000000000
 
 
 ExpoterSettings* VRsceneExporter::m_set = NULL;
-std::string      VRsceneExporter::m_mtlOverrideName;
 BL::Material     VRsceneExporter::m_mtlOverride = BL::Material(PointerRNA_NULL);
 
 
@@ -135,8 +134,7 @@ void VRsceneExporter::init()
 {
 	VRayExportable::clearCache();
 
-	m_mtlOverrideName = "";
-
+	VRayExportable::m_set->m_mtlOverride.clear();
 	RnaAccess::RnaValue rna((ID*)m_set->m_sce, "vray.SettingsOptions");
 	if(rna.getBool("mtl_override_on")) {
 		std::string overrideName = rna.getString("mtl_override");
@@ -146,8 +144,8 @@ void VRsceneExporter::init()
 			for(m_set->b_data.materials.begin(bl_maIt); bl_maIt != m_set->b_data.materials.end(); ++bl_maIt) {
 				BL::Material bl_ma = *bl_maIt;
 				if(bl_ma.name() == overrideName) {
-					m_mtlOverrideName = GetIDName((ID*)bl_ma.ptr.data);
-					m_mtlOverride     = bl_ma;
+					VRayExportable::m_set->m_mtlOverride = GetIDName((ID*)bl_ma.ptr.data);
+					m_mtlOverride = bl_ma;
 					break;
 				}
 			}
@@ -158,7 +156,6 @@ void VRsceneExporter::init()
 
 	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, exporterRnaProperty.c_str());
 	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
-	VRayExportable::m_set->m_mtlOverride       = m_mtlOverrideName;
 	VRayExportable::m_set->m_useInstancerForGroup = vrayExporter.getBool("instancer_dupli_group");
 
 	// Prepass LightLinker
@@ -328,11 +325,13 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		if(NOT(b_data))
 			b_data = m_set->b_data;
 
-		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
-			BL::Material b_ma = *maIt;
-			if(m_mtlOverride && (m_mtlOverride.name() != b_ma.name()))
-				continue;
-			VRayNodeExporter::exportMaterial(b_data, b_ma);
+		if(m_mtlOverride)
+			VRayNodeExporter::exportMaterial(b_data, m_mtlOverride);
+		else {
+			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+				BL::Material b_ma = *maIt;
+				VRayNodeExporter::exportMaterial(b_data, b_ma);
+			}
 		}
 	}
 
@@ -564,7 +563,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			node->setDupliHolder(attrs.dupliHolder);
 		}
 	}
-	node->init(m_mtlOverrideName);
+	node->init(m_set->m_mtlOverride);
 	node->initHash();
 
 	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
@@ -677,7 +676,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	nodeCtx.obCtx.ob   = ob;
 	nodeCtx.obCtx.sce  = m_set->m_sce;
 	nodeCtx.obCtx.main = m_set->m_main;
-	nodeCtx.obCtx.mtlOverride = m_mtlOverrideName;
+	nodeCtx.obCtx.mtlOverride = m_set->m_mtlOverride;
 
 	// Export object main properties
 	//
