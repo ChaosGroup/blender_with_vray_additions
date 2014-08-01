@@ -403,7 +403,7 @@ static int bpy_prop_poll_cb(struct PointerRNA *self, PointerRNA *candidate, stru
 	ret = PyObject_CallObject(py_func, args);
 
 	Py_DECREF(args);
-	
+
 	if (ret == NULL) {
 		printf_func_error(py_func);
 		result = false;
@@ -2868,7 +2868,7 @@ static PyObject *BPy_EnumProperty(PyObject *self, PyObject *args, PyObject *kw)
 static StructRNA *pointer_type_from_py(PyObject *value, const char *error_prefix)
 {
 	StructRNA *srna;
-	
+
 	srna = srna_from_self(value, "");
 	if (!srna) {
 		if (PyErr_Occurred()) {
@@ -2942,7 +2942,6 @@ static PyObject *BPy_PointerProperty(PyObject *self, PyObject *args, PyObject *k
 
 		BPY_PROPDEF_CHECK(PointerProperty, property_flag_items);
 
-		
 		ptype = pointer_type_from_py(type, "PointerProperty(...)");
 		if (!ptype)
 			return NULL;

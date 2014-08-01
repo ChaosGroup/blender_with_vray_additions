@@ -1795,7 +1795,7 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 
 	if (!prop) return;
 	BLI_assert(prop->type == IDP_GROUP);
-	
+
 	for (loop = prop->data.group.first; loop; loop = loop->next) {
 		switch (loop->type) {
 		case IDP_ID: /* DatablockProperty */
@@ -7591,7 +7591,7 @@ static void lib_link_all(FileData *fd, Main *main)
 
 		if (lbarray[i] == &main->nodetree)
 			continue; /* Since nodetrees aren't all in main, they do their own id-prop linking */
-		
+
 		while (loop) {
 			if (loop->flag & LIB_NEED_LINK) /* Don't unset yet! */
 				IDP_LibLinkProperty(loop->properties, fd);
@@ -8179,7 +8179,7 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 			expand_idprops(fd, mainvar, node->prop);
 
 			for (sock = node->inputs.first; sock; sock = sock->next)
-				expand_doit(fd, mainvar, sock->prop);				
+				expand_doit(fd, mainvar, sock->prop);
 			for (sock = node->outputs.first; sock; sock = sock->next)
 				expand_doit(fd, mainvar, sock->prop);
 		}

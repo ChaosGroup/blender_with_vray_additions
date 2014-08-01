@@ -395,7 +395,7 @@ static PropertyRNA *typemap[IDP_NUMTYPES] = {
 	(PropertyRNA *)&rna_PropertyGroupItem_int,
 	(PropertyRNA *)&rna_PropertyGroupItem_float,
 	NULL, NULL, NULL,
-	(PropertyRNA *)&rna_PropertyGroupItem_group, 
+	(PropertyRNA *)&rna_PropertyGroupItem_group,
 	(PropertyRNA *)&rna_PropertyGroupItem_id,
 	(PropertyRNA *)&rna_PropertyGroupItem_double,
 	(PropertyRNA *)&rna_PropertyGroupItem_idp_array
@@ -2837,7 +2837,7 @@ void RNA_property_pointer_set(PointerRNA *ptr, PropertyRNA *prop, PointerRNA ptr
 
 	if (idprop && pprop->set && !((PropPointerSetFuncPy)pprop->set)(ptr, &ptr_value, prop))
 		return;
-	
+
 	if (ptr_value.type != NULL && !RNA_struct_is_a(ptr_value.type, pprop->type)) {
 		printf("%s: expected %s type, not %s.\n", __func__, pprop->type->identifier, ptr_value.type->identifier);
 		return;
