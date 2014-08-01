@@ -2272,7 +2272,7 @@ bool ui_but_string_set(bContext *C, uiBut *but, const char *str)
 					
 					if (prop && RNA_property_collection_lookup_string(&ptr, prop, str, &rptr))
 						RNA_property_pointer_set(&but->rnapoin, but->rnaprop, rptr);
-					
+
 					return true;
 				}
 
