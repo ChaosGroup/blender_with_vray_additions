@@ -427,17 +427,7 @@ void GeomStaticMesh::initFaces()
 					copy_v3_v3(n3, &b_mesh.vertices[faceVerts[3]].normal().data[0]);
 			}
 			else {
-				if(faceVerts[3])
-					normal_quad_v3(fno,
-								  &b_mesh.vertices[faceVerts[0]].normal().data[0],
-								  &b_mesh.vertices[faceVerts[1]].normal().data[0],
-								  &b_mesh.vertices[faceVerts[2]].normal().data[0],
-								  &b_mesh.vertices[faceVerts[3]].normal().data[0]);
-				else
-					normal_tri_v3(fno,
-								  &b_mesh.vertices[faceVerts[0]].normal().data[0],
-								  &b_mesh.vertices[faceVerts[1]].normal().data[0],
-								  &b_mesh.vertices[faceVerts[2]].normal().data[0]);
+				copy_v3_v3(fno, &faceIt->normal().data[0]);
 
 				copy_v3_v3(n0, fno);
 				copy_v3_v3(n1, fno);
