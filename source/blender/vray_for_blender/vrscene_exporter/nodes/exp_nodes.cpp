@@ -604,6 +604,16 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 			}
 		}
 	}
+	else if(toNode.bl_idname() == "VRayNodeDebugSwitch") {
+		const int inputIndex = RNA_int_get(&toNode.ptr, "input_index");
+		const std::string inputSocketName = boost::str(boost::format("Input %i") % inputIndex);
+
+		BL::NodeSocket inputSocket = VRayNodeExporter::getSocketByName(toNode, inputSocketName);
+		if(NOT(inputSocket && inputSocket.is_linked()))
+			return "NULL";
+
+		connectedPlugin = VRayNodeExporter::exportLinkedSocket(ntree, inputSocket, context);
+	}
 	else {
 		connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, toNode, fromSocket, context);
 	}
