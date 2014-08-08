@@ -182,6 +182,21 @@ void VRayScene::Node::initHash()
 }
 
 
+bool Node::DoOverrideMaterial(BL::Material ma)
+{
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data, (ID*)ma.ptr.data);
+	if(ntree) {
+		BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
+		if(maOutput) {
+			if(RNA_boolean_get(&maOutput.ptr, "dontOverride")) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+
 std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &materialOverride)
 {
 	std::string materialName = CGR_DEFAULT_MATERIAL;
@@ -198,29 +213,21 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 				if(materialOverride.empty())
 					materialName = maName;
 				else {
-					if(RNA_boolean_get(&maOutput.ptr, "dontOverride")) {
+					if(RNA_boolean_get(&maOutput.ptr, "dontOverride"))
 						materialName = maName;
-					}
+					else
+						materialName = materialOverride;
 				}
 			}
 		}
 	}
 	else {
-		std::string maName = GetIDName((ID*)ma);
-
-		if(materialOverride.empty())
-			materialName = maName;
-		else {
-			RnaAccess::RnaValue rna(&ma->id, "vray");
-			if(rna.getBool("dontOverride"))
-				materialName = maName;
-		}
+		if(NOT(materialOverride.empty()))
+			materialName = materialOverride;
 	}
 
 	return materialName;
 }
-
-
 
 
 std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)

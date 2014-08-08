@@ -36,6 +36,7 @@
 
 namespace VRayScene {
 
+
 struct AttrValue {
 	int          frame;
 	std::string  value;
@@ -179,7 +180,7 @@ public:
 	static BL::NodeSocket   getOutputSocketByName(BL::Node node, const std::string &socketName);
 
 	static BL::Node         getConnectedNode(BL::NodeSocket socket);
-	static BL::Node         getConnectedNode(BL::Node node, const std::string &socketName);
+	static BL::Node         getConnectedNode(BL::NodeSocket socket, VRayNodeContext *context);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeSocket socket);
 
 	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
@@ -189,6 +190,7 @@ public:
 	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													 VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 
+	static void             exportVRayEnvironment(VRayNodeContext *context);
 	static void             exportVRayClipper(BL::BlendData bl_data, BL::Object bl_ob);
 	static std::string      exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob);
 
@@ -248,9 +250,10 @@ private:
 
 	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													VRayNodeContext *context);
-
 	static std::string      exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-														  VRayNodeContext *context);
+												          VRayNodeContext *context);
+	static std::string      exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+														 VRayNodeContext *context);
 
 private: 
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);

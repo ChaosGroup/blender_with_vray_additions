@@ -31,7 +31,7 @@ std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::No
 
 	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
 	if(objectSock && objectSock.is_linked()) {
-		BL::Node selectObjectNode = VRayNodeExporter::getConnectedNode(objectSock);
+		BL::Node selectObjectNode = VRayNodeExporter::getConnectedNode(objectSock, context);
 		if(selectObjectNode && (selectObjectNode.bl_idname() == "VRayNodeSelectObject")) {
 			BL::Object b_ob = VRayNodeExporter::exportVRayNodeSelectObject(ntree, selectObjectNode, objectSock, context);
 			if(b_ob) {

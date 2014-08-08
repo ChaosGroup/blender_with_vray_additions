@@ -81,6 +81,7 @@ public:
 	static int      IsUpdated(Object *ob);
 	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
 	static string   GetMaterialName(Material *ma, const string &materialOverride="");
+	static bool     DoOverrideMaterial(BL::Material ma);
 
 	static string   WriteMtlWrapper(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl);
 	static string   WriteMtlRenderStats(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl);
