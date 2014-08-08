@@ -65,7 +65,7 @@ void VRayNodeExporter::exportVRayClipper(BL::BlendData bl_data, BL::Object bl_ob
 		}
 
 		attrs["exclusion_mode"] = BOOST_FORMAT_INT(RNA_enum_get(&vrayClipper, "exclusion_mode"));
-		attrs["exclusion_nodes"] = BOOST_FORMAT_LIST_JOIN(exclusion_nodes);
+		attrs["exclusion_nodes"] = BOOST_FORMAT_LIST(exclusion_nodes);
 	}
 
 	if (NOT(material.empty()) && material != "NULL")
