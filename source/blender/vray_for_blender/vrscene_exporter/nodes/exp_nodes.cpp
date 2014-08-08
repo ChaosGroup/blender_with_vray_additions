@@ -202,19 +202,6 @@ BL::Node VRayNodeExporter::getNodeByType(BL::NodeTree nodeTree, const std::strin
 }
 
 
-BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket socket)
-{
-	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
-	bNodeLink   *link = bSocket->link;
-	if(link) {
-		PointerRNA nodePtr;
-		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_Node, link->fromnode, &nodePtr);
-		return BL::Node(nodePtr);
-	}
-	return BL::Node(PointerRNA_NULL);
-}
-
-
 BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeSocket socket)
 {
 	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
@@ -228,12 +215,130 @@ BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeSocket socket)
 }
 
 
-BL::Node VRayNodeExporter::getConnectedNode(BL::Node node, const std::string &socketName)
+BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket socket)
 {
-	BL::NodeSocket socket = VRayNodeExporter::getSocketByName(node, socketName);
-	if(NOT(socket.is_linked()))
+	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
+	bNodeLink   *link = bSocket->link;
+	if(link) {
+		PointerRNA nodePtr;
+		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_Node, link->fromnode, &nodePtr);
+		return BL::Node(nodePtr);
+	}
+	return BL::Node(PointerRNA_NULL);
+}
+
+
+// NOTE: The same as VRayNodeExporter::exportLinkedSocket,
+// but returns connected node
+//
+BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(fromSocket);
+	// NOTE: This could happen while reconnecting nodes and material preview is active
+	if(NOT(conSock.ptr.data))
 		return BL::Node(PointerRNA_NULL);
-	return VRayNodeExporter::getConnectedNode(socket);
+
+	BL::Node conNode = conSock.node();
+	// NOTE: This could happen while reconnecting nodes and material preview is active
+	if(NOT(conNode.ptr.data))
+		return BL::Node(PointerRNA_NULL);
+
+	// If we are connected to the Group node,
+	// we have to found the actual socket/node from the group node tree
+	//
+	if(conNode.is_a(&RNA_ShaderNodeGroup) || conNode.is_a(&RNA_NodeCustomGroup)) {
+		// Setting nested context
+		if(context) {
+			context->pushGroupNode(conNode.ptr);
+		}
+
+		// Get real socket / node to export
+		conSock = VRayNodeExporter::getNodeGroupSocketReal(conNode, conSock);
+		// NOTE: This could happen while reconnecting nodes and material preview is active
+		if(NOT(conSock.ptr.data))
+			return BL::Node(PointerRNA_NULL);
+
+		conNode = conSock.node();
+
+		// Restoring context
+		if(context) {
+			context->popParentTree();
+			context->popGroupNode();
+		}
+	}
+	else if(conNode.is_a(&RNA_NodeGroupInput)) {
+		if(NOT(context)) {
+			PRINT_ERROR("No context for NodeGroupInput!");
+			return BL::Node(PointerRNA_NULL);
+		}
+		else {
+			BL::NodeGroup groupNode  = context->getGroupNode();
+			if(NOT(groupNode)) {
+				PRINT_ERROR("Socket: %s => No group node and / or tree in context!",
+							fromSocket.name().c_str());
+				return BL::Node(PointerRNA_NULL);
+			}
+
+			// Find socket connected to fromSocket on the Group Input node
+			BL::NodeSocket inputNodeSocket = VRayNodeExporter::getConnectedSocket(fromSocket);
+
+			// Now have to find a correspondent socket on the Group node
+			// and then export connected node from the parent tree
+			//
+			BL::NodeSocket groupInputSocket(PointerRNA_NULL);
+			BL::Node::inputs_iterator inIt;
+			for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
+				BL::NodeSocket sock = *inIt;
+				if(sock.name().empty())
+					continue;
+				if(inputNodeSocket.name() == sock.name()) {
+					groupInputSocket = sock;
+					break;
+				}
+			}
+			if(NOT(groupInputSocket)) {
+				PRINT_ERROR("Group node name: %s => Node tree: %s => Input socket not found!",
+							groupNode.name().c_str(), groupNode.node_tree().name().c_str());
+				return BL::Node(PointerRNA_NULL);
+			}
+
+			// Forward the real socket
+			conSock = VRayNodeExporter::getConnectedSocket(groupInputSocket);
+			if(NOT(conSock.ptr.data))
+				return BL::Node(PointerRNA_NULL);
+
+			// Finally get the node connected to the socket on the Group node
+			conNode = VRayNodeExporter::getConnectedNode(groupInputSocket);
+			if(NOT(conNode)) {
+				PRINT_ERROR("Group node name: %s => Connected node is not found!",
+							groupNode.name().c_str());
+				return BL::Node(PointerRNA_NULL);
+			}
+		}
+	}
+	else if(conNode.is_a(&RNA_NodeReroute)) {
+		if(conNode.internal_links.length()) {
+			BL::NodeSocket rerouteInSock = conNode.internal_links[0].from_socket();
+			if(rerouteInSock) {
+				conSock = VRayNodeExporter::getConnectedSocket(rerouteInSock);
+				if(NOT(conSock.ptr.data))
+					return BL::Node(PointerRNA_NULL);
+				conNode = VRayNodeExporter::getConnectedNode(rerouteInSock);
+			}
+		}
+	}
+	else if(conNode.bl_idname() == "VRayNodeDebugSwitch") {
+		const int inputIndex = RNA_enum_get(&conNode.ptr, "input_index");
+		const std::string inputSocketName = boost::str(boost::format("Input %i") % inputIndex);
+
+		BL::NodeSocket inputSocket = VRayNodeExporter::getSocketByName(conNode, inputSocketName);
+		if(NOT(inputSocket && inputSocket.is_linked()))
+			return BL::Node(PointerRNA_NULL);
+
+		conNode = VRayNodeExporter::getConnectedNode(inputSocket, context);
+	}
+
+	return conNode;
 }
 
 
@@ -642,6 +747,11 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 		RNA_float_get_array(&socket.ptr, "value", color);
 		return BOOST_FORMAT_ACOLOR3(color);
 	}
+	else if(socketVRayType == "VRaySocketEnvironment") {
+		float color[3];
+		RNA_float_get_array(&socket.ptr, "value", color);
+		return BOOST_FORMAT_COLOR(color);
+	}
 	else if(socketVRayType == "VRaySocketFloatColor") {
 		return BOOST_FORMAT_FLOAT(RNA_float_get(&socket.ptr, "value"));
 	}
@@ -667,6 +777,7 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 	else if(socketVRayType == "VRaySocketColorNoValue") {}
 	else if(socketVRayType == "VRaySocketCoords") {}
 	else if(socketVRayType == "VRaySocketObject") {}
+	else if(socketVRayType == "VRaySocketEffect") {}
 	else {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
 					ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
@@ -862,6 +973,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeEnvFogMeshGizmo") {
 		return VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeEnvironmentFog") {
+		return VRayNodeExporter::exportVRayNodeEnvironmentFog(ntree, node, fromSocket, context);
+	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);
 	}
@@ -978,6 +1092,10 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	}
 	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
 		output = ExpoterSettings::gSet.m_fileMat;
+	}
+	else if(pluginType == "EFFECT" || pluginType == "") {
+		// NOTE: Move to appropriate file
+		output = ExpoterSettings::gSet.m_fileObject;
 	}
 	else if(pluginType == "LIGHT") {
 		output = ExpoterSettings::gSet.m_fileLights;
