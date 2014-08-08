@@ -32,7 +32,7 @@ int ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *mai
 	geomStaticMesh->setPropGroup(propGroup);
 	geomStaticMesh->initAttributes();
 
-	int toDelete = geomStaticMesh->write(outputFile, VRayScene::VRayExportable::m_set->m_frameCurrent);
+	int toDelete = geomStaticMesh->write(outputFile, ExpoterSettings::gSet.m_frameCurrent);
 	if(toDelete)
 		delete geomStaticMesh;
 

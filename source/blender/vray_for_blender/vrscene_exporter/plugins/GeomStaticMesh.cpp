@@ -685,7 +685,7 @@ void GeomStaticMesh::initHash()
 	m_hash = 1;
 
 	// If not animation don't waste time calculating hashes
-	if(VRayExportable::m_set->m_isAnimation) {
+	if(ExpoterSettings::gSet.m_isAnimation) {
 		if(m_vertices) {
 			m_hashVertices = HashCode(m_vertices);
 			m_hash ^= m_hashVertices;
@@ -838,7 +838,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 	}
 
 	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
-	int             prevFrame = VRayExportable::m_set->m_frameCurrent - VRayExportable::m_set->m_frameStep;
+	int             prevFrame = ExpoterSettings::gSet.m_frameCurrent - ExpoterSettings::gSet.m_frameStep;
 
 	size_t      compSize = meshComponentNames.size();
 	std::string geomName = meshComponentNames[compSize-1];

@@ -228,7 +228,7 @@ public:
 	static void freePluginDesc()                           { m_pluginDesc.freeData();    }
 
 	static void initInterpolate(int frame) {
-		if(m_set->m_isAnimation) {
+		if(ExpoterSettings::gSet.m_isAnimation) {
 			sprintf(m_interpStart, "interpolate((%d,", frame);
 			sprintf(m_interpEnd,   "))");
 		}
@@ -299,7 +299,6 @@ public:
 	static char             m_interpStart[32];
 	static char             m_interpEnd[3];
 
-	static ExpoterSettings *m_set;
 	static VRayPluginsDesc  m_pluginDesc;
 
 protected:

@@ -33,8 +33,6 @@ VRayPluginsDesc  VRayExportable::m_pluginDesc;
 char             VRayExportable::m_interpStart[32] = "";
 char             VRayExportable::m_interpEnd[3]    = "";
 
-ExpoterSettings *VRayExportable::m_set = NULL;
-
 
 VRayExportable::VRayExportable():
 	m_bl_ob(PointerRNA_NULL)
@@ -157,17 +155,17 @@ int VRayExportable::write(PyObject *output, int frame) {
 		return 1;
 	m_exportNameCache.insert(m_name);
 
-	if(NOT(m_set->m_isAnimation)) {
+	if(NOT(ExpoterSettings::gSet.m_isAnimation)) {
 		writeData(output, NULL);
 	}
 	else {
-		if(NOT(m_set->DoUpdateCheck())) {
+		if(NOT(ExpoterSettings::gSet.DoUpdateCheck())) {
 			writeData(output, NULL);
 		}
 		else {
 			MHash currentHash = getHash();
 
-			if(frame == m_set->m_frameCurrent) {
+			if(frame == ExpoterSettings::gSet.m_frameCurrent) {
 				initInterpolate(frame);
 				writeData(output, NULL);
 				m_frameCache.update(m_name, currentHash, frame, this);
@@ -185,7 +183,7 @@ int VRayExportable::write(PyObject *output, int frame) {
 				}
 				else {
 					int cacheFrame = m_frameCache.getFrame(m_name);
-					int prevFrame  = frame - m_set->m_frameStep;
+					int prevFrame  = frame - ExpoterSettings::gSet.m_frameStep;
 
 					int needKeyFrame = cacheFrame < prevFrame;
 

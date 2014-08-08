@@ -64,7 +64,7 @@ StrSet      *VRayScene::Node::m_scene_nodes = NULL;
 
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 	VRayExportable(scene, main, ob),
-	m_ntree(VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob)),
+	m_ntree(VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data, (ID*)ob)),
 	m_dupliHolder(PointerRNA_NULL)
 {
 	m_geometry     = NULL;
@@ -92,7 +92,7 @@ void VRayScene::Node::freeData()
 {
 	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"Node::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
 
-	if(NOT(VRayExportable::m_set->m_isAnimation)) {
+	if(NOT(ExpoterSettings::gSet.m_isAnimation)) {
 		if(m_geometry) {
 			delete m_geometry;
 			m_geometry = NULL;
@@ -186,7 +186,7 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 {
 	std::string materialName = CGR_DEFAULT_MATERIAL;
 
-	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ma);
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data, (ID*)ma);
 	if(ntree) {
 		BL::Node maOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeOutputMaterial");
 		if(maOutput) {
@@ -584,9 +584,9 @@ void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 }
 
 
-void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob, const NodeAttrs &attrs)
+void VRayScene::Node::WriteHair(Object *ob, const NodeAttrs &attrs)
 {
-	if(VRayNodeExporter::m_set->DoUpdateCheck() && NOT(IsObjectDataUpdated(ob))) {
+	if(ExpoterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(ob))) {
 		return;
 	}
 
@@ -599,15 +599,15 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob, const Nod
 				continue;
 
 			int           toDelete = false;
-			GeomMayaHair *geomMayaHair = new GeomMayaHair(settings->m_sce, settings->m_main, ob);
+			GeomMayaHair *geomMayaHair = new GeomMayaHair(ExpoterSettings::gSet.m_sce, ExpoterSettings::gSet.m_main, ob);
 			geomMayaHair->preInit(psys);
 			geomMayaHair->setLightLinker(m_lightLinker);
 			geomMayaHair->setSceneSet(m_scene_nodes);
-			if(VRayExportable::m_set->m_exportNodes)
-				geomMayaHair->writeNode(settings->m_fileObject, settings->m_frameCurrent, attrs);
-			if(VRayExportable::m_set->m_exportMeshes) {
+			if(ExpoterSettings::gSet.m_exportNodes)
+				geomMayaHair->writeNode(ExpoterSettings::gSet.m_fileObject, ExpoterSettings::gSet.m_frameCurrent, attrs);
+			if(ExpoterSettings::gSet.m_exportMeshes) {
 				geomMayaHair->init();
-				toDelete = geomMayaHair->write(settings->m_fileGeom, settings->m_frameCurrent);
+				toDelete = geomMayaHair->write(ExpoterSettings::gSet.m_fileGeom, ExpoterSettings::gSet.m_frameCurrent);
 			}
 			if(toDelete)
 				delete geomMayaHair;
@@ -616,7 +616,7 @@ void VRayScene::Node::WriteHair(ExpoterSettings *settings, Object *ob, const Nod
 }
 
 
-void VRayScene::Node::writeHair(ExpoterSettings *settings, const NodeAttrs &attrs)
+void VRayScene::Node::writeHair(const NodeAttrs &attrs)
 {
-	Node::WriteHair(settings, m_ob, attrs);
+	Node::WriteHair(m_ob, attrs);
 }

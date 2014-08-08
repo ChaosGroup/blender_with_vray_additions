@@ -20,4 +20,6 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
-#include "exp_nodes.h"
+#include "exp_settings.h"
+
+ExpoterSettings ExpoterSettings::gSet;
