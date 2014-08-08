@@ -198,8 +198,8 @@ public:
 	static std::string      exportMaterial(BL::BlendData b_data, BL::Material b_ma);
 
 	static void             getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
-
-	static ExpoterSettings *m_set;
+	static std::string      getObjectNameList(BL::Group group);
+	static std::string      getObjectName(BL::Object group);
 
 private:
 	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
@@ -233,6 +233,8 @@ private:
 												   VRayNodeContext *context);
 	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 											           VRayNodeContext *context);
+	static std::string      exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+													   VRayNodeContext *context);
 
 	static std::string      exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
@@ -246,6 +248,9 @@ private:
 
 	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													VRayNodeContext *context);
+
+	static std::string      exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+														  VRayNodeContext *context);
 
 private: 
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);

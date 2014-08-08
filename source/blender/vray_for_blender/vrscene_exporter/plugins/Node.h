@@ -76,7 +76,7 @@ public:
 
 	static int      IsSmokeDomain(Object *ob);
 	static int      HasHair(Object *ob);
-	static void     WriteHair(ExpoterSettings *settings, Object *ob, const NodeAttrs &attrs=NodeAttrs());
+	static void     WriteHair(Object *ob, const NodeAttrs &attrs=NodeAttrs());
 	static int      DoRenderEmitter(Object *ob);
 	static int      IsUpdated(Object *ob);
 	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
@@ -102,7 +102,7 @@ public:
 	void            freeData();
 
 	void            writeGeometry(PyObject *output, int frame=0);
-	void            writeHair(ExpoterSettings *settings, const NodeAttrs &attrs=NodeAttrs());
+	void            writeHair(const NodeAttrs &attrs=NodeAttrs());
 	std::string     writeHideFromView(const std::string &baseMtl="");
 
 	char           *getTransform() const;

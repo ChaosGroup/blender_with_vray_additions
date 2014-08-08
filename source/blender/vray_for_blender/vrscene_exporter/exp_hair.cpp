@@ -31,7 +31,7 @@ int ExportGeomMayaHair(PyObject *outputFile, Scene *sce, Main *main, Object *ob,
 	geomMayaHair->init();
 	geomMayaHair->initName(pluginName);
 
-	int toDelete = geomMayaHair->write(outputFile,  VRayScene::VRayExportable::m_set->m_frameCurrent);
+	int toDelete = geomMayaHair->write(outputFile,  ExpoterSettings::gSet.m_frameCurrent);
 	if(toDelete)
 		delete geomMayaHair;
 

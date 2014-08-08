@@ -59,9 +59,7 @@ extern "C" {
 // Default velocity transform matrix hex
 const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
-
-ExpoterSettings* VRsceneExporter::m_set = NULL;
-BL::Material     VRsceneExporter::m_mtlOverride = BL::Material(PointerRNA_NULL);
+BL::Material  VRsceneExporter::m_mtlOverride = BL::Material(PointerRNA_NULL);
 
 
 static int IsDuplicatorRenderable(BL::Object ob)
@@ -86,11 +84,9 @@ static int IsDuplicatorRenderable(BL::Object ob)
 }
 
 
-VRsceneExporter::VRsceneExporter(ExpoterSettings *settings)
+VRsceneExporter::VRsceneExporter()
 {
 	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
-
-	m_set = settings;
 
 	init();
 }
@@ -134,17 +130,17 @@ void VRsceneExporter::init()
 {
 	VRayExportable::clearCache();
 
-	VRayExportable::m_set->m_mtlOverride.clear();
-	RnaAccess::RnaValue rna((ID*)m_set->m_sce, "vray.SettingsOptions");
+	ExpoterSettings::gSet.m_mtlOverride.clear();
+	RnaAccess::RnaValue rna((ID*)ExpoterSettings::gSet.m_sce, "vray.SettingsOptions");
 	if(rna.getBool("mtl_override_on")) {
 		std::string overrideName = rna.getString("mtl_override");
 
 		if(NOT(overrideName.empty())) {
 			BL::BlendData::materials_iterator bl_maIt;
-			for(m_set->b_data.materials.begin(bl_maIt); bl_maIt != m_set->b_data.materials.end(); ++bl_maIt) {
+			for(ExpoterSettings::gSet.b_data.materials.begin(bl_maIt); bl_maIt != ExpoterSettings::gSet.b_data.materials.end(); ++bl_maIt) {
 				BL::Material bl_ma = *bl_maIt;
 				if(bl_ma.name() == overrideName) {
-					VRayExportable::m_set->m_mtlOverride = GetIDName((ID*)bl_ma.ptr.data);
+					ExpoterSettings::gSet.m_mtlOverride = GetIDName((ID*)bl_ma.ptr.data);
 					m_mtlOverride = bl_ma;
 					break;
 				}
@@ -154,12 +150,12 @@ void VRsceneExporter::init()
 
 	std::string exporterRnaProperty = "vray.Exporter";
 
-	RnaAccess::RnaValue vrayExporter((ID*)m_set->m_sce, exporterRnaProperty.c_str());
-	VRayExportable::m_set->m_useDisplaceSubdiv = vrayExporter.getBool("use_displace");
-	VRayExportable::m_set->m_useInstancerForGroup = vrayExporter.getBool("instancer_dupli_group");
+	RnaAccess::RnaValue vrayExporter((ID*)ExpoterSettings::gSet.m_sce, exporterRnaProperty.c_str());
+	ExpoterSettings::gSet.m_useDisplaceSubdiv    = vrayExporter.getBool("use_displace");
+	ExpoterSettings::gSet.m_useInstancerForGroup = vrayExporter.getBool("instancer_dupli_group");
 
 	// Prepass LightLinker
-	m_lightLinker.init(m_set->b_data, m_set->b_scene);
+	m_lightLinker.init(ExpoterSettings::gSet.b_data, ExpoterSettings::gSet.b_scene);
 	m_lightLinker.prepass();
 	m_lightLinker.setSceneSet(&m_exportedObjects);
 	Node::m_lightLinker = &m_lightLinker;
@@ -171,11 +167,11 @@ void VRsceneExporter::init()
 
 	// Current active layers
 	if(useLayers == 0) {
-		m_set->m_activeLayers = VRayExportable::m_set->m_sce->lay;
+		ExpoterSettings::gSet.m_activeLayers = ExpoterSettings::gSet.m_sce->lay;
 	}
 	// All layers
 	else if(useLayers == 1) {
-		m_set->m_activeLayers = ~(1<<21);
+		ExpoterSettings::gSet.m_activeLayers = ~(1<<21);
 	}
 	// Custom layers
 	else {
@@ -183,10 +179,10 @@ void VRsceneExporter::init()
 		int layer_values[20];
 		RNA_boolean_get_array(vrayExporter.getPtr(), "customRenderLayers", layer_values);
 
-		m_set->m_activeLayers = 0;
+		ExpoterSettings::gSet.m_activeLayers = 0;
 		for(int a = 0; a < 20; ++a) {
 			if(layer_values[a]) {
-				m_set->m_activeLayers |= (1 << a);
+				ExpoterSettings::gSet.m_activeLayers |= (1 << a);
 			}
 		}
 	}
@@ -196,18 +192,18 @@ void VRsceneExporter::init()
 
 	// If "Camera Loop"
 	if(animationMode == 4) {
-		for(Camera *ca = (Camera*)m_set->m_main->camera.first; ca; ca = (Camera*)ca->id.next) {
+		for(Camera *ca = (Camera*)ExpoterSettings::gSet.m_main->camera.first; ca; ca = (Camera*)ca->id.next) {
 			RnaAccess::RnaValue vrayCamera((ID*)ca, "vray");
 			int useHideFromView = vrayCamera.getBool("hide_from_view");
 			if(useHideFromView) {
-				m_set->m_useHideFromView = true;
+				ExpoterSettings::gSet.m_useHideFromView = true;
 				break;
 			}
 		}
 	}
 	else {
-		RnaAccess::RnaValue vrayCamera((ID*)m_set->m_sce->camera->data, "vray");
-		m_set->m_useHideFromView = vrayCamera.getBool("hide_from_view");
+		RnaAccess::RnaValue vrayCamera((ID*)ExpoterSettings::gSet.m_sce->camera->data, "vray");
+		ExpoterSettings::gSet.m_useHideFromView = vrayCamera.getBool("hide_from_view");
 	}
 }
 
@@ -216,22 +212,21 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 {
 	PRINT_INFO("VRsceneExporter::exportScene()");
 
-	VRayNodeExporter::m_set = VRayExportable::m_set;
-	VRayNodeExporter::m_set->m_exportNodes  = exportNodes;
-	VRayNodeExporter::m_set->m_exportMeshes = exportGeometry;
+	ExpoterSettings::gSet.m_exportNodes  = exportNodes;
+	ExpoterSettings::gSet.m_exportMeshes = exportGeometry;
 
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
-	PRINT_INFO_EX("Exporting data for frame %i...", m_set->m_frameCurrent);
+	PRINT_INFO_EX("Exporting data for frame %i...", ExpoterSettings::gSet.m_frameCurrent);
 	timeMeasure = PIL_check_seconds_timer();
 
 	Base *base = NULL;
 
-	m_set->b_engine.update_progress(0.0f);
+	ExpoterSettings::gSet.b_engine.update_progress(0.0f);
 
 	PointerRNA sceneRNA;
-	RNA_id_pointer_create((ID*)m_set->m_sce, &sceneRNA);
+	RNA_id_pointer_create((ID*)ExpoterSettings::gSet.m_sce, &sceneRNA);
 	BL::Scene bl_sce(sceneRNA);
 
 	size_t nObjects = bl_sce.objects.length();
@@ -256,8 +251,8 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	// Create particle system data
 	// Needed for the correct first frame
 	//
-	if(m_set->m_isAnimation) {
-		if(m_set->m_frameCurrent == m_set->m_frameStart) {
+	if(ExpoterSettings::gSet.m_isAnimation) {
+		if(ExpoterSettings::gSet.m_frameCurrent == ExpoterSettings::gSet.m_frameStart) {
 			initDupli();
 		}
 	}
@@ -265,11 +260,11 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	// Export stuff
 	int exportInterrupt = false;
 
-	base = (Base*)m_set->m_sce->base.first;
+	base = (Base*)ExpoterSettings::gSet.m_sce->base.first;
 	nObjects = 0;
 	while(base) {
-		if(m_set->b_engine.test_break()) {
-			m_set->b_engine.report(RPT_WARNING, "Export interrupted!");
+		if(ExpoterSettings::gSet.b_engine.test_break()) {
+			ExpoterSettings::gSet.b_engine.report(RPT_WARNING, "Export interrupted!");
 			exportInterrupt = true;
 			break;
 		}
@@ -286,7 +281,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		if(ob->restrictflag & OB_RESTRICT_RENDER)
 			continue;
 
-		if(NOT(ob->lay & m_set->m_activeLayers))
+		if(NOT(ob->lay & ExpoterSettings::gSet.m_activeLayers))
 			continue;
 
 		if(m_skipObjects.count((void*)&ob->id)) {
@@ -299,7 +294,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		expProgress += expProgStep;
 		nObjects++;
 		if((nObjects % progUpdateCnt) == 0) {
-			m_set->b_engine.update_progress(expProgress);
+			ExpoterSettings::gSet.b_engine.update_progress(expProgress);
 		}
 	}
 
@@ -313,8 +308,8 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		BL::BlendData b_data(PointerRNA_NULL);
 		BL::BlendData::materials_iterator maIt;
 		
-		if (m_set->b_engine.is_preview()) {
-			RenderEngine *re = (RenderEngine*)m_set->b_engine.ptr.data;
+		if (ExpoterSettings::gSet.b_engine.is_preview()) {
+			RenderEngine *re = (RenderEngine*)ExpoterSettings::gSet.b_engine.ptr.data;
 			if(re->type->preview_main) {
 				PointerRNA previewMainPtr;
 				RNA_id_pointer_create((ID*)re->type->preview_main, &previewMainPtr);
@@ -323,7 +318,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 
 		if(NOT(b_data))
-			b_data = m_set->b_data;
+			b_data = ExpoterSettings::gSet.b_data;
 
 		if(m_mtlOverride)
 			VRayNodeExporter::exportMaterial(b_data, m_mtlOverride);
@@ -335,9 +330,9 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 	}
 
-	m_lightLinker.write(m_set->m_fileObject);
+	m_lightLinker.write(ExpoterSettings::gSet.m_fileObject);
 
-	m_set->b_engine.update_progress(1.0f);
+	ExpoterSettings::gSet.b_engine.update_progress(1.0f);
 
 	m_hideFromView.clear();
 
@@ -345,12 +340,12 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 	if(exportInterrupt) {
 		PRINT_INFO_EX("Exporting data for frame %i is interruped! [%s]",
-					  m_set->m_frameCurrent, timeMeasureBuf);
+					  ExpoterSettings::gSet.m_frameCurrent, timeMeasureBuf);
 		return 1;
 	}
 
 	PRINT_INFO_EX("Exporting data for frame %i done [%s]",
-				  m_set->m_frameCurrent, timeMeasureBuf);
+				  ExpoterSettings::gSet.m_frameCurrent, timeMeasureBuf);
 
 	return 0;
 }
@@ -374,7 +369,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		// If object is a dupli group holder and it's not animated -
 		// export it only for the first frame
 		//
-		if(m_set->DoUpdateCheck()) {
+		if(ExpoterSettings::gSet.DoUpdateCheck()) {
 			if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
 				if(NOT(VRayScene::Node::IsUpdated((Object*)bl_ob.ptr.data))) {
 					return;
@@ -382,14 +377,14 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			}
 		}
 
-		bl_ob.dupli_list_create(m_set->b_scene, 2);
+		bl_ob.dupli_list_create(ExpoterSettings::gSet.b_scene, 2);
 
 		RnaAccess::RnaValue bl_obRNA((ID*)ob, "vray");
 		int override_objectID = bl_obRNA.getInt("dupliGroupIDOverride");
 
 		int useInstancer = true;
 		if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
-			useInstancer = m_set->m_useInstancerForGroup;
+			useInstancer = ExpoterSettings::gSet.m_useInstancerForGroup;
 		}
 		else {
 			PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
@@ -409,7 +404,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 		BL::Object::dupli_list_iterator b_dup;
 		for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
-			if(m_set->b_engine.test_break())
+			if(ExpoterSettings::gSet.b_engine.test_break())
 				break;
 
 			BL::DupliObject bl_dupliOb      = *b_dup;
@@ -498,7 +493,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		}
 	}
 
-	if(m_set->b_engine.test_break())
+	if(ExpoterSettings::gSet.b_engine.test_break())
 		return;
 
 	if(GEOM_TYPE(ob)) {
@@ -531,10 +526,10 @@ void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const No
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
 	if(RNA_boolean_get(&vrayClipper, "enabled")) {
-		VRayNodeExporter::exportVRayClipper(m_set->b_data, bl_ob);
+		VRayNodeExporter::exportVRayClipper(ExpoterSettings::gSet.b_data, bl_ob);
 	}
 	else {
-		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)ob);
+		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data, (ID*)ob);
 		if(ntree) {
 			exportNodeFromNodeTree(ntree, ob, attrs);
 		}
@@ -550,7 +545,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	PRINT_INFO("VRsceneExporter::exportNode(%s)",
 			   ob->id.name);
 
-	Node *node = new Node(m_set->m_sce, m_set->m_main, ob);
+	Node *node = new Node(ExpoterSettings::gSet.m_sce, ExpoterSettings::gSet.m_main, ob);
 	node->setNamePrefix(attrs.namePrefix);
 	if(attrs.override) {
 		NodeAttrs &_attrs = const_cast<NodeAttrs&>(attrs);
@@ -563,10 +558,10 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			node->setDupliHolder(attrs.dupliHolder);
 		}
 	}
-	node->init(m_set->m_mtlOverride);
+	node->init(ExpoterSettings::gSet.m_mtlOverride);
 	node->initHash();
 
-	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
+	if(ExpoterSettings::gSet.m_useHideFromView && m_hideFromView.hasData()) {
 		RenderStats hideFromViewStats;
 		hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
 		hideFromViewStats.gi_visibility          = !m_hideFromView.gi_visibility.count(ob);
@@ -580,36 +575,36 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	}
 
 	// This will also check if object's mesh is valid
-	if(NOT(node->preInitGeometry(VRayExportable::m_set->m_useDisplaceSubdiv))) {
+	if(NOT(node->preInitGeometry(ExpoterSettings::gSet.m_useDisplaceSubdiv))) {
 		delete node;
 		return;
 	}
 
 	if(node->hasHair()) {
-		node->writeHair(m_set);
+		node->writeHair();
 		if(NOT(node->doRenderEmitter())) {
 			delete node;
 			return;
 		}
 	}
 
-	if(VRayExportable::m_set->m_exportMeshes) {
+	if(ExpoterSettings::gSet.m_exportMeshes) {
 		int writeData = true;
-		if(checkUpdated && m_set->DoUpdateCheck())
+		if(checkUpdated && ExpoterSettings::gSet.DoUpdateCheck())
 			writeData = node->isObjectDataUpdated();
 		if(writeData) {
 			node->initGeometry();
-			node->writeGeometry(m_set->m_fileGeom, m_set->m_frameCurrent);
+			node->writeGeometry(ExpoterSettings::gSet.m_fileGeom, ExpoterSettings::gSet.m_frameCurrent);
 		}
 	}
 
-	if(VRayExportable::m_set->m_exportNodes && NOT(node->isMeshLight())) {
+	if(ExpoterSettings::gSet.m_exportNodes && NOT(node->isMeshLight())) {
 		int writeObject = true;
-		if(checkUpdated && m_set->DoUpdateCheck())
+		if(checkUpdated && ExpoterSettings::gSet.DoUpdateCheck())
 			writeObject = node->isObjectUpdated();
 		int toDelete = false;
 		if(writeObject) {
-			toDelete = node->write(m_set->m_fileObject, m_set->m_frameCurrent);
+			toDelete = node->write(ExpoterSettings::gSet.m_fileObject, ExpoterSettings::gSet.m_frameCurrent);
 		}
 		else {
 			if(m_hideFromView.hasData()) {
@@ -637,7 +632,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export hair
 	//
-	Node::WriteHair(m_set, ob, attrs);
+	Node::WriteHair(ob, attrs);
 
 	if(NOT(Node::DoRenderEmitter(ob)))
 		return;
@@ -670,9 +665,9 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	//
 	VRayNodeContext nodeCtx;
 	nodeCtx.obCtx.ob   = ob;
-	nodeCtx.obCtx.sce  = m_set->m_sce;
-	nodeCtx.obCtx.main = m_set->m_main;
-	nodeCtx.obCtx.mtlOverride = m_set->m_mtlOverride;
+	nodeCtx.obCtx.sce  = ExpoterSettings::gSet.m_sce;
+	nodeCtx.obCtx.main = ExpoterSettings::gSet.m_main;
+	nodeCtx.obCtx.mtlOverride = ExpoterSettings::gSet.m_mtlOverride;
 
 	// Export object main properties
 	//
@@ -712,7 +707,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export 'MtlRenderStats' for "Hide From View"
 	//
-	if(m_set->m_useHideFromView && m_hideFromView.hasData()) {
+	if(ExpoterSettings::gSet.m_useHideFromView && m_hideFromView.hasData()) {
 		std::string hideFromViewName = "HideFromView@" + pluginName;
 
 		AttributeValueMap hideFromViewAttrs;
@@ -770,12 +765,12 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 void VRsceneExporter::exportLight(Object *ob, DupliObject *dOb)
 {
-	if(NOT(VRayExportable::m_set->m_exportNodes))
+	if(NOT(ExpoterSettings::gSet.m_exportNodes))
 		return;
 
-	Light *light = new Light(m_set->m_sce, m_set->m_main, ob, dOb);
+	Light *light = new Light(ExpoterSettings::gSet.m_sce, ExpoterSettings::gSet.m_main, ob, dOb);
 
-	int toDelete = light->write(m_set->m_fileLights, m_set->m_frameCurrent);
+	int toDelete = light->write(ExpoterSettings::gSet.m_fileLights, ExpoterSettings::gSet.m_frameCurrent);
 	if(toDelete) {
 		delete light;
 	}
@@ -860,7 +855,7 @@ void VRsceneExporter::exportLightNoded(Object *ob, DupliObject *dOb)
 
 	// Now, get all mappable attribute values
 	//
-	BL::NodeTree lampNtree = VRayNodeExporter::getNodeTree(m_set->b_data, (ID*)lamp);
+	BL::NodeTree lampNtree = VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data, (ID*)lamp);
 	if(lampNtree) {
 		std::string vrayNodeType = boost::str(boost::format("VRayNode%s") % pluginID);
 
@@ -886,8 +881,8 @@ void VRsceneExporter::exportLightNoded(Object *ob, DupliObject *dOb)
 	// Now, let's go through "Render Elements" and check if we have to
 	// plug our light somewhere like "Light Select"
 	//
-	BL::NodeTree sceNtree = VRayNodeExporter::getNodeTree(m_set->b_data,
-														  (ID*)m_set->m_sce);
+	BL::NodeTree sceNtree = VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data,
+														  (ID*)ExpoterSettings::gSet.m_sce);
 	if(sceNtree) {
 		BL::Node chanNode = VRayNodeExporter::getNodeByType(sceNtree, "VRayNodeRenderChannels");
 		if(chanNode) {
@@ -910,7 +905,7 @@ void VRsceneExporter::exportLightNoded(Object *ob, DupliObject *dOb)
 void VRsceneExporter::initDupli()
 {
 	PointerRNA sceneRNA;
-	RNA_id_pointer_create((ID*)m_set->m_sce, &sceneRNA);
+	RNA_id_pointer_create((ID*)ExpoterSettings::gSet.m_sce, &sceneRNA);
 	BL::Scene bl_sce(sceneRNA);
 
 	BL::Scene::objects_iterator bl_obIt;
@@ -940,14 +935,14 @@ void VRsceneExporter::initDupli()
 
 void VRsceneExporter::exportDupli()
 {
-	PyObject *out = m_set->m_fileObject;
+	PyObject *out = ExpoterSettings::gSet.m_fileObject;
 
 	for(MyPartSystems::const_iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
 		const std::string   psysName = sysIt->first;
 		const MyPartSystem *parts    = sysIt->second;
 
 		PYTHON_PRINTF(out, "\nInstancer Dupli%s {", StripString(psysName).c_str());
-		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, m_set->m_isAnimation ? m_set->m_frameCurrent : 0);
+		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, ExpoterSettings::gSet.m_isAnimation ? ExpoterSettings::gSet.m_frameCurrent : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
@@ -961,7 +956,7 @@ void VRsceneExporter::exportDupli()
 			}
 		}
 		PYTHON_PRINTF(out, ")%s;", VRayExportable::m_interpEnd);
-		PYTHON_PRINTF(m_set->m_fileObject, "\n}\n");
+		PYTHON_PRINTF(ExpoterSettings::gSet.m_fileObject, "\n}\n");
 	}
 
 	m_psys.clear();

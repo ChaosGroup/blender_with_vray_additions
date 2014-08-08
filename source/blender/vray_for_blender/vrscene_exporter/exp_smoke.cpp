@@ -46,7 +46,7 @@ void ExportTexVoxelData(PyObject          *output,
 	if(NOT(texVoxelData->getHash()))
 		return;
 
-	int toDelete = texVoxelData->write(output, VRayScene::VRayExportable::m_set->m_frameCurrent);
+	int toDelete = texVoxelData->write(output, ExpoterSettings::gSet.m_frameCurrent);
 	if(toDelete)
 		delete texVoxelData;
 }
@@ -121,7 +121,7 @@ void  ExportVoxelDataAsFluid(PyObject *output, Scene *sce, Object *ob, SmokeModi
 	if(NOT(texVoxelData->getHash()))
 		return;
 
-	int toDelete = texVoxelData->write(output, VRayScene::VRayExportable::m_set->m_frameCurrent);
+	int toDelete = texVoxelData->write(output, ExpoterSettings::gSet.m_frameCurrent);
 	if(toDelete)
 		delete texVoxelData;
 }

@@ -63,6 +63,23 @@ static PyObject* mExportFree(PyObject *self)
 }
 
 
+static PyObject* mExportInitAnim(PyObject *self, PyObject *args)
+{
+	int isAnimation = false;
+	int frameStart  = 1;
+	int frameStep   = 1;
+
+	if(NOT(PyArg_ParseTuple(args, "iii", &isAnimation, &frameStart, &frameStep)))
+		return NULL;
+
+	ExpoterSettings::gSet.m_isAnimation = isAnimation;
+	ExpoterSettings::gSet.m_frameStart  = frameStart;
+	ExpoterSettings::gSet.m_frameStep   = frameStep;
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 {
 	PyObject *py_engine     = NULL;
@@ -76,10 +93,6 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *materialsFile = NULL;
 	PyObject *texturesFile  = NULL;
 
-	int       isAnimation   = false;
-	int       frameStart    = 1;
-	int       frameStep     = 1;
-
 	char     *drSharePath   = NULL;
 
 	static char *kwlist[] = {
@@ -92,16 +105,12 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		_C("lightsFile"),     // 6
 		_C("materialFile"),   // 7
 		_C("textureFile"),    // 8
-		_C("isAnimation"),    // 9
-		_C("frameStart"),     // 10
-		_C("frameStep"),      // 11
-		_C("drSharePath"),    // 12
+		_C("drSharePath"),    // 9
 		NULL
 	};
 
-	//                                  0123456789111
-	//                                            012
-	static const char  kwlistTypes[] = "OOOOOOOOOiiis";
+	//                                  0123456789
+	static const char  kwlistTypes[] = "OOOOOOOOOs";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 									   &py_engine,
@@ -113,9 +122,6 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 									   &lightsFile,
 									   &materialsFile,
 									   &texturesFile,
-									   &isAnimation,
-									   &frameStart,
-									   &frameStep,
 									   &drSharePath)))
 		return NULL;
 
@@ -137,27 +143,24 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_data), &dataRNA);
 	BL::BlendData bl_data(dataRNA);
 
-	VRayExportable::m_set = new ExpoterSettings(bl_scene, bl_data, bl_engine);
-	VRayExportable::m_set->m_sce  = (Scene*)bl_scene.ptr.data;
-	VRayExportable::m_set->m_main = (Main*)bl_data.ptr.data;
+	ExpoterSettings::gSet.reset();
+	ExpoterSettings::gSet.init(bl_scene, bl_data, bl_engine);
+	ExpoterSettings::gSet.m_sce  = (Scene*)bl_scene.ptr.data;
+	ExpoterSettings::gSet.m_main = (Main*)bl_data.ptr.data;
 
-	VRayExportable::m_set->m_fileObject = obFile;
-	VRayExportable::m_set->m_fileGeom   = geomFile;
-	VRayExportable::m_set->m_fileLights = lightsFile;
-	VRayExportable::m_set->m_fileMat    = materialsFile;
-	VRayExportable::m_set->m_fileTex    = texturesFile;
-
-	VRayExportable::m_set->m_isAnimation = isAnimation;
-	VRayExportable::m_set->m_frameStart  = frameStart;
-	VRayExportable::m_set->m_frameStep   = frameStep;
+	ExpoterSettings::gSet.m_fileObject = obFile;
+	ExpoterSettings::gSet.m_fileGeom   = geomFile;
+	ExpoterSettings::gSet.m_fileLights = lightsFile;
+	ExpoterSettings::gSet.m_fileMat    = materialsFile;
+	ExpoterSettings::gSet.m_fileTex    = texturesFile;
 
 	if(drSharePath) {
-		VRayExportable::m_set->m_drSharePath = drSharePath;
+		ExpoterSettings::gSet.m_drSharePath = drSharePath;
 	}
 
-	VRsceneExporter *exporter = new VRsceneExporter(VRayExportable::m_set);
+	ExpoterSettings::gSet.m_exporter = new VRsceneExporter();
 
-	return PyLong_FromVoidPtr(exporter);
+	return PyLong_FromVoidPtr(ExpoterSettings::gSet.m_exporter);
 }
 
 
@@ -166,11 +169,6 @@ static PyObject* mExportExit(PyObject *self, PyObject *value)
 	void *exporterPtr = PyLong_AsVoidPtr(value);
 	if(exporterPtr) {
 		delete (VRsceneExporter*)exporterPtr;
-	}
-
-	if(VRayExportable::m_set) {
-		delete VRayExportable::m_set;
-		VRayExportable::m_set = NULL;
 	}
 
 	Py_RETURN_NONE;
@@ -184,9 +182,7 @@ static PyObject* mExportSetFrame(PyObject *self, PyObject *args)
 	if(NOT(PyArg_ParseTuple(args, "i", &frameCurrent)))
 		return NULL;
 
-	if(VRayExportable::m_set) {
-		VRayExportable::m_set->m_frameCurrent = frameCurrent;
-	}
+	ExpoterSettings::gSet.m_frameCurrent = frameCurrent;
 
 	Py_RETURN_NONE;
 }
@@ -370,9 +366,9 @@ static PyObject* mExportMesh(PyObject *self, PyObject *args)
 
 static PyObject* mExportNode(PyObject *self, PyObject *args)
 {
-	PyObject *ntreePtr  = NULL;
-	PyObject *nodePtr   = NULL;
-	PyObject *socketPtr = NULL;
+	PyObject *ntreePtr    = NULL;
+	PyObject *nodePtr     = NULL;
+	PyObject *socketPtr   = NULL;
 
 	if(NOT(PyArg_ParseTuple(args, "OOO", &ntreePtr, &nodePtr, &socketPtr))) {
 		return NULL;
@@ -391,11 +387,9 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 	RNA_pointer_create((ID*)node.ptr.id.data, &RNA_NodeSocket, nodeSocket, &socketRNA);
 	BL::NodeSocket fromSocket(socketRNA);
 
-	std::string pluginName = VRayNodeExporter::exportVRayNode(ntree, node, fromSocket);
+	std::string pluginName = VRayNodeExporter::exportSocket(ntree, fromSocket);
 
-	// TODO: Return result plugin name
-
-	Py_RETURN_NONE;
+	return PyUnicode_FromString(pluginName.c_str());
 }
 
 
@@ -516,6 +510,7 @@ static PyMethodDef methods[] = {
 
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export node tree node"},
 
+	{"initAnimation",            mExportInitAnim,    METH_VARARGS, "Init animation settings"},
 	{"setFrame",                 mExportSetFrame,    METH_VARARGS, "Set current frame"},
 	{"clearFrames", (PyCFunction)mExportClearFrames, METH_NOARGS,  "Clear frame cache"},
 	{"clearCache",  (PyCFunction)mExportClearCache,  METH_NOARGS,  "Clear name cache"},

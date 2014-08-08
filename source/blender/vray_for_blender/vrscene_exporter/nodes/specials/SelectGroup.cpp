@@ -31,7 +31,7 @@ BL::Group VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::No
 	std::string groupName = buf;
 
 	if(NOT(groupName.empty())) {
-		BL::BlendData b_data = m_set->b_data;
+		BL::BlendData b_data = ExpoterSettings::gSet.b_data;
 		
 		BL::BlendData::groups_iterator grIt;
 		for(b_data.groups.begin(grIt); grIt != b_data.groups.end(); ++grIt) {
@@ -42,4 +42,22 @@ BL::Group VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::No
 	}
 
 	return BL::Group(PointerRNA_NULL);
+}
+
+
+std::string VRayNodeExporter::getObjectNameList(BL::Group group)
+{
+	if(NOT(group))
+		return "List()";
+
+	StrVector obNames;
+
+	BL::Group::objects_iterator obIt;
+	for(group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
+		BL::Object b_ob = *obIt;
+
+		obNames.push_back(GetIDName(b_ob));
+	}
+
+	return BOOST_FORMAT_LIST(obNames);
 }

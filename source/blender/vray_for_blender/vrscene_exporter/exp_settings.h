@@ -34,11 +34,18 @@
 #include <Python.h>
 
 
+class VRsceneExporter;
+
 struct ExpoterSettings {
-	ExpoterSettings(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine):
-		b_scene(scene),
-		b_data(data),
-		b_engine(engine)
+	static ExpoterSettings gSet;
+
+	ExpoterSettings():
+		b_scene(PointerRNA_NULL),
+		b_data(PointerRNA_NULL),
+		b_engine(PointerRNA_NULL)
+	{}
+
+	void reset()
 	{
 		m_sce  = NULL;
 		m_main = NULL;
@@ -59,6 +66,13 @@ struct ExpoterSettings {
 
 		m_mtlOverride = "";
 		m_drSharePath = "";
+	}
+	
+	void init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
+	{
+		b_scene  = scene;
+		b_data   = data;
+		b_engine = engine;
 	}
 
 	bool              DoUpdateCheck() { return m_isAnimation && (m_frameCurrent > m_frameStart); }
@@ -95,6 +109,8 @@ struct ExpoterSettings {
 
 	// DR
 	std::string       m_drSharePath;
+
+	VRsceneExporter  *m_exporter;
 
 };
 
