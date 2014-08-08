@@ -7997,6 +7997,12 @@ static void expand_idprops(FileData *fd, Main *mainvar, IDProperty *idprop)
 	IDProperty **idp_loop;
 	int i;
 
+	/* NOTE: One scene stores invalid idprop address
+	 * This is the only fix I came with right now...
+	 */
+	if ((intptr_t)idprop < 0xFF)
+		return;
+
 	if (!idprop) return;
 	BLI_assert(idprop->type == IDP_GROUP);
 
