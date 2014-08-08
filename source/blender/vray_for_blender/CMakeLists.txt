@@ -76,6 +76,7 @@ set(SRC
 	vrscene_exporter/exp_anim.h
 	vrscene_exporter/exp_defines.h
 	vrscene_exporter/exp_settings.h
+	vrscene_exporter/exp_settings.cpp
 	vrscene_exporter/exp_geom.cpp
 	vrscene_exporter/exp_hair.cpp
 	vrscene_exporter/exp_scene.cpp
@@ -92,7 +93,6 @@ set(SRC
 	vrscene_exporter/nodes/specials/GeomDisplacedMesh.cpp
 	vrscene_exporter/nodes/specials/LightMesh.cpp
 	vrscene_exporter/nodes/specials/SelectGroup.cpp
-	vrscene_exporter/nodes/specials/SelectNodeTree.cpp
 	vrscene_exporter/nodes/specials/SelectObject.cpp
 	vrscene_exporter/nodes/specials/TexGradRamp.cpp
 	vrscene_exporter/nodes/specials/TexLayered.cpp
@@ -103,6 +103,8 @@ set(SRC
 	vrscene_exporter/nodes/specials/UVWGen.cpp
 	vrscene_exporter/nodes/specials/MtlMulti.cpp
 	vrscene_exporter/nodes/specials/VRayClipper.cpp
+	vrscene_exporter/nodes/specials/Effects.cpp
+	vrscene_exporter/nodes/specials/Environment.cpp
 	vrscene_exporter/plugins/GeomMayaHair.cpp
 	vrscene_exporter/plugins/GeomMayaHair.h
 	vrscene_exporter/plugins/GeomMeshFile.cpp

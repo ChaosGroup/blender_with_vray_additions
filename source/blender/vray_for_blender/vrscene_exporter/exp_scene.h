@@ -140,10 +140,9 @@ public:
 
 class VRsceneExporter {
 public:
-	VRsceneExporter(ExpoterSettings *settings);
+	VRsceneExporter();
 	~VRsceneExporter();
 
-	static ExpoterSettings *m_set;
 	static BL::Material     m_mtlOverride;
 
 	// Used to skip Node creating of gizmo objects
