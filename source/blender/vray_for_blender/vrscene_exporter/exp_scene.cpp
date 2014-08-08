@@ -140,7 +140,7 @@ void VRsceneExporter::init()
 			for(ExpoterSettings::gSet.b_data.materials.begin(bl_maIt); bl_maIt != ExpoterSettings::gSet.b_data.materials.end(); ++bl_maIt) {
 				BL::Material bl_ma = *bl_maIt;
 				if(bl_ma.name() == overrideName) {
-					ExpoterSettings::gSet.m_mtlOverride = GetIDName((ID*)bl_ma.ptr.data);
+					ExpoterSettings::gSet.m_mtlOverride = Node::GetMaterialName((Material*)bl_ma.ptr.data);
 					m_mtlOverride = bl_ma;
 					break;
 				}
@@ -257,6 +257,9 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 	}
 
+	VRayNodeContext nodeCtx;
+	VRayNodeExporter::exportVRayEnvironment(&nodeCtx);
+
 	// Export stuff
 	int exportInterrupt = false;
 
@@ -322,11 +325,12 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 		if(m_mtlOverride)
 			VRayNodeExporter::exportMaterial(b_data, m_mtlOverride);
-		else {
-			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
-				BL::Material b_ma = *maIt;
-				VRayNodeExporter::exportMaterial(b_data, b_ma);
-			}
+
+		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+			BL::Material b_ma = *maIt;
+			if(m_mtlOverride && Node::DoOverrideMaterial(b_ma))
+				continue;
+			VRayNodeExporter::exportMaterial(b_data, b_ma);
 		}
 	}
 
@@ -678,7 +682,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(geometrySocket);
+	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(geometrySocket, &nodeCtx);
 	if(geometryNode.bl_idname() == "VRayNodeLightMesh") {
 		// No need to export Node - this object is LightMesh
 		return;
