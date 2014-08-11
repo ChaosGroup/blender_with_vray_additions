@@ -136,8 +136,6 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 
 std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	std::string pluginName = "NULL";
-
 	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
 	if(objectSock && objectSock.is_linked()) {
 		BL::Node domainNode = VRayNodeExporter::getConnectedNode(objectSock, context);
@@ -161,7 +159,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 		}
 	}
 
-	return pluginName;
+	return "List()";
 }
 
 
@@ -175,7 +173,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 		gizmos.push_back(VRayNodeExporter::exportSocket(ntree, gizmosSock, context));
 	}
 
-	manualAttrs["gizmos"] = BOOST_FORMAT_LIST(gizmos);
+	manualAttrs["gizmos"] = gizmos;
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }
