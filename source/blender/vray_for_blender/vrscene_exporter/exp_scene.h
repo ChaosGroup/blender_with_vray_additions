@@ -158,8 +158,8 @@ private:
 
 	void                    exportObjectBase(Object *ob);
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
-	void                    exportLight(Object *ob, DupliObject *dOb=NULL);
-	void                    exportLightNoded(Object *ob, DupliObject *dOb=NULL);
+
+	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL);
 
 	void                    initDupli();
 	void                    exportDupli();
