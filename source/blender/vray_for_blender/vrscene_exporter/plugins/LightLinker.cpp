@@ -82,7 +82,7 @@ void LightLinker::prepass()
 		int includeExclude   = RNA_enum_get(&ptr, "include_exclude");
 		int includeIllumShad = RNA_enum_get(&ptr, "illumination_shadow");
 
-		if (includeExclude == 0)
+		if (includeExclude == LightList::typeNone)
 			continue;
 
 		const std::string &lightName = GetIDName((ID*)ob.ptr.data, "LA");
@@ -131,18 +131,27 @@ void LightLinker::write(PyObject *output)
 
 		const StrSet &obList = lightList.obList;
 
-		if (lightList.obListType == 1) {
-			std::copy(obList.begin(), obList.end(),
-					  std::inserter(m_ignored_lights[lightName], m_ignored_lights[lightName].begin()));
+		if (lightList.obListType == LightList::typeExclude) {
+			if (lightList.flags == LightLinker::excludeIllumination || lightList.flags == LightLinker::excludeBoth) {
+				std::copy(obList.begin(), obList.end(),
+						  std::inserter(m_ignored_lights[lightName], m_ignored_lights[lightName].begin()));
+			}
+			if (lightList.flags == LightLinker::excludeShadows || lightList.flags == LightLinker::excludeBoth) {
+				std::copy(obList.begin(), obList.end(),
+						  std::inserter(m_ignored_shadow_lights[lightName], m_ignored_shadow_lights[lightName].begin()));
+			}
 		}
-		else if (lightList.obListType == 2) {
-			boost::set_difference(*m_scene_nodes, obList,
-								  std::inserter(m_ignored_lights[lightName], m_ignored_lights[lightName].begin()));
+		else if (lightList.obListType == LightList::typeInclude) {
+			if (lightList.flags == LightLinker::excludeIllumination || lightList.flags == LightLinker::excludeBoth) {
+				boost::set_difference(*m_scene_nodes, obList,
+									  std::inserter(m_ignored_lights[lightName], m_ignored_lights[lightName].begin()));
+			}
+			if (lightList.flags == LightLinker::excludeShadows || lightList.flags == LightLinker::excludeBoth) {
+				boost::set_difference(*m_scene_nodes, obList,
+									  std::inserter(m_ignored_shadow_lights[lightName], m_ignored_shadow_lights[lightName].begin()));
+			}
 		}
 	}
-
-	plugin << "\nSettingsLightLinker SettingsLightLinker {";
-	plugin << "\n\t" << "ignored_lights=List(";
 
 	// Remove empty items
 	LightIgnore::iterator linkRemoveIt;
@@ -154,6 +163,10 @@ void LightLinker::write(PyObject *output)
 	}
 
 	LightIgnore::const_iterator linkIt;
+
+	plugin << "\nSettingsLightLinker SettingsLightLinker {";
+
+	plugin << "\n\t" << "ignored_lights=List(";
 	for (linkIt = m_ignored_lights.begin(); linkIt != m_ignored_lights.end(); ++linkIt) {
 		const std::string &lightName   = linkIt->first;
 		const StrSet      &obNamesList = linkIt->second;
@@ -163,8 +176,20 @@ void LightLinker::write(PyObject *output)
 		if (linkIt != --m_ignored_lights.end())
 			plugin << ",";
 	}
-
 	plugin << ");";
+
+	plugin << "\n\t" << "ignored_shadow_lights=List(";
+	for (linkIt = m_ignored_shadow_lights.begin(); linkIt != m_ignored_shadow_lights.end(); ++linkIt) {
+		const std::string &lightName   = linkIt->first;
+		const StrSet      &obNamesList = linkIt->second;
+
+		plugin << "List(" << lightName << "," << BOOST_FORMAT_LIST_JOIN(obNamesList) << ")";
+
+		if (linkIt != --m_ignored_shadow_lights.end())
+			plugin << ",";
+	}
+	plugin << ");";
+
 	plugin << "\n}\n";
 	
 	PYTHON_PRINT(output, plugin.str().c_str());
