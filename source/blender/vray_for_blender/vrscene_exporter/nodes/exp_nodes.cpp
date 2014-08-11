@@ -1202,3 +1202,16 @@ void VRayNodeExporter::getUserAttributes(PointerRNA *ptr, StrVector &user_attrib
 	}
 	RNA_END;
 }
+
+
+int VRayNodeExporter::isObjectVisible(BL::Object b_ob)
+{
+	Object *ob = (Object*)b_ob.ptr.data;
+	if (!ob)
+		return false;
+	if(ob->restrictflag & OB_RESTRICT_RENDER)
+		return false;
+	if(NOT(ob->lay & ExpoterSettings::gSet.m_activeLayers))
+		return false;
+	return true;
+}

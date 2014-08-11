@@ -48,7 +48,7 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL:
 			}
 			else {
 				BL::Object domainOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, domainNode, domainSock, context);
-				if(domainOb) {
+				if(domainOb && VRayNodeExporter::isObjectVisible(domainOb)) {
 					BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
 					// This is a smoke simulation and we need to export smoke data
@@ -147,7 +147,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 		if(domainNode) {
 			if (domainNode.bl_idname() == "VRayNodeSelectObject") {
 				BL::Object domainOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, domainNode, objectSock, context);
-				if(domainOb) {
+				if(domainOb && VRayNodeExporter::isObjectVisible(domainOb)) {
 					pluginName = ExportSmokeDomain(ntree, node, domainOb, context);
 				}
 			}
@@ -158,7 +158,9 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 				BL::Group::objects_iterator obIt;
 				for(group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
 					BL::Object domainOb = *obIt;
-					domains.insert(ExportSmokeDomain(ntree, node, domainOb, context));
+					if(domainOb && VRayNodeExporter::isObjectVisible(domainOb)) {
+						domains.insert(ExportSmokeDomain(ntree, node, domainOb, context));
+					}
 				}
 				return BOOST_FORMAT_LIST(domains);
 			}
