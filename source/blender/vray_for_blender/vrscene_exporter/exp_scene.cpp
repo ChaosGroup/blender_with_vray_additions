@@ -764,22 +764,14 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
 {
 	BL::Lamp          lamp(ob.data());
-
 	PointerRNA        vrayLamp = RNA_pointer_get(&lamp.ptr, "vray");
 
-	std::string       pluginID;
-	AttributeValueMap pluginAttrs;
+	const std::string &pluginName = GetIDName(ob, "LA");
 
+	// Find plugin ID
+	std::string  pluginID;
 	if(lamp.type() == BL::Lamp::type_AREA) {
 		pluginID = "LightRectangle";
-
-		BL::AreaLamp  areaLamp(lamp);
-
-		float sizeX = areaLamp.size() / 2.0f;
-		float sizeY = areaLamp.shape() == BL::AreaLamp::shape_SQUARE ? sizeX : areaLamp.size_y() / 2.0f;
-
-		pluginAttrs["u_size"] = BOOST_FORMAT_FLOAT(sizeX);
-		pluginAttrs["v_size"] = BOOST_FORMAT_FLOAT(sizeY);
 	}
 	else if(lamp.type() == BL::Lamp::type_HEMI) {
 		pluginID = "LightDome";
@@ -787,16 +779,8 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
 	else if(lamp.type() == BL::Lamp::type_SPOT) {
 		int spotType = RNA_enum_get(&vrayLamp, "spot_type");
 		switch(spotType) {
-			case 0: {
-				pluginID = "LightSpotMax";
-
-				BL::SpotLamp spotLamp(lamp);
-
-				pluginAttrs["fallsize"] = BOOST_FORMAT_FLOAT(spotLamp.spot_size());
-
-				break;
-			}
-			case 1: pluginID = "LightIESMax"; break;
+			case 0: pluginID = "LightSpotMax"; break;
+			case 1: pluginID = "LightIESMax";  break;
 		}
 	}
 	else if(lamp.type() == BL::Lamp::type_POINT) {
@@ -820,8 +804,7 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
 		return;
 	}
 
-	const std::string &pluginName = GetIDName(ob, "LA");
-
+	AttributeValueMap pluginAttrs;
 	PointerRNA propGroup = RNA_pointer_get(&vrayLamp, pluginID.c_str());
 
 	// Get all non-mappable attribute values
@@ -877,6 +860,26 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
 	//			++linkRemoveIt;
 	//	}
 #endif
+
+	if(pluginID == "LightRectangle") {
+		BL::AreaLamp  areaLamp(lamp);
+
+		float sizeX = areaLamp.size() / 2.0f;
+		float sizeY = areaLamp.shape() == BL::AreaLamp::shape_SQUARE ? sizeX : areaLamp.size_y() / 2.0f;
+
+		pluginAttrs["u_size"] = BOOST_FORMAT_FLOAT(sizeX);
+		pluginAttrs["v_size"] = BOOST_FORMAT_FLOAT(sizeY);
+
+		pluginAttrs["use_rect_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("rect_tex"));
+	}
+	else if(pluginID == "LightDome") {
+		pluginAttrs["use_dome_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("use_dome_tex"));
+	}
+	else if(pluginID == "LightSpotMax") {
+		BL::SpotLamp spotLamp(lamp);
+
+		pluginAttrs["fallsize"] = BOOST_FORMAT_FLOAT(spotLamp.spot_size());
+	}
 
 	// Now, let's go through "Render Elements" and check if we have to
 	// plug our light somewhere like "Light Select"
