@@ -33,6 +33,12 @@ using namespace VRayScene;
 
 
 struct LightList {
+	enum {
+		typeNone    = 0,
+		typeExclude = 1,
+		typeInclude = 2,
+	};
+
 	StrSet  obList;
 	int     obListType;
 	int     flags;
@@ -42,6 +48,12 @@ struct LightList {
 class LightLinker {
 	typedef std::map<std::string, LightList> LightLink;
 	typedef std::map<std::string, StrSet>    LightIgnore;
+
+	enum {
+		excludeIllumination = 0,
+		excludeShadows      = 1,
+		excludeBoth         = 2
+	};
 
 public:
 	LightLinker();
@@ -65,6 +77,7 @@ private:
 
 	LightLink      m_include_exclude;
 	LightIgnore    m_ignored_lights;
+	LightIgnore    m_ignored_shadow_lights;
 
 };
 
