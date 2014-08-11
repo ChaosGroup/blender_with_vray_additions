@@ -978,6 +978,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeEnvironmentFog") {
 		return VRayNodeExporter::exportVRayNodeEnvironmentFog(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeUVWGenEnvironment") {
+		return VRayNodeExporter::exportVRayNodeUVWGenEnvironment(ntree, node, fromSocket, context);
+	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);
 	}

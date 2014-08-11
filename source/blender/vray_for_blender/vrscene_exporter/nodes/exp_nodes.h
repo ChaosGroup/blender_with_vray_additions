@@ -267,6 +267,8 @@ private:
 												          VRayNodeContext *context);
 	static std::string      exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 														 VRayNodeContext *context);
+	static std::string      exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+															VRayNodeContext *context);
 
 private: 
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);
