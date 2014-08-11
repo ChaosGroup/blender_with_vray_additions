@@ -166,11 +166,11 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	AttributeValueMap  manualAttrs;
-	StrVector          gizmos;
+	std::string        gizmos = "List()";
 
 	BL::NodeSocket gizmosSock = VRayNodeExporter::getSocketByAttr(node, "gizmos");
 	if (gizmosSock.is_linked()) {
-		gizmos.push_back(VRayNodeExporter::exportSocket(ntree, gizmosSock, context));
+		gizmos = VRayNodeExporter::exportSocket(ntree, gizmosSock, context);
 	}
 
 	manualAttrs["gizmos"] = gizmos;
