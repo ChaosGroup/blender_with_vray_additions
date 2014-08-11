@@ -34,7 +34,17 @@
 #include <BLI_string.h>
 
 
+#define IS_OBJECT_SELECT_NODE(n) \
+( \
+	n.bl_idname() == "VRayNodeSelectObject" || \
+	n.bl_idname() == "VRayNodeSelectGroup" \
+)
+
+
 namespace VRayScene {
+
+
+typedef std::vector<BL::Object> ObList;
 
 
 struct AttrValue {
@@ -202,6 +212,9 @@ public:
 	static void             getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	static std::string      getObjectNameList(BL::Group group);
 	static std::string      getObjectName(BL::Object group);
+	static void             getNodeSelectObjects(BL::Node node, ObList &obList);
+
+	static int              isObjectVisible(BL::Object b_ob);
 
 private:
 	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
@@ -260,8 +273,6 @@ private:
 	static BL::NodeSocket   getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket);
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
-
-	static int              isObjectVisible(BL::Object b_ob);
 
 };
 

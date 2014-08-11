@@ -65,11 +65,13 @@ void VRayNodeExporter::getAttributesList(const std::string &pluginID, StrSet &at
 			if(v.second.get<bool>("skip"))
 				continue;
 
-		if(mappable && MAPPABLE_TYPE(attrType)) {
-			attrSet.insert(attrName);
+		if(mappable) {
+			if(MAPPABLE_TYPE(attrType))
+				attrSet.insert(attrName);
 		}
 		else {
-			attrSet.insert(attrName);
+			if(NOT(MAPPABLE_TYPE(attrType)))
+				attrSet.insert(attrName);
 		}
 	}
 }
