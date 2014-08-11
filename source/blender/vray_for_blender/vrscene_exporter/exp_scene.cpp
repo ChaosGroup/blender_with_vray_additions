@@ -425,13 +425,14 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
 				continue;
 
+			const std::string &dupliNamePrefix = StripString(bl_ob.name() + "@" + BOOST_FORMAT_INT(dupliOb->persistent_id[0]));
+
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
-				exportLamp(bl_ob, bl_dupliOb);
+				exportLamp(bl_ob, bl_dupliOb, dupliNamePrefix);
 			}
 			else {
 				if(NOT(useInstancer)) {
-					dupliAttrs.namePrefix = bl_ob.name() + "@" + BOOST_FORMAT_INT(dupliOb->persistent_id[0]);
-					dupliAttrs.namePrefix = StripString(dupliAttrs.namePrefix);
+					dupliAttrs.namePrefix = dupliNamePrefix;
 					copy_m4_m4(dupliAttrs.tm, dupliOb->mat);
 
 					// If LightLinker contain duplicator,
@@ -761,12 +762,16 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 }
 
 
-void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
+void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::string &prefix)
 {
-	BL::Lamp          lamp(ob.data());
+	BL::ID lampID = ob.data();
+	if(NOT(lampID))
+		return;
+
+	BL::Lamp          lamp(lampID);
 	PointerRNA        vrayLamp = RNA_pointer_get(&lamp.ptr, "vray");
 
-	const std::string &pluginName = GetIDName(ob, "LA");
+	const std::string &pluginName = prefix + GetIDName(ob, "LA");
 
 	// Find plugin ID
 	std::string  pluginID;
@@ -813,10 +818,9 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
 
 	for(StrSet::const_iterator setIt = pluginAttrNames.begin(); setIt != pluginAttrNames.end(); ++setIt) {
 		const std::string &attrName = *setIt;
-
-		std::string propValue = VRayNodeExporter::getValueFromPropGroup(&propGroup, (ID*)lamp.ptr.data, attrName.c_str());
-		if(propValue != "NULL")
-			pluginAttrs[attrName] = propValue;
+		const std::string &attrValue = VRayNodeExporter::getValueFromPropGroup(&propGroup, (ID*)lamp.ptr.data, attrName.c_str());
+		if(attrValue != "NULL")
+			pluginAttrs[attrName] = attrValue;
 	}
 
 	// Now, get all mappable attribute values
@@ -836,30 +840,13 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb)
 
 				BL::NodeSocket sock = VRayNodeExporter::getSocketByAttr(lightNode, attrName);
 				if(sock) {
-					pluginAttrs[attrName] = VRayNodeExporter::exportSocket(lightTree, sock);
+					const std::string &attrValue = VRayNodeExporter::exportSocket(lightTree, sock);
+					if(attrValue != "NULL")
+						pluginAttrs[attrName] = attrValue;
 				}
 			}
 		}
 	}
-#if 0
-	else {
-		if(NOT(lightNode)) {
-			// NOTE: This allows us to skip mappable attributes without values to prevent incorrect export
-			for(StrSet::const_iterator setIt = socketAttrNames.begin(); setIt != socketAttrNames.end(); ++setIt) {
-				const std::string &attrName = *setIt;
-				pluginAttrs[attrName] = "NULL";
-			}
-		}
-	}
-	// Remove NULL items
-	//	LightIgnore::iterator linkRemoveIt;
-	//	for(linkRemoveIt = m_ignored_lights.begin(); linkRemoveIt != m_ignored_lights.end();) {
-	//		if(NOT(linkRemoveIt->second.size()))
-	//			m_ignored_lights.erase(linkRemoveIt++);
-	//		else
-	//			++linkRemoveIt;
-	//	}
-#endif
 
 	if(pluginID == "LightRectangle") {
 		BL::AreaLamp  areaLamp(lamp);
