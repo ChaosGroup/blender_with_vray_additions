@@ -142,9 +142,6 @@ void ED_spacemacros_init(void)
 
 	/* Macros's must go last since they reference other operators.
 	 * We need to have them go after python operators too */
-#ifdef WITH_VRAY_FOR_BLENDER
-	ED_operatortypes_exporter();
-#endif
 	ED_operatormacros_armature();
 	ED_operatormacros_mesh();
 	ED_operatormacros_metaball();
