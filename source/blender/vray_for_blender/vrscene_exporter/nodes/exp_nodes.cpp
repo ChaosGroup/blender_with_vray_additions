@@ -1093,9 +1093,11 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
 		output = ExpoterSettings::gSet.m_fileMat;
 	}
-	else if(pluginType == "EFFECT" || pluginType == "") {
-		// NOTE: Move to appropriate file
-		output = ExpoterSettings::gSet.m_fileObject;
+	else if(pluginType == "EFFECT" || pluginType == "ENVIRONMENT") {
+		output = ExpoterSettings::gSet.m_fileEnv;
+	}
+	else if(pluginType == "RENDERCHANNEL") {
+		output = ExpoterSettings::gSet.m_fileMain;
 	}
 	else if(pluginType == "LIGHT") {
 		output = ExpoterSettings::gSet.m_fileLights;

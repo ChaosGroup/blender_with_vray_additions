@@ -85,7 +85,9 @@ struct ExpoterSettings {
 	BL::RenderEngine  b_engine;
 
 	// Output files
+	PyObject         *m_fileMain;
 	PyObject         *m_fileObject;
+	PyObject         *m_fileEnv;
 	PyObject         *m_fileGeom;
 	PyObject         *m_fileLights;
 	PyObject         *m_fileMat;
