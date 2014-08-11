@@ -92,8 +92,7 @@ set(SRC
 	vrscene_exporter/nodes/specials/BlenderOutputMaterial.cpp
 	vrscene_exporter/nodes/specials/GeomDisplacedMesh.cpp
 	vrscene_exporter/nodes/specials/LightMesh.cpp
-	vrscene_exporter/nodes/specials/SelectGroup.cpp
-	vrscene_exporter/nodes/specials/SelectObject.cpp
+	vrscene_exporter/nodes/specials/Selecters.cpp
 	vrscene_exporter/nodes/specials/TexGradRamp.cpp
 	vrscene_exporter/nodes/specials/TexLayered.cpp
 	vrscene_exporter/nodes/specials/TexRemap.cpp
