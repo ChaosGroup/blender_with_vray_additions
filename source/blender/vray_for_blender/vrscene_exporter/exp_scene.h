@@ -159,7 +159,7 @@ private:
 	void                    exportObjectBase(Object *ob);
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 
-	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL);
+	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL, const std::string &prefix="");
 
 	void                    initDupli();
 	void                    exportDupli();
