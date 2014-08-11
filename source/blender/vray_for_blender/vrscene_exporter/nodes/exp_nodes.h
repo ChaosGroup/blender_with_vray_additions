@@ -261,6 +261,8 @@ private:
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
+	static int              isObjectVisible(BL::Object b_ob);
+
 };
 
 
