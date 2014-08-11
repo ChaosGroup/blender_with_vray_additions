@@ -232,3 +232,11 @@ std::string RnaValue::getPath(const char *propName)
 
 	return std::string(filepath);
 }
+
+
+std::string RNA_std_string_get(PointerRNA *ptr, const std::string &attrName)
+{
+	char buf[512] = "";
+	RNA_string_get(ptr, attrName.c_str(), buf);
+	return buf;
+}

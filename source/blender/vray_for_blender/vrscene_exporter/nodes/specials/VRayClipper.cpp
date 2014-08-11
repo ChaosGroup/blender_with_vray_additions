@@ -46,9 +46,7 @@ void VRayNodeExporter::exportVRayClipper(BL::BlendData bl_data, BL::Object bl_ob
 	attrs["object_id"]        = BOOST_FORMAT_INT(bl_ob.pass_index());
 	attrs["transform"]        = BOOST_FORMAT_TM(transform);
 
-	char buf[MAX_ID_NAME];
-	RNA_string_get(&vrayClipper, "exclusion_nodes", buf);
-	const std::string excludeGroupName = buf;
+	const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 	if (NOT(excludeGroupName.empty())) {
 		StrSet exclusion_nodes;
 		BL::BlendData::groups_iterator grIt;

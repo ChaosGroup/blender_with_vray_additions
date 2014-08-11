@@ -64,4 +64,6 @@ private:
 
 }
 
+std::string  RNA_std_string_get(PointerRNA *ptr, const std::string &attrName);
+
 #endif // CGR_UTILS_RNA_H
