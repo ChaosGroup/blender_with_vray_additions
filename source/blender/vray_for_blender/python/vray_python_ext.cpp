@@ -87,6 +87,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	PyObject *py_scene      = NULL;
 	PyObject *py_data       = NULL;
 
+	PyObject *mainFile      = NULL;
+	PyObject *envFile       = NULL;
 	PyObject *obFile        = NULL;
 	PyObject *geomFile      = NULL;
 	PyObject *lightsFile    = NULL;
@@ -100,29 +102,34 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 		_C("context"),        // 1
 		_C("scene"),          // 2
 		_C("data"),           // 3
-		_C("objectFile"),     // 4
-		_C("geometryFile"),   // 5
-		_C("lightsFile"),     // 6
-		_C("materialFile"),   // 7
-		_C("textureFile"),    // 8
-		_C("drSharePath"),    // 9
+		_C("mainFile"),       // 4
+		_C("envFile"),        // 5
+		_C("objectFile"),     // 6
+		_C("geometryFile"),   // 7
+		_C("lightsFile"),     // 8
+		_C("materialFile"),   // 9
+		_C("textureFile"),    // 10
+		_C("drSharePath"),    // 11
 		NULL
 	};
 
-	//                                  0123456789
-	static const char  kwlistTypes[] = "OOOOOOOOOs";
+	//                                  012345678911
+	//                                            01
+	static const char  kwlistTypes[] = "OOOOOOOOOOOs";
 
 	if(NOT(PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
-									   &py_engine,
-									   &py_context,
-									   &py_scene,
-									   &py_data,
-									   &obFile,
-									   &geomFile,
-									   &lightsFile,
-									   &materialsFile,
-									   &texturesFile,
-									   &drSharePath)))
+									   &py_engine,     // 0
+									   &py_context,    // 1
+									   &py_scene,      // 2
+									   &py_data,       // 3
+									   &mainFile,      // 4
+									   &envFile,       // 5
+									   &obFile,        // 6
+									   &geomFile,      // 7
+									   &lightsFile,    // 8
+									   &materialsFile, // 9
+									   &texturesFile,  // 10
+									   &drSharePath))) // 11
 		return NULL;
 
 	PointerRNA engineRNA;
@@ -148,7 +155,9 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	ExpoterSettings::gSet.m_sce  = (Scene*)bl_scene.ptr.data;
 	ExpoterSettings::gSet.m_main = (Main*)bl_data.ptr.data;
 
+	ExpoterSettings::gSet.m_fileMain   = mainFile;
 	ExpoterSettings::gSet.m_fileObject = obFile;
+	ExpoterSettings::gSet.m_fileEnv    = envFile;
 	ExpoterSettings::gSet.m_fileGeom   = geomFile;
 	ExpoterSettings::gSet.m_fileLights = lightsFile;
 	ExpoterSettings::gSet.m_fileMat    = materialsFile;
