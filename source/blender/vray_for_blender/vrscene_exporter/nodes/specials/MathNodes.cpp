@@ -67,6 +67,7 @@ std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::No
 		copy_v3_v3(tm[3], offs);
 	}
 
+	// XXX: may be invert only when from object?
 	invert_m4_m4(itm, tm);
 
 	char tmHex[CGR_TRANSFORM_HEX_SIZE];
