@@ -141,29 +141,23 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
 	if(objectSock && objectSock.is_linked()) {
 		BL::Node domainNode = VRayNodeExporter::getConnectedNode(objectSock, context);
-
-		// NOTE: Rewrite to support object / group select
-
 		if(domainNode) {
-			if (domainNode.bl_idname() == "VRayNodeSelectObject") {
-				BL::Object domainOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, domainNode, objectSock, context);
-				if(domainOb && VRayNodeExporter::isObjectVisible(domainOb)) {
-					pluginName = ExportSmokeDomain(ntree, node, domainOb, context);
-				}
-			}
-			else if (domainNode.bl_idname() == "VRayNodeSelectGroup") {
-				StrSet domains;
-				BL::Group group = VRayNodeExporter::exportVRayNodeSelectGroup(ntree, domainNode, objectSock, context);
+			StrSet domains;
 
-				BL::Group::objects_iterator obIt;
-				for(group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
+			ObList domainObList;
+			VRayNodeExporter::getNodeSelectObjects(domainNode, domainObList);
+
+			if(domainObList.size()) {
+				ObList::const_iterator obIt;
+				for(obIt = domainObList.begin(); obIt != domainObList.end(); ++obIt) {
 					BL::Object domainOb = *obIt;
-					if(domainOb && VRayNodeExporter::isObjectVisible(domainOb)) {
+					if(VRayNodeExporter::isObjectVisible(domainOb)) {
 						domains.insert(ExportSmokeDomain(ntree, node, domainOb, context));
 					}
 				}
-				return BOOST_FORMAT_LIST(domains);
 			}
+
+			return BOOST_FORMAT_LIST(domains);
 		}
 	}
 
