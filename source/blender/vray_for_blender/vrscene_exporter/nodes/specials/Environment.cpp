@@ -90,8 +90,10 @@ void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext *context)
 					// Background
 					BL::NodeSocket bgSock = VRayNodeExporter::getSocketByAttr(envNode, "bg_tex");
 					const std::string bg_tex = VRayNodeExporter::exportSocket(worldTree, bgSock, context);
+					const std::string bg_tex_mult = BOOST_FORMAT_FLOAT(RNA_float_get(&bgSock.ptr, "multiplier"));
+
 					pluginAttrs["bg_tex"]      = bg_tex;
-					pluginAttrs["bg_tex_mult"] = BOOST_FORMAT_FLOAT(RNA_float_get(&bgSock.ptr, "multiplier"));
+					pluginAttrs["bg_tex_mult"] = bg_tex_mult;
 
 					// Overrides
 					StrSet envOverrides;
@@ -109,8 +111,8 @@ void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext *context)
 						float          overMult = RNA_float_get(&overSock.ptr, "multiplier");
 
 						if (NOT(overUse)) {
-							pluginAttrs[overAttr] = bg_tex;
-							pluginAttrs[overMultAttr] = "1.0";
+							pluginAttrs[overAttr]     = bg_tex;
+							pluginAttrs[overMultAttr] = bg_tex_mult;
 						}
 						else {
 							pluginAttrs[overAttr]     = VRayNodeExporter::exportSocket(worldTree, overSock, context);
