@@ -596,11 +596,10 @@ void GeomStaticMesh::initMapChannels()
 	if(NOT(channelCount))
 		return;
 
-	BL::Mesh::tessfaces_iterator              faceIt;
-
 	int uv_layer_id = 0;
 	int totface     = b_mesh.tessfaces.length();
 
+	BL::Mesh::tessfaces_iterator              faceIt;
 	BL::Mesh::tessface_uv_textures_iterator   uvIt;
 	for(b_mesh.tessface_uv_textures.begin(uvIt); uvIt != b_mesh.tessface_uv_textures.end(); ++uvIt) {
 		NEW_MAP_CHANNEL_BEGIN(uvIt);
