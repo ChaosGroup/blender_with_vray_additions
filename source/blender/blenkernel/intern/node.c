@@ -52,6 +52,7 @@
 #include "BLI_path_util.h"
 #include "BLI_utildefines.h"
 #include "BLI_callbacks.h"
+
 #include "BLF_translation.h"
 
 #include "BKE_animsys.h"
@@ -60,7 +61,6 @@
 #include "BKE_library.h"
 #include "BKE_main.h"
 #include "BKE_node.h"
-#include "BKE_depsgraph.h"
 
 #include "BLI_ghash.h"
 #include "RNA_access.h"
