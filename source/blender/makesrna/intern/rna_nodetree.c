@@ -7634,6 +7634,16 @@ static void rna_def_nodetree(BlenderRNA *brna)
 	RNA_def_property_flag(prop, PROP_REGISTER);
 	RNA_def_property_ui_text(prop, "Icon", "The node tree icon");
 
+	prop = RNA_def_property(srna, "bl_update_preview", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "typeinfo->flags", NTREE_FLAG_PREVIEW);
+	RNA_def_property_flag(prop, PROP_REGISTER_OPTIONAL);
+	RNA_def_property_ui_text(prop, "Update Preview", "Generate render preview update event");
+
+	prop = RNA_def_property(srna, "bl_update_event", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "typeinfo->flags", NTREE_FLAG_EVENT);
+	RNA_def_property_flag(prop, PROP_REGISTER_OPTIONAL);
+	RNA_def_property_ui_text(prop, "Update Event", "Generate bpy.app.handlers.node_tree_update event");
+
 	/* poll */
 	func = RNA_def_function(srna, "poll", NULL);
 	RNA_def_function_ui_description(func, "Check visibility in the editor");

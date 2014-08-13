@@ -2933,30 +2933,6 @@ void ntreeVerifyNodes(struct Main *main, struct ID *id)
 	} FOREACH_NODETREE_END
 }
 
-static ID *cgr_get_ntree_material(ID *ntree)
-{
-	Material    *ma = NULL;
-	PropertyRNA *prop = NULL;
-	PointerRNA   ptr;
-
-	for (ma = G.main->mat.first; ma; ma = ma->id.next) {
-		RNA_id_pointer_create((ID*)ma, &ptr);
-		ptr = RNA_pointer_get(&ptr, "vray");
-
-		prop = RNA_struct_find_property(&ptr, "ntree");
-		if(prop) {
-			PropertyType propType = RNA_property_type(prop);
-			if(propType == PROP_POINTER) {
-				PointerRNA ntreeRNA = RNA_pointer_get(&ptr, "ntree");
-				if((void*)ntree == ntreeRNA.data)
-					return (ID*)ma;
-			}
-		}
-	}
-
-	return NULL;
-}
-
 void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 {
 	bNode *node;
@@ -3011,18 +2987,10 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 
 	if (ntree->update & (NTREE_UPDATE_LINKS | NTREE_UPDATE_NODES)) {
 		if (ntree->type == NTREE_CUSTOM) {
-			if(ntree->idname) {
-				if(STREQ(ntree->idname, "VRayNodeTreeMaterial")) {
-					ID *ma = cgr_get_ntree_material((ID*)ntree);
-					if(ma) {
-						DAG_id_tag_update(ma, 0);
-						WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, ma);
-					}
-				}
-				if(STREQLEN(ntree->idname, "VRayNodeTree", 12)) {
-					BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
-				}
-			}
+			if (ntree->typeinfo->flags & NTREE_FLAG_PREVIEW)
+				WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, NULL);
+			if (ntree->typeinfo->flags & NTREE_FLAG_EVENT)
+				BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
 		}
 	}
 
