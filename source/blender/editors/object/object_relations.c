@@ -2197,7 +2197,6 @@ static int make_local_exec(bContext *C, wmOperator *op)
 		}
 
 		BKE_library_make_local(bmain, NULL, false); /* NULL is all libs */
-		IDP_restore_fake_user();
 		WM_event_add_notifier(C, NC_WINDOW, NULL);
 		return OPERATOR_FINISHED;
 	}
@@ -2290,8 +2289,6 @@ static int make_local_exec(bContext *C, wmOperator *op)
 		}
 		CTX_DATA_END;
 	}
-
-	IDP_restore_fake_user();
 
 	WM_event_add_notifier(C, NC_WINDOW, NULL);
 

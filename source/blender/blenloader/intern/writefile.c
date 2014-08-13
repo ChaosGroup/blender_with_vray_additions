@@ -161,6 +161,7 @@
 #include "BKE_fcurve.h"
 #include "BKE_pointcache.h"
 #include "BKE_mesh.h"
+#include "BKE_idprop.h"
 
 #ifdef USE_NODE_COMPAT_CUSTOMNODES
 #include "NOD_common.h"
@@ -3628,6 +3629,11 @@ int BLO_write_file(Main *mainvar, const char *filepath, int write_flags, ReportL
 	/* path backup/restore */
 	void     *path_list_backup = NULL;
 	const int path_list_flag = (BKE_BPATH_TRAVERSE_SKIP_LIBRARY | BKE_BPATH_TRAVERSE_SKIP_MULTIFILE);
+
+	/* restore fake user flag for ID properties           */
+	/* flag could be reseted when append/copy/paste etc   */
+	/* without this ID properties' data will be wiped out */
+	BLO_verify_custom_data(mainvar);
 
 	/* open temporary file, so we preserve the original in case we crash */
 	BLI_snprintf(tempname, sizeof(tempname), "%s@", filepath);

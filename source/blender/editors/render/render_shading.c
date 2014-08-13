@@ -64,7 +64,6 @@
 #include "BKE_texture.h"
 #include "BKE_world.h"
 #include "BKE_editmesh.h"
-#include "BKE_idprop.h"
 
 #include "IMB_imbuf.h"
 #include "IMB_imbuf_types.h"
@@ -408,9 +407,6 @@ static int new_material_exec(bContext *C, wmOperator *UNUSED(op))
 		RNA_property_pointer_set(&ptr, prop, idptr);
 		RNA_property_update(C, &ptr, prop);
 	}
-
-	/* will restore fake user flag for duplicated ntree */
-	IDP_restore_fake_user();
 
 	WM_event_add_notifier(C, NC_MATERIAL | NA_ADDED, ma);
 	
