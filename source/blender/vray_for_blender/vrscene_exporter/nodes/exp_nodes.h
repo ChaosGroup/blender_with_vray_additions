@@ -250,6 +250,8 @@ private:
 											           VRayNodeContext *context);
 	static std::string      exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													   VRayNodeContext *context);
+	static std::string      exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+												 VRayNodeContext *context);
 
 	static std::string      exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
