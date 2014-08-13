@@ -104,6 +104,7 @@ set(SRC
 	vrscene_exporter/nodes/specials/VRayClipper.cpp
 	vrscene_exporter/nodes/specials/Effects.cpp
 	vrscene_exporter/nodes/specials/Environment.cpp
+	vrscene_exporter/nodes/specials/Custom.cpp
 	vrscene_exporter/plugins/GeomMayaHair.cpp
 	vrscene_exporter/plugins/GeomMayaHair.h
 	vrscene_exporter/plugins/GeomMeshFile.cpp

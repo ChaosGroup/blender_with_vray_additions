@@ -943,6 +943,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeTexRemap") {
 		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeTexSky") {
+		return VRayNodeExporter::exportVRayNodeTexSky(ntree, node, fromSocket, context);
+	}
 	else if(nodeClass == "VRayNodeTexVoxelData") {
 		return VRayNodeExporter::exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
 	}
