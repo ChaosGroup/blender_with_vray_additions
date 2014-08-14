@@ -586,6 +586,7 @@ void IDP_foreachIDLink(const ID *id, IDPWalkFunc walk, void *userData)
 
 			walk(userData, idprop);
 		}
+		BLI_ghashIterator_free(iter);
 	}
 	BLI_spin_unlock(&HashTableLock);
 }
