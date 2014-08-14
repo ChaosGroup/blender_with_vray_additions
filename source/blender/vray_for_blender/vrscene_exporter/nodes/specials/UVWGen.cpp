@@ -21,6 +21,9 @@
  */
 
 #include "exp_nodes.h"
+#include <cmath>
+
+#define DEG_TO_RAD(d) (d * M_PI / 180.0f)
 
 
 static const char *sMappingType[] = {
@@ -45,6 +48,21 @@ std::string VRayNodeExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree
 
 	AttributeValueMap  manualAttrs;
 	manualAttrs["mapping_type"] = BOOST_FORMAT_STRING(sMappingType[mapping_type]);
+
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
+}
+
+
+std::string VRayNodeExporter::exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	AttributeValueMap  manualAttrs;
+
+	BL::NodeSocket rotateFrameTexSock = VRayNodeExporter::getSocketByAttr(node, "rotate_frame_tex");
+	if (rotateFrameTexSock && NOT(rotateFrameTexSock.is_linked())) {
+		const float rotate_frame_tex = DEG_TO_RAD(RNA_float_get(&rotateFrameTexSock.ptr, "value"));
+
+		manualAttrs["rotate_frame_tex"] = BOOST_FORMAT_FLOAT(rotate_frame_tex);
+	}
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }
