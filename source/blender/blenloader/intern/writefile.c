@@ -3677,6 +3677,11 @@ int BLO_write_file(Main *mainvar, const char *filepath, int write_flags, ReportL
 		}
 	}
 
+	/* restore fake user flag for ID properties           */
+	/* flag could be reseted when append/copy/paste etc   */
+	/* without this ID properties' data will be wiped out */
+	BLO_verify_custom_data(NULL);
+
 	write_user_block= write_flags & G_FILE_USERPREFS;
 
 	if (write_flags & G_FILE_RELATIVE_REMAP)
