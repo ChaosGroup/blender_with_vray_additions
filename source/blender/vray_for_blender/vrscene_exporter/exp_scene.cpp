@@ -462,7 +462,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					MyPartSystem *mySys = m_psys.get(dupliBaseName);
 					MyParticle *myPa = new MyParticle();
 					myPa->nodeName = GetIDName(&dupliOb->ob->id);
-					myPa->particleId = dupliOb->persistent_id[0];
+					myPa->particleId = persistent_id_xor;
 					// Instancer use original object's transform,
 					// so apply inverse matrix here.
 					// When linking from file 'imat' is not valid,
