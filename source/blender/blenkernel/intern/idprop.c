@@ -545,8 +545,10 @@ static void IDP_ID_RemoveFromHash(IDProperty *prop, ID *id)
 	if (reflist) {
 		BLI_ghash_remove(reflist, prop, NULL, NULL);
 
-		if (BLI_ghash_size(reflist) == 0)
+		if (BLI_ghash_size(reflist) == 0) {
 			BLI_ghash_remove(IDP_IDHashTable, IDP_Id(prop), NULL, NULL);
+			BLI_ghash_free(reflist, NULL, NULL);
+		}
 	}
 }
 
