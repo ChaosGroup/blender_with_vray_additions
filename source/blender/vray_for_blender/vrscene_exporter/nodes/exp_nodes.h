@@ -271,6 +271,8 @@ private:
 														 VRayNodeContext *context);
 	static std::string      exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 															VRayNodeContext *context);
+	static std::string      exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+																   VRayNodeContext *context);
 
 private: 
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);
