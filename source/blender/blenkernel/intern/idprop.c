@@ -524,9 +524,20 @@ void IDP_ID_Register(IDProperty *prop)
 		break;
 	}
 }
+
+static void IDP_ID_RemoveFromHash(IDProperty *prop, ID *id)
+{
+	GHash *reflist = BLI_ghash_lookup(IDP_IDHashTable, id);
+	if (reflist) {
+		BLI_ghash_remove(reflist, prop, NULL, NULL);
+
+		if (BLI_ghash_size(reflist) == 0)
+			BLI_ghash_remove(IDP_IDHashTable, IDP_Id(prop), NULL, NULL);
+	}
+}
+
 void IDP_ID_Unregister(IDProperty *prop)
 {
-	GHash *reflist = 0;
 	int i;
 
 	switch(prop->type) {
@@ -534,8 +545,7 @@ void IDP_ID_Unregister(IDProperty *prop)
 		if (IDP_Id(prop)) {
 			BLI_spin_trylock(&HashTableLock);
 
-			reflist = BLI_ghash_lookup(IDP_IDHashTable, IDP_Id(prop));
-			if (reflist) BLI_ghash_remove(reflist, prop, NULL, NULL);
+			IDP_ID_RemoveFromHash(prop, IDP_Id(prop));
 
 			BLI_spin_unlock(&HashTableLock);
 		}
@@ -545,10 +555,10 @@ void IDP_ID_Unregister(IDProperty *prop)
 
 		for (i = 0; i < prop->totallen; i++) {
 			IDProperty *inner = GETPROP(prop, i);
-			if (inner->type != IDP_ID) continue;
+			if (inner->type != IDP_ID)
+				continue;
 
-			reflist = BLI_ghash_lookup(IDP_IDHashTable, IDP_Id(inner));
-			if (reflist) BLI_ghash_remove(reflist, inner, NULL, NULL);
+			IDP_ID_RemoveFromHash(inner, IDP_Id(inner));
 		}
 
 		BLI_spin_unlock(&HashTableLock);
