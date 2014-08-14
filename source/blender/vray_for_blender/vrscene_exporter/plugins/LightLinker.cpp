@@ -161,6 +161,12 @@ void LightLinker::write(PyObject *output)
 		else
 			++linkRemoveIt;
 	}
+	for(linkRemoveIt = m_ignored_shadow_lights.begin(); linkRemoveIt != m_ignored_shadow_lights.end();) {
+		if(NOT(linkRemoveIt->second.size()))
+			m_ignored_shadow_lights.erase(linkRemoveIt++);
+		else
+			++linkRemoveIt;
+	}
 
 	LightIgnore::const_iterator linkIt;
 
