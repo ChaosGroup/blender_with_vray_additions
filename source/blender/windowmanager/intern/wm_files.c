@@ -921,6 +921,11 @@ int wm_file_write(bContext *C, const char *filepath, int fileflags, ReportList *
 
 	BLI_callback_exec(G.main, NULL, BLI_CB_EVT_SAVE_PRE);
 
+	/* restore fake user flag for ID properties           */
+	/* flag could be reseted when append/copy/paste etc   */
+	/* without this ID properties' data will be wiped out */
+	BLO_verify_custom_data(NULL);
+
 	/* operator now handles overwrite checks */
 
 	if (G.fileflags & G_AUTOPACK) {
@@ -992,6 +997,11 @@ int wm_homefile_write_exec(bContext *C, wmOperator *op)
 	wmWindow *win = CTX_wm_window(C);
 	char filepath[FILE_MAX];
 	int fileflags;
+
+	/* restore fake user flag for ID properties           */
+	/* flag could be reseted when append/copy/paste etc   */
+	/* without this ID properties' data will be wiped out */
+	BLO_verify_custom_data(NULL);
 
 	/* check current window and close it if temp */
 	if (win && win->screen->temp)
