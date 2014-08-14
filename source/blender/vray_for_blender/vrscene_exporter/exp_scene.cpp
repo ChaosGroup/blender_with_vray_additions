@@ -425,7 +425,12 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
 				continue;
 
-			const std::string &dupliNamePrefix = StripString(bl_ob.name() + "@" + BOOST_FORMAT_INT(dupliOb->persistent_id[0]));
+			BL::Array<int, 8> persistent_id = bl_dupliOb.persistent_id();
+			int persistent_id_xor = 1;
+			for (int c = 0; c < 8; ++c)
+				persistent_id_xor ^= persistent_id[c];
+
+			const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_INT(persistent_id_xor) + "@" + bl_ob.name());
 
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
 				exportLamp(bl_ob, bl_dupliOb, dupliNamePrefix);
