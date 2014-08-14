@@ -21,7 +21,12 @@
  */
 
 #include "exp_nodes.h"
-#include <cmath>
+
+#ifdef WIN32
+#  define _USE_MATH_DEFINES
+#endif
+#include <math.h>
+
 
 #define DEG_TO_RAD(d) (d * M_PI / 180.0f)
 
