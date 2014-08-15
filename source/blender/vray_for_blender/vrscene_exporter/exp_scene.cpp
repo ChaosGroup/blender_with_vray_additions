@@ -364,6 +364,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	RNA_id_pointer_create((ID*)ob, &objectRNA);
 	BL::Object bl_ob(objectRNA);
 
+	PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
+
 	PRINT_INFO("Processing object %s", ob->id.name);
 
 	if(ob->id.pad2)
@@ -383,25 +385,15 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 		bl_ob.dupli_list_create(ExpoterSettings::gSet.b_scene, 2);
 
-		RnaAccess::RnaValue bl_obRNA((ID*)ob, "vray");
-		int override_objectID = bl_obRNA.getInt("dupliGroupIDOverride");
-
-		int useInstancer = true;
-		if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
-			useInstancer = ExpoterSettings::gSet.m_useInstancerForGroup;
-		}
-		else {
-			PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
-
-			useInstancer = RNA_boolean_get(&vrayObject, "use_instancer");
-		}
+		int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
+		int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
 
 		NodeAttrs dupliAttrs;
 		dupliAttrs.override = true;
 		// If dupli are shown via Instancer we need to hide
 		// original object
 		dupliAttrs.visible  = NOT(useInstancer);
-		dupliAttrs.objectID = override_objectID;
+		dupliAttrs.objectID = overrideObjectID;
 		dupliAttrs.dupliHolder = bl_ob;
 
 		const std::string &duplicatorName = GetIDName(bl_ob);
@@ -417,6 +409,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
 				continue;
 
+			// Duplicated object could be duplicator itself
+			// Check if we need to show it
 			if(NOT(IsDuplicatorRenderable(bl_duplicatedOb)))
 				continue;
 
