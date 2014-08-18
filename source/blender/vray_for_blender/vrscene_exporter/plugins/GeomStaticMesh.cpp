@@ -33,6 +33,8 @@
 #include "CGR_vrscene.h"
 #include "CGR_rna.h"
 
+#include "cgr_hash.h"
+
 #include "BKE_mesh.h"
 #include "BKE_material.h"
 #include "BKE_customdata.h"
@@ -69,27 +71,27 @@ MChan::MChan()
 {
 	name = "";
 	index = 0;
-	cloned = 0;
+	cloned = false;
 	uv_vertices = NULL;
 	uv_faces = NULL;
+
+	hash = 1;
+	hashUvVertices = 1;
+	hashUvFaces = 1;
 }
 
 
 void MChan::freeData()
 {
-	if(uv_vertices) {
-		delete [] uv_vertices;
-		uv_vertices = NULL;
-	}
-	if(uv_faces) {
-		if(NOT(cloned))
-			delete [] uv_faces;
-		uv_faces = NULL;
+	FREE_ARRAY(uv_vertices);
+
+	if (NOT(cloned)) {
+		FREE_ARRAY(uv_faces);
 	}
 }
 
 
-GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkComponents):
+GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 	VRayExportable(scene, main, ob),
 	b_data(PointerRNA_NULL),
 	b_scene(PointerRNA_NULL),
@@ -97,45 +99,40 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkCo
 	b_mesh(PointerRNA_NULL)
 {
 	m_vertices = NULL;
-	coordIndex = 0;
-
 	m_faces = NULL;
-	vertIndex = 0;
-
 	m_normals = NULL;
 	m_faceNormals = NULL;
 	m_faceMtlIDs = NULL;
 	m_edge_visibility = NULL;
+
+	m_vertsArray = NULL;
+	m_facesArray = NULL;
+	m_faceNormalsArray = NULL;
+	m_normalsArray = NULL;
+	m_mtlIDsArray = NULL;
+	m_edgeVisArray = NULL;
 
 	map_channels.clear();
 
 	dynamic_geometry = 0;
 	environment_geometry = 0;
 	primary_visibility = 1;
-
 	osd_subdiv_level = 0;
 	osd_subdiv_type = 0;
 	osd_subdiv_uvs = 0;
 	weld_threshold = -1.0f;
-
 	smooth_uv         = true;
 	smooth_uv_borders = true;
 
-	useDisplace = false;
-	useSmooth   = false;
-
-	displaceTextureName = "";
-
-	m_useZip = true;
-
-	m_checkComponents = checkComponents;
-
+	m_hash = 1;
 	m_hashVertices = 1;
 	m_hashFaces = 1;
 	m_hashNormals = 1;
 	m_hashFaceNormals = 1;
 	m_hashFaceMtlIDs = 1;
-	m_hashEdgeVisibility = 1;
+	m_hashEdgeVis = 1;
+
+	m_propGroup = Py_None;
 
 	// Prepare RNA pointers
 	PointerRNA dataPtr;
@@ -180,11 +177,6 @@ void GeomStaticMesh::init()
 
 void GeomStaticMesh::preInit()
 {
-	if(m_checkComponents) {
-		initDisplace();
-		initSmooth();
-	}
-
 	initName();
 }
 
@@ -193,30 +185,12 @@ void GeomStaticMesh::freeData()
 {
 	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"GeomStaticMesh::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
 
-	if(m_vertices) {
-		delete [] m_vertices;
-		m_vertices = NULL;
-	}
-	if(m_faces) {
-		delete [] m_faces;
-		m_faces = NULL;
-	}
-	if(m_normals) {
-		delete [] m_normals;
-		m_normals = NULL;
-	}
-	if(m_faceNormals) {
-		delete [] m_faceNormals;
-		m_faceNormals = NULL;
-	}
-	if(m_faceMtlIDs) {
-		delete [] m_faceMtlIDs;
-		m_faceMtlIDs = NULL;
-	}
-	if(m_edge_visibility) {
-		delete [] m_edge_visibility;
-		m_edge_visibility = NULL;
-	}
+	FREE_ARRAY(m_vertices);
+	FREE_ARRAY(m_normals);
+	FREE_ARRAY(m_faces);
+	FREE_ARRAY(m_faceNormals);
+	FREE_ARRAY(m_faceMtlIDs);
+	FREE_ARRAY(m_edge_visibility);
 
 	for(int i = 0; i < map_channels.size(); ++i) {
 		map_channels[i]->freeData();
@@ -230,61 +204,6 @@ void GeomStaticMesh::initName(const std::string &name)
 		m_name = name;
 	else
 		m_name = "Me" + GetIDName((ID*)m_ob);
-
-	meshComponentNames.push_back(m_name);
-	if(useSmooth && useDisplace)
-		meshComponentNames.push_back("smoothDisp" + m_name);
-	else if(useSmooth)
-		meshComponentNames.push_back("smooth" + m_name);
-	else if(useDisplace)
-		meshComponentNames.push_back("disp" + m_name);
-
-	m_name = meshComponentNames.back();
-}
-
-
-void GeomStaticMesh::initDisplace()
-{
-	for(int a = 1; a <= m_ob->totcol; ++a) {
-		Material *ma = give_current_material(m_ob, a);
-		if(NOT(ma))
-			continue;
-
-		for(int t = 0; t < MAX_MTEX; ++t) {
-			if(ma->mtex[t] && ma->mtex[t]->tex) {
-				Tex *tex = ma->mtex[t]->tex;
-
-				PointerRNA texRNA;
-				RNA_id_pointer_create(&tex->id, &texRNA);
-				if(RNA_struct_find_property(&texRNA, "vray_slot")) {
-					PointerRNA VRayTextureSlot = RNA_pointer_get(&texRNA, "vray_slot");
-					if(RNA_struct_find_property(&VRayTextureSlot, "map_displacement")) {
-						int mapDisplacement = RNA_boolean_get(&VRayTextureSlot, "map_displacement");
-
-						if(mapDisplacement) {
-							useDisplace = true;
-
-							// NOTE: Texture blend is not supported,
-							// and will be supported only in vb30
-							//
-							displaceTexture     = tex;
-							displaceTextureName = GetIDName((ID*)tex);
-
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-
-void GeomStaticMesh::initSmooth()
-{
-	RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticSmoothedMesh");
-
-	useSmooth = rna.getBool("use");
 }
 
 
@@ -312,7 +231,7 @@ int GeomStaticMesh::mapChannelsUpdated(GeomStaticMesh *prevMesh)
 }
 
 
-const MChan* GeomStaticMesh::getMapChannel(const size_t i) const
+const MChan* GeomStaticMesh::getMapChannel(const int i) const
 {
 	if(i >= map_channels.size())
 		return NULL;
@@ -322,34 +241,31 @@ const MChan* GeomStaticMesh::getMapChannel(const size_t i) const
 
 void GeomStaticMesh::initVertices()
 {
-	int totvert = b_mesh.vertices.length();
+	const int totvert = b_mesh.vertices.length();
 	if(NOT(totvert)) {
 		EMPTY_HEX_DATA(m_vertices);
 		return;
 	}
 
-	size_t  vertsArraySize = 3 * totvert * sizeof(float);
-	float  *vertsArray = new float[vertsArraySize];
+	m_vertsArraySize = 3 * totvert;
+	m_vertsArray     = new float[m_vertsArraySize];
 
 	BL::Mesh::vertices_iterator vertIt;
+	int coordIndex = 0;
 	for(b_mesh.vertices.begin(vertIt); vertIt != b_mesh.vertices.end(); ++vertIt) {
-		vertsArray[coordIndex+0] = vertIt->co()[0];
-		vertsArray[coordIndex+1] = vertIt->co()[1];
-		vertsArray[coordIndex+2] = vertIt->co()[2];
+		m_vertsArray[coordIndex+0] = vertIt->co()[0];
+		m_vertsArray[coordIndex+1] = vertIt->co()[1];
+		m_vertsArray[coordIndex+2] = vertIt->co()[2];
 		coordIndex += 3;
 	}
 
-	m_vertices = GetStringZip((u_int8_t*)vertsArray, coordIndex * sizeof(float));
-
-	delete [] vertsArray;
+	m_vertices = GetStringZip((u_int8_t*)m_vertsArray, m_vertsArraySize * sizeof(float));
 }
 
 
 void GeomStaticMesh::initFaces()
 {
-	int totface = b_mesh.tessfaces.length();
-	int totedge = b_mesh.edges.length();
-	if(NOT(totface)) {
+	if(NOT(b_mesh.tessfaces.length())) {
 		EMPTY_HEX_DATA(m_faces);
 		EMPTY_HEX_DATA(m_normals);
 		EMPTY_HEX_DATA(m_faceNormals);
@@ -358,43 +274,45 @@ void GeomStaticMesh::initFaces()
 		return;
 	}
 
+	const bool useAutoSmooth = b_mesh.use_auto_smooth();
+
+	// Prepass faces
 	BL::Mesh::tessfaces_iterator faceIt;
+	int totFaces = 0;
+	int totEdge  = 0;
+	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
+		FaceVerts faceVerts = faceIt->vertices_raw();
 
-	// Assume all faces are 4-vertex => 2 tri-faces:
-	//   6 vertex indices
-	//   6 normals of 3 coords
-	//
-	size_t  facesArraySize   = 6 *     totface * sizeof(int);
-	size_t  faceNormalsSize  = 6 *     totface * sizeof(int);
-	size_t  normalsArraySize = 6 * 3 * totface * sizeof(int);
-	size_t  face_mtlIDsSize  = 2 *     totface * sizeof(int);
-	size_t  evArraySize      =         totedge * sizeof(int);
+		// If face is quad we split it into 2 tris
+		totFaces += faceVerts[3] ? 2 : 1;
+		totEdge  += faceVerts[3] ? 6 : 3;
+	}
 
-	int    *facesArray       = new int[facesArraySize];
-	int    *faceNormalsArray = new int[faceNormalsSize];
-	float  *normalsArray     = new float[normalsArraySize];
-	int    *face_mtlIDsArray = new int[face_mtlIDsSize];
-	int    *evArray          = new int[evArraySize];
+	m_facesArraySize        = 3 *     totFaces;
+	m_faceNormalsArraySize  = 3 *     totFaces;
+	m_normalsArraySize      = 3 * 3 * totFaces;
+	m_mtlIDArraySize        =         totFaces;
+	m_edgeVisArraySize      =         totEdge;
 
-	float  fno[3];
-	float  n0[3];
-	float  n1[3];
-	float  n2[3];
-	float  n3[3];
+	m_facesArray       = new int[m_facesArraySize];
+	m_faceNormalsArray = new int[m_faceNormalsArraySize];
+	m_normalsArray     = new float[m_normalsArraySize];
+	m_mtlIDsArray      = new int[m_mtlIDArraySize];
+	m_edgeVisArray     = new int[m_edgeVisArraySize];
 
-	int    ev = 0;
-	int    k  = 0;
+	// Reset some arrays
+	memset(m_edgeVisArray, 0, m_edgeVisArraySize * sizeof(int));
 
-	int    normIndex      = 0;
-	int    faceNormIndex  = 0;
-	int    faceMtlIDIndex = 0;
-	int    evIndex        = 0;
+	int normArrIndex   = 0;
+	int faceVertIndex  = 0;
+	int faceNormIndex  = 0;
+	int faceMtlIDIndex = 0;
+	int edgeVisIndex   = 0;
 
-	bool   useAutoSmooth  = b_mesh.use_auto_smooth();
+	int ev = 0;
+	int k  = 0;
 
-	vertIndex = 0;
-
-	if(totface <= 5) {
+	if(totFaces <= 5) {
 		for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 			FaceVerts faceVerts = faceIt->vertices_raw();
 			if(faceVerts[3])
@@ -402,13 +320,18 @@ void GeomStaticMesh::initFaces()
 			else
 				ev = (ev << 3) | 8;
 		}
-		evArray[evIndex++] = ev;
+		m_edgeVisArray[edgeVisIndex++] = ev;
 	}
 
 	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 		FaceVerts faceVerts = faceIt->vertices_raw();
 
 		// Normals
+		float  n0[3];
+		float  n1[3];
+		float  n2[3];
+		float  n3[3];
+
 		if(useAutoSmooth) {
 			BL::Array<float, 12> autoNo = faceIt->split_normals();
 
@@ -427,6 +350,7 @@ void GeomStaticMesh::initFaces()
 					copy_v3_v3(n3, &b_mesh.vertices[faceVerts[3]].normal().data[0]);
 			}
 			else {
+				float fno[3];
 				copy_v3_v3(fno, &faceIt->normal().data[0]);
 
 				copy_v3_v3(n0, fno);
@@ -442,64 +366,58 @@ void GeomStaticMesh::initFaces()
 		int matID = faceIt->material_index() + 1;
 
 		// Store face vertices
-		facesArray[vertIndex++] = faceVerts[0];
-		facesArray[vertIndex++] = faceVerts[1];
-		facesArray[vertIndex++] = faceVerts[2];
+		m_facesArray[faceVertIndex++] = faceVerts[0];
+		m_facesArray[faceVertIndex++] = faceVerts[1];
+		m_facesArray[faceVertIndex++] = faceVerts[2];
 		if(faceVerts[3]) {
-			facesArray[vertIndex++] = faceVerts[2];
-			facesArray[vertIndex++] = faceVerts[3];
-			facesArray[vertIndex++] = faceVerts[0];
+			m_facesArray[faceVertIndex++] = faceVerts[2];
+			m_facesArray[faceVertIndex++] = faceVerts[3];
+			m_facesArray[faceVertIndex++] = faceVerts[0];
 		}
 
 		// Store normals
-		COPY_VECTOR(normalsArray, normIndex, n0);
-		COPY_VECTOR(normalsArray, normIndex, n1);
-		COPY_VECTOR(normalsArray, normIndex, n2);
+		COPY_VECTOR(m_normalsArray, normArrIndex, n0);
+		COPY_VECTOR(m_normalsArray, normArrIndex, n1);
+		COPY_VECTOR(m_normalsArray, normArrIndex, n2);
 		if(faceVerts[3]) {
-			COPY_VECTOR(normalsArray, normIndex, n2);
-			COPY_VECTOR(normalsArray, normIndex, n3);
-			COPY_VECTOR(normalsArray, normIndex, n0);
+			COPY_VECTOR(m_normalsArray, normArrIndex, n2);
+			COPY_VECTOR(m_normalsArray, normArrIndex, n3);
+			COPY_VECTOR(m_normalsArray, normArrIndex, n0);
 		}
 
 		// Store face normals
 		int verts = faceVerts[3] ? 6 : 3;
 		for(int v = 0; v < verts; ++v) {
-			faceNormalsArray[faceNormIndex] = faceNormIndex;
+			m_faceNormalsArray[faceNormIndex] = faceNormIndex;
 			faceNormIndex++;
 		}
 
 		// Store material ID
-		face_mtlIDsArray[faceMtlIDIndex++] = matID;
+		m_mtlIDsArray[faceMtlIDIndex++] = matID;
 		if(faceVerts[3])
-			face_mtlIDsArray[faceMtlIDIndex++] = matID;
+			m_mtlIDsArray[faceMtlIDIndex++] = matID;
 
 		// Store edge visibility
 		if(faceVerts[3]) {
 			ev = (ev << 3) | 3;
-			k = AddEdgeVisibility(k, evArray, evIndex, ev);
+			k = AddEdgeVisibility(k, m_edgeVisArray, edgeVisIndex, ev);
 			ev = (ev << 3) | 3;
-			k = AddEdgeVisibility(k, evArray, evIndex, ev);
+			k = AddEdgeVisibility(k, m_edgeVisArray, edgeVisIndex, ev);
 		} else {
 			ev = (ev << 3) | 8;
-			k = AddEdgeVisibility(k, evArray, evIndex, ev);
+			k = AddEdgeVisibility(k, m_edgeVisArray, edgeVisIndex, ev);
 		}
 	}
 
 	// Store edge visibility if smth is left there
 	if(k)
-		evArray[evIndex++] = ev;
+		m_edgeVisArray[edgeVisIndex++] = ev;
 
-	m_faces           = GetStringZip((u_int8_t*)facesArray,       vertIndex      * sizeof(int));
-	m_normals         = GetStringZip((u_int8_t*)normalsArray,     normIndex      * sizeof(float));
-	m_faceNormals     = GetStringZip((u_int8_t*)faceNormalsArray, faceNormIndex  * sizeof(int));
-	m_faceMtlIDs      = GetStringZip((u_int8_t*)face_mtlIDsArray, faceMtlIDIndex * sizeof(int));
-	m_edge_visibility = GetStringZip((u_int8_t*)evArray,          evIndex        * sizeof(int));
-
-	delete [] facesArray;
-	delete [] normalsArray;
-	delete [] faceNormalsArray;
-	delete [] face_mtlIDsArray;
-	delete [] evArray;
+	m_faces           = GetStringZip((u_int8_t*)m_facesArray,       faceVertIndex  * sizeof(int));
+	m_normals         = GetStringZip((u_int8_t*)m_normalsArray,     normArrIndex   * sizeof(float));
+	m_faceNormals     = GetStringZip((u_int8_t*)m_faceNormalsArray, faceNormIndex  * sizeof(int));
+	m_faceMtlIDs      = GetStringZip((u_int8_t*)m_mtlIDsArray,      faceMtlIDIndex * sizeof(int));
+	m_edge_visibility = GetStringZip((u_int8_t*)m_edgeVisArray,     edgeVisIndex   * sizeof(int));
 }
 
 
@@ -632,7 +550,7 @@ void GeomStaticMesh::initMapChannels()
 
 void GeomStaticMesh::initAttributes()
 {
-	if(m_propGroup && NOT(m_propGroup == Py_None)) {
+	if(m_propGroup != Py_None) {
 		dynamic_geometry     = GetPythonAttrInt(m_propGroup, "dynamic_geometry");
 		environment_geometry = GetPythonAttrInt(m_propGroup, "environment_geometry");
 
@@ -641,12 +559,6 @@ void GeomStaticMesh::initAttributes()
 		osd_subdiv_uvs   = GetPythonAttrInt(m_propGroup, "osd_subdiv_uvs");
 
 		weld_threshold = GetPythonAttrFloat(m_propGroup, "weld_threshold");
-	}
-	else {
-		RnaAccess::RnaValue rna(&m_ob->id, "vray.GeomStaticMesh");
-		if(rna.hasProperty("dynamic_geometry")) {
-			dynamic_geometry = rna.getBool("dynamic_geometry");
-		}
 	}
 }
 
@@ -670,179 +582,58 @@ void GeomStaticMesh::initAttributes(PointerRNA *ptr)
 }
 
 
+void GeomStaticMesh::freeArrays()
+{
+	FREE_ARRAY(m_vertsArray);
+	FREE_ARRAY(m_facesArray);
+	FREE_ARRAY(m_normalsArray);
+	FREE_ARRAY(m_faceNormalsArray);
+	FREE_ARRAY(m_mtlIDsArray);
+	FREE_ARRAY(m_edgeVisArray);
+}
+
+
+MHash GeomStaticMesh::hashArray(void *data, int dataLen)
+{
+	MHash hashArr[4] = {0, 0, 0, 0};
+	MHash hash = 1;
+	MHash seed = 42;
+
+	MurmurHash3_x64_128(data, dataLen, seed, hashArr);
+
+	for (int i = 0; i < 4; ++i)
+		hash ^= hashArr[i];
+
+	m_hash ^= hash;
+
+	return hash;
+}
+
+
 void GeomStaticMesh::initHash()
 {
-#if CGR_USE_MURMUR_HASH
-	u_int32_t vertexHash[4];
-	u_int32_t facesHash[4];
-
-	MurmurHash3_x64_128(vertices, coordIndex * sizeof(float), 42,            vertexHash);
-	MurmurHash3_x64_128(faces,    vertIndex  * sizeof(int),   vertexHash[0], facesHash);
-
-	PRINT_INFO("Object: %s => hash = 0x%X", object->id.name+2, hash);
-#else
 	m_hash = 1;
 
 	// If not animation don't waste time calculating hashes
 	if(ExpoterSettings::gSet.m_isAnimation) {
-		if(m_vertices) {
-			m_hashVertices = HashCode(m_vertices);
-			m_hash ^= m_hashVertices;
-		}
-		if(m_normals) {
-			m_hashNormals = HashCode(m_normals);
-			m_hash ^= m_hashNormals;
-		}
-		if(m_faces) {
-			m_hashFaces = HashCode(m_faces);
-			m_hash ^= m_hashFaces;
-		}
-		if(m_faceNormals) {
-			m_hashFaceNormals = HashCode(m_faceNormals);
-			m_hash ^= m_hashFaceNormals;
-		}
-		if(m_faceMtlIDs) {
-			m_hashFaceMtlIDs = HashCode(m_faceMtlIDs);
-			m_hash ^= m_hashFaceMtlIDs;
-		}
-		if(m_edge_visibility) {
-			m_hashEdgeVisibility = HashCode(m_edge_visibility);
-			m_hash ^= m_hashEdgeVisibility;
-		}
-
-		if(useSmooth)
-			m_hash ^= HashCode(m_pluginSmooth.str().c_str());
-		if(useDisplace)
-			m_hash ^= HashCode(m_pluginDisplace.str().c_str());
-	}
-#endif
-}
-
-
-void GeomStaticMesh::writeGeomStaticSmoothedMesh(PyObject *output)
-{
-	RnaAccess::RnaValue smoothRna(&m_ob->id, "vray.GeomStaticSmoothedMesh");
-
-	size_t mCompSize = meshComponentNames.size();
-
-	m_pluginSmooth << "\n" << "GeomStaticSmoothedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
-	m_pluginSmooth << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
-
-	writeAttributes(smoothRna.getPtr(), m_pluginDesc.getTree("GeomStaticSmoothedMesh"), m_pluginSmooth);
-
-	if(useDisplace) {
-		RnaAccess::RnaValue dispRna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
-
-		StrSet skipDispAttrs;
-		skipDispAttrs.insert("map_channel");
-
-		writeAttributes(dispRna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), m_pluginSmooth, skipDispAttrs);
-
-		// Overrider type settings
-		//
-		int displace_type = dispRna.getEnum("type");
-
-		if(displace_type == 1) {
-			m_pluginSmooth << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-			m_pluginSmooth << "\n\t" << "vector_displacement" << "=" << 0 << ";";
-		}
-		else if(displace_type == 0) {
-			m_pluginSmooth << "\n\t" << "displace_2d"         << "=" << 1 << ";";
-			m_pluginSmooth << "\n\t" << "vector_displacement" << "=" << 0 << ";";
-		}
-		else if(displace_type == 2) {
-			m_pluginSmooth << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-			m_pluginSmooth << "\n\t" << "vector_displacement" << "=" << 1 << ";";
-		}
-
-		if(displace_type == 2) {
-			m_pluginSmooth << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
-		}
-		else {
-			m_pluginSmooth << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
-		}
-
-		// Use first channel for displace
-		m_pluginSmooth << "\n\t" << "map_channel" << "=" << 0 << ";";
-	}
-	m_pluginSmooth << "\n}\n";
-
-	meshComponentNames.pop_back();
-
-	PYTHON_PRINT(output, m_pluginSmooth.str().c_str());
-}
-
-
-void GeomStaticMesh::writeGeomDisplacedMesh(PyObject *output)
-{
-	RnaAccess::RnaValue rna(&displaceTexture->id, "vray_slot.GeomDisplacedMesh");
-
-	size_t mCompSize = meshComponentNames.size();
-
-
-	StrSet skipDispAttrs;
-	skipDispAttrs.insert("map_channel");
-
-	m_pluginDisplace << "\n" << "GeomDisplacedMesh" << " " << meshComponentNames[mCompSize-1] << " {";
-	m_pluginDisplace << "\n\t" << "mesh=" << meshComponentNames[mCompSize-2] << ";";
-
-	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("GeomDisplacedMesh"), m_pluginDisplace, skipDispAttrs);
-
-	meshComponentNames.pop_back();
-
-	// Overrider type settings
-	//
-	int displace_type = rna.getEnum("type");
-
-	if(displace_type == 1) {
-		m_pluginDisplace << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-		m_pluginDisplace << "\n\t" << "vector_displacement" << "=" << 0 << ";";
-	}
-	else if(displace_type == 0) {
-		m_pluginDisplace << "\n\t" << "displace_2d"         << "=" << 1 << ";";
-		m_pluginDisplace << "\n\t" << "vector_displacement" << "=" << 0 << ";";
-	}
-	else if(displace_type == 2) {
-		m_pluginDisplace << "\n\t" << "displace_2d"         << "=" << 0 << ";";
-		m_pluginDisplace << "\n\t" << "vector_displacement" << "=" << 1 << ";";
+		m_hashVertices    = hashArray(m_vertsArray,       m_vertsArraySize       * sizeof(float));
+		m_hashNormals     = hashArray(m_normalsArray,     m_normalsArraySize     * sizeof(float));
+		m_hashFaces       = hashArray(m_facesArray,       m_facesArraySize       * sizeof(int));
+		m_hashFaceNormals = hashArray(m_faceNormalsArray, m_faceNormalsArraySize * sizeof(int));
+		m_hashFaceMtlIDs  = hashArray(m_mtlIDsArray,      m_mtlIDArraySize       * sizeof(int));
+		m_hashEdgeVis     = hashArray(m_edgeVisArray,     m_edgeVisArraySize     * sizeof(int));
 	}
 
-	if(displace_type == 2) {
-		m_pluginDisplace << "\n\t" << "displacement_tex_color=" << displaceTextureName << ";";
-	}
-	else {
-		m_pluginDisplace << "\n\t" << "displacement_tex_float=" << displaceTextureName << "::out_intensity;";
-	}
-
-	// Use first channel for displace
-	m_pluginDisplace << "\n\t" << "map_channel" << "=" << 0 << ";";
-	m_pluginDisplace << "\n}\n";
-
-	PYTHON_PRINT(output, m_pluginDisplace.str().c_str());
+	freeArrays();
 }
 
 
 void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
-	if(useSmooth && useDisplace)
-		writeGeomStaticSmoothedMesh(output);
-	else if(useSmooth)
-		writeGeomStaticSmoothedMesh(output);
-	else if(useDisplace)
-		writeGeomDisplacedMesh(output);
-
-	if(useSmooth || useDisplace) {
-		smooth_uv         = true;
-		smooth_uv_borders = true;
-	}
-
 	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
 	int             prevFrame = ExpoterSettings::gSet.m_frameCurrent - ExpoterSettings::gSet.m_frameStep;
 
-	size_t      compSize = meshComponentNames.size();
-	std::string geomName = meshComponentNames[compSize-1];
-
-	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", geomName.c_str());
+	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", m_name.c_str());
 
 	PYTHON_PRINT_DATA(output, "vertices", "ListVectorHex",
 					  m_vertices, m_hashVertices,
@@ -877,7 +668,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 
 	if(m_edge_visibility) {
 		PYTHON_PRINT_DATA(output, "edge_visibility", "ListIntHex",
-						  m_edge_visibility, m_hashEdgeVisibility,
+						  m_edge_visibility, m_hashEdgeVis,
 						  prevMesh,
 						  prevMesh->getEdgeVisibility(), prevMesh->getEdgeVisibilityHash());
 	}
@@ -924,7 +715,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 		PYTHON_PRINTF(output, ")%s;", m_interpEnd);
 	}
 
-	if(NOT(prevMesh)) {
+	if(ExpoterSettings::gSet.IsFirstFrame()) {
 		PYTHON_PRINTF(output, "\n\tprimary_visibility=%i;", primary_visibility);
 		PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
 		PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
@@ -932,7 +723,6 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_uvs=%i;",   osd_subdiv_uvs);
 		PYTHON_PRINTF(output, "\n\tweld_threshold=%.3f;", weld_threshold);
-
 		PYTHON_PRINTF(output, "\n\tsmooth_uv=%i;",         smooth_uv);
 		PYTHON_PRINTF(output, "\n\tsmooth_uv_borders=%i;", smooth_uv_borders);
 	}

@@ -144,44 +144,41 @@ void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const
 }
 
 
-int VRayExportable::write(PyObject *output, int frame) {
+int VRayExportable::write(PyObject *output, int frame)
+{
+	VRayScene::WriteFlag exitCode = VRayScene::eFreeData;
+
 	if(NOT(getHash()))
-		return 1;
+		return exitCode;
 
 	// Allows to skip already exported data,
 	// useful when using dupli.
 	//
 	if(m_exportNameCache.find(m_name) != m_exportNameCache.end())
-		return 1;
+		return exitCode;
+
 	m_exportNameCache.insert(m_name);
 
 	if(NOT(ExpoterSettings::gSet.m_isAnimation)) {
 		writeData(output, NULL);
 	}
 	else {
-		if(NOT(ExpoterSettings::gSet.DoUpdateCheck())) {
+		MHash currentHash = getHash();
+
+		if(frame == ExpoterSettings::gSet.m_frameStart) {
+			initInterpolate(frame);
 			writeData(output, NULL);
+
+			m_frameCache.update(m_name, currentHash, frame, this);
+
+			exitCode = VRayScene::eKeedData;
 		}
 		else {
-			MHash currentHash = getHash();
-
-			if(frame == ExpoterSettings::gSet.m_frameCurrent) {
-				initInterpolate(frame);
-				writeData(output, NULL);
-				m_frameCache.update(m_name, currentHash, frame, this);
-				return 0;
-			}
-			else {
-				if(NOT(isUpdated()))
-					return 1;
-
+			if(isUpdated()) {
 				MHash           prevHash  = m_frameCache.getHash(m_name);
 				VRayExportable *prevState = m_frameCache.getData(m_name);
 
-				if(currentHash == prevHash) {
-					return 1;
-				}
-				else {
+				if(currentHash != prevHash) {
 					int cacheFrame = m_frameCache.getFrame(m_name);
 					int prevFrame  = frame - ExpoterSettings::gSet.m_frameStep;
 
@@ -192,13 +189,13 @@ int VRayExportable::write(PyObject *output, int frame) {
 
 					m_frameCache.update(m_name, currentHash, frame, this);
 
-					return 0;
+					exitCode = VRayScene::eKeedData;
 				}
 			}
 		}
 	}
 
-	return 1;
+	return exitCode;
 }
 
 

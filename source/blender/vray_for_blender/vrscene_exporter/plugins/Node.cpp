@@ -34,8 +34,6 @@
 
 #include "GeomStaticMesh.h"
 #include "GeomMayaHair.h"
-#include "GeomMeshFile.h"
-#include "GeomPlane.h"
 
 #include "BKE_global.h"
 #include "BKE_depsgraph.h"
@@ -122,27 +120,11 @@ void VRayScene::Node::initName(const std::string &name)
 }
 
 
-int VRayScene::Node::preInitGeometry(int useDisplaceSubdiv)
+int VRayScene::Node::preInitGeometry()
 {
-	RnaAccess::RnaValue rna((ID*)m_ob->data, "vray");
-
-	if(NOT(rna.getBool("override")))
-		m_geometryType = VRayScene::eGeometryMesh;
-	else
-		if(rna.getEnum("override_type") == 0)
-			m_geometryType = VRayScene::eGeometryProxy;
-		else if(rna.getEnum("override_type") == 1)
-			m_geometryType = VRayScene::eGeometryPlane;
-
-	if(m_geometryType == VRayScene::eGeometryMesh) {
-		if(IsMeshValid(m_sce, m_main, m_ob)) {
-			m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob, useDisplaceSubdiv);
-		}
+	if(IsMeshValid(m_sce, m_main, m_ob)) {
+		m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob);
 	}
-	else if(m_geometryType == VRayScene::eGeometryProxy)
-		m_geometry = new GeomMeshFile(m_sce, m_main, m_ob);
-	else if(m_geometryType == VRayScene::eGeometryPlane)
-		m_geometry = new GeomPlane(m_sce, m_main, m_ob);
 
 	if(NOT(m_geometry))
 		return 0;

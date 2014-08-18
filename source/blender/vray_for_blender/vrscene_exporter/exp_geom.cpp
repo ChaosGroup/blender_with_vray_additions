@@ -26,7 +26,7 @@
 
 int ExportGeomStaticMesh(PyObject *outputFile, Scene *sce, Object *ob, Main *main, const char *pluginName, PyObject *propGroup)
 {
-	VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(sce, main, ob, false);
+	VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(sce, main, ob);
 	geomStaticMesh->init();
 	geomStaticMesh->initName(pluginName);
 	geomStaticMesh->setPropGroup(propGroup);
