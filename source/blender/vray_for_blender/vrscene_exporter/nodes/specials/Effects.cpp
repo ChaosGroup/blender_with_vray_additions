@@ -114,7 +114,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 							 ExporterSettings::gSet.m_sce,
 							 (Object*)domainOb.ptr.data,
 							 ExporterSettings::gSet.m_main,
-							 pluginName.c_str(),
+							 geomPluginName.c_str(),
 							 NULL);
 
 		char transform[CGR_TRANSFORM_HEX_SIZE];
@@ -124,7 +124,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 		pluginAttrs["geometry"]  = geomPluginName;
 		pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
 
-		VRayNodePluginExporter::exportPlugin("NODE", "EnvFogMeshGizmo", pluginName, pluginAttrs);
+		VRayNodePluginExporter::exportPlugin("EFFECT", "EnvFogMeshGizmo", pluginName, pluginAttrs);
 	}
 
 	// Exclude object from Node creation
@@ -169,10 +169,11 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 		return "NULL";
 
 	AttributeValueMap  manualAttrs;
-	std::string        gizmos = "";
 
 	BL::NodeSocket gizmosSock = VRayNodeExporter::getSocketByAttr(node, "gizmos");
 	if (gizmosSock.is_linked()) {
+		std::string gizmos = "";
+
 		BL::Node conNode = VRayNodeExporter::getConnectedNode(gizmosSock);
 		if (NOT(conNode.bl_idname() == "VRayNodeEnvFogMeshGizmo")) {
 			PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node");
@@ -180,17 +181,18 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 		else {
 			gizmos = VRayNodeExporter::exportSocket(ntree, gizmosSock, context);
 		}
-	}
 
-	// If socket is linked it means user have attached the gizmo node,
-	// but if gizmos list is empty it means gizmo object is invisible.
-	// We don't need to export the whole effect at all because it will cover the whole
-	// scene without gizmo.
-	if (gizmosSock.is_linked() && (gizmos.empty() || gizmos == "NULL" || gizmos == "List()")) {
-		return "NULL";
+		// If socket is linked it means user have attached the gizmo node,
+		// but if gizmos list is empty it means gizmo object is invisible.
+		// We don't need to export the whole effect at all because it will cover the whole
+		// scene without gizmo.
+		if (gizmos.empty() || gizmos == "NULL" || gizmos == "List()") {
+			return "NULL";
+		}
+		else {
+			manualAttrs["gizmos"] = gizmos;
+		}
 	}
-
-	manualAttrs["gizmos"] = gizmos;
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }
