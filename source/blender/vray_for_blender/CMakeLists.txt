@@ -69,8 +69,8 @@ set(SRC
 	utils/CGR_vrscene.cpp
 	utils/cgr_paths.h
 	utils/cgr_paths.cpp
-	utils/murmur3.h
-	utils/murmur3.cpp
+	utils/cgr_hash.h
+	utils/cgr_hash.cpp
 
 	# vrscene export
 	vrscene_exporter/exp_anim.h
