@@ -159,13 +159,13 @@ int VRayExportable::write(PyObject *output, int frame)
 
 	m_exportNameCache.insert(m_name);
 
-	if(NOT(ExpoterSettings::gSet.m_isAnimation)) {
+	if(NOT(ExporterSettings::gSet.m_isAnimation)) {
 		writeData(output, NULL);
 	}
 	else {
 		MHash currentHash = getHash();
 
-		if(frame == ExpoterSettings::gSet.m_frameStart) {
+		if(frame == ExporterSettings::gSet.m_frameStart) {
 			initInterpolate(frame);
 			writeData(output, NULL);
 
@@ -180,7 +180,7 @@ int VRayExportable::write(PyObject *output, int frame)
 
 				if(currentHash != prevHash) {
 					int cacheFrame = m_frameCache.getFrame(m_name);
-					int prevFrame  = frame - ExpoterSettings::gSet.m_frameStep;
+					int prevFrame  = frame - ExporterSettings::gSet.m_frameStep;
 
 					int needKeyFrame = cacheFrame < prevFrame;
 
