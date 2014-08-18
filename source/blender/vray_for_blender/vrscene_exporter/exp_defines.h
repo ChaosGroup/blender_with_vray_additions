@@ -96,6 +96,12 @@ else { \
 	} \
 }
 
+#define FREE_ARRAY(x) \
+if (x) { \
+	delete [] x; \
+	x = NULL; \
+}
+
 #define EMPTY_HEX_DATA(ptr) \
 	ptr = new char[1]; \
 	ptr[0] = '\0';
