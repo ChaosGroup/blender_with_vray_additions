@@ -75,6 +75,7 @@ extern "C" {
 	attrType == "GEOMETRY"          || \
 	attrType == "PLUGIN"            || \
 	attrType == "TEXTURE"           || \
+	attrType == "MATRIX"            || \
 	attrType == "TRANSFORM"         || \
 	attrType == "TRANSFORM_TEXTURE" || \
 	attrType == "FLOAT_TEXTURE"     || \
