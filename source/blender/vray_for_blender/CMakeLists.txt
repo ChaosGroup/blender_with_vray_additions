@@ -107,14 +107,8 @@ set(SRC
 	vrscene_exporter/nodes/specials/Custom.cpp
 	vrscene_exporter/plugins/GeomMayaHair.cpp
 	vrscene_exporter/plugins/GeomMayaHair.h
-	vrscene_exporter/plugins/GeomMeshFile.cpp
-	vrscene_exporter/plugins/GeomMeshFile.h
-	vrscene_exporter/plugins/GeomPlane.cpp
-	vrscene_exporter/plugins/GeomPlane.h
 	vrscene_exporter/plugins/GeomStaticMesh.cpp
 	vrscene_exporter/plugins/GeomStaticMesh.h
-	vrscene_exporter/plugins/Light.cpp
-	vrscene_exporter/plugins/Light.h
 	vrscene_exporter/plugins/Node.cpp
 	vrscene_exporter/plugins/Node.h
 	vrscene_exporter/plugins/TexVoxelData.cpp
