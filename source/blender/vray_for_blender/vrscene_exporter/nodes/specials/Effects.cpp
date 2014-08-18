@@ -166,11 +166,25 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	AttributeValueMap  manualAttrs;
-	std::string        gizmos = "List()";
+	std::string        gizmos = "";
 
 	BL::NodeSocket gizmosSock = VRayNodeExporter::getSocketByAttr(node, "gizmos");
 	if (gizmosSock.is_linked()) {
-		gizmos = VRayNodeExporter::exportSocket(ntree, gizmosSock, context);
+		BL::Node conNode = VRayNodeExporter::getConnectedNode(gizmosSock);
+		if (NOT(conNode.bl_idname() == "VRayNodeEnvFogMeshGizmo")) {
+			PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node");
+		}
+		else {
+			gizmos = VRayNodeExporter::exportSocket(ntree, gizmosSock, context);
+		}
+	}
+
+	// If socket is linked it means user have attached the gizmo node,
+	// but if gizmos list is empty it means gizmo object is invisible.
+	// We don't need to export the whole effect at all because it will cover the whole
+	// scene without gizmo.
+	if (gizmosSock.is_linked() && (gizmos.empty() || gizmos == "NULL" || gizmos == "List()")) {
+		return "NULL";
 	}
 
 	manualAttrs["gizmos"] = gizmos;
