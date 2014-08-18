@@ -511,7 +511,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		node->setHideFromView(hideFromViewStats);
 	}
 
-	if(node->hasHair() && ExporterSettings::gSet.m_exportHair) {
+	if(node->hasHair()) {
 		node->writeHair();
 		if(NOT(node->doRenderEmitter())) {
 			delete node;
