@@ -22,10 +22,17 @@
 
 #include "exp_settings.h"
 
-ExpoterSettings ExpoterSettings::gSet;
+#include "Node.h"
+#include "CGR_rna.h"
+
+#include "DNA_scene_types.h"
+#include "RNA_access.h"
 
 
-void ExpoterSettings::init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
+ExporterSettings ExporterSettings::gSet;
+
+
+void ExporterSettings::init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
 {
 	b_scene  = scene;
 	b_data   = data;
@@ -33,7 +40,87 @@ void ExpoterSettings::init(BL::Scene scene, BL::BlendData data, BL::RenderEngine
 }
 
 
-void ExpoterSettings::reset()
+void ExporterSettings::init()
+{
+	PointerRNA vrayScene = RNA_pointer_get(&b_scene.ptr, "vray");
+	PointerRNA vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
+
+	m_exportHair        = RNA_boolean_get(&vrayExporter, "use_smoke");
+	m_exportSmoke       = RNA_boolean_get(&vrayExporter, "use_hair");
+	m_useDisplaceSubdiv = RNA_boolean_get(&vrayExporter, "use_displace");
+
+	// Check what layers to use
+	//
+	const int useLayers = RNA_enum_get(&vrayExporter, "activeLayers");
+	if(useLayers == 0) {
+		// Current active layers
+		m_activeLayers = m_sce->lay;
+	}
+	else if(useLayers == 1) {
+		// All layers
+		m_activeLayers = ~(1<<21);
+	}
+	else {
+		// Custom layers
+		// Load custom render layers
+		int layer_values[20];
+		RNA_boolean_get_array(&vrayExporter, "customRenderLayers", layer_values);
+
+		m_activeLayers = 0;
+		for(int a = 0; a < 20; ++a) {
+			if(layer_values[a]) {
+				gSet.m_activeLayers |= (1 << a);
+			}
+		}
+	}
+
+	// Find if we need hide from view here
+	const int animationMode = RNA_enum_get(&vrayExporter, "animation_mode");
+	if(animationMode == 4) {
+		// "Camera Loop"
+		BL::BlendData::cameras_iterator caIt;
+		for(b_data.cameras.begin(caIt); caIt != b_data.cameras.end(); ++caIt) {
+			BL::Camera ca = *caIt;
+
+			PointerRNA vrayCamera = RNA_pointer_get(&ca.ptr, "vray");
+
+			if(RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+				if(RNA_boolean_get(&vrayCamera, "hide_from_view")) {
+					m_useHideFromView = true;
+					break;
+				}
+			}
+		}
+	}
+	else {
+		BL::Object caOb = b_scene.camera();
+		BL::Camera ca(caOb.data());
+
+		PointerRNA vrayCamera = RNA_pointer_get(&ca.ptr, "vray");
+
+		m_useHideFromView = RNA_boolean_get(&vrayCamera, "hide_from_view");
+	}
+
+	m_mtlOverride.clear();
+	PointerRNA settingsOptions = RNA_pointer_get(&vrayScene, "SettingsOptions");
+	if(RNA_boolean_get(&settingsOptions, "mtl_override_on")) {
+		const std::string &overrideName = RNA_std_string_get(&settingsOptions, "mtl_override");
+		if(NOT(overrideName.empty())) {
+			BL::BlendData::materials_iterator maIt;
+			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
+				BL::Material ma = *maIt;
+				if(ma.name() == overrideName) {
+					m_mtlOverride = Node::GetMaterialName((Material*)ma.ptr.data);
+					// m_mtlOverride = bl_ma;
+					break;
+				}
+			}
+		}
+	}
+}
+
+
+void ExporterSettings::reset()
 {
 	m_sce  = NULL;
 	m_main = NULL;
@@ -45,7 +132,14 @@ void ExpoterSettings::reset()
 	m_fileTex    = NULL;
 
 	m_activeLayers  = 0;
-	m_useInstancerForGroup = false;
+
+	m_useHideFromView   = false;
+	m_useDisplaceSubdiv = true;
+
+	m_exportNodes  = true;
+	m_exportMeshes = true;
+	m_exportHair   = true;
+	m_exportSmoke  = true;
 
 	m_isAnimation  = false;
 	m_frameCurrent = 0;
@@ -57,13 +151,13 @@ void ExpoterSettings::reset()
 }
 
 
-bool ExpoterSettings::DoUpdateCheck()
+bool ExporterSettings::DoUpdateCheck()
 {
 	return m_isAnimation && (m_frameCurrent > m_frameStart);
 }
 
 
-bool ExpoterSettings::IsFirstFrame()
+bool ExporterSettings::IsFirstFrame()
 {
 	if(NOT(m_isAnimation))
 		return true;

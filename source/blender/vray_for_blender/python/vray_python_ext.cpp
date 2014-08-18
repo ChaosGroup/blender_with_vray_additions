@@ -72,9 +72,9 @@ static PyObject* mExportInitAnim(PyObject *self, PyObject *args)
 	if(NOT(PyArg_ParseTuple(args, "iii", &isAnimation, &frameStart, &frameStep)))
 		return NULL;
 
-	ExpoterSettings::gSet.m_isAnimation = isAnimation;
-	ExpoterSettings::gSet.m_frameStart  = frameStart;
-	ExpoterSettings::gSet.m_frameStep   = frameStep;
+	ExporterSettings::gSet.m_isAnimation = isAnimation;
+	ExporterSettings::gSet.m_frameStart  = frameStart;
+	ExporterSettings::gSet.m_frameStep   = frameStep;
 
 	Py_RETURN_NONE;
 }
@@ -150,26 +150,26 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_data), &dataRNA);
 	BL::BlendData bl_data(dataRNA);
 
-	ExpoterSettings::gSet.reset();
-	ExpoterSettings::gSet.init(bl_scene, bl_data, bl_engine);
-	ExpoterSettings::gSet.m_sce  = (Scene*)bl_scene.ptr.data;
-	ExpoterSettings::gSet.m_main = (Main*)bl_data.ptr.data;
+	ExporterSettings::gSet.reset();
+	ExporterSettings::gSet.init(bl_scene, bl_data, bl_engine);
+	ExporterSettings::gSet.m_sce  = (Scene*)bl_scene.ptr.data;
+	ExporterSettings::gSet.m_main = (Main*)bl_data.ptr.data;
 
-	ExpoterSettings::gSet.m_fileMain   = mainFile;
-	ExpoterSettings::gSet.m_fileObject = obFile;
-	ExpoterSettings::gSet.m_fileEnv    = envFile;
-	ExpoterSettings::gSet.m_fileGeom   = geomFile;
-	ExpoterSettings::gSet.m_fileLights = lightsFile;
-	ExpoterSettings::gSet.m_fileMat    = materialsFile;
-	ExpoterSettings::gSet.m_fileTex    = texturesFile;
+	ExporterSettings::gSet.m_fileMain   = mainFile;
+	ExporterSettings::gSet.m_fileObject = obFile;
+	ExporterSettings::gSet.m_fileEnv    = envFile;
+	ExporterSettings::gSet.m_fileGeom   = geomFile;
+	ExporterSettings::gSet.m_fileLights = lightsFile;
+	ExporterSettings::gSet.m_fileMat    = materialsFile;
+	ExporterSettings::gSet.m_fileTex    = texturesFile;
 
 	if(drSharePath) {
-		ExpoterSettings::gSet.m_drSharePath = drSharePath;
+		ExporterSettings::gSet.m_drSharePath = drSharePath;
 	}
 
-	ExpoterSettings::gSet.m_exporter = new VRsceneExporter();
+	ExporterSettings::gSet.m_exporter = new VRsceneExporter();
 
-	return PyLong_FromVoidPtr(ExpoterSettings::gSet.m_exporter);
+	return PyLong_FromVoidPtr(ExporterSettings::gSet.m_exporter);
 }
 
 
@@ -191,7 +191,7 @@ static PyObject* mExportSetFrame(PyObject *self, PyObject *args)
 	if(NOT(PyArg_ParseTuple(args, "i", &frameCurrent)))
 		return NULL;
 
-	ExpoterSettings::gSet.m_frameCurrent = frameCurrent;
+	ExporterSettings::gSet.m_frameCurrent = frameCurrent;
 
 	Py_RETURN_NONE;
 }

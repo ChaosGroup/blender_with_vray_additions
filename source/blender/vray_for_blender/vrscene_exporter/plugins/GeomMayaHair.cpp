@@ -497,7 +497,7 @@ void GeomMayaHair::initHash()
 	m_hash = 1;
 
 	// If not animation don't waste time calculating hashes
-	if(ExpoterSettings::gSet.m_isAnimation) {
+	if(ExporterSettings::gSet.m_isAnimation) {
 		if(hair_vertices)
 			m_hashHairVertices    = HashCode(hair_vertices);
 		if(num_hair_vertices)
@@ -564,7 +564,7 @@ void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs
 void GeomMayaHair::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	GeomMayaHair *prevHair  = (GeomMayaHair*)prevState;
-	int           prevFrame = ExpoterSettings::gSet.m_frameCurrent - ExpoterSettings::gSet.m_frameStep;
+	int           prevFrame = ExporterSettings::gSet.m_frameCurrent - ExporterSettings::gSet.m_frameStep;
 
 	PYTHON_PRINTF(output, "\nGeomMayaHair %s {", m_name.c_str());
 
@@ -606,5 +606,5 @@ std::string GeomMayaHair::getHairMaterialName() const
 	Material *ma = give_current_material(m_ob, m_psys->part->omat);
 	if(NOT(ma))
 		return "MANOMATERIALISSET";
-	return Node::GetMaterialName(ma, ExpoterSettings::gSet.m_mtlOverride);
+	return Node::GetMaterialName(ma, ExporterSettings::gSet.m_mtlOverride);
 }

@@ -1019,7 +1019,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 
 	m_namesCache.insert(pluginName);
 
-	bool pluginIsInCache = ExpoterSettings::gSet.m_isAnimation ? m_nodeCache.pluginInCache(pluginName) : false;
+	bool pluginIsInCache = ExporterSettings::gSet.m_isAnimation ? m_nodeCache.pluginInCache(pluginName) : false;
 
 	std::stringstream outAttributes;
 	std::stringstream outPlugin;
@@ -1032,14 +1032,14 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		const std::string attrValue = attrIt->second;
 		const std::string attrType  = GetAttrType(pluginDesc, attrName);
 
-		if(NOT(ExpoterSettings::gSet.m_isAnimation)) {
+		if(NOT(ExporterSettings::gSet.m_isAnimation)) {
 			outAttributes << "\n\t" << attrName << "=" << attrValue << ";";
 		}
 		else {
 			MHash attrHash = HashCode(attrValue.c_str());
 
-			const int currentFrame = ExpoterSettings::gSet.m_frameCurrent;
-			const int prevFrame    = currentFrame - ExpoterSettings::gSet.m_frameStep;
+			const int currentFrame = ExporterSettings::gSet.m_frameCurrent;
+			const int prevFrame    = currentFrame - ExporterSettings::gSet.m_frameStep;
 
 			const int attrNonAnim = NOT_ANIMATABLE_TYPE(attrType);
 
@@ -1088,7 +1088,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	if(outAttributes.str().empty()) {
 		// We have some plugins without input attributes
 		// Export them only for the first frame
-		if(ExpoterSettings::gSet.DoUpdateCheck())
+		if(ExporterSettings::gSet.DoUpdateCheck())
 			return 0;
 	}
 
@@ -1096,22 +1096,22 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 	outPlugin << outAttributes.str();
 	outPlugin << "\n}\n";
 
-	PyObject *output = ExpoterSettings::gSet.m_fileObject;
+	PyObject *output = ExporterSettings::gSet.m_fileObject;
 
 	if(pluginType == "TEXTURE" || pluginType == "UVWGEN") {
-		output = ExpoterSettings::gSet.m_fileTex;
+		output = ExporterSettings::gSet.m_fileTex;
 	}
 	else if(pluginType == "MATERIAL" || pluginType == "BRDF") {
-		output = ExpoterSettings::gSet.m_fileMat;
+		output = ExporterSettings::gSet.m_fileMat;
 	}
 	else if(pluginType == "EFFECT" || pluginType == "ENVIRONMENT") {
-		output = ExpoterSettings::gSet.m_fileEnv;
+		output = ExporterSettings::gSet.m_fileEnv;
 	}
 	else if(pluginType == "RENDERCHANNEL") {
-		output = ExpoterSettings::gSet.m_fileMain;
+		output = ExporterSettings::gSet.m_fileMain;
 	}
 	else if(pluginType == "LIGHT") {
-		output = ExpoterSettings::gSet.m_fileLights;
+		output = ExporterSettings::gSet.m_fileLights;
 	}
 	else if(pluginType == "GEOMETRY") {
 		if(pluginID == "GeomDisplacedMesh"      ||
@@ -1119,10 +1119,10 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		   pluginID == "GeomPlane")
 		{
 			// Store dynamic geometry plugins in 'Node' file
-			output = ExpoterSettings::gSet.m_fileObject;
+			output = ExporterSettings::gSet.m_fileObject;
 		}
 		else {
-			output = ExpoterSettings::gSet.m_fileGeom;
+			output = ExporterSettings::gSet.m_fileGeom;
 		}
 	}
 
@@ -1222,7 +1222,7 @@ int VRayNodeExporter::isObjectVisible(BL::Object b_ob)
 		return false;
 	if(ob->restrictflag & OB_RESTRICT_RENDER)
 		return false;
-	if(NOT(ob->lay & ExpoterSettings::gSet.m_activeLayers))
+	if(NOT(ob->lay & ExporterSettings::gSet.m_activeLayers))
 		return false;
 	return true;
 }

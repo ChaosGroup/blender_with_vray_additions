@@ -36,16 +36,17 @@
 
 class VRsceneExporter;
 
-struct ExpoterSettings {
-	static ExpoterSettings gSet;
+struct ExporterSettings {
+	static ExporterSettings gSet;
 
-	ExpoterSettings():
+	ExporterSettings():
 		b_scene(PointerRNA_NULL),
 		b_data(PointerRNA_NULL),
 		b_engine(PointerRNA_NULL)
 	{}
 
 	void              init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine);
+	void              init();
 	void              reset();
 
 	bool              DoUpdateCheck();
@@ -70,11 +71,12 @@ struct ExpoterSettings {
 	// Export options
 	int               m_exportNodes;
 	int               m_exportMeshes;
+	int               m_exportHair;
+	int               m_exportSmoke;
 	unsigned int      m_activeLayers;
 	int               m_useHideFromView;
-
 	int               m_useDisplaceSubdiv;
-	int               m_useInstancerForGroup;
+
 	std::string       m_mtlOverride;
 
 	// Animation options

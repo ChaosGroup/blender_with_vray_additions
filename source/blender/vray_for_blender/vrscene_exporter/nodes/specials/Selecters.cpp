@@ -31,7 +31,7 @@ BL::Object VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::
 	std::string objectName = buf;
 
 	if(NOT(objectName.empty())) {
-		BL::BlendData b_data = ExpoterSettings::gSet.b_data;
+		BL::BlendData b_data = ExporterSettings::gSet.b_data;
 
 		BL::BlendData::objects_iterator obIt;
 		for(b_data.objects.begin(obIt); obIt != b_data.objects.end(); ++obIt) {
@@ -53,7 +53,7 @@ BL::Group VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::No
 	std::string groupName = buf;
 
 	if(NOT(groupName.empty())) {
-		BL::BlendData b_data = ExpoterSettings::gSet.b_data;
+		BL::BlendData b_data = ExporterSettings::gSet.b_data;
 		
 		BL::BlendData::groups_iterator grIt;
 		for(b_data.groups.begin(grIt); grIt != b_data.groups.end(); ++grIt) {

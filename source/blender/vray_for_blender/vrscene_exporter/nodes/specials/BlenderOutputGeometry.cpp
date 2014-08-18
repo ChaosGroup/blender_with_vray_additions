@@ -35,9 +35,9 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 
 	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
-	if(ExpoterSettings::gSet.m_exportMeshes) {
-		if(ExpoterSettings::gSet.m_isAnimation) {
-			if(ExpoterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context->obCtx.ob))) {
+	if(ExporterSettings::gSet.m_exportMeshes) {
+		if(ExporterSettings::gSet.m_isAnimation) {
+			if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context->obCtx.ob))) {
 				return pluginName;
 			}
 		}
@@ -47,7 +47,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 		geomStaticMesh->initName(pluginName);
 		geomStaticMesh->initAttributes(&node.ptr);
 
-		int toDelete = geomStaticMesh->write(ExpoterSettings::gSet.m_fileGeom, ExpoterSettings::gSet.m_frameCurrent);
+		int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
 		if(toDelete)
 			delete geomStaticMesh;
 	}

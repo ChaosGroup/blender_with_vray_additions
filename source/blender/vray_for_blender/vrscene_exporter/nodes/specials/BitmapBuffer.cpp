@@ -49,17 +49,17 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 					int seqEnd    = seqLength - seqStart + 1;
 
 					if(imageUser.use_cyclic()) {
-						seqFrame = ((ExpoterSettings::gSet.m_frameCurrent - seqStart) % seqLength) + 1;
+						seqFrame = ((ExporterSettings::gSet.m_frameCurrent - seqStart) % seqLength) + 1;
 					}
 					else {
-						if(ExpoterSettings::gSet.m_frameCurrent < seqStart){
+						if(ExporterSettings::gSet.m_frameCurrent < seqStart){
 							seqFrame = seqStart;
 						}
-						else if(ExpoterSettings::gSet.m_frameCurrent > seqEnd) {
+						else if(ExporterSettings::gSet.m_frameCurrent > seqEnd) {
 							seqFrame = seqEnd;
 						}
 						else {
-							seqFrame = seqStart + ExpoterSettings::gSet.m_frameCurrent - 1;
+							seqFrame = seqStart + ExporterSettings::gSet.m_frameCurrent - 1;
 						}
 					}
 					if(seqOffset < 0) {
@@ -79,7 +79,7 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 			PointerRNA bitmapBuffer = RNA_pointer_get(&node.ptr, "BitmapBuffer");
 			bool use_input_gamma = RNA_boolean_get(&bitmapBuffer, "use_input_gamma");
 			if(use_input_gamma) {
-				PointerRNA vrayScene = RNA_pointer_get(&ExpoterSettings::gSet.b_scene.ptr, "vray");
+				PointerRNA vrayScene = RNA_pointer_get(&ExporterSettings::gSet.b_scene.ptr, "vray");
 				PointerRNA settingsColorMapping = RNA_pointer_get(&vrayScene, "SettingsColorMapping");
 
 				attrs["gamma"] = BOOST_FORMAT_FLOAT(RNA_float_get(&settingsColorMapping, "input_gamma"));

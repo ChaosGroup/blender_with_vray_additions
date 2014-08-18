@@ -41,7 +41,7 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 
 	const std::string meshName = VRayNodeExporter::exportLinkedSocket(ntree, meshSock, context);
 
-	if(NOT(ExpoterSettings::gSet.m_useDisplaceSubdiv))
+	if(NOT(ExporterSettings::gSet.m_useDisplaceSubdiv))
 		return meshName;
 
 	AttributeValueMap manualAttrs;
