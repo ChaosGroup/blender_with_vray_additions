@@ -25,13 +25,13 @@
 
 void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext *context)
 {
-	BL::World world = ExpoterSettings::gSet.b_scene.world();
+	BL::World world = ExporterSettings::gSet.b_scene.world();
 
 	PointerRNA vrayWorld = RNA_pointer_get(&world.ptr, "vray");
 
 	float globalLightLevel = RNA_float_get(&vrayWorld, "global_light_level");
 
-	BL::NodeTree worldTree = VRayNodeExporter::getNodeTree(ExpoterSettings::gSet.b_data, (ID*)world.ptr.data);
+	BL::NodeTree worldTree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)world.ptr.data);
 	if (NOT(worldTree)) {
 		AttributeValueMap pluginAttrs;
 		pluginAttrs["global_light_level"] = BOOST_FORMAT_COLOR1(globalLightLevel);

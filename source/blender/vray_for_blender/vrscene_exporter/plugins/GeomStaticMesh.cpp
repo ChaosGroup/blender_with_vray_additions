@@ -615,7 +615,7 @@ void GeomStaticMesh::initHash()
 	m_hash = 1;
 
 	// If not animation don't waste time calculating hashes
-	if(ExpoterSettings::gSet.m_isAnimation) {
+	if(ExporterSettings::gSet.m_isAnimation) {
 		m_hashVertices    = hashArray(m_vertsArray,       m_vertsArraySize       * sizeof(float));
 		m_hashNormals     = hashArray(m_normalsArray,     m_normalsArraySize     * sizeof(float));
 		m_hashFaces       = hashArray(m_facesArray,       m_facesArraySize       * sizeof(int));
@@ -631,7 +631,7 @@ void GeomStaticMesh::initHash()
 void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
-	int             prevFrame = ExpoterSettings::gSet.m_frameCurrent - ExpoterSettings::gSet.m_frameStep;
+	int             prevFrame = ExporterSettings::gSet.m_frameCurrent - ExporterSettings::gSet.m_frameStep;
 
 	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", m_name.c_str());
 
@@ -715,7 +715,7 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 		PYTHON_PRINTF(output, ")%s;", m_interpEnd);
 	}
 
-	if(ExpoterSettings::gSet.IsFirstFrame()) {
+	if(ExporterSettings::gSet.IsFirstFrame()) {
 		PYTHON_PRINTF(output, "\n\tprimary_visibility=%i;", primary_visibility);
 		PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
 		PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);

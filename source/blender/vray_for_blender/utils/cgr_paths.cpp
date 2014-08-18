@@ -55,7 +55,7 @@ std::string BlenderUtils::GetFullFilepath(const std::string &filepath, ID *holde
 
 std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 {
-	if(ExpoterSettings::gSet.m_drSharePath.empty())
+	if(ExporterSettings::gSet.m_drSharePath.empty())
 		return filepath;
 
 	bpath srcFilepath(filepath);
@@ -78,7 +78,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 	else if(fileExt == "vrmap" || fileExt == "vrst" || fileExt == "vrsm")
 		assetSubdir = "lightmaps";
 
-	bpath drRoot(ExpoterSettings::gSet.m_drSharePath);
+	bpath drRoot(ExporterSettings::gSet.m_drSharePath);
 
 	bpath dstDirpath = drRoot / assetSubdir;
 

@@ -233,7 +233,7 @@ public:
 	static void freePluginDesc()                           { m_pluginDesc.freeData();    }
 
 	static void initInterpolate(int frame) {
-		if(ExpoterSettings::gSet.m_isAnimation) {
+		if(ExporterSettings::gSet.m_isAnimation) {
 			sprintf(m_interpStart, "interpolate((%d,", frame);
 			sprintf(m_interpEnd,   "))");
 		}

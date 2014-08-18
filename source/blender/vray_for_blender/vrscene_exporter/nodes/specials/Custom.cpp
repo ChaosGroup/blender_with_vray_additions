@@ -44,7 +44,7 @@ std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node 
 	}
 	else {
 		BL::Scene::objects_iterator obIt;
-		for (ExpoterSettings::gSet.b_scene.objects.begin(obIt); obIt != ExpoterSettings::gSet.b_scene.objects.end(); ++obIt) {
+		for (ExporterSettings::gSet.b_scene.objects.begin(obIt); obIt != ExporterSettings::gSet.b_scene.objects.end(); ++obIt) {
 			BL::Object ob = *obIt;
 			if (ob.type() == BL::Object::type_LAMP) {
 				BL::ID laID = ob.data();

@@ -58,8 +58,8 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL:
 						std::string pluginName    = VRayNodeExporter::getPluginName(node, ntree, context);
 						int         interpolation = RNA_enum_get(&texVoxelData, "interpolation");
 
-						ExportTexVoxelData(ExpoterSettings::gSet.m_fileGeom,
-										   ExpoterSettings::gSet.m_sce,
+						ExportTexVoxelData(ExporterSettings::gSet.m_fileGeom,
+										   ExporterSettings::gSet.m_sce,
 										   (Object*)domainOb.ptr.data,
 										   (SmokeModifierData*)smokeMod.ptr.data,
 										   pluginName.c_str(),
@@ -99,8 +99,8 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 			}
 		}
 
-		ExportSmokeDomain(ExpoterSettings::gSet.m_fileGeom,
-						  ExpoterSettings::gSet.m_sce,
+		ExportSmokeDomain(ExporterSettings::gSet.m_fileGeom,
+						  ExporterSettings::gSet.m_sce,
 						  (Object*)domainOb.ptr.data,
 						  (SmokeModifierData*)smokeMod.ptr.data,
 						  pluginName.c_str(),
@@ -110,10 +110,10 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 	else {
 		std::string geomPluginName = pluginName + "@Domain";
 
-		ExportGeomStaticMesh(ExpoterSettings::gSet.m_fileGeom,
-							 ExpoterSettings::gSet.m_sce,
+		ExportGeomStaticMesh(ExporterSettings::gSet.m_fileGeom,
+							 ExporterSettings::gSet.m_sce,
 							 (Object*)domainOb.ptr.data,
-							 ExpoterSettings::gSet.m_main,
+							 ExporterSettings::gSet.m_main,
 							 pluginName.c_str(),
 							 NULL);
 
@@ -128,7 +128,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 	}
 
 	// Exclude object from Node creation
-	ExpoterSettings::gSet.m_exporter->addSkipObject(domainOb.ptr.data);
+	ExporterSettings::gSet.m_exporter->addSkipObject(domainOb.ptr.data);
 
 	return pluginName;
 }
@@ -165,6 +165,9 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 
 std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
+	if (NOT(ExporterSettings::gSet.m_exportSmoke))
+		return "NULL";
+
 	AttributeValueMap  manualAttrs;
 	std::string        gizmos = "";
 
