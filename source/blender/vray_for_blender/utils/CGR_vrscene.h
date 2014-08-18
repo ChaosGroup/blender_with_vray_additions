@@ -3,12 +3,9 @@
 
 #include "CGR_config.h"
 
-#include "utils/murmur3.h"
-
 #include <Python.h>
 
 
-MHash HashCode(const char* s);
 void  GetDoubleHex(float f, char *buf);
 void  GetFloatHex(float f, char *buf);
 void  GetVectorHex(float f[3], char *buf);

@@ -196,16 +196,6 @@ void GetTransformHex(float m[4][4], char *buf)
 }
 
 
-MHash HashCode(const char *s)
-{
-	int h = 0;
-	while (*s) {
-		h = 31*h + (*s++);
-	}
-	return h;
-}
-
-
 int GetPythonAttrInt(PyObject *propGroup, const char *attrName, int def)
 {
 	PyObject *attr = PyObject_GetAttrString(propGroup, attrName);
