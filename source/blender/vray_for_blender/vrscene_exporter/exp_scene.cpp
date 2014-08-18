@@ -559,6 +559,12 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	node->init(ExpoterSettings::gSet.m_mtlOverride);
 	node->initHash();
 
+	// This will also check if object's mesh is valid
+	if(NOT(node->preInitGeometry())) {
+		delete node;
+		return;
+	}
+
 	if(ExpoterSettings::gSet.m_useHideFromView && m_hideFromView.hasData()) {
 		RenderStats hideFromViewStats;
 		hideFromViewStats.visibility             = !m_hideFromView.visibility.count(ob);
@@ -570,12 +576,6 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		hideFromViewStats.camera_visibility      = !m_hideFromView.camera_visibility.count(ob);
 
 		node->setHideFromView(hideFromViewStats);
-	}
-
-	// This will also check if object's mesh is valid
-	if(NOT(node->preInitGeometry(ExpoterSettings::gSet.m_useDisplaceSubdiv))) {
-		delete node;
-		return;
 	}
 
 	if(node->hasHair()) {

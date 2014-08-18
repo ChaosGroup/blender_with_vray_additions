@@ -35,7 +35,7 @@ extern "C" {
 #include "LightLinker.h"
 
 #include "utils/CGR_vrscene.h"
-#include "utils/murmur3.h"
+#include "utils/cgr_hash.h"
 
 #include <string>
 #include <vector>
@@ -97,7 +97,7 @@ public:
 	int             isObjectDataUpdated();
 
 	void            init(const std::string &mtlOverrideName="");
-	int             preInitGeometry(int useDisplaceSubdiv=true);
+	int             preInitGeometry();
 	void            initGeometry();
 
 	void            freeData();

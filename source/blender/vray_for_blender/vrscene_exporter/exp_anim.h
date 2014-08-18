@@ -23,7 +23,7 @@
 #ifndef CGR_ANIM_CACHE_H
 #define CGR_ANIM_CACHE_H
 
-#include "utils/murmur3.h"
+#include "utils/cgr_hash.h"
 
 #include <string>
 #include <map>
@@ -61,8 +61,12 @@ public:
 	}
 
 	void update(const std::string &name, const MHash &hash, const int &frame, T *data) {
-		if(cache.count(name))
-			delete cache[name].data;
+		if(cache.count(name)) {
+			if (cache[name].data) {
+				delete cache[name].data;
+			}
+		}
+
 		cache[name].data  = data;
 		cache[name].hash  = hash;
 		cache[name].frame = frame;

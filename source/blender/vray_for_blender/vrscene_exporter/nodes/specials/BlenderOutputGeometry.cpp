@@ -42,7 +42,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 			}
 		}
 
-		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob, false);
+		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob);
 		geomStaticMesh->init();
 		geomStaticMesh->initName(pluginName);
 		geomStaticMesh->initAttributes(&node.ptr);

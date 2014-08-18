@@ -51,7 +51,7 @@ typedef std::vector<MChan*> MChans;
 
 class GeomStaticMesh : public VRayExportable {
 public:
-	GeomStaticMesh(Scene *scene, Main *main, Object *ob, int checkComponents=true);
+	GeomStaticMesh(Scene *scene, Main *main, Object *ob);
 
 	virtual      ~GeomStaticMesh() { freeData(); }
 	virtual void  initHash();
@@ -77,39 +77,29 @@ public:
 	MHash         getNormalsHash() const        { return m_hashNormals; }
 	MHash         getFaceNormalsHash() const    { return m_hashFaceNormals; }
 	MHash         getFaceMtlIDsHash() const     { return m_hashFaceMtlIDs; }
-	MHash         getEdgeVisibilityHash() const { return m_hashEdgeVisibility; }
+	MHash         getEdgeVisibilityHash() const { return m_hashEdgeVis; }
 
-	size_t        getMapChannelCount() const { return map_channels.size(); }
-	const MChan*  getMapChannel(const size_t i) const;
+	int           getMapChannelCount() const { return map_channels.size(); }
+	const MChan*  getMapChannel(const int i) const;
 
 private:
-	void          writeGeomDisplacedMesh(PyObject *output);
-	void          writeGeomStaticSmoothedMesh(PyObject *output);
-
-	int           hasDisplace();
-
 	void          initVertices();
 	void          initFaces();
 	void          initMapChannels();
 
-	void          initDisplace();
-	void          initSmooth();
-
 	int           mapChannelsUpdated(GeomStaticMesh *prevMesh);
+
+	MHash         hashArray(void *data, int dataLen);
+	void          freeArrays();
 
 	BL::BlendData b_data;
 	BL::Scene     b_scene;
 	BL::Object    b_object;
 	BL::Mesh      b_mesh;
 
-	StrVector     meshComponentNames;
-
+	// Char buffers with ZIP'ed data
 	char         *m_vertices;
-	size_t        coordIndex;
-
 	char         *m_faces;
-	size_t        vertIndex;
-
 	char         *m_normals;
 	char         *m_faceNormals;
 	char         *m_faceMtlIDs;
@@ -117,44 +107,36 @@ private:
 
 	MChans        map_channels;
 
-	// Additional hashes
-	// Allows exporting only the changed
-	// mesh parts
+	// Data arrays and hashes
+	float        *m_vertsArray;
+	int          *m_facesArray;
+	int          *m_faceNormalsArray;
+	float        *m_normalsArray;
+	int          *m_mtlIDsArray;
+	int          *m_edgeVisArray;
+
+	int           m_vertsArraySize;
+	int           m_facesArraySize;
+	int           m_normalsArraySize;
+	int           m_faceNormalsArraySize;
+	int           m_mtlIDArraySize;
+	int           m_edgeVisArraySize;
+
 	MHash         m_hashVertices;
 	MHash         m_hashFaces;
 	MHash         m_hashNormals;
 	MHash         m_hashFaceNormals;
 	MHash         m_hashFaceMtlIDs;
-	MHash         m_hashEdgeVisibility;
-
-	// Export options
-	int           m_useZip;
-
-	// Options
-	int           m_checkComponents;
-	std::stringstream  m_pluginDisplace;
-	std::stringstream  m_pluginSmooth;
-
-	int           useSmooth;
-	std::string   smoothName;
-
-	int           useDisplace;
-	std::string   displaceName;
-	int           useDisplaceOverride;
-	Tex          *displaceTexture;
-	std::string   displaceTextureName;
+	MHash         m_hashEdgeVis;
 
 	// GeomStaticMesh properties
 	int           dynamic_geometry;
 	int           environment_geometry;
-
 	int           osd_subdiv_level;
 	int           osd_subdiv_type;
 	int           osd_subdiv_uvs;
-
 	float         weld_threshold;
 	int           primary_visibility;
-
 	int           smooth_uv;
 	int           smooth_uv_borders;
 

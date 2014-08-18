@@ -45,37 +45,11 @@ struct ExpoterSettings {
 		b_engine(PointerRNA_NULL)
 	{}
 
-	void reset()
-	{
-		m_sce  = NULL;
-		m_main = NULL;
+	void              init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine);
+	void              reset();
 
-		m_fileObject = NULL;
-		m_fileGeom   = NULL;
-		m_fileLights = NULL;
-		m_fileMat    = NULL;
-		m_fileTex    = NULL;
-
-		m_activeLayers  = 0;
-		m_useInstancerForGroup = false;
-
-		m_isAnimation  = false;
-		m_frameCurrent = 0;
-		m_frameStart   = 1;
-		m_frameStep    = 1;
-
-		m_mtlOverride = "";
-		m_drSharePath = "";
-	}
-	
-	void init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
-	{
-		b_scene  = scene;
-		b_data   = data;
-		b_engine = engine;
-	}
-
-	bool              DoUpdateCheck() { return m_isAnimation && (m_frameCurrent > m_frameStart); }
+	bool              DoUpdateCheck();
+	bool              IsFirstFrame();
 
 	Scene            *m_sce;
 	Main             *m_main;

@@ -23,3 +23,51 @@
 #include "exp_settings.h"
 
 ExpoterSettings ExpoterSettings::gSet;
+
+
+void ExpoterSettings::init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
+{
+	b_scene  = scene;
+	b_data   = data;
+	b_engine = engine;
+}
+
+
+void ExpoterSettings::reset()
+{
+	m_sce  = NULL;
+	m_main = NULL;
+
+	m_fileObject = NULL;
+	m_fileGeom   = NULL;
+	m_fileLights = NULL;
+	m_fileMat    = NULL;
+	m_fileTex    = NULL;
+
+	m_activeLayers  = 0;
+	m_useInstancerForGroup = false;
+
+	m_isAnimation  = false;
+	m_frameCurrent = 0;
+	m_frameStart   = 1;
+	m_frameStep    = 1;
+
+	m_mtlOverride = "";
+	m_drSharePath = "";
+}
+
+
+bool ExpoterSettings::DoUpdateCheck()
+{
+	return m_isAnimation && (m_frameCurrent > m_frameStart);
+}
+
+
+bool ExpoterSettings::IsFirstFrame()
+{
+	if(NOT(m_isAnimation))
+		return true;
+	if(m_frameCurrent > m_frameStart)
+		return true;
+	return false;
+}
