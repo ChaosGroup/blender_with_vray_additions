@@ -38,8 +38,6 @@
 #include "CGR_blender_data.h"
 #include "CGR_json_plugins.h"
 
-#include "murmur3.h"
-
 #include "BKE_global.h"
 #include "BKE_depsgraph.h"
 #include "MEM_guardedalloc.h"
@@ -126,6 +124,12 @@ namespace VRayScene {
 typedef std::map<std::string, std::string> AttributeValueMap;
 
 class VRayExportable;
+
+
+enum WriteFlag {
+	eKeedData = 0,
+	eFreeData = 1
+};
 
 
 struct NodeAttrs {
