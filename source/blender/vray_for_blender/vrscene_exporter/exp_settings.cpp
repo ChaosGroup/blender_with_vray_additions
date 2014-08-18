@@ -45,8 +45,8 @@ void ExporterSettings::init()
 	PointerRNA vrayScene = RNA_pointer_get(&b_scene.ptr, "vray");
 	PointerRNA vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
 
-	m_exportHair        = RNA_boolean_get(&vrayExporter, "use_smoke");
-	m_exportSmoke       = RNA_boolean_get(&vrayExporter, "use_hair");
+	m_exportHair        = RNA_boolean_get(&vrayExporter, "use_hair");
+	m_exportSmoke       = RNA_boolean_get(&vrayExporter, "use_smoke");
 	m_useDisplaceSubdiv = RNA_boolean_get(&vrayExporter, "use_displace");
 
 	// Check what layers to use
