@@ -151,6 +151,8 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 
 void GeomStaticMesh::init()
 {
+	std::cout << "Getting mesh for " << b_object.name() << std::endl;
+
 	b_mesh = b_data.meshes.new_from_object(b_scene, b_object, true, 2, false, false);
 	if (NOT(b_mesh))
 		return;

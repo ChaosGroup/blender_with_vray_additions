@@ -47,8 +47,9 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 	AttributeValueMap manualAttrs;
 	manualAttrs["mesh"] = meshName;
 
-	RnaAccess::RnaValue propGroup((ID*)node.ptr.data, "GeomDisplacedMesh");
-	int displace_type = propGroup.getEnum("type");
+	PointerRNA geomDisplacedMesh = RNA_pointer_get(&node.ptr, "GeomDisplacedMesh");
+
+	int displace_type = RNA_enum_get(&geomDisplacedMesh, "type");
 
 	if(displace_type == 1) {
 		manualAttrs["displace_2d"]         = "0";

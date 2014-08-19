@@ -307,8 +307,10 @@ std::string Node::WriteMtlWrapper(PointerRNA *vrayPtr, ID *propHolder, const std
 
 std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::string &baseMtl)
 {
-	RnaAccess::RnaValue rna(&m_ob->id, "vray.MtlOverride");
-	if(NOT(rna.getBool("use")))
+	PointerRNA vrayObject = RNA_pointer_get(&m_bl_ob.ptr, "vray");
+	PointerRNA mtlOverride = RNA_pointer_get(&vrayObject, "MtlOverride");
+
+	if(NOT(RNA_boolean_get(&mtlOverride, "use")))
 		return baseMtl;
 
 	std::string pluginName = "MtlOverride@" + baseMtl;
@@ -316,7 +318,7 @@ std::string VRayScene::Node::writeMtlOverride(PyObject *output, const std::strin
 	std::stringstream ss;
 	ss << "\n" << "MtlOverride" << " " << pluginName << " {";
 	ss << "\n\t" << "base_mtl=" << baseMtl << ";";
-	writeAttributes(rna.getPtr(), m_pluginDesc.getTree("MtlOverride"), ss);
+	writeAttributes(&mtlOverride, m_pluginDesc.getTree("MtlOverride"), ss);
 	ss << "\n}\n";
 
 	PYTHON_PRINT(output, ss.str().c_str());
@@ -551,13 +553,6 @@ void Node::setNamePrefix(const std::string &name_prefix)
 void Node::setTransform(float tm[4][4])
 {
 	copy_m4_m4(m_tm, tm);
-}
-
-
-int VRayScene::Node::isMeshLight()
-{
-	RnaAccess::RnaValue rna(&m_ob->id, "vray.LightMesh");
-	return rna.getBool("use");
 }
 
 
