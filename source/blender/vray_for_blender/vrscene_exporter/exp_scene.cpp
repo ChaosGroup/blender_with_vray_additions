@@ -33,7 +33,6 @@
 
 #include "GeomMayaHair.h"
 #include "GeomStaticMesh.h"
-#include "Light.h"
 
 #include "PIL_time.h"
 #include "BLI_string.h"
