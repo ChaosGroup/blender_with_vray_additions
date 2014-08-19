@@ -24,46 +24,11 @@
 #define CGR_UTILS_RNA_H
 
 #include "RNA_access.h"
-#include "CGR_json_plugins.h"
 
 #include <string>
-#include <sstream>
 
 
-namespace RnaAccess {
-
-class RnaValue {
-public:
-	RnaValue(ID *id, const char *rnaPointerPath);
-
-	int          GetValue(const char *propName, int   &value);
-	int          GetValue(const char *propName, bool  &value);
-	int          GetValue(const char *propName, float &value);
-	int          GetValue(const char *propName, char  *value);
-	int          GetValue(const char *propName, float  value[3]);
-
-	int          getInt(const char *propName);
-	int          getEnum(const char *propName);
-	float        getFloat(const char *propName);
-	int          getBool(const char *propName);
-	std::string  getString(const char *propName);
-	void         getChar(const char *propName, char *buf);
-	std::string  getPath(const char *propName);
-
-	int          hasProperty(const char *propName);
-
-	PointerRNA*  getPtr() { return &m_pointer; }
-
-private:
-	int          checkProperty(const char *propName);
-
-	std::string  m_path;
-	PointerRNA   m_pointer;
-
-};
-
-}
-
+std::string  RNA_path_get(PointerRNA *ptr, const std::string &attrName);
 std::string  RNA_std_string_get(PointerRNA *ptr, const std::string &attrName);
 
 #endif // CGR_UTILS_RNA_H
