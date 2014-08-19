@@ -529,7 +529,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 		}
 	}
 
-	if(ExporterSettings::gSet.m_exportNodes && NOT(node->isMeshLight())) {
+	if(ExporterSettings::gSet.m_exportNodes) {
 		int writeObject = true;
 		if(checkUpdated && ExporterSettings::gSet.DoUpdateCheck())
 			writeObject = node->isObjectUpdated();

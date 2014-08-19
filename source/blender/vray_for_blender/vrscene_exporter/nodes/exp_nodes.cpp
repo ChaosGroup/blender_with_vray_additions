@@ -346,14 +346,15 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 
 BL::NodeTree VRayNodeExporter::getNodeTree(BL::BlendData b_data, ID *id)
 {
-	RnaAccess::RnaValue VRayObject(id, "vray");
+	PointerRNA idPtr;
+	RNA_id_pointer_create(id, &idPtr);
 
-	PointerRNA  *ptr  = VRayObject.getPtr();
-	PropertyRNA *prop = RNA_struct_find_property(ptr, "ntree");
+	PointerRNA   ptr  = RNA_pointer_get(&idPtr, "vray");
+	PropertyRNA *prop = RNA_struct_find_property(&ptr, "ntree");
 	if(prop) {
 		PropertyType propType = RNA_property_type(prop);
 		if(propType == PROP_POINTER) {
-			PointerRNA ntree = RNA_pointer_get(ptr, "ntree");
+			PointerRNA ntree = RNA_pointer_get(&ptr, "ntree");
 			BL::NodeTree nodeTree(ntree);
 			if(nodeTree)
 				return nodeTree;
