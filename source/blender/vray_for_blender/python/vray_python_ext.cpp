@@ -393,7 +393,7 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 
 	PointerRNA   socketRNA;
 	bNodeSocket *nodeSocket = (bNodeSocket*)PyLong_AsVoidPtr(socketPtr);
-	RNA_pointer_create((ID*)node.ptr.id.data, &RNA_NodeSocket, nodeSocket, &socketRNA);
+	RNA_pointer_create((ID*)ntree.ptr.data, &RNA_NodeSocket, nodeSocket, &socketRNA);
 	BL::NodeSocket fromSocket(socketRNA);
 
 	std::string pluginName = VRayNodeExporter::exportSocket(ntree, fromSocket);
