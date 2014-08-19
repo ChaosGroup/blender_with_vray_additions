@@ -110,7 +110,6 @@ public:
 	int             getObjectID() const;
 	const char     *getDataName() const { return m_geometryName.c_str(); }
 
-	int             isMeshLight();
 	int             isSmokeDomain();
 	int             hasHair();
 	int             doRenderEmitter();
