@@ -595,6 +595,8 @@ static PyObject *BPy_IDGroup_MapDataToPy(IDProperty *prop)
 			return idprop_py_from_idp_float(prop);
 		case IDP_DOUBLE:
 			return idprop_py_from_idp_double(prop);
+		case IDP_ID:
+			return idprop_py_from_idp_id(NULL, prop);
 		case IDP_ARRAY:
 		{
 			PyObject *seq = PyList_New(prop->len);
