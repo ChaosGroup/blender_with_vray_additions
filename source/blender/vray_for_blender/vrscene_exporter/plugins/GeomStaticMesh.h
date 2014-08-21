@@ -108,6 +108,7 @@ private:
 	MChans        map_channels;
 
 	// Data arrays and hashes
+	int           m_totTriFaces;
 	float        *m_vertsArray;
 	int          *m_facesArray;
 	int          *m_faceNormalsArray;

@@ -278,20 +278,20 @@ void GeomStaticMesh::initFaces()
 
 	// Prepass faces
 	BL::Mesh::tessfaces_iterator faceIt;
-	int totFaces = 0;
+	m_totTriFaces = 0;
 	int totEdge  = 0;
 	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 		FaceVerts faceVerts = faceIt->vertices_raw();
 
 		// If face is quad we split it into 2 tris
-		totFaces += faceVerts[3] ? 2 : 1;
+		m_totTriFaces += faceVerts[3] ? 2 : 1;
 		totEdge  += faceVerts[3] ? 6 : 3;
 	}
 
-	m_facesArraySize        = 3 *     totFaces;
-	m_faceNormalsArraySize  = 3 *     totFaces;
-	m_normalsArraySize      = 3 * 3 * totFaces;
-	m_mtlIDArraySize        =         totFaces;
+	m_facesArraySize        = 3 *     m_totTriFaces;
+	m_faceNormalsArraySize  = 3 *     m_totTriFaces;
+	m_normalsArraySize      = 3 * 3 * m_totTriFaces;
+	m_mtlIDArraySize        =         m_totTriFaces;
 	m_edgeVisArraySize      =         totEdge;
 
 	m_facesArray       = new int[m_facesArraySize];
@@ -312,7 +312,7 @@ void GeomStaticMesh::initFaces()
 	int ev = 0;
 	int k  = 0;
 
-	if(totFaces <= 5) {
+	if(m_totTriFaces <= 5) {
 		for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 			FaceVerts faceVerts = faceIt->vertices_raw();
 			if(faceVerts[3])
@@ -439,8 +439,8 @@ void GeomStaticMesh::initFaces()
 	} \
 	\
 	if(totface) { \
-	   size_t  mapVertexArraySize = 4 * 3 * totface * sizeof(float); \
-	   float  *mapVertex = new float[mapVertexArraySize]; \
+	   int    mapVertexArraySize = 3 * 3 * m_totTriFaces; \
+	   float *mapVertex = new float[mapVertexArraySize]; \
 	\
 	   int coordIndex = 0; \
 	   int f          = 0; \
@@ -456,13 +456,14 @@ void GeomStaticMesh::initFaces()
 		   mapChannel->cloned = 1; \
 	   } \
 	   else { \
-		   size_t  mapFacesArraySize  = 4 * totface * sizeof(int); \
-		   int    *mapFaces = new int[mapFacesArraySize]; \
+		   int  mapFacesArraySize  = 3 * m_totTriFaces; \
+		   int *mapFaces = new int[mapFacesArraySize]; \
 	\
 		   int vertIndex = 0; \
 		   int k = 0; \
 		   int u = 0; \
 		   int f = 0; \
+		   BL::Mesh::tessfaces_iterator faceIt; \
 		   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) { \
 			   FaceVerts faceVerts = faceIt->vertices_raw(); \
 			   if(faceVerts[3]) { \
@@ -517,15 +518,22 @@ void GeomStaticMesh::initMapChannels()
 	int uv_layer_id = 0;
 	int totface     = b_mesh.tessfaces.length();
 
-	BL::Mesh::tessfaces_iterator              faceIt;
 	BL::Mesh::tessface_uv_textures_iterator   uvIt;
 	for(b_mesh.tessface_uv_textures.begin(uvIt); uvIt != b_mesh.tessface_uv_textures.end(); ++uvIt) {
 		NEW_MAP_CHANNEL_BEGIN(uvIt);
 
-		int verts = faceVerts[3] ? 4 : 3;
-		for(int i = 0; i < verts; i++) {
-			mapVertex[coordIndex++] = uvIt->data[f].uv()[i * 2 + 0];
-			mapVertex[coordIndex++] = uvIt->data[f].uv()[i * 2 + 1];
+#if 0
+		BL::MeshTextureFaceLayer uv = *uvIt;
+		BL::MeshTextureFaceLayer::data_iterator uvIt;
+		for(uv.data.begin(uvIt); uvIt != uv.data.end(); ++uvIt) {
+			BL::MeshTextureFace uvFace = *uvIt;
+		}
+#endif
+
+		const int verts = faceVerts[3] ? 4 : 3;
+		for(int c = 0; c < verts; ++c) {
+			mapVertex[coordIndex++] = uvIt->data[f].uv()[c * 2 + 0];
+			mapVertex[coordIndex++] = uvIt->data[f].uv()[c * 2 + 1];
 			mapVertex[coordIndex++] = 0.0f;
 		}
 
