@@ -94,11 +94,15 @@ void ExporterSettings::init()
 	}
 	else {
 		BL::Object caOb = b_scene.camera();
-		BL::Camera ca(caOb.data());
+		// NOTE: Could happen if scene has no camera and we initing exporter for
+		// proxy export
+		if (caOb) {
+			BL::Camera ca(caOb.data());
 
-		PointerRNA vrayCamera = RNA_pointer_get(&ca.ptr, "vray");
+			PointerRNA vrayCamera = RNA_pointer_get(&ca.ptr, "vray");
 
-		m_useHideFromView = RNA_boolean_get(&vrayCamera, "hide_from_view");
+			m_useHideFromView = RNA_boolean_get(&vrayCamera, "hide_from_view");
+		}
 	}
 
 	m_mtlOverride.clear();
