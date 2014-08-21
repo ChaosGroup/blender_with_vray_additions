@@ -438,7 +438,7 @@ void GeomStaticMesh::initFaces()
 	   mapChannel->index = uv_layer_id++; \
 	} \
 	\
-	if(totface) { \
+	if(m_totTriFaces) { \
 	   int    mapVertexArraySize = 3 * 3 * m_totTriFaces; \
 	   float *mapVertex = new float[mapVertexArraySize]; \
 	\
@@ -463,7 +463,6 @@ void GeomStaticMesh::initFaces()
 		   int k = 0; \
 		   int u = 0; \
 		   int f = 0; \
-		   BL::Mesh::tessfaces_iterator faceIt; \
 		   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) { \
 			   FaceVerts faceVerts = faceIt->vertices_raw(); \
 			   if(faceVerts[3]) { \
@@ -516,8 +515,7 @@ void GeomStaticMesh::initMapChannels()
 		return;
 
 	int uv_layer_id = 0;
-	int totface     = b_mesh.tessfaces.length();
-
+	BL::Mesh::tessfaces_iterator              faceIt;
 	BL::Mesh::tessface_uv_textures_iterator   uvIt;
 	for(b_mesh.tessface_uv_textures.begin(uvIt); uvIt != b_mesh.tessface_uv_textures.end(); ++uvIt) {
 		NEW_MAP_CHANNEL_BEGIN(uvIt);
