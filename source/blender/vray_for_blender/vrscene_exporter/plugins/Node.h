@@ -69,8 +69,12 @@ struct RenderStats {
 	int visibility;
 };
 
+typedef std::map<BL::ID, std::string> MeshCache;
+
 
 class Node : public VRayExportable {
+	static MeshCache sMeshCache;
+
 public:
 	Node(Scene *scene, Main *main, Object *ob);
 
@@ -82,6 +86,8 @@ public:
 	static string   GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti);
 	static string   GetMaterialName(Material *ma, const string &materialOverride="");
 	static bool     DoOverrideMaterial(BL::Material ma);
+
+	static void     FreeMeshCache();
 
 	static string   WriteMtlWrapper(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl);
 	static string   WriteMtlRenderStats(PointerRNA *vrayPtr, ID *propHolder, const std::string &objectName, const std::string &baseMtl);
@@ -151,6 +157,7 @@ private:
 	VRayExportable *m_geometry;
 	GeomType        m_geometryType;
 	std::string     m_geometryName;
+	int             m_geometryCached;
 
 	RenderStats     m_renderStatsOverride;
 	int             m_useHideFromView;

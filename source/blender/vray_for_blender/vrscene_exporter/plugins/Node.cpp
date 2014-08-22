@@ -57,7 +57,7 @@ extern "C" {
 
 LightLinker *VRayScene::Node::m_lightLinker = NULL;
 StrSet      *VRayScene::Node::m_scene_nodes = NULL;
-
+MeshCache    VRayScene::Node::sMeshCache;
 
 
 VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
@@ -70,6 +70,7 @@ VRayScene::Node::Node(Scene *scene, Main *main, Object *ob):
 	m_objectID     = m_ob->index;
 	m_visible      = true;
 	m_useHideFromView = false;
+	m_geometryCached = false;
 
 	copy_m4_m4(m_tm, m_ob->obmat);
 }
@@ -122,18 +123,35 @@ void VRayScene::Node::initName(const std::string &name)
 
 int VRayScene::Node::preInitGeometry()
 {
-	if(IsMeshValid(m_sce, m_main, m_ob)) {
-		m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob);
+	if (NOT(IsMeshValid(m_sce, m_main, m_ob))) {
+		return 0;
 	}
 
-	if(NOT(m_geometry))
-		return 0;
+	if (ExporterSettings::gSet.m_useAltInstances) {
+		BL::ID dataID = m_bl_ob.data();
+		if (dataID) {
+			m_geometryCached = Node::sMeshCache.count(dataID);
+			if (m_geometryCached) {
+				m_geometryName = Node::sMeshCache[dataID];
+			}
+		}
+	}
 
-	m_geometry->preInit();
+	if (NOT(m_geometryCached)) {
+		m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob);
+		m_geometry->preInit();
 
-	// We will delete geometry as soon as possible,
-	// so store name here
-	m_geometryName = m_geometry->getName();
+		// We will delete geometry as soon as possible,
+		// so store name here
+		m_geometryName = m_geometry->getName();
+
+		if (ExporterSettings::gSet.m_useAltInstances) {
+			BL::ID dataID = m_bl_ob.data();
+			if (dataID) {
+				Node::sMeshCache.insert(std::make_pair(dataID, m_geometryName));
+			}
+		}
+	}
 
 	return 1;
 }
@@ -141,11 +159,14 @@ int VRayScene::Node::preInitGeometry()
 
 void VRayScene::Node::initGeometry()
 {
-	if(NOT(m_geometry)) {
-		PRINT_ERROR("[%s] Node::initGeometry() => m_geometry is NULL!", m_name.c_str());
-		return;
+	if(NOT(m_geometryCached)) {
+		if(NOT(m_geometry)) {
+			PRINT_ERROR("[%s] Node::initGeometry() => m_geometry is NULL!", m_name.c_str());
+		}
+		else {
+			m_geometry->init();
+		}
 	}
-	m_geometry->init();
 }
 
 
@@ -176,6 +197,12 @@ bool Node::DoOverrideMaterial(BL::Material ma)
 		}
 	}
 	return true;
+}
+
+
+void Node::FreeMeshCache()
+{
+	Node::sMeshCache.clear();
 }
 
 
@@ -558,15 +585,14 @@ void Node::setTransform(float tm[4][4])
 
 void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 {
-	if(NOT(m_geometry)) {
-		PRINT_ERROR("[%s] Node::writeGeometry() => m_geometry is NULL!", m_name.c_str());
-		return;
-	}
-
-	int toDelete = m_geometry->write(output, frame);
-	if(toDelete) {
-		delete m_geometry;
-		m_geometry = NULL;
+	if(NOT(m_geometryCached)) {
+		if(NOT(m_geometry)) {
+			PRINT_ERROR("[%s] Node::writeGeometry() => m_geometry is NULL!", m_name.c_str());
+		}
+		else if(m_geometry->write(output, frame) == VRayScene::eFreeData) {
+			delete m_geometry;
+			m_geometry = NULL;
+		}
 	}
 }
 

@@ -272,6 +272,10 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 	m_hideFromView.clear();
 
+	// When using Alt-D instances geometry is not freed from Node,
+	// have to do it manually
+	Node::FreeMeshCache();
+
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 
 	if(exportInterrupt) {
