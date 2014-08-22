@@ -83,7 +83,7 @@ struct HideFromView {
 
 struct MyParticle {
 	std::string        nodeName;
-	size_t             particleId;
+	MHash              particleId;
 	char               transform[CGR_TRANSFORM_HEX_SIZE];
 	static const char *velocity;
 };
