@@ -2,7 +2,7 @@
 
 Import('env')
 
-vb = vb.Clone()
+vb = env.Clone()
 vb.Depends('../../../source/blender/makesrna/intern/RNA_blender_cpp.h', 'makesrna')
 
 sources = vb.Glob('*/*.c') + vb.Glob('*/*.cpp') + vb.Glob('*/*/*.c') + vb.Glob('*/*/*.cpp')  + vb.Glob('*/*/*/*.cpp')
