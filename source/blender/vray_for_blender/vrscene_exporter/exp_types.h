@@ -94,6 +94,7 @@ extern "C" {
 #define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6g") % f)
 #define BOOST_FORMAT_TM(tm)    boost::str(boost::format("TransformHex(\"%s\")") % tm)
 #define BOOST_FORMAT_INT(i)    boost::str(boost::format("%i") % i)
+#define BOOST_FORMAT_UINT(i)   boost::str(boost::format("%u") % i)
 #define BOOST_FORMAT_BOOL(i)   BOOST_FORMAT_INT(i)
 
 #define BOOST_FORMAT_COLOR(c)   boost::str(boost::format("Color(%.6g,%.6g,%.6g)")       % c[0] % c[1] % c[2]);
@@ -112,12 +113,6 @@ extern "C" {
 #define BOOST_FORMAT_LIST(data)       BOOST_FORMAT_LIST_BASE("List",      data)
 #define BOOST_FORMAT_LIST_INT(data)   BOOST_FORMAT_LIST_BASE("ListInt",   data)
 #define BOOST_FORMAT_LIST_FLOAT(data) BOOST_FORMAT_LIST_BASE("ListFloat", data)
-
-#ifdef WIN32
-#  define SIZE_T_FORMAT "%i"
-#else
-#  define SIZE_T_FORMAT "%zu"
-#endif
 
 
 namespace VRayScene {
