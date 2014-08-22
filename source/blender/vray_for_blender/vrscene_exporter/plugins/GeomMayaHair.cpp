@@ -48,6 +48,8 @@ extern "C" {
 #  include "BKE_particle.h"
 }
 
+#include <cmath>
+
 
 using namespace VRayScene;
 
@@ -93,8 +95,6 @@ GeomMayaHair::GeomMayaHair(Scene *scene, Main *main, Object *ob):
 {
 	m_hash = 1;
 
-	use_width_fade = 0;
-
 	hair_vertices     = NULL;
 	num_hair_vertices = NULL;
 	widths            = NULL;
@@ -102,9 +102,9 @@ GeomMayaHair::GeomMayaHair(Scene *scene, Main *main, Object *ob):
 	strand_uvw        = NULL;
 
 	use_global_hair_tree = 1;
-
 	geom_splines = 0;
 	geom_tesselation_mult = 1.0;
+	widths_in_pixels = false;
 
 	m_hashHairVertices = 1;
 	m_hashNumHairVertices = 1;
@@ -222,6 +222,9 @@ void GeomMayaHair::initData()
 
 	RNA_id_pointer_create(&pset->id, &rna_pset);
 
+	// Experimental option to make hair thinner to the end
+	int use_width_fade = false;
+
 	if(RNA_struct_find_property(&rna_pset, "vray")) {
 		VRayParticleSettings = RNA_pointer_get(&rna_pset, "vray");
 
@@ -229,6 +232,8 @@ void GeomMayaHair::initData()
 			VRayFur = RNA_pointer_get(&VRayParticleSettings, "VRayFur");
 
 			hair_width = RNA_float_get(&VRayFur, "width");
+			use_width_fade = RNA_boolean_get(&VRayFur, "make_thinner");
+			widths_in_pixels = RNA_boolean_get(&VRayFur, "widths_in_pixels");
 		}
 	}
 
@@ -333,6 +338,9 @@ void GeomMayaHair::initData()
 			child_key   = child_cache[p];
 			child_steps = child_key->steps;
 
+			float hair_fade_width = hair_width;
+			float hair_fade_step  = hair_width / (child_steps+1);
+
 			for(s = 0; s < child_steps; ++s, ++child_key) {
 				// Child particles are stored in world space,
 				// but we need them in object space
@@ -347,7 +355,9 @@ void GeomMayaHair::initData()
 				// Store coordinates
 				COPY_VECTOR(hair_vertices_arr, hair_vert_co_index, child_key_co);
 
-				widths_arr[hair_vert_index++] = hair_width;
+				widths_arr[hair_vert_index++] = use_width_fade ? std::max(1e-6f, hair_fade_width) : hair_width;
+
+				hair_fade_width -= hair_fade_step;
 			}
 		}
 	}
@@ -355,13 +365,18 @@ void GeomMayaHair::initData()
 		float nco[3];
 		invert_m4_m4(hairmat, m_ob->obmat);
 		for(int pa_no = 0; pa_no < totparts; pa_no++) {
+			float hair_fade_width = hair_width;
+			float hair_fade_step  = hair_width / (ren_step+1);
+
 			for(int step_no = 0; step_no <= ren_step; step_no++) {
 				b_psys.co_hair(b_ob, pa_no, step_no, nco);
 				mul_m4_v3(hairmat, nco);
 
 				COPY_VECTOR(hair_vertices_arr, hair_vert_co_index, nco);
 
-				widths_arr[hair_vert_index++] = hair_width;
+				widths_arr[hair_vert_index++] = use_width_fade ? std::max(1e-6f, hair_fade_width) : hair_width;
+
+				hair_fade_width -= hair_fade_step;
 			}
 		}
 	}
@@ -595,6 +610,7 @@ void GeomMayaHair::writeData(PyObject *output, VRayExportable *prevState, bool k
 		PYTHON_PRINTF(output, "\n\tgeom_splines=%i;", geom_splines);
 		PYTHON_PRINTF(output, "\n\tgeom_tesselation_mult=%.3f;",  geom_tesselation_mult);
 		PYTHON_PRINTF(output, "\n\tuse_global_hair_tree=%i;",  use_global_hair_tree);
+		PYTHON_PRINTF(output, "\n\twidths_in_pixels=%i;",  widths_in_pixels);
 	}
 
 	PYTHON_PRINT(output, "\n}\n");
