@@ -76,6 +76,7 @@ struct ExporterSettings {
 	unsigned int      m_activeLayers;
 	int               m_useHideFromView;
 	int               m_useDisplaceSubdiv;
+	int               m_useAltInstances;
 
 	std::string       m_mtlOverride;
 

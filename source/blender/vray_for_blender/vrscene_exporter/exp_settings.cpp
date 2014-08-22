@@ -48,6 +48,7 @@ void ExporterSettings::init()
 	m_exportHair        = RNA_boolean_get(&vrayExporter, "use_hair");
 	m_exportSmoke       = RNA_boolean_get(&vrayExporter, "use_smoke");
 	m_useDisplaceSubdiv = RNA_boolean_get(&vrayExporter, "use_displace");
+	m_useAltInstances   = RNA_boolean_get(&vrayExporter, "use_alt_d_instances");
 
 	// Check what layers to use
 	//

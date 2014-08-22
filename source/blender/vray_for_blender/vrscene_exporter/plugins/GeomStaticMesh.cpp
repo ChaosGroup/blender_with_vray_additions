@@ -202,8 +202,14 @@ void GeomStaticMesh::initName(const std::string &name)
 {
 	if(NOT(name.empty()))
 		m_name = name;
-	else
-		m_name = "Me" + GetIDName((ID*)m_ob);
+	else {
+		if(ExporterSettings::gSet.m_useAltInstances) {
+			m_name = GetIDName((ID*)m_ob->data, "Me");
+		}
+		else {
+			m_name = GetIDName((ID*)m_ob, "Me");
+		}
+	}
 }
 
 
