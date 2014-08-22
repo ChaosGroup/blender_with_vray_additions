@@ -68,9 +68,6 @@ private:
 
 	ParticleSystem    *m_psys;
 
-	// Experimental option to make hair thinner to the end
-	int                use_width_fade;
-
 	// Node for hair
 	std::string        m_nodeName;
 	char               m_nodeTm[CGR_TRANSFORM_HEX_SIZE];
@@ -92,6 +89,7 @@ private:
 
 	int                use_global_hair_tree;
 	int                geom_splines;
+	int                widths_in_pixels;
 	float              geom_tesselation_mult;
 	float              opacity;
 
