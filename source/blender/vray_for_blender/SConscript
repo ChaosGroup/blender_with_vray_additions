@@ -2,7 +2,10 @@
 
 Import('env')
 
-sources = env.Glob('*/*.c') + env.Glob('*/*.cpp') + env.Glob('*/*/*.c') + env.Glob('*/*/*.cpp')  + env.Glob('*/*/*/*.cpp')
+vb = vb.Clone()
+vb.Depends('../../../source/blender/makesrna/intern/RNA_blender_cpp.h', 'makesrna')
+
+sources = vb.Glob('*/*.c') + vb.Glob('*/*.cpp') + vb.Glob('*/*/*.c') + vb.Glob('*/*/*.cpp')  + vb.Glob('*/*/*/*.cpp')
 
 includes = [
     '../../../intern/guardedalloc',
@@ -34,7 +37,7 @@ includes.append(env['BF_ZLIB_INC'])
 if env['OURPLATFORM'] in {'win32-vc', 'win32-mingw', 'linuxcross', 'win64-vc'}:
     includes.append(env['BF_PTHREADS_INC'])
 
-env.BlenderLib(
+vb.BlenderLib(
     libname  = 'vray_for_blender',
     sources  = sources,
     includes = includes,
