@@ -351,12 +351,10 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
 				continue;
 
-			BL::Array<int, 8> persistent_id = bl_dupliOb.persistent_id();
-			int persistent_id_xor = 1;
-			for (int c = 0; c < 8; ++c)
-				persistent_id_xor ^= persistent_id[c];
+			MHash persistendID;
+			MurmurHash3_x86_32((const void*)bl_dupliOb.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
 
-			const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_INT(persistent_id_xor) + "@" + bl_ob.name());
+			const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + bl_ob.name());
 
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
 				exportLamp(bl_ob, bl_dupliOb, dupliNamePrefix);
@@ -388,7 +386,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					MyPartSystem *mySys = m_psys.get(dupliBaseName);
 					MyParticle *myPa = new MyParticle();
 					myPa->nodeName = GetIDName(&dupliOb->ob->id);
-					myPa->particleId = persistent_id_xor;
+					myPa->particleId = persistendID;
 					// Instancer use original object's transform,
 					// so apply inverse matrix here.
 					// When linking from file 'imat' is not valid,
@@ -915,7 +913,7 @@ void VRsceneExporter::exportDupli()
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
 				const MyParticle *pa = *paIt;
 
-				PYTHON_PRINTF(out, "List("SIZE_T_FORMAT",TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
+				PYTHON_PRINTF(out, "List(%u,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
 
 				if(paIt != --parts->m_particles.end()) {
 					PYTHON_PRINT(out, ",");
