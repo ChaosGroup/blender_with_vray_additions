@@ -3651,11 +3651,7 @@ static const char *cpp_classes = ""
 "	operator void*() { return ptr.data; }\n"
 "	operator bool() { return ptr.data != NULL; }\n"
 "	bool operator == (const Pointer &other) const { return ptr.data == other.ptr.data; }\n"
-#ifdef _MSC_VER
-"	bool operator < (const Pointer &lhs, const Pointer &rhs) const { return lhs.ptr.data != rhs.ptr.data; }\n"
-#else
 "	bool operator < (const Pointer &other) const { return ptr.data != other.ptr.data; }\n"
-#endif
 "\n"
 "	PointerRNA ptr;\n"
 "};\n"
