@@ -72,6 +72,3 @@ if env['WITH_BF_COMPOSITOR']:
 
 if env['WITH_BF_FREESTYLE']:
     SConscript (['freestyle/SConscript'])
-
-if env['WITH_VRAY_FOR_BLENDER']:
-    SConscript (['vray_for_blender/SConscript'])

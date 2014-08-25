@@ -148,7 +148,3 @@ endif()
 if(WITH_FREESTYLE)
 	add_subdirectory(freestyle)
 endif()
-
-if(WITH_VRAY_FOR_BLENDER)
-	add_subdirectory(vray_for_blender)
-endif()

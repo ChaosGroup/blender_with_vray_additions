@@ -83,7 +83,7 @@
 #include "../mathutils/mathutils.h"
 
 #ifdef WITH_VRAY_FOR_BLENDER
-#include "CGR_vray_for_blender.h"
+#  include "cgr_vray_for_blender.h"
 #endif
 
 
