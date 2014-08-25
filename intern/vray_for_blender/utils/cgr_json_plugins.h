@@ -23,8 +23,6 @@
 #ifndef CGR_JSON_PLUGINS_H
 #define CGR_JSON_PLUGINS_H
 
-#include <Python.h>
-
 #ifdef _MSC_VER
 #include <boost/config/compiler/visualc.hpp>
 #endif
@@ -42,8 +40,6 @@
 typedef boost::property_tree::ptree         PluginJson;
 typedef std::map<std::string, PluginJson*>  PluginDesc;
 
-
-void  PrintTree(PluginJson &pt);
 
 class VRayPluginsDesc {
 public:
