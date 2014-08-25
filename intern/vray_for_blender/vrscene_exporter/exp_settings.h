@@ -23,6 +23,8 @@
 #ifndef CGR_EXP_SETTINGS_H
 #define CGR_EXP_SETTINGS_H
 
+#include <Python.h>
+
 #include "cgr_config.h"
 
 #include "BKE_global.h"
@@ -30,8 +32,6 @@
 #include "MEM_guardedalloc.h"
 #include "RNA_blender_cpp.h"
 #include "BLI_path_util.h"
-
-#include <Python.h>
 
 
 class VRsceneExporter;
