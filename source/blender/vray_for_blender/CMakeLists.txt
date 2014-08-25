@@ -55,18 +55,16 @@ set(SRC
 	CGR_config.h
 
 	# Utilities
-	utils/CGR_base64.h
-	utils/CGR_base64.cpp
-	utils/CGR_rna.h
-	utils/CGR_rna.cpp
-	utils/CGR_json_plugins.h
-	utils/CGR_json_plugins.cpp
-	utils/CGR_blender_data.h
-	utils/CGR_blender_data.cpp
-	utils/CGR_string.h
-	utils/CGR_string.cpp
-	utils/CGR_vrscene.h
-	utils/CGR_vrscene.cpp
+	utils/cgr_rna.h
+	utils/cgr_rna.cpp
+	utils/cgr_json_plugins.h
+	utils/cgr_json_plugins.cpp
+	utils/cgr_blender_data.h
+	utils/cgr_blender_data.cpp
+	utils/cgr_string.h
+	utils/cgr_string.cpp
+	utils/cgr_vrscene.h
+	utils/cgr_vrscene.cpp
 	utils/cgr_paths.h
 	utils/cgr_paths.cpp
 	utils/cgr_hash.h
