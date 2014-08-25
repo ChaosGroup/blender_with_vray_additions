@@ -38,7 +38,7 @@
 #include "../editors/space_file/filelist.h"
 
 
-void PrintTree(PluginJson &pt)
+static void PrintTree(PluginJson &pt)
 {
     if(pt.empty())
         return;
