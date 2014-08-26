@@ -25,7 +25,16 @@
 
 void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext *context)
 {
-	BL::World world = ExporterSettings::gSet.b_scene.world();
+	BL::Scene worldScene(PointerRNA_NULL);
+
+	if (ExporterSettings::gSet.b_engine && ExporterSettings::gSet.b_engine.is_preview()) {
+		worldScene = ExporterSettings::gSet.b_context.scene();
+	}
+	else {
+		worldScene = ExporterSettings::gSet.b_scene;
+	}
+
+	BL::World world = worldScene.world();
 
 	PointerRNA vrayWorld = RNA_pointer_get(&world.ptr, "vray");
 
