@@ -2987,8 +2987,10 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 
 	if (ntree->update & (NTREE_UPDATE_LINKS | NTREE_UPDATE_NODES)) {
 		if (ntree->type == NTREE_CUSTOM) {
-			if (ntree->typeinfo->flags & NTREE_FLAG_PREVIEW)
+			if (ntree->typeinfo->flags & NTREE_FLAG_PREVIEW) {
+				WM_main_add_notifier(NC_WORLD    | ND_SHADING_PREVIEW, NULL);
 				WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, NULL);
+			}
 			if (ntree->typeinfo->flags & NTREE_FLAG_EVENT)
 				BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
 		}
