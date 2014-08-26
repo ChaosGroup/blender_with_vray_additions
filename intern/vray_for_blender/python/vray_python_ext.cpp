@@ -37,6 +37,9 @@
 #include "BLI_math.h"
 #include "BKE_context.h"
 
+#include "WM_api.h"
+#include "WM_types.h"
+
 extern "C" {
 #  include "mathutils/mathutils.h"
 }
@@ -502,6 +505,31 @@ static PyObject* mSetHideFromView(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mUpdatePreview(PyObject *self, PyObject *args)
+{
+	PyObject *py_context  = NULL;
+	int       update_flag = 0;
+
+	if(NOT(PyArg_ParseTuple(args, "Oi", &py_context, &update_flag))) {
+		return NULL;
+	}
+
+	bContext *C = (bContext*)PyLong_AsVoidPtr(py_context);
+
+	int update_type = 0;
+	switch(update_flag) {
+		case 0:	update_type |= NC_WORLD; break;
+		case 1:	update_type |= NC_MATERIAL; break;
+		case 2:	update_type |= NC_LAMP; break;
+		default: break;
+	}
+
+	WM_event_add_notifier(C, update_type | ND_SHADING_PREVIEW, NULL);
+
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
 	{"start",             mExportStart ,      METH_VARARGS, "Startup init"},
 	{"free", (PyCFunction)mExportFree,        METH_NOARGS,  "Free resources"},
@@ -527,6 +555,8 @@ static PyMethodDef methods[] = {
 	{"getTransformHex",   mGetTransformHex,   METH_O,       "Get transform hex string"},
 	{"setSkipObjects",    mSetSkipObjects,    METH_VARARGS, "Set a list of objects to skip from exporting"},
 	{"setHideFromView",   mSetHideFromView,   METH_VARARGS, "Setup overrides for objects for the current view"},
+
+	{"updatePreview",     mUpdatePreview,     METH_VARARGS, "Generate preview update event"},
 
 	{NULL, NULL, 0, NULL},
 };
