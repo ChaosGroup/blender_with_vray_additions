@@ -755,6 +755,13 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 		RNA_float_get_array(&socket.ptr, "value", color);
 		return BOOST_FORMAT_COLOR(color);
 	}
+	else if(socketVRayType == "VRaySocketEnvironmentOverride") {
+		if(RNA_boolean_get(&socket.ptr, "use")) {
+			float color[3];
+			RNA_float_get_array(&socket.ptr, "value", color);
+			return BOOST_FORMAT_COLOR(color);
+		}
+	}
 	else if(socketVRayType == "VRaySocketFloatColor") {
 		return BOOST_FORMAT_FLOAT(RNA_float_get(&socket.ptr, "value"));
 	}
