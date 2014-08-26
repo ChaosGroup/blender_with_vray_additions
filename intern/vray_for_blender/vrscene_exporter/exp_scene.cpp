@@ -793,7 +793,7 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::
 		pluginAttrs["use_rect_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("rect_tex"));
 	}
 	else if(pluginID == "LightDome") {
-		pluginAttrs["use_dome_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("use_dome_tex"));
+		pluginAttrs["use_dome_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("dome_tex"));
 	}
 	else if(pluginID == "LightSpotMax") {
 		BL::SpotLamp spotLamp(lamp);
