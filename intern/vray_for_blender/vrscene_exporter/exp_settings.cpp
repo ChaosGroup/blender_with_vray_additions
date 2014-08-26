@@ -32,8 +32,10 @@
 ExporterSettings ExporterSettings::gSet;
 
 
-void ExporterSettings::init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
+void ExporterSettings::init(BL::Context context, BL::Scene scene, BL::BlendData data, BL::RenderEngine engine)
 {
+	b_context = context;
+
 	b_scene  = scene;
 	b_data   = data;
 	b_engine = engine;

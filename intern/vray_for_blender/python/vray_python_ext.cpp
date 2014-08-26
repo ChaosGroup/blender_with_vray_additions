@@ -139,11 +139,9 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(py_engine), &engineRNA);
 	BL::RenderEngine bl_engine(engineRNA);
 
-#if 0
 	PointerRNA contextRNA;
 	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_context), &contextRNA);
 	BL::Context bl_context(contextRNA);
-#endif
 
 	PointerRNA sceneRNA;
 	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_scene), &sceneRNA);
@@ -154,7 +152,7 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	BL::BlendData bl_data(dataRNA);
 
 	ExporterSettings::gSet.reset();
-	ExporterSettings::gSet.init(bl_scene, bl_data, bl_engine);
+	ExporterSettings::gSet.init(bl_context, bl_scene, bl_data, bl_engine);
 	ExporterSettings::gSet.m_sce  = (Scene*)bl_scene.ptr.data;
 	ExporterSettings::gSet.m_main = (Main*)bl_data.ptr.data;
 

@@ -40,12 +40,13 @@ struct ExporterSettings {
 	static ExporterSettings gSet;
 
 	ExporterSettings():
+		b_context(PointerRNA_NULL),
 		b_scene(PointerRNA_NULL),
 		b_data(PointerRNA_NULL),
 		b_engine(PointerRNA_NULL)
 	{}
 
-	void              init(BL::Scene scene, BL::BlendData data, BL::RenderEngine engine);
+	void              init(BL::Context context, BL::Scene scene, BL::BlendData data, BL::RenderEngine engine);
 	void              init();
 	void              reset();
 
@@ -54,7 +55,9 @@ struct ExporterSettings {
 
 	Scene            *m_sce;
 	Main             *m_main;
+	bContext         *m_ctx;
 
+	BL::Context       b_context;
 	BL::Scene         b_scene;
 	BL::BlendData     b_data;
 	BL::RenderEngine  b_engine;
