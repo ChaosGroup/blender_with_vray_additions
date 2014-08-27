@@ -35,6 +35,9 @@
 
 #include "BLI_strict_flags.h"
 
+#include "math_color_kelvin_vray.h"
+
+
 void hsv_to_rgb(float h, float s, float v, float *r, float *g, float *b)
 {
 	float nr, ng, nb;
@@ -622,6 +625,24 @@ void BLI_init_srgb_conversion(void)
 		BLI_color_to_srgb_table[i] = (unsigned short)(b * 0x100);
 	}
 }
+
+void blackbody_to_rgb(int T, float *r, float *g, float *b)
+{
+	int i = 0;
+
+	/* Table range in 800 - 12000 */
+	if (T < 800 || T > 12000)
+		return;
+
+	*r = *g = *b = 0;
+
+	i = T - 800;
+
+	*r = VRayKelvinToRGB[i][0];
+	*g = VRayKelvinToRGB[i][1];
+	*b = VRayKelvinToRGB[i][2];
+}
+
 static float inverse_srgb_companding(float v)
 {
 	if (v > 0.04045f) {

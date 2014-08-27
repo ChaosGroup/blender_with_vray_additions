@@ -2006,6 +2006,25 @@ static void do_color_wheel_rna_cb(bContext *UNUSED(C), void *bt1, void *UNUSED(a
 		popup->menuretval = UI_RETURN_UPDATE;
 }
 
+static void do_kel_rna_cb(bContext *UNUSED(C), void *bt1, void *kelcl)
+{
+	uiBut *but = (uiBut *)bt1;
+	uiPopupBlockHandle *popup = but->block->handle;
+
+	float rgb[3];
+	int   kelTemp = (*(int*)kelcl);
+
+	blackbody_to_rgb(kelTemp, rgb, rgb+1, rgb+2);
+
+	if (but->block->color_profile)
+		ui_block_to_scene_linear_v3(but->block, rgb);
+
+	ui_update_block_buts_rgb(but->block, rgb, false);
+
+	if (popup)
+		popup->menuretval = UI_RETURN_UPDATE;
+}
+
 static void do_hex_rna_cb(bContext *UNUSED(C), void *bt1, void *hexcl)
 {
 	uiBut *but = (uiBut *)bt1;
@@ -2055,6 +2074,10 @@ static void picker_new_hide_reveal(uiBlock *block, short colormode)
 		else if (bt->func == do_hex_rna_cb || bt->type == LABEL) {
 			/* hex input or gamma correction status label */
 			if (colormode == 2) bt->flag &= ~UI_HIDDEN;
+			else bt->flag |= UI_HIDDEN;
+		}
+		else if (bt->func == do_kel_rna_cb) {
+			if (colormode == 3) bt->flag &= ~UI_HIDDEN;
 			else bt->flag |= UI_HIDDEN;
 		}
 	}
@@ -2112,11 +2135,12 @@ static void square_picker(uiBlock *block, PointerRNA *ptr, PropertyRNA *prop, in
 /* a HS circle, V slider, rgb/hsv/hex sliders */
 static void uiBlockPicker(uiBlock *block, float rgba[4], PointerRNA *ptr, PropertyRNA *prop, bool show_picker)
 {
-	static short colormode = 0;  /* temp? 0=rgb, 1=hsv, 2=hex */
+	static short colormode = 0;  /* temp? 0=rgb, 1=hsv, 2=hex, 3=V-Ray Kelvin */
 	uiBut *bt;
 	int width, butwidth;
 	static char tip[50];
 	static char hexcol[128];
+	static int kelT;
 	float rgb_gamma[3];
 	unsigned char rgb_gamma_uchar[3];
 	float softmin, softmax, hardmin, hardmax, step, precision;
@@ -2169,14 +2193,16 @@ static void uiBlockPicker(uiBlock *block, float rgba[4], PointerRNA *ptr, Proper
 	/* mode */
 	yco = -1.5f * UI_UNIT_Y;
 	uiBlockBeginAlign(block);
-	bt = uiDefButS(block, ROW, 0, IFACE_("RGB"), 0, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 0.0, 0, 0, "");
+	bt = uiDefButS(block, ROW, 0, IFACE_("RGB"), 0, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 0.0, 0, 0, "");
 	uiButSetFunc(bt, do_picker_new_mode_cb, bt, NULL);
 	if (U.color_picker_type == USER_CP_CIRCLE_HSL)
-		bt = uiDefButS(block, ROW, 0, IFACE_("HSL"), width / 3, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
+		bt = uiDefButS(block, ROW, 0, IFACE_("HSL"), width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
 	else
-		bt = uiDefButS(block, ROW, 0, IFACE_("HSV"), width / 3, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
+		bt = uiDefButS(block, ROW, 0, IFACE_("HSV"), width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
 	uiButSetFunc(bt, do_picker_new_mode_cb, bt, NULL);
-	bt = uiDefButS(block, ROW, 0, IFACE_("Hex"), 2 * width / 3, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 2.0, 0, 0, "");
+	bt = uiDefButS(block, ROW, 0, IFACE_("Hex"), 2 * width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 2.0, 0, 0, "");
+	uiButSetFunc(bt, do_picker_new_mode_cb, bt, NULL);
+	bt = uiDefButS(block, ROW, 0, IFACE_("K"),   3 * width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 3.0, 0, 0, "");
 	uiButSetFunc(bt, do_picker_new_mode_cb, bt, NULL);
 	uiBlockEndAlign(block);
 
@@ -2230,6 +2256,10 @@ static void uiBlockPicker(uiBlock *block, float rgba[4], PointerRNA *ptr, Proper
 	bt = uiDefBut(block, TEX, 0, IFACE_("Hex: "), 0, yco, butwidth, UI_UNIT_Y, hexcol, 0, 8, 0, 0, TIP_("Hex triplet for color (#RRGGBB)"));
 	uiButSetFunc(bt, do_hex_rna_cb, bt, hexcol);
 	uiDefBut(block, LABEL, 0, IFACE_("(Gamma Corrected)"), 0, yco - UI_UNIT_Y, butwidth, UI_UNIT_Y, NULL, 0.0, 0.0, 0, 0, "");
+
+	yco = -2.0f * UI_UNIT_Y;
+	bt = uiDefButI(block, NUMSLI, 0, IFACE_("K: "), 0, yco -= UI_UNIT_Y, butwidth, UI_UNIT_Y, &kelT, 800, 12000, 0, 0, TIP_("Kelvin temperature"));
+	uiButSetFunc(bt, do_kel_rna_cb, bt, &kelT);
 
 	ui_rgb_to_color_picker_v(rgb_gamma, hsv);
 
