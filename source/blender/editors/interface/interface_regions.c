@@ -2005,6 +2005,29 @@ static void ui_color_wheel_rna_cb(bContext *UNUSED(C), void *bt1, void *UNUSED(a
 		popup->menuretval = UI_RETURN_UPDATE;
 }
 
+
+static void ui_colorpicker_kel_rna_cb(bContext *UNUSED(C), void *bt1, void *kelcl)
+{
+	uiBut *but = (uiBut *)bt1;
+	uiPopupBlockHandle *popup = but->block->handle;
+	ColorPicker *cpicker = but->custom_data;
+
+	float rgb[3];
+	int   kelTemp = (*(int*)kelcl);
+
+	blackbody_to_rgb(kelTemp, rgb, rgb+1, rgb+2);
+
+	if (but->block->color_profile) {
+		ui_block_cm_to_scene_linear_v3(but->block, rgb);
+	}
+
+	ui_update_color_picker_buts_rgb(but->block, cpicker, rgb, false);
+
+	if (popup)
+		popup->menuretval = UI_RETURN_UPDATE;
+}
+
+
 static void ui_colorpicker_hex_rna_cb(bContext *UNUSED(C), void *bt1, void *hexcl)
 {
 	uiBut *but = (uiBut *)bt1;
@@ -2055,6 +2078,10 @@ static void ui_colorpicker_hide_reveal(uiBlock *block, short colormode)
 		else if (bt->func == ui_colorpicker_hex_rna_cb || bt->type == UI_BTYPE_LABEL) {
 			/* hex input or gamma correction status label */
 			if (colormode == 2) bt->flag &= ~UI_HIDDEN;
+			else bt->flag |= UI_HIDDEN;
+		}
+		else if (bt->func == ui_colorpicker_kel_rna_cb) {
+			if (colormode == 3) bt->flag &= ~UI_HIDDEN;
 			else bt->flag |= UI_HIDDEN;
 		}
 	}
@@ -2116,11 +2143,12 @@ static void ui_colorpicker_square(uiBlock *block, PointerRNA *ptr, PropertyRNA *
 /* a HS circle, V slider, rgb/hsv/hex sliders */
 static void ui_block_colorpicker(uiBlock *block, float rgba[4], PointerRNA *ptr, PropertyRNA *prop, bool show_picker)
 {
-	static short colormode = 0;  /* temp? 0=rgb, 1=hsv, 2=hex */
+	static short colormode = 0;  /* temp? 0=rgb, 1=hsv, 2=hex, 3=V-Ray Kelvin */
 	uiBut *bt;
 	int width, butwidth;
 	static char tip[50];
 	static char hexcol[128];
+	static int kelT;
 	float rgb_gamma[3];
 	unsigned char rgb_gamma_uchar[3];
 	float softmin, softmax, hardmin, hardmax, step, precision;
@@ -2173,17 +2201,21 @@ static void ui_block_colorpicker(uiBlock *block, float rgba[4], PointerRNA *ptr,
 	
 	/* mode */
 	yco = -1.5f * UI_UNIT_Y;
+
 	UI_block_align_begin(block);
-	bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("RGB"), 0, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 0.0, 0, 0, "");
+	bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("RGB"), 0, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 0.0, 0, 0, "");
 	UI_but_func_set(bt, ui_colorpicker_create_mode_cb, bt, NULL);
 	bt->custom_data = cpicker;
 	if (U.color_picker_type == USER_CP_CIRCLE_HSL)
-		bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("HSL"), width / 3, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
+		bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("HSL"), width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
 	else
-		bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("HSV"), width / 3, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
+		bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("HSV"), width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 1.0, 0, 0, "");
 	UI_but_func_set(bt, ui_colorpicker_create_mode_cb, bt, NULL);
 	bt->custom_data = cpicker;
-	bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("Hex"), 2 * width / 3, yco, width / 3, UI_UNIT_Y, &colormode, 0.0, 2.0, 0, 0, "");
+	bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("Hex"), 2 * width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 2.0, 0, 0, "");
+	UI_but_func_set(bt, ui_colorpicker_create_mode_cb, bt, NULL);
+	bt->custom_data = cpicker;
+	bt = uiDefButS(block, UI_BTYPE_ROW, 0, IFACE_("K"),   3 * width / 4, yco, width / 4, UI_UNIT_Y, &colormode, 0.0, 3.0, 0, 0, "");
 	UI_but_func_set(bt, ui_colorpicker_create_mode_cb, bt, NULL);
 	bt->custom_data = cpicker;
 	UI_block_align_end(block);
@@ -2247,6 +2279,10 @@ static void ui_block_colorpicker(uiBlock *block, float rgba[4], PointerRNA *ptr,
 	UI_but_func_set(bt, ui_colorpicker_hex_rna_cb, bt, hexcol);
 	bt->custom_data = cpicker;
 	uiDefBut(block, UI_BTYPE_LABEL, 0, IFACE_("(Gamma Corrected)"), 0, yco - UI_UNIT_Y, butwidth, UI_UNIT_Y, NULL, 0.0, 0.0, 0, 0, "");
+
+	yco = -2.0f * UI_UNIT_Y;
+	bt = uiDefButI(block, UI_BTYPE_NUM_SLIDER, 0, IFACE_("K: "), 0, yco -= UI_UNIT_Y, butwidth, UI_UNIT_Y, &kelT, 800, 12000, 0, 0, TIP_("Kelvin temperature"));
+	UI_but_func_set(bt, ui_colorpicker_kel_rna_cb, bt, &kelT);
 
 	ui_rgb_to_color_picker_v(rgb_gamma, hsv);
 
