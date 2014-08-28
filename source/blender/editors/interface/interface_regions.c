@@ -2016,9 +2016,6 @@ static void do_kel_rna_cb(bContext *UNUSED(C), void *bt1, void *kelcl)
 
 	blackbody_to_rgb(kelTemp, rgb, rgb+1, rgb+2);
 
-	if (but->block->color_profile)
-		ui_block_to_scene_linear_v3(but->block, rgb);
-
 	ui_update_block_buts_rgb(but->block, rgb, false);
 
 	if (popup)
