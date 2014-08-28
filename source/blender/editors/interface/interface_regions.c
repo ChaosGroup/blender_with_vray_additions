@@ -2016,11 +2016,6 @@ static void ui_colorpicker_kel_rna_cb(bContext *UNUSED(C), void *bt1, void *kelc
 	int   kelTemp = (*(int*)kelcl);
 
 	blackbody_to_rgb(kelTemp, rgb, rgb+1, rgb+2);
-
-	if (but->block->color_profile) {
-		ui_block_cm_to_scene_linear_v3(but->block, rgb);
-	}
-
 	ui_update_color_picker_buts_rgb(but->block, cpicker, rgb, false);
 
 	if (popup)
