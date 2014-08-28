@@ -630,11 +630,11 @@ void blackbody_to_rgb(int T, float *r, float *g, float *b)
 {
 	int i = 0;
 
+	*r = *g = *b = 0;
+
 	/* Table range in 800 - 12000 */
 	if (T < 800 || T > 12000)
 		return;
-
-	*r = *g = *b = 0;
 
 	i = T - 800;
 
