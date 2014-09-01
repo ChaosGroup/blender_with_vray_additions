@@ -2740,6 +2740,12 @@ static void direct_link_nodetree(FileData *fd, bNodeTree *ntree)
 					nss->bytecode = newdataadr(fd, nss->bytecode);
 				}
 			}
+			/* Make it possible to use some Blender nodes inside pynode trees */
+			else if (ntree->type==NTREE_CUSTOM) {
+				if (ELEM(node->type, SH_NODE_CURVE_VEC, SH_NODE_CURVE_RGB)) {
+					direct_link_curvemapping(fd, node->storage);
+				}
+			}
 			else if (ntree->type==NTREE_COMPOSIT) {
 				if (ELEM(node->type, CMP_NODE_TIME, CMP_NODE_CURVE_VEC, CMP_NODE_CURVE_RGB, CMP_NODE_HUECORRECT))
 					direct_link_curvemapping(fd, node->storage);
