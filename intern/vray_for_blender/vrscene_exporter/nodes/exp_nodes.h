@@ -198,7 +198,8 @@ public:
 	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 										   VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													 VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
+													 VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap(),
+													 const std::string &manualName="");
 
 	static void             exportVRayEnvironment(VRayNodeContext *context);
 	static void             exportVRayClipper(BL::BlendData bl_data, BL::Object bl_ob);
@@ -252,6 +253,8 @@ private:
 													   VRayNodeContext *context);
 	static std::string      exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												 VRayNodeContext *context);
+	static std::string      exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+													 VRayNodeContext *context);
 
 	static std::string      exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
@@ -279,6 +282,8 @@ private:
 	static BL::NodeSocket   getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket);
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
+
+	static void             getNodeVectorCurveData(BL::Node node, StrVector &points, StrVector &types);
 
 };
 
