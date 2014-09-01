@@ -888,6 +888,12 @@ static void write_nodetree(WriteData *wd, bNodeTree *ntree)
 			else if (ntree->type==NTREE_COMPOSIT && node->type==CMP_NODE_MOVIEDISTORTION) {
 				/* pass */
 			}
+			/* Make it possible to use some Blender nodes inside pynode trees */
+			else if (ntree->type==NTREE_CUSTOM) {
+				if (ELEM(node->type, SH_NODE_CURVE_VEC, SH_NODE_CURVE_RGB)) {
+					write_curvemapping(wd, node->storage);
+				}
+			}
 			else
 				writestruct(wd, DATA, node->typeinfo->storagename, 1, node->storage);
 		}
