@@ -35,6 +35,10 @@ void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext *context)
 	}
 
 	BL::World world = worldScene.world();
+	if (NOT(world)) {
+		PRINT_WARN("Scene doesn't have World datablock!");
+		return;
+	}
 
 	PointerRNA vrayWorld = RNA_pointer_get(&world.ptr, "vray");
 
