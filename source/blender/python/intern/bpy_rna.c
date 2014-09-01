@@ -81,7 +81,7 @@
 #  include "BLF_translation.h"
 #endif
 
-// #define USE_PEDANTIC_WRITE
+#define USE_PEDANTIC_WRITE
 #define USE_MATHUTILS
 #define USE_STRING_COERCE
 
