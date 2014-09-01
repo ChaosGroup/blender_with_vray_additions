@@ -1133,7 +1133,6 @@ void ED_preview_icon_job(const bContext *C, void *owner, ID *id, unsigned int *r
 	WM_jobs_start(CTX_wm_manager(C), wm_job);
 }
 
-
 void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, MTex *slot, int sizex, int sizey, int method)
 {
 	Object *ob = CTX_data_active_object(C);
@@ -1163,12 +1162,15 @@ void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, M
 	sp->parent = parent;
 	sp->slot = slot;
 
-	if (et && et->render && et->preview_main)
+	if (et && et->render && et->preview_main) {
 		sp->pr_main = et->preview_main;
-	else if ((method != PR_NODE_RENDER) && id_type != ID_TE && use_new_shading)
+	}
+	else if ((method != PR_NODE_RENDER) && id_type != ID_TE && use_new_shading) {
 		sp->pr_main = G_pr_main_cycles;
-	else
+	}
+	else {
 		sp->pr_main = G_pr_main;
+	}
 
 	if (ob && ob->totcol) copy_v4_v4(sp->col, ob->col);
 	else sp->col[0] = sp->col[1] = sp->col[2] = sp->col[3] = 1.0f;
