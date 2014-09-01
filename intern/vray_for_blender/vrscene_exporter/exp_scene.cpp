@@ -39,6 +39,7 @@
 #include "BKE_material.h"
 #include "BKE_global.h"
 #include "BLI_math_matrix.h"
+#include "BLI_utildefines.h"
 
 extern "C" {
 #  include "RE_engine.h"
@@ -799,6 +800,9 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::
 		BL::SpotLamp spotLamp(lamp);
 
 		pluginAttrs["fallsize"] = BOOST_FORMAT_FLOAT(spotLamp.spot_size());
+	}
+	else if(ELEM(pluginID, "LightRectangle", "LightSphere", "LightDome")) {
+		pluginAttrs["objectID"] = BOOST_FORMAT_INT(ob.pass_index());
 	}
 
 	// Now, let's go through "Render Elements" and check if we have to
