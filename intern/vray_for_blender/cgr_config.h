@@ -86,17 +86,16 @@
 #define STRINGIZE(A) STRINGIZE_NX(A)
 
 #ifdef CGR_PLUGIN_NAME
-#  define _OUTPUT_PROMPT(P) COLOR_MAGENTA STRINGIZE(P) COLOR_DEFAULT ": "
-#  define OUTPUT_PROMPT _OUTPUT_PROMPT(CGR_PLUGIN_NAME)
+#  define _OUTPUT_PROMPT(P)         COLOR_MAGENTA STRINGIZE(P)          COLOR_DEFAULT ": "
+#  define _OUTPUT_ERROR_PROMPT(P)   COLOR_RED     STRINGIZE(P) " Error" COLOR_DEFAULT ": "
+#  define _OUTPUT_WARNING_PROMPT(P) COLOR_YELLOW  STRINGIZE(P) " Error" COLOR_DEFAULT ": "
+#  define OUTPUT_PROMPT         _OUTPUT_PROMPT(CGR_PLUGIN_NAME)
+#  define OUTPUT_ERROR_PROMPT   _OUTPUT_ERROR_PROMPT(CGR_PLUGIN_NAME)
+#  define OUTPUT_WARNING_PROMPT _OUTPUT_WARNING_PROMPT(CGR_PLUGIN_NAME)
 #else
-#  define OUTPUT_PROMPT COLOR_MAGENTA "Info" COLOR_DEFAULT ": "
-#endif
-
-#ifdef CGR_PLUGIN_NAME
-#  define _OUTPUT_ERROR_PROMPT(P) COLOR_RED STRINGIZE(P) " Error" COLOR_DEFAULT ": "
-#  define OUTPUT_ERROR_PROMPT _OUTPUT_ERROR_PROMPT(CGR_PLUGIN_NAME)
-#else
-#  define OUTPUT_ERROR_PROMPT COLOR_RED "Error" COLOR_DEFAULT ": "
+#  define OUTPUT_PROMPT         COLOR_MAGENTA "Info"    COLOR_DEFAULT ": "
+#  define OUTPUT_ERROR_PROMPT   COLOR_RED     "Error"   COLOR_DEFAULT ": "
+#  define OUTPUT_WARNING_PROMPT COLOR_YELLOW  "Warning" COLOR_DEFAULT ": "
 #endif
 
 #if CGR_USE_DEBUG == 0
@@ -133,6 +132,12 @@
 #define PRINT_INFO_LB(...) {\
 	fprintf(stdout, OUTPUT_PROMPT); \
 	fprintf(stdout, __VA_ARGS__); \
+	fflush(stdout); }
+
+#define PRINT_WARN(...) { \
+	fprintf(stdout, OUTPUT_WARNING_PROMPT); \
+	fprintf(stdout, __VA_ARGS__); \
+	fprintf(stdout, "\n"); \
 	fflush(stdout); }
 
 #if CGR_USE_DEBUG == 0
