@@ -292,7 +292,7 @@ static StructRNA *rna_RenderEngine_register(Main *bmain, ReportList *reports, vo
 	et->update_script_node = (have_function[5]) ? engine_update_script_node : NULL;
 
 	/* load preview file */
-	if (strlen(et->preview_filepath)) {
+	if (*et->preview_filepath) {
 		et->preview_main = BLO_load_main_from_file(et->preview_filepath);
 	}
 
