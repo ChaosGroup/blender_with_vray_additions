@@ -293,7 +293,7 @@ typedef struct bNodeTreeType {
 	char ui_name[64];
 	char ui_description[256];
 	int ui_icon;
-
+	
 	/* callbacks */
 	void (*free_cache)(struct bNodeTree *ntree);
 	void (*free_node_cache)(struct bNodeTree *ntree, struct bNode *node);

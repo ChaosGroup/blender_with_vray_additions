@@ -2984,7 +2984,7 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 		/* check link validity */
 		ntree_validate_links(ntree);
 	}
-
+	
 	if (ntree->update & (NTREE_UPDATE_LINKS | NTREE_UPDATE_NODES)) {
 		if (ntree->type == NTREE_CUSTOM) {
 			if (ntree->typeinfo->flags & NTREE_FLAG_PREVIEW) {

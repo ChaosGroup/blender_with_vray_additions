@@ -3107,7 +3107,7 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 						psys_get_modifier(ob, psys)->flag &= ~eParticleSystemFlag_psys_updated;
 				}
 			}
-
+			
 			/* quick cache removed */
 
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
