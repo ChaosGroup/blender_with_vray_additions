@@ -813,7 +813,9 @@ std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, co
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+													   VRayNodeContext *context, const AttributeValueMap &manualAttrs,
+													   const std::string &manualName)
 {
 	std::string pluginType;
 	std::string pluginID;
@@ -854,7 +856,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 	PRINT_INFO("  Node represents plugin \"%s\" [\"%s\"]",
 			   pluginID.c_str(), pluginType.c_str());
 
-	std::string        pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
+	std::string        pluginName = manualName.empty() ? VRayNodeExporter::getPluginName(node, ntree, context) : manualName;
 	AttributeValueMap  pluginAttrs;
 
 	// VRayNodeContext nodeContext(ntree, node, fromSocket, context);
@@ -953,6 +955,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeTexSky") {
 		return VRayNodeExporter::exportVRayNodeTexSky(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeTexFalloff") {
+		return VRayNodeExporter::exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeTexVoxelData") {
 		return VRayNodeExporter::exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
