@@ -476,7 +476,7 @@ void GeomMayaHair::initData()
 void GeomMayaHair::initAttributes()
 {
 	opacity      = 1.0;
-	geom_splines = (m_psys->part->flag & PART_HAIR_BSPLINE);
+	geom_splines = bool(m_psys->part->flag & PART_HAIR_BSPLINE);
 }
 
 
