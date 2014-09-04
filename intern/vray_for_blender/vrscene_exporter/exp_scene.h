@@ -160,6 +160,7 @@ private:
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL, const std::string &prefix="");
+	void                    exportVRayAsset(BL::Object ob);
 
 	void                    initDupli();
 	void                    exportDupli();

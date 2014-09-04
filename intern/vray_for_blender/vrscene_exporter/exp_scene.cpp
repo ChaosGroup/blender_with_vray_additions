@@ -27,6 +27,7 @@
 #include "cgr_blender_data.h"
 #include "cgr_json_plugins.h"
 #include "cgr_rna.h"
+#include "cgr_paths.h"
 
 #include "exp_scene.h"
 #include "exp_nodes.h"
@@ -439,6 +440,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	}
 	else if(LIGHT_TYPE(ob)) {
 		exportLamp(bl_ob);
+	}
+	else if(EMPTY_TYPE(ob)) {
+		exportVRayAsset(bl_ob);
 	}
 }
 
@@ -872,6 +876,40 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
 
 	VRayNodePluginExporter::exportPlugin("LIGHT", pluginID, pluginName, pluginAttrs);
+}
+
+
+void VRsceneExporter::exportVRayAsset(BL::Object ob)
+{
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+
+	if (RNA_boolean_get(&vrayObject, "overrideWithScene")) {
+		PointerRNA vrayAsset = RNA_pointer_get(&vrayObject, "VRayAsset");
+
+		const std::string &pluginName = "Asset@" + GetIDName(ob);
+
+		char transform[CGR_TRANSFORM_HEX_SIZE];
+		GetTransformHex(((Object*)ob.ptr.data)->obmat, transform);
+
+		AttributeValueMap pluginAttrs;
+
+		pluginAttrs["filepath"] = BOOST_FORMAT_STRING(BlenderUtils::GetFullFilepath(RNA_std_string_get(&vrayAsset, "sceneFilepath")).c_str());
+
+		pluginAttrs["use_transform"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneUseTransform"));
+		pluginAttrs["transform"]     = BOOST_FORMAT_TM(transform);
+
+		pluginAttrs["prefix"]  = BOOST_FORMAT_STRING(GetIDName(ob).c_str());
+		pluginAttrs["replace"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneReplace"));
+
+		pluginAttrs["add_nodes"]       = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddNodes"));
+		pluginAttrs["add_materials"]   = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddMaterials"));
+		pluginAttrs["add_lights"]      = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddLights"));
+		pluginAttrs["add_cameras"]     = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddCameras"));
+		pluginAttrs["add_environment"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddEnvironment"));
+
+
+		VRayNodePluginExporter::exportPlugin("NODE", "VRayAsset", pluginName, pluginAttrs);
+	}
 }
 
 
