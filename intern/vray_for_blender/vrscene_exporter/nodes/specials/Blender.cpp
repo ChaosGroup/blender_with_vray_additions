@@ -31,6 +31,7 @@ void VRayNodeExporter::getNodeVectorCurveData(BL::Node node, StrVector &points, 
 	BL::ShaderNodeVectorCurve curveNode(node);
 
 	BL::CurveMapping curveMapping = curveNode.mapping();
+	curveMapping.initialize();
 
 	BL::CurveMap curve = curveMapping.curves[0];
 	if (NOT(curve.points.length()))
