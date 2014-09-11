@@ -1975,7 +1975,6 @@ static uiBlock *curvemap_tools_posslope_func(bContext *C, ARegion *ar, void *cum
 	uiBlockSetDirection(block, UI_RIGHT);
 	uiTextBoundsBlock(block, 50);
 
-	uiEndBlock(C, block);
 	return block;
 }
 
@@ -2003,7 +2002,6 @@ static uiBlock *curvemap_tools_negslope_func(bContext *C, ARegion *ar, void *cum
 	uiBlockSetDirection(block, UI_RIGHT);
 	uiTextBoundsBlock(block, 50);
 
-	uiEndBlock(C, block);
 	return block;
 }
 
