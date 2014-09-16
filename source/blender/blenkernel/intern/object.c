@@ -122,6 +122,8 @@
 
 #include "GPU_material.h"
 
+#include "RNA_access.h"
+
 /* Vertex parent modifies original BMesh which is not safe for threading.
  * Ideally such a modification should be handled as a separate DAG update
  * callback for mesh datablock, but for until it is actually supported use
@@ -2920,7 +2922,11 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
                                  RigidBodyWorld *rbw,
                                  const bool do_proxy_update)
 {
-	ob->id.pad2 = CGR_NONE;
+	PointerRNA ptr;
+	int        data_updated = CGR_NONE;
+
+	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
+	ptr = RNA_pointer_get(&ptr, "vray");
 
 	if (ob->recalc & OB_RECALC_ALL) {
 		/* speed optimization for animation lookups */
@@ -2965,7 +2971,7 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 		}
 		
 		if(ob->recalc & OB_RECALC_OB || ob->recalc & OB_RECALC_TIME)
-			ob->id.pad2 |= CGR_UPDATED_OBJECT;
+			RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_DATA);
 
 		if (ob->recalc & OB_RECALC_DATA) {
 			ID *data_id = (ID *)ob->data;
@@ -3111,7 +3117,7 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 			/* quick cache removed */
 
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
-			ob->id.pad2 |= CGR_UPDATED_DATA;
+			RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_DATA);
 		}
 		else {
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);

@@ -48,6 +48,7 @@ Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
 void  FreeDupliList(Object *ob);
 
+int   IsObjectUpdated(Object *ob);
 int   IsObjectDataUpdated(Object *ob);
 
 int   IsObjectHasActions(Object *ob);

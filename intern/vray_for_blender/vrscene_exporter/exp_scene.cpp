@@ -306,8 +306,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 	PRINT_INFO("Processing object %s", ob->id.name);
 
-	if(ob->id.pad2)
-		PRINT_INFO("Base object %s (update: %i)", ob->id.name, ob->id.pad2);
+	int data_updated = RNA_int_get(&vrayObject, "data_updated");
+	if(data_updated)
+		PRINT_INFO("Base object %s (update: %i)", ob->id.name, data_updated);
 
 	if(bl_ob.is_duplicator()) {
 		// If object is a dupli group holder and it's not animated -
