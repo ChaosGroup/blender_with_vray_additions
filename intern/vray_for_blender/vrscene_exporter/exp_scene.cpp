@@ -244,7 +244,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		//
 		BL::BlendData b_data(PointerRNA_NULL);
 		BL::BlendData::materials_iterator maIt;
-		
+
 		if (ExporterSettings::gSet.b_engine.is_preview()) {
 			RenderEngine *re = (RenderEngine*)ExporterSettings::gSet.b_engine.ptr.data;
 			if(re->type->preview_main) {
@@ -908,7 +908,7 @@ void VRsceneExporter::exportVRayAsset(BL::Object ob)
 		pluginAttrs["add_environment"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddEnvironment"));
 
 
-		VRayNodePluginExporter::exportPlugin("NODE", "VRayAsset", pluginName, pluginAttrs);
+		VRayNodePluginExporter::exportPlugin("NODE", "VRayScene", pluginName, pluginAttrs);
 	}
 }
 
