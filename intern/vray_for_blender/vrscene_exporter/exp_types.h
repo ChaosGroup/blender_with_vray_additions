@@ -191,7 +191,7 @@ public:
 
 	// Checks if object was recalculated by Blender.
 	//
-	virtual int   isUpdated() { return m_ob->id.pad2; }
+	virtual int   isUpdated() { return IsObjectUpdated(m_ob) || IsObjectDataUpdated(m_ob); }
 
 	// Inits some very basic settings like object name, geometry type, etc.
 	//
