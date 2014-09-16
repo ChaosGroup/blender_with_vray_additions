@@ -230,6 +230,8 @@ private:
 													VRayNodeContext *context);
 	static std::string      exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 															VRayNodeContext *context);
+	static std::string      exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+																 VRayNodeContext *context);
 
 	static BL::Object       exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													   VRayNodeContext *context);

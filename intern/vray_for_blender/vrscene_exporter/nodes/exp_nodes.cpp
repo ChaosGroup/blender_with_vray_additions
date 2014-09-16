@@ -788,6 +788,7 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 	else if(socketVRayType == "VRaySocketCoords") {}
 	else if(socketVRayType == "VRaySocketObject") {}
 	else if(socketVRayType == "VRaySocketEffect") {}
+	else if(socketVRayType == "VRaySocketMtl") {}
 	else {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
 					ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
@@ -943,6 +944,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeGeomDisplacedMesh") {
 		return VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeGeomStaticSmoothedMesh") {
+		return VRayNodeExporter::exportVRayNodeGeomStaticSmoothedMesh(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeBitmapBuffer") {
 		return VRayNodeExporter::exportVRayNodeBitmapBuffer(ntree, node, fromSocket, context);
