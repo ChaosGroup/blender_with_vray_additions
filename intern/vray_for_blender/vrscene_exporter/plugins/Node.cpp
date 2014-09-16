@@ -456,9 +456,9 @@ void VRayScene::Node::writeData(PyObject *output, VRayExportable *prevState, boo
 int VRayScene::Node::IsUpdated(Object *ob)
 {
 	if(ob->type == OB_FONT)
-		return ob->id.pad2 & CGR_UPDATED_DATA;
+		return IsObjectDataUpdated(ob);
 
-	int updated = ob->id.pad2 & CGR_UPDATED_OBJECT;
+	int updated = IsObjectUpdated(ob);
 	if(NOT(updated)) {
 		if(ob->parent) {
 			// XXX: Check exactly how parent update affects child object
@@ -483,7 +483,7 @@ int VRayScene::Node::isObjectUpdated()
 
 int VRayScene::Node::isObjectDataUpdated()
 {
-	return m_ob->id.pad2 & CGR_UPDATED_DATA;
+	return IsObjectDataUpdated(m_ob);
 }
 
 

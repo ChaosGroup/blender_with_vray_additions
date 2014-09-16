@@ -54,6 +54,8 @@ extern "C" {
 #include "BKE_anim.h"
 }
 
+#include "RNA_access.h"
+
 #include <string.h>
 
 
@@ -308,7 +310,7 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 
 int IsParentUpdated(Object *ob)
 {
-	if(ob->id.pad2)
+	if(IsObjectUpdated(ob) || IsObjectDataUpdated(ob))
 		return 1;
 	if(ob->parent)
 		return IsParentUpdated(ob->parent);
@@ -316,7 +318,23 @@ int IsParentUpdated(Object *ob)
 }
 
 
+int IsObjectUpdated(Object *ob)
+{
+	PointerRNA ptr;
+	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
+	ptr = RNA_pointer_get(&ptr, "vray");
+	return RNA_int_get(&ptr, "data_updated") & CGR_UPDATED_OBJECT;
+}
+
+
 int IsObjectDataUpdated(Object *ob)
 {
+#if 0
 	return ob->id.pad2 & CGR_UPDATED_DATA;
+#else
+	PointerRNA ptr;
+	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
+	ptr = RNA_pointer_get(&ptr, "vray");
+	return RNA_int_get(&ptr, "data_updated") & CGR_UPDATED_DATA;
+#endif
 }
