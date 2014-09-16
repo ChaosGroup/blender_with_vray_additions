@@ -88,3 +88,31 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }
+
+
+std::string VRayNodeExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	if(NOT(context->obCtx.ob)) {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
+					ntree.name().c_str(), node.name().c_str());
+		return "NULL";
+	}
+
+	BL::NodeSocket meshSock = getSocketByName(node, "Mesh");
+	if(NOT(meshSock.is_linked())) {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Mesh socket is not linked!",
+					ntree.name().c_str(), node.name().c_str());
+
+		return "NULL";
+	}
+
+	const std::string meshName = VRayNodeExporter::exportLinkedSocket(ntree, meshSock, context);
+
+	if(NOT(ExporterSettings::gSet.m_useDisplaceSubdiv))
+		return meshName;
+
+	AttributeValueMap manualAttrs;
+	manualAttrs["mesh"] = meshName;
+
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
+}
