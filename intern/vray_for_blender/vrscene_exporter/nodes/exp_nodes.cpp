@@ -30,15 +30,15 @@ StrSet           VRayNodePluginExporter::m_namesCache;
 
 std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext *context)
 {
-	std::string pluginName = "NT" + ntree.name() + "N" + node.name();
+	std::string pluginName = GetIDName(ntree, "NT") + "N" + node.name();
 
 	if(context) {
 		BL::NodeTree  parent = context->getNodeTree();
 		BL::NodeGroup group  = context->getGroupNode();
 		if(parent)
-			pluginName += "NP" + parent.name();
+			pluginName += GetIDName(parent, "NP");
 		if(group)
-			pluginName += "GR" + group.name();
+			pluginName += GetIDName(parent, "GR");
 	}
 
 	return StripString(pluginName);
