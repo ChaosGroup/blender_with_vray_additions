@@ -268,7 +268,11 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 	}
 
-	m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
+	if(ExporterSettings::gSet.m_isAnimation) {
+		if(ExporterSettings::gSet.m_frameCurrent == ExporterSettings::gSet.m_frameStart) {
+			m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
+		}
+	}
 
 	ExporterSettings::gSet.b_engine.update_progress(1.0f);
 
