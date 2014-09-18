@@ -152,15 +152,15 @@ public:
 	void                    addToHideFromViewList(const std::string &listKey, void *obPtr);
 
 	int                     exportScene(const int &exportNodes, const int &exportGeometry);
+	void                    exportObjectBase(Object *ob);
 
 private:
 	void                    init();
 
-	void                    exportObjectBase(Object *ob);
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL, const std::string &prefix="");
-	void                    exportVRayAsset(BL::Object ob);
+	int                     exportVRayAsset(BL::Object ob);
 
 	void                    initDupli();
 	void                    exportDupli();
