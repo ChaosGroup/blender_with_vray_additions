@@ -3060,16 +3060,19 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 		}
 		
 		if(ob->recalc & OB_RECALC_OB || ob->recalc & OB_RECALC_TIME)
-			RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_DATA);
+			if (ptr.data)
+				RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_OBJECT);
 
 		if (ob->recalc & OB_RECALC_DATA) {
 			BKE_object_handle_data_update(eval_ctx, scene, ob);
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
-			RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_DATA);
+			if (ptr.data)
+				RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_DATA);
 		}
 		else {
 			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
-			RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_OBJECT);
+			if (ptr.data)
+				RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_OBJECT);
 		}
 
 		ob->recalc &= ~OB_RECALC_ALL;
