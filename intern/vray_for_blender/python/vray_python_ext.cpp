@@ -403,6 +403,51 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mExportShaders(PyObject *self, PyObject *args)
+{
+	PRINT_ERROR("exportShaders is not yet implemented...");
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* mExportObject(PyObject *self, PyObject *args)
+{
+	PyObject *py_exporter = NULL;
+	PyObject *py_data     = NULL;
+	PyObject *py_object   = NULL;
+
+	if(NOT(PyArg_ParseTuple(args, "OOO", &py_object, &py_data, &py_exporter))) {
+		return NULL;
+	}
+
+	PointerRNA objectRNA;
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_object), &objectRNA);
+	BL::Object b_ob(objectRNA);
+
+	PointerRNA dataRNA;
+	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_data), &dataRNA);
+	BL::BlendData b_data(dataRNA);
+
+	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
+	if(exporter) {
+		BL::Object::material_slots_iterator slIt;
+		for(b_ob.material_slots.begin(slIt); slIt != b_ob.material_slots.end(); ++slIt) {
+			BL::MaterialSlot b_sl = *slIt;
+			if (b_sl) {
+				BL::Material b_ma = b_sl.material();
+				if (b_ma) {
+					VRayNodeExporter::exportMaterial(b_data, b_ma);
+				}
+			}
+		}
+
+		exporter->exportObjectBase((Object*)b_ob.ptr.data);
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 {
 	if (MatrixObject_Check(value)) {
@@ -544,6 +589,8 @@ static PyMethodDef methods[] = {
 	{"exportFluid",       mExportFluid,       METH_VARARGS, "Export voxel data as TexMayaFluid"},
 
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export node tree node"},
+	{"exportShaders",     mExportShaders,     METH_VARARGS, "Export shaders from selection"},
+	{"exportObject",      mExportObject,      METH_VARARGS, "Export object"},
 
 	{"initAnimation",            mExportInitAnim,    METH_VARARGS, "Init animation settings"},
 	{"setFrame",                 mExportSetFrame,    METH_VARARGS, "Set current frame"},
