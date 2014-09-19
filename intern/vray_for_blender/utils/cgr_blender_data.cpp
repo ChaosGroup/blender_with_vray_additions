@@ -322,8 +322,20 @@ int IsObjectUpdated(Object *ob)
 {
 	PointerRNA ptr;
 	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
-	ptr = RNA_pointer_get(&ptr, "vray");
-	return RNA_int_get(&ptr, "data_updated") & CGR_UPDATED_OBJECT;
+
+	PointerRNA vrayObject = RNA_pointer_get(&ptr, "vray");
+
+	int upObject = RNA_int_get(&vrayObject, "data_updated") & CGR_UPDATED_OBJECT;
+	int upData   = 0;
+
+	BL::Object bl_ob(ptr);
+	if(bl_ob.is_duplicator()) {
+		if(bl_ob.particle_systems.length()) {
+			upData = RNA_int_get(&vrayObject, "data_updated") & CGR_UPDATED_DATA;
+		}
+	}
+
+	return upObject || upData;
 }
 
 
