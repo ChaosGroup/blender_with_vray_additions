@@ -268,11 +268,13 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		}
 	}
 
-	if(ExporterSettings::gSet.m_isAnimation) {
-		if(ExporterSettings::gSet.m_frameCurrent == ExporterSettings::gSet.m_frameStart) {
-			m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
-		}
-	}
+	bool writeLightLinker = true;
+	if(ExporterSettings::gSet.m_isAnimation)
+		if(ExporterSettings::gSet.m_frameCurrent > ExporterSettings::gSet.m_frameStart)
+			writeLightLinker = false;
+
+	if (writeLightLinker)
+		m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
 
 	ExporterSettings::gSet.b_engine.update_progress(1.0f);
 
@@ -319,8 +321,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		// export it only for the first frame
 		//
 		if(ExporterSettings::gSet.DoUpdateCheck()) {
-			if(bl_ob.dupli_type() == BL::Object::dupli_type_GROUP) {
-				if(NOT(VRayScene::Node::IsUpdated((Object*)bl_ob.ptr.data))) {
+			if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE) {
+				if(NOT(IsObjectUpdated((Object*)bl_ob.ptr.data) &&
+					   IsObjectDataUpdated((Object*)bl_ob.ptr.data))) {
 					return;
 				}
 			}
@@ -343,7 +346,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 		BL::Object::dupli_list_iterator b_dup;
 		for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
-			if(ExporterSettings::gSet.b_engine.test_break())
+			if(ExporterSettings::gSet.b_engine && ExporterSettings::gSet.b_engine.test_break())
 				break;
 
 			BL::DupliObject bl_dupliOb      = *b_dup;
@@ -434,7 +437,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		}
 	}
 
-	if(ExporterSettings::gSet.b_engine.test_break())
+	if(ExporterSettings::gSet.b_engine && ExporterSettings::gSet.b_engine.test_break())
 		return;
 
 	if(GEOM_TYPE(ob)) {
@@ -950,11 +953,13 @@ void VRsceneExporter::exportDupli()
 {
 	PyObject *out = ExporterSettings::gSet.m_fileObject;
 
+	VRayExportable::initInterpolate(ExporterSettings::gSet.m_frameCurrent);
+
 	for(MyPartSystems::const_iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
 		const std::string   psysName = sysIt->first;
 		const MyPartSystem *parts    = sysIt->second;
 
-		PYTHON_PRINTF(out, "\nInstancer Dupli%s {", StripString(psysName).c_str());
+		PYTHON_PRINTF(out, "\nInstancer Dulpi%s {", StripString(psysName).c_str());
 		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");
