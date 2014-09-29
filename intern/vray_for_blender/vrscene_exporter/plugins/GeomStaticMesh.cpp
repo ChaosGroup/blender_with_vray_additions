@@ -274,20 +274,18 @@ void GeomStaticMesh::initFaces()
 	// Prepass faces
 	BL::Mesh::tessfaces_iterator faceIt;
 	m_totTriFaces = 0;
-	int totEdge  = 0;
 	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 		FaceVerts faceVerts = faceIt->vertices_raw();
 
 		// If face is quad we split it into 2 tris
 		m_totTriFaces += faceVerts[3] ? 2 : 1;
-		totEdge  += faceVerts[3] ? 6 : 3;
 	}
 
 	m_facesArraySize        = 3 *     m_totTriFaces;
 	m_faceNormalsArraySize  = 3 *     m_totTriFaces;
 	m_normalsArraySize      = 3 * 3 * m_totTriFaces;
 	m_mtlIDArraySize        =         m_totTriFaces;
-	m_edgeVisArraySize      =         totEdge / 30 + 1;
+	m_edgeVisArraySize      =         m_totTriFaces / 10 + ((m_totTriFaces % 10 > 0) ? 1 : 0);
 
 	m_facesArray       = new int[m_facesArraySize];
 	m_faceNormalsArray = new int[m_faceNormalsArraySize];
@@ -302,8 +300,7 @@ void GeomStaticMesh::initFaces()
 	int faceVertIndex  = 0;
 	int faceNormIndex  = 0;
 	int faceMtlIDIndex = 0;
-	int edgeVisIndex   = 0;
-	int edgeVisCnt     = 0;
+	int currentTr = 0;
 
 	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 		FaceVerts faceVerts = faceIt->vertices_raw();
@@ -352,9 +349,9 @@ void GeomStaticMesh::initFaces()
 		m_facesArray[faceVertIndex++] = faceVerts[1];
 		m_facesArray[faceVertIndex++] = faceVerts[2];
 		if(faceVerts[3]) {
+			m_facesArray[faceVertIndex++] = faceVerts[0];
 			m_facesArray[faceVertIndex++] = faceVerts[2];
 			m_facesArray[faceVertIndex++] = faceVerts[3];
-			m_facesArray[faceVertIndex++] = faceVerts[0];
 		}
 
 		// Store normals
@@ -362,9 +359,9 @@ void GeomStaticMesh::initFaces()
 		COPY_VECTOR(m_normalsArray, normArrIndex, n1);
 		COPY_VECTOR(m_normalsArray, normArrIndex, n2);
 		if(faceVerts[3]) {
+			COPY_VECTOR(m_normalsArray, normArrIndex, n0);
 			COPY_VECTOR(m_normalsArray, normArrIndex, n2);
 			COPY_VECTOR(m_normalsArray, normArrIndex, n3);
-			COPY_VECTOR(m_normalsArray, normArrIndex, n0);
 		}
 
 		// Store face normals
@@ -381,28 +378,23 @@ void GeomStaticMesh::initFaces()
 
 		// Store edge visibility
 		if(faceVerts[3]) {
-			m_edgeVisArray[edgeVisIndex] |= (0b011011 << edgeVisCnt);
-			edgeVisCnt += 6;
+			m_edgeVisArray[currentTr/10] |= (0b011 << ((currentTr%10)*3));
+			currentTr++;
+			m_edgeVisArray[currentTr/10] |= (0b110 << ((currentTr%10)*3));
+			currentTr++;
 		}
 		else {
-			m_edgeVisArray[edgeVisIndex] |= (0b111 << edgeVisCnt);
-			edgeVisCnt += 3;
-		}
-		// One int in 'edge_visibility' stores info about 30 edges
-		if (edgeVisCnt == 30) {
-			edgeVisIndex++;
-			edgeVisCnt = 0;
+			m_edgeVisArray[currentTr/10] |= (0b111 << ((currentTr%10)*3));
+			currentTr++;
 		}
 	}
-
-	// Now we need element count which is index+1
-	edgeVisIndex++;
 
 	m_faces           = GetStringZip((u_int8_t*)m_facesArray,       faceVertIndex  * sizeof(int));
 	m_normals         = GetStringZip((u_int8_t*)m_normalsArray,     normArrIndex   * sizeof(float));
 	m_faceNormals     = GetStringZip((u_int8_t*)m_faceNormalsArray, faceNormIndex  * sizeof(int));
 	m_faceMtlIDs      = GetStringZip((u_int8_t*)m_mtlIDsArray,      faceMtlIDIndex * sizeof(int));
-	m_edge_visibility = GetStringZip((u_int8_t*)m_edgeVisArray,     edgeVisIndex   * sizeof(int));
+
+	m_edge_visibility = GetStringZip((u_int8_t*)m_edgeVisArray,     m_edgeVisArraySize * sizeof(int));
 }
 
 
