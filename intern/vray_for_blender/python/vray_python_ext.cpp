@@ -448,6 +448,38 @@ static PyObject* mExportObject(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mExportObjectsPre(PyObject *self, PyObject *args)
+{
+	PyObject *py_exporter = NULL;
+	if(NOT(PyArg_ParseTuple(args, "O", &py_exporter))) {
+		return NULL;
+	}
+
+	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
+	if(exporter) {
+		// ...
+	}
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* mExportObjectsPost(PyObject *self, PyObject *args)
+{
+	PyObject *py_exporter = NULL;
+	if(NOT(PyArg_ParseTuple(args, "O", &py_exporter))) {
+		return NULL;
+	}
+
+	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
+	if(exporter) {
+		// ...
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyObject* mGetTransformHex(PyObject *self, PyObject *value)
 {
 	if (MatrixObject_Check(value)) {
@@ -590,7 +622,10 @@ static PyMethodDef methods[] = {
 
 	{"exportNode",        mExportNode,        METH_VARARGS, "Export node tree node"},
 	{"exportShaders",     mExportShaders,     METH_VARARGS, "Export shaders from selection"},
+
 	{"exportObject",      mExportObject,      METH_VARARGS, "Export object"},
+	{"exportObjectsPre",  mExportObjectsPre,  METH_VARARGS, "Init data defore objects export"},
+	{"exportObjectsPost", mExportObjectsPost, METH_VARARGS, "Write / cleanup data after objects export"},
 
 	{"initAnimation",            mExportInitAnim,    METH_VARARGS, "Init animation settings"},
 	{"setFrame",                 mExportSetFrame,    METH_VARARGS, "Set current frame"},
