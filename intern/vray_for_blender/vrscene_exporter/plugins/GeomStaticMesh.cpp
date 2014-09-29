@@ -56,17 +56,6 @@ using namespace VRayScene;
 typedef BL::Array<int, 4>  FaceVerts;
 
 
-BLI_INLINE int AddEdgeVisibility(int k, int *evArray, int &evIndex, int &ev)
-{
-	if(k == 9) {
-		evArray[evIndex++] = ev;
-		ev = 0;
-		return 0;
-	}
-	return k+1;
-}
-
-
 MChan::MChan()
 {
 	name = "";
@@ -298,7 +287,7 @@ void GeomStaticMesh::initFaces()
 	m_faceNormalsArraySize  = 3 *     m_totTriFaces;
 	m_normalsArraySize      = 3 * 3 * m_totTriFaces;
 	m_mtlIDArraySize        =         m_totTriFaces;
-	m_edgeVisArraySize      =         totEdge;
+	m_edgeVisArraySize      =         totEdge / 30 + 1;
 
 	m_facesArray       = new int[m_facesArraySize];
 	m_faceNormalsArray = new int[m_faceNormalsArraySize];
@@ -314,20 +303,7 @@ void GeomStaticMesh::initFaces()
 	int faceNormIndex  = 0;
 	int faceMtlIDIndex = 0;
 	int edgeVisIndex   = 0;
-
-	int ev = 0;
-	int k  = 0;
-
-	if(m_totTriFaces <= 5) {
-		for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
-			FaceVerts faceVerts = faceIt->vertices_raw();
-			if(faceVerts[3])
-				ev = (ev << 6) | 27;
-			else
-				ev = (ev << 3) | 8;
-		}
-		m_edgeVisArray[edgeVisIndex++] = ev;
-	}
+	int edgeVisCnt     = 0;
 
 	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 		FaceVerts faceVerts = faceIt->vertices_raw();
@@ -405,19 +381,22 @@ void GeomStaticMesh::initFaces()
 
 		// Store edge visibility
 		if(faceVerts[3]) {
-			ev = (ev << 3) | 3;
-			k = AddEdgeVisibility(k, m_edgeVisArray, edgeVisIndex, ev);
-			ev = (ev << 3) | 3;
-			k = AddEdgeVisibility(k, m_edgeVisArray, edgeVisIndex, ev);
-		} else {
-			ev = (ev << 3) | 8;
-			k = AddEdgeVisibility(k, m_edgeVisArray, edgeVisIndex, ev);
+			m_edgeVisArray[edgeVisIndex] |= (0b011011 << edgeVisCnt);
+			edgeVisCnt += 6;
+		}
+		else {
+			m_edgeVisArray[edgeVisIndex] |= (0b111 << edgeVisCnt);
+			edgeVisCnt += 3;
+		}
+		// One int in 'edge_visibility' stores info about 30 edges
+		if (edgeVisCnt == 30) {
+			edgeVisIndex++;
+			edgeVisCnt = 0;
 		}
 	}
 
-	// Store edge visibility if smth is left there
-	if(k)
-		m_edgeVisArray[edgeVisIndex++] = ev;
+	// Now we need element count which is index+1
+	edgeVisIndex++;
 
 	m_faces           = GetStringZip((u_int8_t*)m_facesArray,       faceVertIndex  * sizeof(int));
 	m_normals         = GetStringZip((u_int8_t*)m_normalsArray,     normArrIndex   * sizeof(float));
