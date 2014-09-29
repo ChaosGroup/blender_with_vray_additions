@@ -378,13 +378,13 @@ void GeomStaticMesh::initFaces()
 
 		// Store edge visibility
 		if(faceVerts[3]) {
-			m_edgeVisArray[currentTr/10] |= (0b011 << ((currentTr%10)*3));
+			m_edgeVisArray[currentTr/10] |= (3 << ((currentTr%10)*3));
 			currentTr++;
-			m_edgeVisArray[currentTr/10] |= (0b110 << ((currentTr%10)*3));
+			m_edgeVisArray[currentTr/10] |= (6 << ((currentTr%10)*3));
 			currentTr++;
 		}
 		else {
-			m_edgeVisArray[currentTr/10] |= (0b111 << ((currentTr%10)*3));
+			m_edgeVisArray[currentTr/10] |= (7 << ((currentTr%10)*3));
 			currentTr++;
 		}
 	}
