@@ -112,6 +112,8 @@ void free_blender(void)
 	BKE_main_free(G.main);
 	G.main = NULL;
 
+	IDP_exit();
+
 	BKE_spacetypes_free();      /* after free main, it uses space callbacks */
 	
 	IMB_exit();

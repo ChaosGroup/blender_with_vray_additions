@@ -161,6 +161,7 @@
 #include "BKE_fcurve.h"
 #include "BKE_pointcache.h"
 #include "BKE_mesh.h"
+#include "BKE_idprop.h"
 
 #ifdef USE_NODE_COMPAT_CUSTOMNODES
 #include "NOD_common.h"
@@ -886,6 +887,12 @@ static void write_nodetree(WriteData *wd, bNodeTree *ntree)
 				write_curvemapping(wd, node->storage);
 			else if (ntree->type==NTREE_COMPOSIT && node->type==CMP_NODE_MOVIEDISTORTION) {
 				/* pass */
+			}
+			/* Make it possible to use some Blender nodes inside pynode trees */
+			else if (ntree->type==NTREE_CUSTOM) {
+				if (ELEM(node->type, SH_NODE_CURVE_VEC, SH_NODE_CURVE_RGB)) {
+					write_curvemapping(wd, node->storage);
+				}
 			}
 			else
 				writestruct(wd, DATA, node->typeinfo->storagename, 1, node->storage);
@@ -3675,6 +3682,11 @@ int BLO_write_file(Main *mainvar, const char *filepath, int write_flags, ReportL
 			}
 		}
 	}
+
+	/* restore fake user flag for ID properties           */
+	/* flag could be reseted when append/copy/paste etc   */
+	/* without this ID properties' data will be wiped out */
+	BLO_verify_custom_data(NULL);
 
 	write_user_block= write_flags & G_FILE_USERPREFS;
 

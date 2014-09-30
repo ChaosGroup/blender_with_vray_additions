@@ -400,6 +400,9 @@ def creator(env):
         incs.append('#/source/blender/freestyle')
         defs.append('WITH_FREESTYLE')
 
+    if env['WITH_VRAY_FOR_BLENDER']:
+        defs.append('WITH_VRAY_FOR_BLENDER')
+
     if env['OURPLATFORM'] in ('win32-vc', 'win32-mingw', 'linuxcross', 'win64-vc', 'win64-mingw'):
         incs.append(env['BF_PTHREADS_INC'])
         incs.append('#/intern/utfconv')
@@ -989,6 +992,8 @@ class BlenderEnvironment(SConsEnvironment):
                 print bc.HEADER+'Configuring library '+bc.ENDC+bc.OKGREEN+libname + bc.ENDC
             lenv = self.Clone()
             lenv.Append(CPPPATH=includes)
+            if lenv['OURPLATFORM'] in ('win32-vc', 'win64-vc'):
+                lenv.Append(CPPPATH=lenv['BF_PTHREADS_INC'])
             lenv.Append(CPPDEFINES=defines)
             if lenv['BF_DEBUG'] or (libname in quickdebug):
                 lenv.Append(CFLAGS = lenv['BF_DEBUG_CFLAGS'])

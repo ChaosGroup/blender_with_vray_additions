@@ -536,6 +536,8 @@ void WM_exit_ext(bContext *C, const bool do_python)
 
 void WM_exit(bContext *C)
 {
+	BLI_callback_exec(NULL, NULL, BLI_CB_EVT_QUIT);
+
 	WM_exit_ext(C, 1);
 
 	printf("\nBlender quit\n");

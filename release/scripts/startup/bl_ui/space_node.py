@@ -418,7 +418,10 @@ class NODE_PT_quality(bpy.types.Panel):
 class NODE_UL_interface_sockets(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         socket = item
-        color = socket.draw_color(context)
+
+        color = (1.0,1.0,1.0,1.0)
+        if hasattr(socket, 'draw_color'):
+            color = socket.draw_color(context)
 
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             row = layout.row(align=True)

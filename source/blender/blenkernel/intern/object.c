@@ -66,6 +66,7 @@
 #include "BLI_utildefines.h"
 #include "BLI_linklist.h"
 #include "BLI_kdtree.h"
+#include "BLI_callbacks.h"
 
 #include "BLF_translation.h"
 
@@ -120,6 +121,8 @@
 #endif
 
 #include "GPU_material.h"
+
+#include "RNA_access.h"
 
 /* Vertex parent modifies original BMesh which is not safe for threading.
  * Ideally such a modification should be handled as a separate DAG update
@@ -2919,6 +2922,12 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
                                  RigidBodyWorld *rbw,
                                  const bool do_proxy_update)
 {
+	PointerRNA ptr;
+	int        data_updated = CGR_NONE;
+
+	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
+	ptr = RNA_pointer_get(&ptr, "vray");
+
 	if (ob->recalc & OB_RECALC_ALL) {
 		/* speed optimization for animation lookups */
 		if (ob->pose)
@@ -2961,6 +2970,10 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 				BKE_object_where_is_calc_ex(scene, rbw, ob, NULL);
 		}
 		
+		if(ob->recalc & OB_RECALC_OB || ob->recalc & OB_RECALC_TIME)
+			if (ptr.data)
+				RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_OBJECT);
+
 		if (ob->recalc & OB_RECALC_DATA) {
 			ID *data_id = (ID *)ob->data;
 			AnimData *adt = BKE_animdata_from_id(data_id);
@@ -3103,6 +3116,15 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 			}
 			
 			/* quick cache removed */
+
+			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_DATA_UPDATE);
+			if (ptr.data)
+				RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_DATA);
+		}
+		else {
+			BLI_callback_exec(NULL, &ob->id, BLI_CB_EVT_OBJECT_UPDATE);
+			if (ptr.data)
+				RNA_int_set(&ptr, "data_updated", data_updated | CGR_UPDATED_OBJECT);
 		}
 
 		ob->recalc &= ~OB_RECALC_ALL;
@@ -3541,6 +3563,8 @@ void BKE_object_relink(Object *ob)
 
 	ID_NEW(ob->proxy);
 	ID_NEW(ob->proxy_group);
+
+	IDP_RelinkProperty(ob->id.properties);
 }
 
 MovieClip *BKE_object_movieclip_get(Scene *scene, Object *ob, bool use_default)

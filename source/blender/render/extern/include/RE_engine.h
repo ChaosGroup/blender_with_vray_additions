@@ -36,6 +36,7 @@
 #include "DNA_scene_types.h"
 #include "RNA_types.h"
 #include "RE_bake.h"
+#include "BLI_fileops.h"
 
 struct bNode;
 struct bNodeTree;
@@ -84,6 +85,10 @@ typedef struct RenderEngineType {
 	char idname[64]; // best keep the same size as BKE_ST_MAXNAME
 	char name[64];
 	int flag;
+
+	char preview_filepath[PATH_MAX];
+	struct Main *preview_main;
+	bool preview_main_initialized;
 
 	void (*update)(struct RenderEngine *engine, struct Main *bmain, struct Scene *scene);
 	void (*render)(struct RenderEngine *engine, struct Scene *scene);

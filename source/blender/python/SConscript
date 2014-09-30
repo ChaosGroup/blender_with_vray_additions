@@ -117,6 +117,10 @@ if env['WITH_BF_CYCLES']:
 if env['WITH_BF_CYCLES_OSL']:
     defs.append('WITH_CYCLES_OSL')
 
+if env['WITH_VRAY_FOR_BLENDER']:
+    incs += ' #intern/vray_for_blender'
+    defs.append('WITH_VRAY_FOR_BLENDER')
+
 if env['WITH_BF_FREESTYLE']:
     incs += ' ../freestyle/intern/python'
     defs.append('WITH_FREESTYLE')

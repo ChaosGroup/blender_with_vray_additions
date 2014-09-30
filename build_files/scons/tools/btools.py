@@ -155,6 +155,8 @@ def validate_arguments(args, bc):
             'WITH_X11_XINPUT',
             'WITH_X11_XF86VMODE',
             'BF_GHOST_DEBUG',
+            'WITH_VRAY_FOR_BLENDER'
+            'USE_QTKIT',
             'BF_FANCY', 'BF_QUIET', 'BF_LINE_OVERWRITE',
             'BF_X264_CONFIG',
             'BF_XVIDCORE_CONFIG',
@@ -585,6 +587,8 @@ def read_opts(env, cfg, args):
         ('BF_CYCLES_CUDA_NVCC', 'CUDA nvcc compiler path', ''),
         ('BF_CYCLES_CUDA_ENV', 'preset environement nvcc will execute in', ''),
         ('BF_CYCLES_CUDA_BINARIES_ARCH', 'CUDA architectures to compile binaries for', []),
+
+        (BoolVariable('WITH_VRAY_FOR_BLENDER', 'Compile with V-Ray For Blender extentions', True)),
 
         (BoolVariable('WITH_BF_OIIO', 'Build with OpenImageIO', False)),
         (BoolVariable('WITH_BF_STATICOIIO', 'Statically link to OpenImageIO', False)),

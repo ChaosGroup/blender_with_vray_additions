@@ -1,0 +1,48 @@
+#!/usr/bin/python
+
+Import('env')
+
+vb = env.Clone()
+vb.Depends('../../source/blender/makesrna/intern/RNA_blender_cpp.h', 'makesrna')
+
+sources = vb.Glob('*/*.c') + vb.Glob('*/*.cpp') + vb.Glob('*/*/*.c') + vb.Glob('*/*/*.cpp')  + vb.Glob('*/*/*/*.cpp')
+
+includes = [
+    './',
+    './utils',
+    './vrscene_exporter',
+    './vrscene_exporter/nodes',
+    './vrscene_exporter/plugins',
+
+    '#intern/guardedalloc',
+    '#intern/smoke/extern',
+
+    '#source/blender/blenkernel',
+    '#source/blender/blenlib',
+    '#source/blender/blenloader',
+    '#source/blender/makesdna',
+    '#source/blender/makesrna',
+    '#source/blender/python',
+    '#source/blender/python/intern',
+    '#source/blender/render/extern/include',
+    '#source/blender/render/intern/include',
+    '#source/blender/windowmanager',
+
+    '../../source/blender/makesrna/intern',
+]
+
+includes.extend(env['BF_PYTHON_INC'].split())
+includes.append(env['BF_BOOST_INC'])
+includes.append(env['BF_ZLIB_INC'])
+
+if env['OURPLATFORM'] in {'win32-vc', 'win32-mingw', 'linuxcross', 'win64-vc'}:
+    includes.append(env['BF_PTHREADS_INC'])
+
+vb.BlenderLib(
+    libname  = 'vray_for_blender',
+    sources  = sources,
+    includes = includes,
+    defines  = [],
+    libtype  = ['core'],
+    priority = [600]
+)

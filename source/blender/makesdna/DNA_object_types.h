@@ -679,6 +679,12 @@ typedef enum ObjectMode {
 
 #define MAX_DUPLI_RECUR 8
 
+enum {
+	CGR_NONE           = 0,
+	CGR_UPDATED_OBJECT = 1 << 0,
+	CGR_UPDATED_DATA   = 1 << 1
+};
+
 #ifdef __cplusplus
 }
 #endif

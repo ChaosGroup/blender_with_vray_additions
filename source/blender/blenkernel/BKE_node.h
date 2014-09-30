@@ -279,10 +279,16 @@ typedef enum eNodeSizePreset {
 
 struct bNodeTreeExec;
 
+typedef enum bNodeTreeTypeFlags {
+	NTREE_FLAG_PREVIEW = (1<<0), /* generate event for preview update */
+	NTREE_FLAG_EVENT   = (1<<1)  /* generate bpy.app.handlers.node_tree_update event */
+} bNodeTreeTypeFlags;
+
 typedef void (*bNodeClassCallback)(void *calldata, int nclass, const char *name);
 typedef struct bNodeTreeType {
 	int type;						/* type identifier */
 	char idname[64];				/* identifier name */
+	int flags;
 
 	char ui_name[64];
 	char ui_description[256];

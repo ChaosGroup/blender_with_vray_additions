@@ -82,7 +82,7 @@ static int node_group_operator_active(bContext *C)
 			return true;
 		}
 	}
-	return false;
+	return true;
 }
 
 static int node_group_operator_editable(bContext *C)
@@ -101,7 +101,7 @@ static int node_group_operator_editable(bContext *C)
 			return true;
 		}
 	}
-	return false;
+	return true;
 }
 
 static const char *group_ntree_idname(bContext *C)
@@ -120,6 +120,8 @@ static const char *group_node_idname(bContext *C)
 		return "CompositorNodeGroup";
 	else if (STREQ(snode->tree_idname, "TextureNodeTree"))
 		return "TextureNodeGroup";
+	else
+		return "ShaderNodeGroup";
 	
 	return "";
 }

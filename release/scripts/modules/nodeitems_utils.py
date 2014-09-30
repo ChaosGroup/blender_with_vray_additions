@@ -21,13 +21,19 @@ import bpy
 
 
 class NodeCategory():
+    # Whether to split items into columns
+    # Integer, if not None specifies the number of items
+    # in the column
+    split_items = None
+
     @classmethod
     def poll(cls, context):
         return True
 
-    def __init__(self, identifier, name, description="", items=None):
+    def __init__(self, identifier, name, description="", icon='NONE', items=None):
         self.identifier = identifier
         self.name = name
+        self.icon = icon
         self.description = description
 
         if items is None:
@@ -43,9 +49,10 @@ class NodeCategory():
 
 
 class NodeItem():
-    def __init__(self, nodetype, label=None, settings={}, poll=None):
+    def __init__(self, nodetype, label=None, icon=None, settings={}, poll=None):
         self.nodetype = nodetype
         self._label = label
+        self._icon  = icon
         self.settings = settings
         self.poll = poll
 
@@ -57,13 +64,23 @@ class NodeItem():
             # if no custom label is defined, fall back to the node type UI name
             return getattr(bpy.types, self.nodetype).bl_rna.name
 
+    @property
+    def icon(self):
+        if self._icon:
+            return self._icon
+        else:
+            nodeType = getattr(bpy.types, self.nodetype)
+            if hasattr(nodeType, 'bl_icon'):
+                return nodeType.bl_icon
+            return 'NONE'
+
     # NB: is a staticmethod because called with an explicit self argument
     # NodeItemCustom sets this as a variable attribute in __init__
     @staticmethod
     def draw(self, layout, context):
         default_context = bpy.app.translations.contexts.default
 
-        props = layout.operator("node.add_node", text=self.label, text_ctxt=default_context)
+        props = layout.operator("node.add_node", text=self.label, text_ctxt=default_context, icon=self.icon)
         props.type = self.nodetype
         props.use_transform = True
 
@@ -87,9 +104,17 @@ def register_node_categories(identifier, cat_list):
         raise KeyError("Node categories list '%s' already registered" % identifier)
         return
 
-    # works as draw function for both menus and panels
-    def draw_node_item(self, context):
-        layout = self.layout
+    def draw_node_menu_item(self, context):
+        layout = self.layout.row()
+        col = layout.column()
+        for i,item in enumerate(sorted(self.category.items(context), key=lambda t: getattr(bpy.types, t.nodetype).bl_rna.name)):
+            if self.category.split_items is not None:
+                if i and i % self.category.split_items == 0:
+                    col = layout.column()
+            item.draw(item, col, context)
+
+    def draw_node_panel_item(self, context):
+        layout = self.layout.row()
         col = layout.column()
         for item in self.category.items(context):
             item.draw(item, col, context)
@@ -102,7 +127,7 @@ def register_node_categories(identifier, cat_list):
             "bl_label": cat.name,
             "category": cat,
             "poll": cat.poll,
-            "draw": draw_node_item,
+            "draw": draw_node_menu_item,
             })
         panel_type = type("NODE_PT_category_" + cat.identifier, (bpy.types.Panel,), {
             "bl_space_type": 'NODE_EDITOR',
@@ -111,7 +136,7 @@ def register_node_categories(identifier, cat_list):
             "bl_category": cat.name,
             "category": cat,
             "poll": cat.poll,
-            "draw": draw_node_item,
+            "draw": draw_node_panel_item,
             })
 
         menu_types.append(menu_type)
@@ -125,7 +150,7 @@ def register_node_categories(identifier, cat_list):
 
         for cat in cat_list:
             if cat.poll(context):
-                layout.menu("NODE_MT_category_%s" % cat.identifier)
+                layout.menu("NODE_MT_category_%s" % cat.identifier, icon=cat.icon)
 
     bpy.types.NODE_MT_add.append(draw_add_menu)
 

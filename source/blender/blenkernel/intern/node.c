@@ -51,6 +51,7 @@
 #include "BLI_listbase.h"
 #include "BLI_path_util.h"
 #include "BLI_utildefines.h"
+#include "BLI_callbacks.h"
 
 #include "BLF_translation.h"
 
@@ -70,6 +71,10 @@
 #include "NOD_composite.h"
 #include "NOD_shader.h"
 #include "NOD_texture.h"
+
+#include "WM_api.h"
+#include "WM_types.h"
+
 
 /* Fallback types for undefined tree, nodes, sockets */
 bNodeTreeType NodeTreeTypeUndefined;
@@ -2980,6 +2985,17 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 		ntree_validate_links(ntree);
 	}
 	
+	if (ntree->update & (NTREE_UPDATE_LINKS | NTREE_UPDATE_NODES)) {
+		if (ntree->type == NTREE_CUSTOM) {
+			if (ntree->typeinfo->flags & NTREE_FLAG_PREVIEW) {
+				WM_main_add_notifier(NC_WORLD    | ND_SHADING_PREVIEW, NULL);
+				WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, NULL);
+			}
+			if (ntree->typeinfo->flags & NTREE_FLAG_EVENT)
+				BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
+		}
+	}
+
 	/* clear update flags */
 	for (node = ntree->nodes.first; node; node = node->next) {
 		node->update = 0;
