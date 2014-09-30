@@ -422,7 +422,7 @@ void GeomStaticMesh::initFaces()
 	   int coordIndex = 0; \
 	   int f          = 0; \
 	   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) { \
-		   FaceVerts faceVerts = faceIt->vertices_raw();
+		   FaceVerts faceVerts = faceIt->vertices_raw(); \
 
 
 #define NEW_MAP_CHANNEL_END \
@@ -437,24 +437,23 @@ void GeomStaticMesh::initFaces()
 		   int *mapFaces = new int[mapFacesArraySize]; \
 	\
 		   int vertIndex = 0; \
-		   int k = 0; \
-		   int u = 0; \
-		   int f = 0; \
-		   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) { \
+	int startIndex = 0; \
+		   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) { \
 			   FaceVerts faceVerts = faceIt->vertices_raw(); \
 			   if(faceVerts[3]) { \
-				   mapFaces[vertIndex++] = u; k = u+1; \
-				   mapFaces[vertIndex++] = k; k = u+2; \
-				   mapFaces[vertIndex++] = k; \
-				   mapFaces[vertIndex++] = k; k = u+3; \
-				   mapFaces[vertIndex++] = k; \
-				   mapFaces[vertIndex++] = u; \
-				   u += 4; \
-			   } else { \
-				   mapFaces[vertIndex++] = u; k = u+1; \
-				   mapFaces[vertIndex++] = k; k = u+2; \
-				   mapFaces[vertIndex++] = k; \
-				   u += 3; \
+				   mapFaces[vertIndex++] = startIndex+0; \
+				   mapFaces[vertIndex++] = startIndex+1; \
+				   mapFaces[vertIndex++] = startIndex+2; \
+				   mapFaces[vertIndex++] = startIndex+0; \
+				   mapFaces[vertIndex++] = startIndex+2; \
+				   mapFaces[vertIndex++] = startIndex+3; \
+				   startIndex += 4; \
+			   } \
+			   else { \
+				   mapFaces[vertIndex++] = startIndex+0; \
+				   mapFaces[vertIndex++] = startIndex+1; \
+				   mapFaces[vertIndex++] = startIndex+2; \
+				   startIndex += 3; \
 			   } \
 		   } \
 	\
@@ -496,14 +495,6 @@ void GeomStaticMesh::initMapChannels()
 	BL::Mesh::tessface_uv_textures_iterator   uvIt;
 	for(b_mesh.tessface_uv_textures.begin(uvIt); uvIt != b_mesh.tessface_uv_textures.end(); ++uvIt) {
 		NEW_MAP_CHANNEL_BEGIN(uvIt);
-
-#if 0
-		BL::MeshTextureFaceLayer uv = *uvIt;
-		BL::MeshTextureFaceLayer::data_iterator uvIt;
-		for(uv.data.begin(uvIt); uvIt != uv.data.end(); ++uvIt) {
-			BL::MeshTextureFace uvFace = *uvIt;
-		}
-#endif
 
 		const int verts = faceVerts[3] ? 4 : 3;
 		for(int c = 0; c < verts; ++c) {
