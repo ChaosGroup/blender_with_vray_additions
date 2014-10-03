@@ -457,7 +457,7 @@ static PyObject* mExportObjectsPre(PyObject *self, PyObject *args)
 
 	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
 	if(exporter) {
-		// ...
+		exporter->exportObjectsPre();
 	}
 
 	Py_RETURN_NONE;
@@ -473,7 +473,10 @@ static PyObject* mExportObjectsPost(PyObject *self, PyObject *args)
 
 	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
 	if(exporter) {
-		// ...
+		exporter->exportObjectsPost();
+		exporter->exportSceneClear();
+		VRayExportable::clearCache();
+		VRayNodePluginExporter::clearNamesCache();
 	}
 
 	Py_RETURN_NONE;
