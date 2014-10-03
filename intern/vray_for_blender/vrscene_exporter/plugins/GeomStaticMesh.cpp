@@ -24,7 +24,7 @@
 
 #include "GeomStaticMesh.h"
 
-#include <boost/tr1/unordered_set.hpp>
+#include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 #include <locale>
 #include <algorithm>
