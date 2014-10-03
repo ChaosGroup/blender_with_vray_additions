@@ -151,11 +151,15 @@ public:
 	// Used for "Hide From View" feature
 	void                    addToHideFromViewList(const std::string &listKey, void *obPtr);
 
+	void                    exportSceneInit();
 	int                     exportScene(const int &exportNodes, const int &exportGeometry);
+	void                    exportSceneClear();
+
+	void                    exportObjectsPre();
 	void                    exportObjectBase(Object *ob);
+	void                    exportObjectsPost();
 
 private:
-	void                    init();
 
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
 

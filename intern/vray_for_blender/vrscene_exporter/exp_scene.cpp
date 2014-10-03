@@ -89,7 +89,7 @@ VRsceneExporter::VRsceneExporter()
 {
 	PRINT_INFO("VRsceneExporter::VRsceneExporter()");
 
-	init();
+	exportSceneInit();
 }
 
 
@@ -127,7 +127,7 @@ void VRsceneExporter::addToHideFromViewList(const std::string &listKey, void *ob
 }
 
 
-void VRsceneExporter::init()
+void VRsceneExporter::exportSceneInit()
 {
 	VRayExportable::clearCache();
 	ExporterSettings::gSet.init();
@@ -139,6 +139,20 @@ void VRsceneExporter::init()
 
 	Node::m_lightLinker = &m_lightLinker;
 	Node::m_scene_nodes = &m_exportedObjects;
+}
+
+
+void VRsceneExporter::exportObjectsPre()
+{
+	// Clear caches
+	m_exportedObjects.clear();
+	m_psys.clear();
+
+	// Create particle system data
+	// Needed for the correct first frame
+	//
+	if(ExporterSettings::gSet.m_isAnimation && ExporterSettings::gSet.IsFirstFrame())
+		initDupli();
 }
 
 
@@ -178,18 +192,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		progUpdateCnt = 100;
 	}
 
-	// Clear caches
-	m_exportedObjects.clear();
-	m_psys.clear();
-
-	// Create particle system data
-	// Needed for the correct first frame
-	//
-	if(ExporterSettings::gSet.m_isAnimation) {
-		if(ExporterSettings::gSet.m_frameCurrent == ExporterSettings::gSet.m_frameStart) {
-			initDupli();
-		}
-	}
+	exportObjectsPre();
 
 	VRayNodeContext nodeCtx;
 	VRayNodeExporter::exportVRayEnvironment(&nodeCtx);
@@ -236,10 +239,6 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	}
 
 	if(NOT(exportInterrupt)) {
-		// Export dupli/particle systems
-		//
-		exportDupli();
-
 		// Export materials
 		//
 		BL::BlendData b_data(PointerRNA_NULL);
@@ -266,25 +265,15 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 				continue;
 			VRayNodeExporter::exportMaterial(b_data, b_ma);
 		}
+
+		exportObjectsPost();
 	}
-
-	bool writeLightLinker = true;
-	if(ExporterSettings::gSet.m_isAnimation)
-		if(ExporterSettings::gSet.m_frameCurrent > ExporterSettings::gSet.m_frameStart)
-			writeLightLinker = false;
-
-	if (writeLightLinker)
-		m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
 
 	ExporterSettings::gSet.b_engine.update_progress(1.0f);
 
-	m_hideFromView.clear();
-
-	// When using Alt-D instances geometry is not freed from Node,
-	// have to do it manually
-	Node::FreeMeshCache();
-
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
+
+	exportSceneClear();
 
 	if(exportInterrupt) {
 		PRINT_INFO_EX("Exporting data for frame %i is interruped! [%s]",
@@ -296,6 +285,27 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 				  ExporterSettings::gSet.m_frameCurrent, timeMeasureBuf);
 
 	return 0;
+}
+
+
+void VRsceneExporter::exportObjectsPost()
+{
+	// Export dupli/particle systems
+	exportDupli();
+
+	// Light linker settings
+	if (ExporterSettings::gSet.IsFirstFrame())
+		m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
+}
+
+
+void VRsceneExporter::exportSceneClear()
+{
+	m_hideFromView.clear();
+
+	// When using Alt-D instances geometry is not freed from Node,
+	// have to do it manually
+	Node::FreeMeshCache();
 }
 
 

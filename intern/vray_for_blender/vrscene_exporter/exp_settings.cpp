@@ -168,7 +168,7 @@ bool ExporterSettings::IsFirstFrame()
 {
 	if(NOT(m_isAnimation))
 		return true;
-	if(m_frameCurrent > m_frameStart)
+	if(m_frameCurrent == m_frameStart)
 		return true;
 	return false;
 }
