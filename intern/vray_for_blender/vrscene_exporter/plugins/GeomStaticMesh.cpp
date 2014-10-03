@@ -24,6 +24,7 @@
 
 #include "GeomStaticMesh.h"
 
+#include <boost/tr1/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 #include <locale>
 #include <algorithm>
@@ -53,7 +54,51 @@ extern "C" {
 using namespace VRayScene;
 
 
-typedef BL::Array<int, 4>  FaceVerts;
+typedef BL::Array<int, 4>   FaceVerts;
+typedef BL::Array<float, 2> UvVert;
+typedef BL::Array<float, 3> ColVert;
+
+
+struct MapVertex {
+	MapVertex() {
+		index = 0;
+	}
+
+	MapVertex(const UvVert &uv) {
+		MapVertex();
+
+		v[0] = uv.data[0];
+		v[1] = uv.data[1];
+		v[2] = 0.0f;
+	}
+
+	MapVertex(const ColVert &col) {
+		MapVertex();
+
+		v[0] = col.data[0];
+		v[1] = col.data[1];
+		v[2] = col.data[2];
+	}
+
+	bool operator == (const MapVertex &_v) const {
+		return (v[0] == _v.v[0]) && (v[1] == _v.v[1]) && (v[2] == _v.v[2]);
+	}
+
+	float        v[3];
+	mutable int  index;
+
+};
+
+struct MapVertexHash
+{
+	std::size_t operator () (const MapVertex &_v) const {
+		MHash hash;
+		MurmurHash3_x86_32(_v.v, 3 * sizeof(float), 42, &hash);
+		return (std::size_t)hash;
+	}
+};
+
+typedef boost::unordered_set<MapVertex, MapVertexHash> UvSet;
 
 
 MChan::MChan()
@@ -398,89 +443,6 @@ void GeomStaticMesh::initFaces()
 }
 
 
-#define GET_FACE_VERTEX_COLOR(it, index) \
-	mapVertex[coordIndex++] = it->data[f].color##index()[0]; \
-	mapVertex[coordIndex++] = it->data[f].color##index()[1]; \
-	mapVertex[coordIndex++] = it->data[f].color##index()[2];
-
-
-#define NEW_MAP_CHANNEL_BEGIN(uvIt) \
-	MChan *mapChannel = new MChan(); \
-	mapChannel->name  = uvIt->name(); \
-	\
-	if(std::count_if(mapChannel->name.begin(), mapChannel->name.end(), ::isdigit) == mapChannel->name.size()) { \
-	   mapChannel->index = boost::lexical_cast<int>(mapChannel->name); \
-	} \
-	else { \
-	   mapChannel->index = uv_layer_id++; \
-	} \
-	\
-	if(m_totTriFaces) { \
-	   int    mapVertexArraySize = 3 * 3 * m_totTriFaces; \
-	   float *mapVertex = new float[mapVertexArraySize]; \
-	\
-	   int coordIndex = 0; \
-	   int f          = 0; \
-	   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) { \
-		   FaceVerts faceVerts = faceIt->vertices_raw(); \
-
-
-#define NEW_MAP_CHANNEL_END \
-	} \
-	   if(map_channels.size()) { \
-		   mapChannel->uv_faces    = map_channels[0]->uv_faces; \
-		   mapChannel->hashUvFaces = map_channels[0]->hashUvFaces; \
-		   mapChannel->cloned = 1; \
-	   } \
-	   else { \
-		   int  mapFacesArraySize  = 3 * m_totTriFaces; \
-		   int *mapFaces = new int[mapFacesArraySize]; \
-	\
-		   int vertIndex = 0; \
-	int startIndex = 0; \
-		   for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) { \
-			   FaceVerts faceVerts = faceIt->vertices_raw(); \
-			   if(faceVerts[3]) { \
-				   mapFaces[vertIndex++] = startIndex+0; \
-				   mapFaces[vertIndex++] = startIndex+1; \
-				   mapFaces[vertIndex++] = startIndex+2; \
-				   mapFaces[vertIndex++] = startIndex+0; \
-				   mapFaces[vertIndex++] = startIndex+2; \
-				   mapFaces[vertIndex++] = startIndex+3; \
-				   startIndex += 4; \
-			   } \
-			   else { \
-				   mapFaces[vertIndex++] = startIndex+0; \
-				   mapFaces[vertIndex++] = startIndex+1; \
-				   mapFaces[vertIndex++] = startIndex+2; \
-				   startIndex += 3; \
-			   } \
-		   } \
-	\
-		   mapChannel->uv_faces = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int)); \
-		   mapChannel->hashUvFaces = HashCode(mapChannel->uv_faces); \
-	\
-		   delete [] mapFaces; \
-	   } \
-	\
-	   mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, coordIndex * sizeof(float)); \
-	   mapChannel->hashUvVertices = HashCode(mapChannel->uv_vertices); \
-	\
-	   delete [] mapVertex; \
-	} \
-	else { \
-	   EMPTY_HEX_DATA(mapChannel->uv_faces); \
-	   EMPTY_HEX_DATA(mapChannel->uv_vertices); \
-	\
-	   mapChannel->hashUvVertices = 1; \
-	   mapChannel->hashUvFaces = 1; \
-	} \
-	\
-	mapChannel->hash = mapChannel->hashUvVertices ^ mapChannel->hashUvFaces; \
-	\
-	map_channels.push_back(mapChannel);
-
-
 void GeomStaticMesh::initMapChannels()
 {
 	int channelCount = 0;
@@ -491,33 +453,197 @@ void GeomStaticMesh::initMapChannels()
 		return;
 
 	int uv_layer_id = 0;
-	BL::Mesh::tessfaces_iterator              faceIt;
-	BL::Mesh::tessface_uv_textures_iterator   uvIt;
-	for(b_mesh.tessface_uv_textures.begin(uvIt); uvIt != b_mesh.tessface_uv_textures.end(); ++uvIt) {
-		NEW_MAP_CHANNEL_BEGIN(uvIt);
 
-		const int verts = faceVerts[3] ? 4 : 3;
-		for(int c = 0; c < verts; ++c) {
-			mapVertex[coordIndex++] = uvIt->data[f].uv()[c * 2 + 0];
-			mapVertex[coordIndex++] = uvIt->data[f].uv()[c * 2 + 1];
-			mapVertex[coordIndex++] = 0.0f;
+	// UV
+	//
+	BL::Mesh::tessface_uv_textures_iterator uvIt;
+	for(b_mesh.tessface_uv_textures.begin(uvIt); uvIt != b_mesh.tessface_uv_textures.end(); ++uvIt) {
+		MChan *mapChannel = new MChan();
+		mapChannel->name  = uvIt->name();
+
+		if(std::count_if(mapChannel->name.begin(), mapChannel->name.end(), ::isdigit) == mapChannel->name.size()) {
+			mapChannel->index = boost::lexical_cast<int>(mapChannel->name);
+		}
+		else {
+			mapChannel->index = uv_layer_id++;
 		}
 
-		NEW_MAP_CHANNEL_END;
+		if(m_totTriFaces) {
+			UvSet uvSet;
+
+			BL::Mesh::tessfaces_iterator faceIt;
+			int f = 0;
+			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
+				FaceVerts faceVerts = faceIt->vertices_raw();
+
+				uvSet.insert(MapVertex(uvIt->data[f].uv1()));
+				uvSet.insert(MapVertex(uvIt->data[f].uv2()));
+				uvSet.insert(MapVertex(uvIt->data[f].uv3()));
+
+				if(faceVerts[3])
+					uvSet.insert(MapVertex(uvIt->data[f].uv4()));
+			}
+
+			f = 0;
+			for (UvSet::iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt, ++f) {
+				(*uvVertIt).index = f;
+			}
+
+			const int mapVertexArraySize = 3 * uvSet.size();
+			float *mapVertex = new float[mapVertexArraySize];
+			int c = 0;
+			for (UvSet::const_iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt) {
+				const MapVertex &uv = *uvVertIt;
+				mapVertex[c++] = uv.v[0];
+				mapVertex[c++] = uv.v[1];
+				mapVertex[c++] = uv.v[2];
+			}
+
+			int  mapFacesArraySize  = 3 * m_totTriFaces;
+			int *mapFaces = new int[mapFacesArraySize];
+
+			int vertIndex = 0;
+			f = 0;
+			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
+				FaceVerts faceVerts = faceIt->vertices_raw();
+
+				const int v0 = uvSet.find(MapVertex(uvIt->data[f].uv1()))->index;
+				const int v1 = uvSet.find(MapVertex(uvIt->data[f].uv2()))->index;
+				const int v2 = uvSet.find(MapVertex(uvIt->data[f].uv3()))->index;
+
+				mapFaces[vertIndex++] = v0;
+				mapFaces[vertIndex++] = v1;
+				mapFaces[vertIndex++] = v2;
+
+				if(faceVerts[3]) {
+					const int v3 = uvSet.find(MapVertex(uvIt->data[f].uv4()))->index;
+
+					mapFaces[vertIndex++] = v0;
+					mapFaces[vertIndex++] = v2;
+					mapFaces[vertIndex++] = v3;
+				}
+			}
+
+			mapChannel->uv_faces    = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int));
+			mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, mapVertexArraySize * sizeof(float));
+
+			mapChannel->hashUvFaces = ExporterSettings::gSet.m_isAnimation
+									  ? hashArray(mapFaces, vertIndex * sizeof(int))
+									  : 1;
+			mapChannel->hashUvVertices = ExporterSettings::gSet.m_isAnimation
+									  ? hashArray(mapVertex, mapVertexArraySize * sizeof(float))
+									  : 1;
+
+			delete [] mapFaces;
+			delete [] mapVertex;
+		}
+		else {
+			EMPTY_HEX_DATA(mapChannel->uv_faces);
+			EMPTY_HEX_DATA(mapChannel->uv_vertices);
+
+			mapChannel->hashUvVertices = 1;
+			mapChannel->hashUvFaces = 1;
+		}
+
+		mapChannel->hash = mapChannel->hashUvVertices ^ mapChannel->hashUvFaces;
+
+		map_channels.push_back(mapChannel);
 	}
 
+	// Vertex paint
+	//
 	BL::Mesh::tessface_vertex_colors_iterator colIt;
 	for(b_mesh.tessface_vertex_colors.begin(colIt); colIt != b_mesh.tessface_vertex_colors.end(); ++colIt) {
-		NEW_MAP_CHANNEL_BEGIN(colIt);
+		MChan *mapChannel = new MChan();
+		mapChannel->name  = colIt->name();
 
-		GET_FACE_VERTEX_COLOR(colIt, 1);
-		GET_FACE_VERTEX_COLOR(colIt, 2);
-		GET_FACE_VERTEX_COLOR(colIt, 3);
-		if(faceVerts[3]) {
-			GET_FACE_VERTEX_COLOR(colIt, 4);
+		if(std::count_if(mapChannel->name.begin(), mapChannel->name.end(), ::isdigit) == mapChannel->name.size()) {
+			mapChannel->index = boost::lexical_cast<int>(mapChannel->name);
+		}
+		else {
+			mapChannel->index = uv_layer_id++;
 		}
 
-		NEW_MAP_CHANNEL_END;
+		if(m_totTriFaces) {
+			UvSet uvSet;
+
+			BL::Mesh::tessfaces_iterator faceIt;
+			int f = 0;
+			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
+				FaceVerts faceVerts = faceIt->vertices_raw();
+
+				uvSet.insert(MapVertex(colIt->data[f].color1()));
+				uvSet.insert(MapVertex(colIt->data[f].color2()));
+				uvSet.insert(MapVertex(colIt->data[f].color3()));
+
+				if(faceVerts[3])
+					uvSet.insert(MapVertex(colIt->data[f].color4()));
+			}
+
+			f = 0;
+			for (UvSet::iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt, ++f) {
+				(*uvVertIt).index = f;
+			}
+
+			const int mapVertexArraySize = 3 * uvSet.size();
+			float *mapVertex = new float[mapVertexArraySize];
+			int c = 0;
+			for (UvSet::const_iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt) {
+				const MapVertex &uv = *uvVertIt;
+				mapVertex[c++] = uv.v[0];
+				mapVertex[c++] = uv.v[1];
+				mapVertex[c++] = uv.v[2];
+			}
+
+			int  mapFacesArraySize  = 3 * m_totTriFaces;
+			int *mapFaces = new int[mapFacesArraySize];
+
+			int vertIndex = 0;
+			f = 0;
+			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
+				FaceVerts faceVerts = faceIt->vertices_raw();
+
+				const int v0 = uvSet.find(MapVertex(colIt->data[f].color1()))->index;
+				const int v1 = uvSet.find(MapVertex(colIt->data[f].color2()))->index;
+				const int v2 = uvSet.find(MapVertex(colIt->data[f].color3()))->index;
+
+				mapFaces[vertIndex++] = v0;
+				mapFaces[vertIndex++] = v1;
+				mapFaces[vertIndex++] = v2;
+
+				if(faceVerts[3]) {
+					const int v3 = uvSet.find(MapVertex(colIt->data[f].color4()))->index;
+
+					mapFaces[vertIndex++] = v0;
+					mapFaces[vertIndex++] = v2;
+					mapFaces[vertIndex++] = v3;
+				}
+			}
+
+			mapChannel->uv_faces    = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int));
+			mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, mapVertexArraySize * sizeof(float));
+
+			mapChannel->hashUvFaces = ExporterSettings::gSet.m_isAnimation
+									  ? hashArray(mapFaces, vertIndex * sizeof(int))
+									  : 1;
+			mapChannel->hashUvVertices = ExporterSettings::gSet.m_isAnimation
+									  ? hashArray(mapVertex, mapVertexArraySize * sizeof(float))
+									  : 1;
+
+			delete [] mapFaces;
+			delete [] mapVertex;
+		}
+		else {
+			EMPTY_HEX_DATA(mapChannel->uv_faces);
+			EMPTY_HEX_DATA(mapChannel->uv_vertices);
+
+			mapChannel->hashUvVertices = 1;
+			mapChannel->hashUvFaces = 1;
+		}
+
+		mapChannel->hash = mapChannel->hashUvVertices ^ mapChannel->hashUvFaces;
+
+		map_channels.push_back(mapChannel);
 	}
 }
 
