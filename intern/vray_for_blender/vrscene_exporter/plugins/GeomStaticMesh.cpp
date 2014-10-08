@@ -158,6 +158,8 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 	smooth_uv         = true;
 	smooth_uv_borders = true;
 
+	m_force_osd = false;
+
 	m_hash = 1;
 	m_hashVertices = 1;
 	m_hashFaces = 1;
@@ -185,9 +187,30 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 
 void GeomStaticMesh::init()
 {
+	BL::SubsurfModifier b_sbs(PointerRNA_NULL);
+	int b_sbs_show_render = true;
+
+	if (ExporterSettings::gSet.m_subsurfToOSD) {
+		if (b_object.modifiers.length()) {
+			BL::Modifier b_mod = b_object.modifiers[b_object.modifiers.length()-1];
+			if (b_mod && b_mod.show_render() && b_mod.type() == BL::Modifier::type_SUBSURF) {
+				b_sbs = BL::SubsurfModifier(b_mod);
+				b_sbs.show_render(false);
+
+				m_force_osd = true;
+				osd_subdiv_type  = b_sbs.subdivision_type() == BL::SubsurfModifier::subdivision_type_CATMULL_CLARK ? 0 : 1;
+				osd_subdiv_level = b_sbs.render_levels();
+				osd_subdiv_uvs   = b_sbs.use_subsurf_uv();
+			}
+		}
+	}
+
 	b_mesh = b_data.meshes.new_from_object(b_scene, b_object, true, 2, false, false);
 	if (NOT(b_mesh))
 		return;
+
+	if (b_sbs)
+		b_sbs.show_render(b_sbs_show_render);
 
 	if (b_mesh.use_auto_smooth())
 		b_mesh.calc_normals_split(b_mesh.auto_smooth_angle());
@@ -654,9 +677,11 @@ void GeomStaticMesh::initAttributes()
 		dynamic_geometry     = GetPythonAttrInt(m_propGroup, "dynamic_geometry");
 		environment_geometry = GetPythonAttrInt(m_propGroup, "environment_geometry");
 
-		osd_subdiv_level = GetPythonAttrInt(m_propGroup, "osd_subdiv_level");
-		osd_subdiv_type  = GetPythonAttrInt(m_propGroup, "osd_subdiv_type");
-		osd_subdiv_uvs   = GetPythonAttrInt(m_propGroup, "osd_subdiv_uvs");
+		if (!m_force_osd) {
+			osd_subdiv_level = GetPythonAttrInt(m_propGroup, "osd_subdiv_level");
+			osd_subdiv_type  = GetPythonAttrInt(m_propGroup, "osd_subdiv_type");
+			osd_subdiv_uvs   = GetPythonAttrInt(m_propGroup, "osd_subdiv_uvs");
+		}
 
 		weld_threshold = GetPythonAttrFloat(m_propGroup, "weld_threshold");
 	}
@@ -671,9 +696,11 @@ void GeomStaticMesh::initAttributes(PointerRNA *ptr)
 	environment_geometry = RNA_boolean_get(&geomStaticMesh, "environment_geometry");
 	primary_visibility   = RNA_boolean_get(&geomStaticMesh, "primary_visibility");
 
-	osd_subdiv_type  = RNA_enum_get(&geomStaticMesh,    "osd_subdiv_type");
-	osd_subdiv_level = RNA_int_get(&geomStaticMesh,     "osd_subdiv_level");
-	osd_subdiv_uvs   = RNA_boolean_get(&geomStaticMesh, "osd_subdiv_uvs");
+	if (!m_force_osd) {
+		osd_subdiv_type  = RNA_enum_get(&geomStaticMesh,    "osd_subdiv_type");
+		osd_subdiv_level = RNA_int_get(&geomStaticMesh,     "osd_subdiv_level");
+		osd_subdiv_uvs   = RNA_boolean_get(&geomStaticMesh, "osd_subdiv_uvs");
+	}
 
 	weld_threshold = RNA_float_get(&geomStaticMesh, "weld_threshold");
 

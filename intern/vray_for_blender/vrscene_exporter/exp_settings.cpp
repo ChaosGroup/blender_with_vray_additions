@@ -51,6 +51,7 @@ void ExporterSettings::init()
 	m_exportSmoke       = RNA_boolean_get(&vrayExporter, "use_smoke");
 	m_useDisplaceSubdiv = RNA_boolean_get(&vrayExporter, "use_displace");
 	m_useAltInstances   = RNA_boolean_get(&vrayExporter, "use_alt_d_instances");
+	m_subsurfToOSD      = RNA_boolean_get(&vrayExporter, "subsurf_to_osd");
 
 	// Check what layers to use
 	//
