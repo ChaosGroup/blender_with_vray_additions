@@ -141,6 +141,8 @@ private:
 	int           smooth_uv;
 	int           smooth_uv_borders;
 
+	int           m_force_osd;
+
 };
 
 }

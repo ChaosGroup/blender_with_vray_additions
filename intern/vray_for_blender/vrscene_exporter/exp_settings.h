@@ -80,6 +80,7 @@ struct ExporterSettings {
 	int               m_useHideFromView;
 	int               m_useDisplaceSubdiv;
 	int               m_useAltInstances;
+	int               m_subsurfToOSD;
 
 	std::string       m_mtlOverride;
 
