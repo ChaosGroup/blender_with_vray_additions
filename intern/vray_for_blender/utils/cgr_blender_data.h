@@ -39,6 +39,12 @@ extern "C" {
 
 #include <string>
 
+#define IS_PSYS_HAIR(pset) \
+(pset && \
+(pset.type()        == BL::ParticleSettings::type_HAIR) && \
+(pset.render_type() == BL::ParticleSettings::render_type_PATH))
+
+
 enum {
 	OBJECT_PERSISTENT_ID_SIZE = 8
 };

@@ -946,7 +946,7 @@ void VRsceneExporter::initDupli()
 					BL::ParticleSystem bl_psys = *bl_psysIt;
 					BL::ParticleSettings bl_pset = bl_psys.settings();
 
-					if(bl_pset.type() == BL::ParticleSettings::type_HAIR && bl_pset.render_type() == BL::ParticleSettings::render_type_PATH)
+					if (IS_PSYS_HAIR(bl_pset))
 						continue;
 
 					m_psys.get(bl_pset.name());

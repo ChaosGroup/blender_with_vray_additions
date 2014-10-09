@@ -508,16 +508,11 @@ int VRayScene::Node::HasHair(Object *ob)
 	BL::Object::modifiers_iterator modIt;
 	for(b_object.modifiers.begin(modIt); modIt != b_object.modifiers.end(); ++modIt) {
 		BL::Modifier mod = *modIt;
-		if(mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+		if(mod.type() == BL::Modifier::type_PARTICLE_SYSTEM && mod.show_render()) {
 			BL::ParticleSystemModifier pmod(mod);
 			BL::ParticleSystem psys = pmod.particle_system();
-			if (psys) {
-				BL::ParticleSettings pset = psys.settings();
-				if (pset) {
-					if (pset.type() == BL::ParticleSettings::type_HAIR && mod.show_render()) {
-						return 1;
-					}
-				}
+			if (psys && IS_PSYS_HAIR(psys.settings())) {
+				return 1;
 			}
 		}
 	}
@@ -625,28 +620,23 @@ void VRayScene::Node::WriteHair(Object *ob, const NodeAttrs &attrs)
 	BL::Object::modifiers_iterator modIt;
 	for(b_object.modifiers.begin(modIt); modIt != b_object.modifiers.end(); ++modIt) {
 		BL::Modifier mod = *modIt;
-		if(mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+		if(mod.type() == BL::Modifier::type_PARTICLE_SYSTEM && mod.show_render()) {
 			BL::ParticleSystemModifier pmod(mod);
 			BL::ParticleSystem psys = pmod.particle_system();
-			if (psys) {
-				BL::ParticleSettings pset = psys.settings();
-				if (pset) {
-					if (pset.type() == BL::ParticleSettings::type_HAIR && mod.show_render()) {
-						int           toDelete = false;
-						GeomMayaHair *geomMayaHair = new GeomMayaHair(ExporterSettings::gSet.m_sce, ExporterSettings::gSet.m_main, ob);
-						geomMayaHair->preInit((ParticleSystem*)psys.ptr.data);
-						geomMayaHair->setLightLinker(m_lightLinker);
-						geomMayaHair->setSceneSet(m_scene_nodes);
-						if(ExporterSettings::gSet.m_exportNodes)
-							geomMayaHair->writeNode(ExporterSettings::gSet.m_fileObject, ExporterSettings::gSet.m_frameCurrent, attrs);
-						if(ExporterSettings::gSet.m_exportMeshes) {
-							geomMayaHair->init();
-							toDelete = geomMayaHair->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
-						}
-						if(toDelete)
-							delete geomMayaHair;
-					}
+			if (psys && IS_PSYS_HAIR(psys.settings())) {
+				int           toDelete = false;
+				GeomMayaHair *geomMayaHair = new GeomMayaHair(ExporterSettings::gSet.m_sce, ExporterSettings::gSet.m_main, ob);
+				geomMayaHair->preInit((ParticleSystem*)psys.ptr.data);
+				geomMayaHair->setLightLinker(m_lightLinker);
+				geomMayaHair->setSceneSet(m_scene_nodes);
+				if(ExporterSettings::gSet.m_exportNodes)
+					geomMayaHair->writeNode(ExporterSettings::gSet.m_fileObject, ExporterSettings::gSet.m_frameCurrent, attrs);
+				if(ExporterSettings::gSet.m_exportMeshes) {
+					geomMayaHair->init();
+					toDelete = geomMayaHair->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
 				}
+				if(toDelete)
+					delete geomMayaHair;
 			}
 		}
 	}
