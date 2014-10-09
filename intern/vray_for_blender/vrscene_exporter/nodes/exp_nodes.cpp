@@ -734,6 +734,11 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 	if(NOT(conSockAttrName.empty())) {
 		if(NOT(conSockAttrName == "uvwgen" || conSockAttrName == "bitmap")) {
 			connectedPlugin += "::" + conSockAttrName;
+			if (toNode.bl_idname() == "VRayNodeTexMayaFluid") {
+				boost::replace_all(connectedPlugin, "::out_flame",   "@Flame");
+				boost::replace_all(connectedPlugin, "::out_density", "@Density");
+				boost::replace_all(connectedPlugin, "::out_fuel",    "@Fuel");
+			}
 		}
 	}
 
