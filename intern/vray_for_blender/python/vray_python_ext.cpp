@@ -176,6 +176,11 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 
 static PyObject* mExportExit(PyObject *self, PyObject *value)
 {
+	VRayExportable::clearFrames();
+	VRayExportable::clearCache();
+	VRayNodePluginExporter::clearNodesCache();
+	VRayNodePluginExporter::clearNamesCache();
+
 	void *exporterPtr = PyLong_AsVoidPtr(value);
 	if(exporterPtr) {
 		delete (VRsceneExporter*)exporterPtr;
