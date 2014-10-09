@@ -28,8 +28,7 @@
 #include <algorithm>
 
 #include <boost/format.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "exp_defines.h"
 #include "exp_anim.h"
@@ -262,7 +261,7 @@ public:
 	// Manual attributes export
 	//
 	std::string getAttributeValue(PointerRNA *ptr, PropertyRNA *prop, const char *propName);
-	
+
 	void writeAttribute(const char *name, const int &value) {
 		m_plugin << "\n\t" << name << "=" << m_interpStart;
 		m_plugin << value;
@@ -313,7 +312,7 @@ protected:
 	Scene                  *m_sce;
 	Main                   *m_main;
 	Object                 *m_ob;
-	
+
 	BL::Object              m_bl_ob;
 
 	PyObject               *m_propGroup;
