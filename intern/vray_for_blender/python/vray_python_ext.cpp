@@ -394,15 +394,18 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 	BL::NodeTree ntree(ntreeRNA);
 
 	PointerRNA nodeRNA;
-	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(nodePtr), &nodeRNA);
+	RNA_pointer_create((ID*)ntree.ptr.data, &RNA_Node, PyLong_AsVoidPtr(nodePtr), &nodeRNA);
 	BL::Node node(nodeRNA);
 
-	PointerRNA   socketRNA;
-	bNodeSocket *nodeSocket = (bNodeSocket*)PyLong_AsVoidPtr(socketPtr);
-	RNA_pointer_create((ID*)ntree.ptr.data, &RNA_NodeSocket, nodeSocket, &socketRNA);
-	BL::NodeSocket fromSocket(socketRNA);
+	BL::NodeSocket fromSocket(PointerRNA_NULL);
+	if (socketPtr != Py_None) {
+		PointerRNA socketRNA;
+		RNA_pointer_create((ID*)ntree.ptr.data, &RNA_NodeSocket, PyLong_AsVoidPtr(socketPtr), &socketRNA);
+		fromSocket = BL::NodeSocket(socketRNA);
+	}
 
-	std::string pluginName = VRayNodeExporter::exportSocket(ntree, fromSocket);
+	VRayNodeContext nodeCtx;
+	std::string pluginName = VRayNodeExporter::exportVRayNode(ntree, node, fromSocket, &nodeCtx);
 
 	return PyUnicode_FromString(pluginName.c_str());
 }
