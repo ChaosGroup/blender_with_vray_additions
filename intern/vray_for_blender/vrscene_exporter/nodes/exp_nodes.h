@@ -179,6 +179,8 @@ public:
 	static std::string      getValueFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName);
 
 	static std::string      getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext *context);
+	static std::string      getPluginType(BL::Node node);
+	static std::string      getPluginID(BL::Node node);
 	
 	static BL::NodeTree     getNodeTree(BL::BlendData b_data, ID *id);
 
@@ -195,6 +197,9 @@ public:
 
 	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
 
+	static void             getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
+											      BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+											      VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 										   VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
 	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
@@ -240,6 +245,8 @@ private:
 
 	static std::string      exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													  VRayNodeContext *context);
+	static std::string      exportVRayNodeBRDFVRayMtl(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
+													  VRayNodeContext *context);
 
 	static std::string      exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													 VRayNodeContext *context);
@@ -277,6 +284,9 @@ private:
 	static std::string      exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 															VRayNodeContext *context);
 	static std::string      exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+																   VRayNodeContext *context);
+
+	static std::string      exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 																   VRayNodeContext *context);
 
 private: 
