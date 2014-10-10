@@ -87,7 +87,7 @@ set(SRC
 	vrscene_exporter/exp_types.h
 	vrscene_exporter/nodes/exp_nodes.cpp
 	vrscene_exporter/nodes/exp_nodes.h
-	vrscene_exporter/nodes/specials/BRDFLayered.cpp
+	vrscene_exporter/nodes/specials/BRDF.cpp
 	vrscene_exporter/nodes/specials/BitmapBuffer.cpp
 	vrscene_exporter/nodes/specials/BlenderOutputGeometry.cpp
 	vrscene_exporter/nodes/specials/BlenderOutputMaterial.cpp
