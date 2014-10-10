@@ -45,6 +45,22 @@ std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, V
 }
 
 
+std::string VRayNodeExporter::getPluginType(BL::Node node)
+{
+	if(RNA_struct_find_property(&node.ptr, "vray_type"))
+		return RNA_std_string_get(&node.ptr, "vray_type");
+	return "";
+}
+
+
+std::string VRayNodeExporter::getPluginID(BL::Node node)
+{
+	if(RNA_struct_find_property(&node.ptr, "vray_plugin"))
+		return RNA_std_string_get(&node.ptr, "vray_plugin");
+	return "";
+}
+
+
 void VRayNodeExporter::getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable)
 {
 	PluginJson *pluginDesc = VRayExportable::m_pluginDesc.getTree(pluginID);
@@ -113,7 +129,7 @@ std::string VRayNodeExporter::getValueFromPropGroup(PointerRNA *propGroup, ID *h
 		return BOOST_FORMAT_INT(RNA_int_get(propGroup, attrName.c_str()));
 	}
 	else if(propType == PROP_ENUM) {
-		return BOOST_FORMAT_INT(RNA_enum_get(propGroup, attrName.c_str()));
+		return BOOST_FORMAT_INT(RNA_enum_ext_get(propGroup, attrName.c_str()));
 	}
 	else if(propType == PROP_FLOAT) {
 		if(NOT(RNA_property_array_check(prop))) {
@@ -819,35 +835,23 @@ std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, co
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													   VRayNodeContext *context, const AttributeValueMap &manualAttrs,
-													   const std::string &manualName)
+void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
+											 BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+											 VRayNodeContext *context, const AttributeValueMap &manualAttrs)
 {
-	std::string pluginType;
-	std::string pluginID;
-
-	char rnaStringBuf[CGR_MAX_PLUGIN_NAME];
-
-	if(RNA_struct_find_property(&node.ptr, "vray_type")) {
-		RNA_string_get(&node.ptr, "vray_type", rnaStringBuf);
-		pluginType = rnaStringBuf;
-	}
-
-	if(RNA_struct_find_property(&node.ptr, "vray_plugin")) {
-		RNA_string_get(&node.ptr, "vray_plugin", rnaStringBuf);
-		pluginID = rnaStringBuf;
-	}
+	const std::string &pluginType = VRayNodeExporter::getPluginType(node);
+	const std::string &pluginID   = VRayNodeExporter::getPluginID(node);
 
 	if(pluginID.empty()) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node plugin ID!",
 					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
+		return;
 	}
 
 	if(NOT(RNA_struct_find_property(&node.ptr, pluginID.c_str()))) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Property group not found!",
 					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
+		return;
 	}
 
 	PointerRNA propGroup = RNA_pointer_get(&node.ptr, pluginID.c_str());
@@ -856,17 +860,11 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 	if(NOT(pluginDesc)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Node is not supported!",
 					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
+		return;
 	}
 
 	PRINT_INFO("  Node represents plugin \"%s\" [\"%s\"]",
 			   pluginID.c_str(), pluginType.c_str());
-
-	std::string        pluginName = manualName.empty() ? VRayNodeExporter::getPluginName(node, ntree, context) : manualName;
-	AttributeValueMap  pluginAttrs;
-
-	// VRayNodeContext nodeContext(ntree, node, fromSocket, context);
-	// VRayNodeExporter::getAttrsFromPropGroupAndNode(pluginAttrs, pluginID, propGroup, manualAttrs, nodeContext);
 
 	BOOST_FOREACH(PluginJson::value_type &v, pluginDesc->get_child("Parameters")) {
 		std::string attrName = v.second.get_child("attr").data();
@@ -905,6 +903,19 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::N
 			}
 		}
 	}
+}
+
+
+std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
+													   VRayNodeContext *context, const AttributeValueMap &manualAttrs,
+													   const std::string &manualName)
+{
+	const std::string &pluginName = manualName.empty() ? VRayNodeExporter::getPluginName(node, ntree, context) : manualName;
+	const std::string &pluginType = VRayNodeExporter::getPluginType(node);
+	const std::string &pluginID   = VRayNodeExporter::getPluginID(node);
+
+	AttributeValueMap pluginAttrs;
+	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context, manualAttrs);
 
 	VRayNodePluginExporter::exportPlugin(pluginType, pluginID, pluginName, pluginAttrs);
 
@@ -927,6 +938,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeBRDFLayered") {
 		return VRayNodeExporter::exportVRayNodeBRDFLayered(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeBRDFVRayMtl") {
+		return VRayNodeExporter::exportVRayNodeBRDFVRayMtl(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeTexLayered") {
 		return VRayNodeExporter::exportVRayNodeTexLayered(ntree, node, fromSocket, context);
@@ -1008,6 +1022,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeUVWGenMayaPlace2dTexture") {
 		return VRayNodeExporter::exportVRayNodeUVWGenMayaPlace2dTexture(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeRenderChannelLightSelect") {
+		return VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);
