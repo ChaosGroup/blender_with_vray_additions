@@ -31,4 +31,6 @@
 std::string  RNA_path_get(PointerRNA *ptr, const std::string &attrName);
 std::string  RNA_std_string_get(PointerRNA *ptr, const std::string &attrName);
 
+int          RNA_enum_ext_get(PointerRNA *ptr, const char *attrName);
+
 #endif // CGR_UTILS_RNA_H
