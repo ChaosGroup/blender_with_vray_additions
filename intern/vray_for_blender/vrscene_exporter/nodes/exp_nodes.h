@@ -172,6 +172,9 @@ private:
 };
 
 
+#define VRayNodeExportParam BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context
+
+
 class VRayNodeExporter {
 public:
 	static void             getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable=false);
@@ -222,6 +225,8 @@ public:
 
 	static int              isObjectVisible(BL::Object b_ob);
 
+	static BL::Object       getObjectByName(const std::string &name);
+
 private:
 	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
 	static std::string      exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
@@ -245,8 +250,7 @@ private:
 
 	static std::string      exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
 													  VRayNodeContext *context);
-	static std::string      exportVRayNodeBRDFVRayMtl(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-													  VRayNodeContext *context);
+	static std::string      exportVRayNodeBRDFVRayMtl(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													 VRayNodeContext *context);
@@ -264,6 +268,8 @@ private:
 												 VRayNodeContext *context);
 	static std::string      exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 													 VRayNodeContext *context);
+	static std::string      exportVRayNodeTexEdges(VRayNodeExportParam);
+	static std::string      exportVRayNodeTexMayaFluid(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
@@ -285,9 +291,17 @@ private:
 															VRayNodeContext *context);
 	static std::string      exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 																   VRayNodeContext *context);
+	static std::string      exportVRayNodeUVWGenChannel(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 																   VRayNodeContext *context);
+
+	static std::string      exportVRayNodePhxShaderSimVol(VRayNodeExportParam);
+	static std::string      exportVRayNodePhxShaderSim(VRayNodeExportParam);
+
+	static std::string      exportVRayNodeSphereFade(VRayNodeExportParam);
+	static std::string      exportVRayNodeSphereFadeGizmo(VRayNodeExportParam);
+	static std::string      exportVRayNodeVolumeVRayToon(VRayNodeExportParam);
 
 private: 
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);

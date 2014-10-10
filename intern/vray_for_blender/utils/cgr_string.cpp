@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <algorithm>
+
 
 void StripString(char *str)
 {
@@ -55,4 +57,10 @@ std::string StripString(const std::string &str)
 	strncpy(buf, str.c_str(), CGR_MAX_PLUGIN_NAME);
 	StripString(buf);
 	return buf;
+}
+
+
+bool IsStdStringDigit(const std::string &str)
+{
+	return std::count_if(str.begin(), str.end(), ::isdigit) == str.size();
 }

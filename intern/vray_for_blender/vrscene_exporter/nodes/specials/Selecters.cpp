@@ -23,25 +23,26 @@
 #include "exp_nodes.h"
 
 
-BL::Object VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+BL::Object VRayNodeExporter::getObjectByName(const std::string &name)
 {
-	char buf[MAX_ID_NAME] = "";
-	RNA_string_get(&node.ptr, "objectName", buf);
-
-	std::string objectName = buf;
-
-	if(NOT(objectName.empty())) {
-		BL::BlendData b_data = ExporterSettings::gSet.b_data;
+	if(NOT(name.empty())) {
+		BL::BlendData data = ExporterSettings::gSet.b_data;
 
 		BL::BlendData::objects_iterator obIt;
-		for(b_data.objects.begin(obIt); obIt != b_data.objects.end(); ++obIt) {
-			BL::Object b_ob = *obIt;
-			if(b_ob.name() == buf)
-				return b_ob;
+		for(data.objects.begin(obIt); obIt != data.objects.end(); ++obIt) {
+			BL::Object ob = *obIt;
+			if(ob.name() == name)
+				return ob;
 		}
 	}
 
 	return BL::Object(PointerRNA_NULL);
+}
+
+
+BL::Object VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	return VRayNodeExporter::getObjectByName(RNA_std_string_get(&node.ptr, "objectName"));
 }
 
 

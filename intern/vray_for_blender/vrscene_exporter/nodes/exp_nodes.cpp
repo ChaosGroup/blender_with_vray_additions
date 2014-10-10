@@ -982,8 +982,14 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeTexFalloff") {
 		return VRayNodeExporter::exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeTexEdges") {
+		return VRayNodeExporter::exportVRayNodeTexEdges(ntree, node, fromSocket, context);
+	}
 	else if(nodeClass == "VRayNodeTexVoxelData") {
 		return VRayNodeExporter::exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeTexMayaFluid") {
+		return VRayNodeExporter::exportVRayNodeTexMayaFluid(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeMtlMulti") {
 		return VRayNodeExporter::exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
@@ -1023,8 +1029,26 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeUVWGenMayaPlace2dTexture") {
 		return VRayNodeExporter::exportVRayNodeUVWGenMayaPlace2dTexture(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeUVWGenChannel") {
+		return VRayNodeExporter::exportVRayNodeUVWGenChannel(ntree, node, fromSocket, context);
+	}
 	else if(nodeClass == "VRayNodeRenderChannelLightSelect") {
 		return VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodePhxShaderSimVol") {
+		return VRayNodeExporter::exportVRayNodePhxShaderSimVol(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodePhxShaderSim") {
+		return VRayNodeExporter::exportVRayNodePhxShaderSim(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeSphereFadeGizmo") {
+		return VRayNodeExporter::exportVRayNodeSphereFadeGizmo(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeSphereFade") {
+		return VRayNodeExporter::exportVRayNodeSphereFade(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeVolumeVRayToon") {
+		return VRayNodeExporter::exportVRayNodeVolumeVRayToon(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);

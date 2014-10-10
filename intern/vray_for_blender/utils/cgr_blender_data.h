@@ -45,11 +45,6 @@ extern "C" {
 (pset.render_type() == BL::ParticleSettings::render_type_PATH))
 
 
-enum {
-	OBJECT_PERSISTENT_ID_SIZE = 8
-};
-
-
 Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
 void  FreeDupliList(Object *ob);

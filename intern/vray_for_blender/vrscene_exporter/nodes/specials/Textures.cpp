@@ -20,15 +20,15 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
-#ifndef CGR_STRING_H
-#define CGR_STRING_H
-
-#include <string>
+#include "exp_nodes.h"
 
 
-void         StripString(char *str);
-std::string  StripString(const std::string &str);
+std::string VRayNodeExporter::exportVRayNodeTexEdges(VRayNodeExportParam)
+{
+	AttributeValueMap pluginAttrs;
+	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
 
-bool         IsStdStringDigit(const std::string &str);
+	pluginAttrs["world_width"] = pluginAttrs["pixel_width"];
 
-#endif // CGR_STRING_H
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
+}

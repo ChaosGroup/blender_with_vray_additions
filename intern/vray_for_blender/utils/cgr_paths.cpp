@@ -117,5 +117,7 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		}
 	}
 
+	// XXX: Network path is not supported!
+
 	return dstFilepath.string();
 }

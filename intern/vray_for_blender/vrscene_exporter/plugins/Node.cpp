@@ -501,6 +501,9 @@ int VRayScene::Node::IsSmokeDomain(Object *ob)
 
 int VRayScene::Node::HasHair(Object *ob)
 {
+	if (NOT(ExporterSettings::gSet.m_exportHair))
+		return 0;
+
 	PointerRNA objectPtr;
 	RNA_id_pointer_create((ID*)ob, &objectPtr);
 	BL::Object b_object(objectPtr);
