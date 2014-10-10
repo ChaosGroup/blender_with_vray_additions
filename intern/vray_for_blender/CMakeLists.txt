@@ -45,6 +45,7 @@ set(INC
 	${CMAKE_SOURCE_DIR}/source/blender/imbuf
 	${CMAKE_SOURCE_DIR}/source/blender/makesdna
 	${CMAKE_SOURCE_DIR}/source/blender/makesrna
+	${CMAKE_SOURCE_DIR}/source/blender/makesrna/intern
 	${CMAKE_SOURCE_DIR}/source/blender/python
 	${CMAKE_SOURCE_DIR}/source/blender/render/extern/include
 	${CMAKE_SOURCE_DIR}/source/blender/render/intern/include
