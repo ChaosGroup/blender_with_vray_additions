@@ -25,13 +25,23 @@
 
 #include "cgr_config.h"
 
+#include "BKE_depsgraph.h"
+#include "MEM_guardedalloc.h"
+#include "RNA_blender_cpp.h"
+
 #include <Python.h>
+#include <string>
+
+
+typedef BL::Array<float, 16> BLTransform;
 
 
 void  GetDoubleHex(float f, char *buf);
 void  GetFloatHex(float f, char *buf);
 void  GetVectorHex(float f[3], char *buf);
 void  GetTransformHex(float m[4][4], char *buf);
+
+std::string  GetTransformHex(const BLTransform &tm);
 
 char* GetHex(const u_int8_t *buf, unsigned bufLen);
 char* GetStringZip(const u_int8_t *buf, unsigned bufLen);

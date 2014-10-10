@@ -217,6 +217,18 @@ void GetTransformHex(float m[4][4], char *buf)
 }
 
 
+std::string GetTransformHex(const BLTransform &bl_tm)
+{
+	float m[4][4];
+	::memcpy(m, bl_tm.data, 16 * sizeof(float));
+
+	char buf[CGR_TRANSFORM_HEX_SIZE];
+	GetTransformHex(m, buf);
+
+	return buf;
+}
+
+
 int GetPythonAttrInt(PyObject *propGroup, const char *attrName, int def)
 {
 	PyObject *attr = PyObject_GetAttrString(propGroup, attrName);

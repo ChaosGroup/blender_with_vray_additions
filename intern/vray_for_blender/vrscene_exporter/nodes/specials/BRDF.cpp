@@ -78,7 +78,7 @@ std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeBRDFVRayMtl(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeBRDFVRayMtl(VRayNodeExportParam)
 {
 	PointerRNA brdfVRayMtl = RNA_pointer_get(&node.ptr, "BRDFVRayMtl");
 

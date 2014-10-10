@@ -83,6 +83,11 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 				PointerRNA settingsColorMapping = RNA_pointer_get(&vrayScene, "SettingsColorMapping");
 
 				attrs["gamma"] = BOOST_FORMAT_FLOAT(RNA_float_get(&settingsColorMapping, "input_gamma"));
+				attrs["color_space"] = "1";
+
+				PRINT_INFO_EX("Node tree: %s => Node name: %s => \"Use Input Gamma\" is used. "
+							  "\"Color Space\" is forced to \"Gamma Corrected\"",
+							  ntree.name().c_str(), node.name().c_str());
 			}
 
 			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, attrs);

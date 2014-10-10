@@ -257,7 +257,7 @@ void TexVoxelData::initSmoke()
 void TexVoxelData::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
 	if(m_asFluid) {
-		int interpolation_type = m_propGroup ? GetPythonAttrInt(m_propGroup, "interpolation_type") : 0;
+		int interpolation_type = m_propGroup ? GetPythonAttrInt(m_propGroup, "interpolation_type") : p_interpolation;
 
 		PYTHON_PRINTF(output, "\nTexMayaFluid %s@Data@Density {", m_name.c_str());
 		PYTHON_PRINTF(output, "\n\tsize_x=%i;", m_res_high[0]);

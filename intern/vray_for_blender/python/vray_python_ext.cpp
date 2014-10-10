@@ -320,7 +320,7 @@ static PyObject* mExportFluid(PyObject *self, PyObject *args)
 
 	Scene *sce = CTX_data_scene(C);
 
-	ExportVoxelDataAsFluid(fileObject, sce, ob, smd, propGroup, pluginName);
+	ExportVoxelDataAsFluid(fileObject, sce, ob, smd, pluginName, 0);
 
 	Py_RETURN_NONE;
 }

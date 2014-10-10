@@ -45,6 +45,17 @@ static const char *sMappingType[] = {
 };
 
 
+std::string VRayNodeExporter::exportVRayNodeUVWGenChannel(VRayNodeExportParam)
+{
+	AttributeValueMap manualAttrs;
+
+	// NOTE: Why Python code was settings this?
+	// manualAttrs["uvw_transform"] = mathutils.Matrix.Identity(4)
+
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
+}
+
+
 std::string VRayNodeExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	PointerRNA UVWGenEnvironment = RNA_pointer_get(&node.ptr, "UVWGenEnvironment");
