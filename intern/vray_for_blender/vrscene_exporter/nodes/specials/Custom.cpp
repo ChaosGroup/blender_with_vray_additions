@@ -99,3 +99,17 @@ std::string VRayNodeExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::N
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, falloffTexAttrs);
 }
+
+
+std::string VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	const std::string &pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
+
+	AttributeValueMap pluginAttrs;
+	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
+
+	// We simply need to change the pluginID
+	VRayNodePluginExporter::exportPlugin("RENDERCHANNEL", "RenderChannelColor", pluginName, pluginAttrs);
+
+	return pluginName;
+}
