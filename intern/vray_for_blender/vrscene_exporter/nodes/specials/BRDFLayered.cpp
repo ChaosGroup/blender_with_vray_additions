@@ -76,3 +76,18 @@ std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::
 
 	return pluginName;
 }
+
+
+std::string VRayNodeExporter::exportVRayNodeBRDFVRayMtl(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	PointerRNA brdfVRayMtl = RNA_pointer_get(&node.ptr, "BRDFVRayMtl");
+
+	AttributeValueMap pluginAttrs;
+	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
+
+	if (RNA_boolean_get(&brdfVRayMtl, "hilight_glossiness_lock")) {
+		pluginAttrs["hilight_glossiness"] = pluginAttrs["reflect_glossiness"];
+	}
+
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
+}
