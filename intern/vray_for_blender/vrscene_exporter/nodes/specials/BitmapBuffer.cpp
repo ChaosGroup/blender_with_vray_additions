@@ -76,12 +76,13 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 
 			attrs["file"] = BOOST_FORMAT_STRING(absFilepath.c_str());
 
-			PointerRNA bitmapBuffer = RNA_pointer_get(&node.ptr, "BitmapBuffer");
-			bool use_input_gamma = RNA_boolean_get(&bitmapBuffer, "use_input_gamma");
-			if(use_input_gamma) {
-				PointerRNA vrayScene = RNA_pointer_get(&ExporterSettings::gSet.b_scene.ptr, "vray");
-				PointerRNA settingsColorMapping = RNA_pointer_get(&vrayScene, "SettingsColorMapping");
+			PointerRNA vrayScene = RNA_pointer_get(&ExporterSettings::gSet.b_scene.ptr, "vray");
+			PointerRNA settingsColorMapping = RNA_pointer_get(&vrayScene, "SettingsColorMapping");
 
+			PointerRNA bitmapBuffer = RNA_pointer_get(&node.ptr, "BitmapBuffer");
+			bool use_input_gamma = RNA_boolean_get(&bitmapBuffer, "use_input_gamma") &&
+								   RNA_boolean_get(&settingsColorMapping, "use_input_gamma");
+			if(use_input_gamma) {
 				attrs["gamma"] = BOOST_FORMAT_FLOAT(RNA_float_get(&settingsColorMapping, "input_gamma"));
 				attrs["color_space"] = "1";
 
