@@ -296,6 +296,8 @@ private:
 	static std::string      exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 																   VRayNodeContext *context);
 
+	static std::string      exportVRayNodeRenderChannelColor(VRayNodeExportParam);
+
 	static std::string      exportVRayNodePhxShaderSimVol(VRayNodeExportParam);
 	static std::string      exportVRayNodePhxShaderSim(VRayNodeExportParam);
 
