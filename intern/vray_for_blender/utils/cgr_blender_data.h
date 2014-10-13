@@ -47,16 +47,12 @@ extern "C" {
 
 Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
 void  FreeRenderMesh(Main *main, Mesh *mesh);
-void  FreeDupliList(Object *ob);
 
 int   IsObjectUpdated(Object *ob);
 int   IsObjectDataUpdated(Object *ob);
 
-int   IsObjectHasActions(Object *ob);
 int   IsMeshAnimated(Object *ob);
 int   IsMeshValid(Scene *sce, Main *main, Object *ob);
-
-int   IsParentUpdated(Object *ob);
 
 std::string GetIDName(ID *id, const std::string &prefix="");
 std::string GetIDName(BL::Pointer ptr, const std::string &prefix="");

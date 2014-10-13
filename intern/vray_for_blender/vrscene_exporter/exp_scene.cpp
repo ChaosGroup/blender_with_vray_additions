@@ -332,7 +332,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		//
 		if(ExporterSettings::gSet.DoUpdateCheck()) {
 			if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE) {
-				if(NOT(IsObjectUpdated((Object*)bl_ob.ptr.data) &&
+				if(NOT(IsObjectUpdated((Object*)bl_ob.ptr.data) ||
 					   IsObjectDataUpdated((Object*)bl_ob.ptr.data))) {
 					return;
 				}

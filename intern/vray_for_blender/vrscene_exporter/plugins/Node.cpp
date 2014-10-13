@@ -458,14 +458,7 @@ int VRayScene::Node::IsUpdated(Object *ob)
 	if(ob->type == OB_FONT)
 		return IsObjectDataUpdated(ob);
 
-	int updated = IsObjectUpdated(ob);
-	if(NOT(updated)) {
-		if(ob->parent) {
-			// XXX: Check exactly how parent update affects child object
-			return VRayScene::Node::IsUpdated(ob->parent);
-		}
-	}
-	return updated;
+	return IsObjectUpdated(ob);
 }
 
 
