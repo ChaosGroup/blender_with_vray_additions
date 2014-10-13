@@ -1035,6 +1035,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	else if(nodeClass == "VRayNodeRenderChannelLightSelect") {
 		return VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(ntree, node, fromSocket, context);
 	}
+	else if(nodeClass == "VRayNodeRenderChannelColor") {
+		return VRayNodeExporter::exportVRayNodeRenderChannelColor(ntree, node, fromSocket, context);
+	}
 	else if(nodeClass == "VRayNodePhxShaderSimVol") {
 		return VRayNodeExporter::exportVRayNodePhxShaderSimVol(ntree, node, fromSocket, context);
 	}
