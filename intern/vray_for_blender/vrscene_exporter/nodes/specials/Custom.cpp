@@ -113,3 +113,18 @@ std::string VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTre
 
 	return pluginName;
 }
+
+
+std::string VRayNodeExporter::exportVRayNodeRenderChannelColor(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	AttributeValueMap pluginAttrs;
+	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
+
+	PointerRNA renderChannelColor = RNA_pointer_get(&node.ptr, "RenderChannelColor");
+
+	if (pluginAttrs["name"].length() == 0) {
+		pluginAttrs["name"] = BOOST_FORMAT_STRING(RNA_enum_name_get(&renderChannelColor, "alias"));
+	}
+
+	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
+}
