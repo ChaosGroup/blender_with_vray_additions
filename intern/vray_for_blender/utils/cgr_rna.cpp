@@ -81,13 +81,11 @@ std::string RNA_enum_name_get(PointerRNA *ptr, const char *attrName)
 int RNA_enum_ext_get(PointerRNA *ptr, const char *attrName)
 {
 	int enum_item_index = RNA_enum_get(ptr, attrName);
-
-	const EnumPropertyRNA  *enum_prop = (const EnumPropertyRNA*)RNA_struct_find_property(ptr, attrName);
-	const EnumPropertyItem &enum_item = enum_prop->item[enum_item_index];
+	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
 
 	// If enum item is digit return it as int
-	if (enum_item.identifier[0] >= '0' && enum_item.identifier[0] <= '9') {
-		enum_item_index = atoi(enum_item.identifier);
+	if (enum_item->identifier[0] >= '0' && enum_item->identifier[0] <= '9') {
+		enum_item_index = atoi(enum_item->identifier);
 	}
 
 	return enum_item_index;
