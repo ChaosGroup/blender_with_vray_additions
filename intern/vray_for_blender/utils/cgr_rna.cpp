@@ -57,24 +57,28 @@ EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName)
 	int enum_item_index = RNA_enum_get(ptr, attrName);
 
 	const EnumPropertyRNA *enum_prop = (const EnumPropertyRNA*)RNA_struct_find_property(ptr, attrName);
+	if (enum_prop)
+		return &enum_prop->item[enum_item_index];
 
-	return &enum_prop->item[enum_item_index];
+	return NULL;
 }
 
 
 std::string RNA_enum_identifier_get(PointerRNA *ptr, const char *attrName)
 {
 	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
-
-	return enum_item->identifier;
+	if (enum_item->identifier)
+		return enum_item->identifier;
+	return "";
 }
 
 
 std::string RNA_enum_name_get(PointerRNA *ptr, const char *attrName)
 {
 	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
-
-	return enum_item->name;
+	if (enum_item->name)
+		return enum_item->name;
+	return "";
 }
 
 
@@ -83,9 +87,18 @@ int RNA_enum_ext_get(PointerRNA *ptr, const char *attrName)
 	int enum_item_index = RNA_enum_get(ptr, attrName);
 	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
 
-	// If enum item is digit return it as int
-	if (enum_item->identifier[0] >= '0' && enum_item->identifier[0] <= '9') {
-		enum_item_index = atoi(enum_item->identifier);
+	if (!enum_item->identifier) {
+		PropertyRNA *prop = RNA_struct_find_property(ptr, attrName);
+		if (prop) {
+			PRINT_ERROR("Property \"%s\": Enum identifier not found!",
+						prop->name);
+		}
+	}
+	else {
+		// If enum item is digit, return it as int
+		if (enum_item->identifier[0] >= '0' && enum_item->identifier[0] <= '9') {
+			enum_item_index = atoi(enum_item->identifier);
+		}
 	}
 
 	return enum_item_index;
