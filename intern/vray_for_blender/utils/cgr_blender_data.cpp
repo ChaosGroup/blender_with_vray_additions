@@ -159,27 +159,6 @@ void FreeRenderMesh(Main *main, Mesh *mesh)
 }
 
 
-void FreeDupliList(Object *ob)
-{
-	if(ob->duplilist) {
-		free_object_duplilist(ob->duplilist);
-		ob->duplilist = NULL;
-	}
-}
-
-
-// We are checking only 'transform' and visibility here
-//
-int IsObjectHasActions(Object *ob)
-{
-	if(ob->adt)
-		return (ob->adt->action != NULL);
-	else if(ob->parent)
-		return IsObjectHasActions(ob->parent);
-	return 0;
-}
-
-
 int IsMeshAnimated(Object *ob)
 {
 	ModifierData *mod = NULL;
@@ -308,16 +287,6 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 }
 
 
-int IsParentUpdated(Object *ob)
-{
-	if(IsObjectUpdated(ob) || IsObjectDataUpdated(ob))
-		return 1;
-	if(ob->parent)
-		return IsParentUpdated(ob->parent);
-	return 0;
-}
-
-
 int IsObjectUpdated(Object *ob)
 {
 	PointerRNA ptr;
@@ -335,18 +304,18 @@ int IsObjectUpdated(Object *ob)
 		}
 	}
 
+	if (!(upObject || upData) && bl_ob.parent()) {
+		return IsObjectUpdated((Object*)bl_ob.parent().ptr.data);
+	}
+
 	return upObject || upData;
 }
 
 
 int IsObjectDataUpdated(Object *ob)
 {
-#if 0
-	return ob->id.pad2 & CGR_UPDATED_DATA;
-#else
 	PointerRNA ptr;
 	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
 	ptr = RNA_pointer_get(&ptr, "vray");
 	return RNA_int_get(&ptr, "data_updated") & CGR_UPDATED_DATA;
-#endif
 }
