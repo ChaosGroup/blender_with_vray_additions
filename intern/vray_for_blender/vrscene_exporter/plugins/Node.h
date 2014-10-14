@@ -60,9 +60,9 @@ typedef std::map<BL::ID, std::string> MeshCache;
 
 
 class Node : public VRayExportable {
+public:
 	static MeshCache sMeshCache;
 
-public:
 	Node(Scene *scene, Main *main, Object *ob);
 
 	static int      IsSmokeDomain(Object *ob);
