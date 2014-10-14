@@ -622,5 +622,5 @@ std::string GeomMayaHair::getHairMaterialName() const
 	Material *ma = give_current_material(m_ob, m_psys->part->omat);
 	if(NOT(ma))
 		return "MANOMATERIALISSET";
-	return Node::GetMaterialName(ma, ExporterSettings::gSet.m_mtlOverride);
+	return Node::GetMaterialName(ma, ExporterSettings::gSet.m_mtlOverrideName);
 }

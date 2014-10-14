@@ -143,8 +143,6 @@ public:
 	VRsceneExporter();
 	~VRsceneExporter();
 
-	static BL::Material     m_mtlOverride;
-
 	// Used to skip Node creating of gizmo objects
 	void                    addSkipObject(void *obPtr);
 
@@ -153,17 +151,16 @@ public:
 
 	void                    exportSceneInit();
 	int                     exportScene(const int &exportNodes, const int &exportGeometry);
-	void                    exportSceneClear();
+	void                    exportClearCaches();
 
 	void                    exportObjectsPre();
 	void                    exportObjectBase(Object *ob);
 	void                    exportObjectsPost();
 
 private:
-
 	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
-
 	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL, const std::string &prefix="");
+
 	int                     exportVRayAsset(BL::Object ob);
 
 	void                    initDupli();

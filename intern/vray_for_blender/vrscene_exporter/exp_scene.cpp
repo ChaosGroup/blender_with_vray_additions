@@ -60,8 +60,6 @@ extern "C" {
 // Default velocity transform matrix hex
 const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
-BL::Material  VRsceneExporter::m_mtlOverride = BL::Material(PointerRNA_NULL);
-
 
 static int IsDuplicatorRenderable(BL::Object ob)
 {
@@ -256,12 +254,14 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 		if(NOT(b_data))
 			b_data = ExporterSettings::gSet.b_data;
 
-		if(m_mtlOverride)
-			VRayNodeExporter::exportMaterial(b_data, m_mtlOverride);
+		if(ExporterSettings::gSet.m_mtlOverride)
+			VRayNodeExporter::exportMaterial(b_data, ExporterSettings::gSet.m_mtlOverride);
 
+		// Export materials checking if we don't need to override it with global
+		// override
 		for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
 			BL::Material b_ma = *maIt;
-			if(m_mtlOverride && Node::DoOverrideMaterial(b_ma))
+			if(ExporterSettings::gSet.m_mtlOverride && Node::DoOverrideMaterial(b_ma))
 				continue;
 			VRayNodeExporter::exportMaterial(b_data, b_ma);
 		}
@@ -273,7 +273,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 
-	exportSceneClear();
+	exportClearCaches();
 
 	if(exportInterrupt) {
 		PRINT_INFO_EX("Exporting data for frame %i is interruped! [%s]",
@@ -293,18 +293,20 @@ void VRsceneExporter::exportObjectsPost()
 	// Export dupli/particle systems
 	exportDupli();
 
-	// Light linker settings
+	// Light linker settings only for the first frame
 	if (ExporterSettings::gSet.IsFirstFrame())
 		m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
 }
 
 
-void VRsceneExporter::exportSceneClear()
+void VRsceneExporter::exportClearCaches()
 {
 	m_hideFromView.clear();
 
-	// When using Alt-D instances geometry is not freed from Node,
-	// have to do it manually
+	// Clean plugin names cache
+	VRayNodePluginExporter::clearNamesCache();
+
+	// Clean Alt-D instances cache
 	Node::FreeMeshCache();
 }
 
@@ -461,6 +463,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	else if(LIGHT_TYPE(ob)) {
 		exportLamp(bl_ob);
 	}
+
+	// Reset update flag
+	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 }
 
 
@@ -512,7 +517,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 			node->setDupliHolder(attrs.dupliHolder);
 		}
 	}
-	node->init(ExporterSettings::gSet.m_mtlOverride);
+	node->init(ExporterSettings::gSet.m_mtlOverrideName);
 	node->initHash();
 
 	// This will also check if object's mesh is valid
@@ -621,7 +626,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	nodeCtx.obCtx.ob   = ob;
 	nodeCtx.obCtx.sce  = ExporterSettings::gSet.m_sce;
 	nodeCtx.obCtx.main = ExporterSettings::gSet.m_main;
-	nodeCtx.obCtx.mtlOverride = ExporterSettings::gSet.m_mtlOverride;
+	nodeCtx.obCtx.mtlOverrideName = ExporterSettings::gSet.m_mtlOverrideName;
 
 	// Export object main properties
 	//
@@ -683,8 +688,6 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	// comes from advanced DupliGroup export.
 	//
 	if(attrs.override) {
-		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
-
 		PointerRNA vrayObject = RNA_pointer_get((PointerRNA*)&attrs.dupliHolder.ptr, "vray");
 
 		visible  = attrs.visible;
@@ -693,6 +696,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		NodeAttrs &_attrs = const_cast<NodeAttrs&>(attrs);
 		GetTransformHex(_attrs.tm, transform);
 
+		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
 		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
 		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
 	}

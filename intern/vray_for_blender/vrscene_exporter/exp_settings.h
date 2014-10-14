@@ -43,7 +43,8 @@ struct ExporterSettings {
 		b_context(PointerRNA_NULL),
 		b_scene(PointerRNA_NULL),
 		b_data(PointerRNA_NULL),
-		b_engine(PointerRNA_NULL)
+		b_engine(PointerRNA_NULL),
+		m_mtlOverride(PointerRNA_NULL)
 	{}
 
 	void              init(BL::Context context, BL::Scene scene, BL::BlendData data, BL::RenderEngine engine);
@@ -82,7 +83,8 @@ struct ExporterSettings {
 	int               m_useAltInstances;
 	int               m_subsurfToOSD;
 
-	std::string       m_mtlOverride;
+	std::string       m_mtlOverrideName;
+	BL::Material      m_mtlOverride;
 
 	// Animation options
 	int               m_isAnimation;

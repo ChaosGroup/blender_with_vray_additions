@@ -109,7 +109,7 @@ void ExporterSettings::init()
 		}
 	}
 
-	m_mtlOverride.clear();
+	m_mtlOverrideName.clear();
 	PointerRNA settingsOptions = RNA_pointer_get(&vrayScene, "SettingsOptions");
 	if(RNA_boolean_get(&settingsOptions, "mtl_override_on")) {
 		const std::string &overrideName = RNA_std_string_get(&settingsOptions, "mtl_override");
@@ -118,8 +118,8 @@ void ExporterSettings::init()
 			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
 				BL::Material ma = *maIt;
 				if(ma.name() == overrideName) {
-					m_mtlOverride = Node::GetMaterialName((Material*)ma.ptr.data);
-					// m_mtlOverride = bl_ma;
+					m_mtlOverride     = ma;
+					m_mtlOverrideName = Node::GetMaterialName((Material*)ma.ptr.data);
 					break;
 				}
 			}
@@ -154,7 +154,7 @@ void ExporterSettings::reset()
 	m_frameStart   = 1;
 	m_frameStep    = 1;
 
-	m_mtlOverride = "";
+	m_mtlOverrideName = "";
 	m_drSharePath = "";
 }
 
