@@ -117,14 +117,14 @@ struct VRayObjectContext {
 		main = NULL;
 		ob   = NULL;
 
-		mtlOverride = "";
+		mtlOverrideName = "";
 	}
 
 	Scene       *sce;
 	Main        *main;
 	Object      *ob;
 
-	std::string  mtlOverride;
+	std::string  mtlOverrideName;
 };
 
 

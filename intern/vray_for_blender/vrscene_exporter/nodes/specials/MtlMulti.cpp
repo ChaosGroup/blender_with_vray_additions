@@ -85,7 +85,7 @@ std::string VRayNodeExporter::exportMtlMulti(BL::BlendData bl_data, BL::Object b
 		if (NOT(ma))
 			continue;
 
-		mtls_list.push_back(Node::GetMaterialName((Material*)ma.ptr.data, ExporterSettings::gSet.m_mtlOverride));
+		mtls_list.push_back(Node::GetMaterialName((Material*)ma.ptr.data, ExporterSettings::gSet.m_mtlOverrideName));
 		ids_list.push_back(BOOST_FORMAT_INT(i));
 	}
 

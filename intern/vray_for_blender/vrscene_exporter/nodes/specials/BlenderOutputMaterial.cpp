@@ -34,7 +34,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree n
 	}
 
 	AttributeValueMap pluginAttrs;
-	std::string mtlName = Node::GetNodeMtlMulti(context->obCtx.ob, context->obCtx.mtlOverride, pluginAttrs);
+	std::string mtlName = Node::GetNodeMtlMulti(context->obCtx.ob, context->obCtx.mtlOverrideName, pluginAttrs);
 
 	// NOTE: Function could return only one material in 'mtlName'
 	if(pluginAttrs.find("mtls_list") == pluginAttrs.end())
