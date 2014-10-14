@@ -85,6 +85,8 @@ set(SRC
 	vrscene_exporter/exp_scene.h
 	vrscene_exporter/exp_types.cpp
 	vrscene_exporter/exp_types.h
+	vrscene_exporter/exp_property.cpp
+	vrscene_exporter/exp_property.h
 	vrscene_exporter/nodes/exp_nodes.cpp
 	vrscene_exporter/nodes/exp_nodes.h
 	vrscene_exporter/nodes/specials/BRDF.cpp
