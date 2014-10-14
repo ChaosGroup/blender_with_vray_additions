@@ -195,6 +195,7 @@ void GeomStaticMesh::init()
 			BL::Modifier b_mod = b_object.modifiers[b_object.modifiers.length()-1];
 			if (b_mod && b_mod.show_render() && b_mod.type() == BL::Modifier::type_SUBSURF) {
 				b_sbs = BL::SubsurfModifier(b_mod);
+				b_sbs_show_render = b_sbs.show_render();
 				b_sbs.show_render(false);
 
 				m_force_osd = true;
