@@ -3010,7 +3010,10 @@ void BKE_object_handle_update_ex(EvaluationContext *eval_ctx,
 	int        data_updated = CGR_NONE;
 
 	RNA_pointer_create((ID*)ob, &RNA_Object, ob, &ptr);
-	ptr = RNA_pointer_get(&ptr, "vray");
+	if (RNA_struct_find_property(&ptr, "vray")) {
+		ptr = RNA_pointer_get(&ptr, "vray");
+		data_updated = RNA_int_get(&ptr, "data_updated");
+	}
 
 	if (ob->recalc & OB_RECALC_ALL) {
 		/* speed optimization for animation lookups */
