@@ -27,13 +27,16 @@
 
 std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context->obCtx.ob)) {
+	if(NOT(context->obCtx.ob && context->obCtx.ob->data)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
 	}
 
-	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
+	std::string pluginName = GetIDName(ExporterSettings::gSet.m_useAltInstances
+									   ? (ID*)context->obCtx.ob->data
+									   : (ID*)context->obCtx.ob,
+									   "Me");
 
 	if(ExporterSettings::gSet.m_exportMeshes) {
 		if(ExporterSettings::gSet.m_isAnimation) {
@@ -42,14 +45,34 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 			}
 		}
 
-		VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob);
-		geomStaticMesh->init();
-		geomStaticMesh->initName(pluginName);
-		geomStaticMesh->initAttributes(&node.ptr);
+		PointerRNA obRNA;
+		RNA_id_pointer_create((ID*)context->obCtx.ob, &obRNA);
+		BL::Object ob(obRNA);
+		BL::ID     dataID = ob.data();
 
-		int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
-		if(toDelete)
-			delete geomStaticMesh;
+		// Check mesh name in "Alt-D" cache
+		int geometryCached = false;
+		if (dataID && ExporterSettings::gSet.m_useAltInstances) {
+			geometryCached = Node::sMeshCache.count(dataID);
+			if (geometryCached) {
+				pluginName = Node::sMeshCache[dataID];
+			}
+		}
+
+		if (NOT(geometryCached)) {
+			VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob);
+			geomStaticMesh->init();
+			geomStaticMesh->initName(pluginName);
+			geomStaticMesh->initAttributes(&node.ptr);
+
+			int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
+			if(toDelete)
+				delete geomStaticMesh;
+		}
+
+		if (dataID && ExporterSettings::gSet.m_useAltInstances && NOT(geometryCached)) {
+			Node::sMeshCache.insert(std::make_pair(dataID, pluginName));
+		}
 	}
 
 	return pluginName;
