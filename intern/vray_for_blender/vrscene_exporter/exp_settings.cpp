@@ -110,6 +110,7 @@ void ExporterSettings::init()
 	}
 
 	m_mtlOverrideName.clear();
+	m_mtlOverride = BL::Material(PointerRNA_NULL);
 	PointerRNA settingsOptions = RNA_pointer_get(&vrayScene, "SettingsOptions");
 	if(RNA_boolean_get(&settingsOptions, "mtl_override_on")) {
 		const std::string &overrideName = RNA_std_string_get(&settingsOptions, "mtl_override");
