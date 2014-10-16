@@ -311,7 +311,7 @@ private:
 
 	static BL::Texture      getTextureFromIDRef(PointerRNA *ptr, const std::string &propName);
 
-	static void             getNodeVectorCurveData(BL::Node node, StrVector &points, StrVector &types);
+	static void             getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, StrVector &points, StrVector &types);
 
 };
 

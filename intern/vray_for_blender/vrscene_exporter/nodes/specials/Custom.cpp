@@ -83,7 +83,7 @@ std::string VRayNodeExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::N
 
 		StrVector points;
 		StrVector types;
-		getNodeVectorCurveData(blendInputNode, points, types);
+		getNodeVectorCurveData(ntree, blendInputNode, points, types);
 
 		const std::string &texBezierCurveName = VRayNodeExporter::getPluginName(blendInputNode, ntree, context);
 		AttributeValueMap texBezierCurveAttrs;

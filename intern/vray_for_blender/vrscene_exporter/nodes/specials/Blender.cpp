@@ -33,14 +33,19 @@ struct MyPoint {
 };
 
 
-void VRayNodeExporter::getNodeVectorCurveData(BL::Node node, StrVector &points, StrVector &types)
+void VRayNodeExporter::getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, StrVector &points, StrVector &types)
 {
 	BL::ShaderNodeVectorCurve curveNode(node);
 
 	BL::CurveMapping curveMapping = curveNode.mapping();
-	curveMapping.initialize();
+	curveMapping.update();
 
 	BL::CurveMap curve = curveMapping.curves[0];
+	if (NOT(curve)) {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect curve!",
+					ntree.name().c_str(), node.name().c_str());
+		return;
+	}
 
 	const int numPoints = curve.points.length();
 
