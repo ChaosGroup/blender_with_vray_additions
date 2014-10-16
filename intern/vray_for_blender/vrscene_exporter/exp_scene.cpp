@@ -22,6 +22,9 @@
 
 #include "cgr_config.h"
 
+#include "GeomMayaHair.h"
+#include "GeomStaticMesh.h"
+
 #include "cgr_vrscene.h"
 #include "cgr_string.h"
 #include "cgr_blender_data.h"
@@ -31,9 +34,6 @@
 
 #include "exp_scene.h"
 #include "exp_nodes.h"
-
-#include "GeomMayaHair.h"
-#include "GeomStaticMesh.h"
 
 #include "PIL_time.h"
 #include "BLI_string.h"
