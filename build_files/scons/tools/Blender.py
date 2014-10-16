@@ -483,7 +483,7 @@ def buildinfo(lenv, build_type):
             if build_branch.startswith('blender-v'):
                 build_branch = 'master'
 
-            if has_local_changes:
+            if False and has_local_changes:
                 build_branch += ' (modified)'
     else:
         build_hash = 'unknown'
