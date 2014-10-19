@@ -22,8 +22,12 @@
 
 #include "exp_nodes.h"
 
+#ifdef REMAP_POINTS
 // Remap values from [-1.0 .. 1.0] to [0.0 .. 1.0]
-#define REMAP_CURVE_POINT(x) (0.5f * ((x) + 1.0f))
+#  define REMAP_CURVE_POINT(x) (0.5f * ((x) + 1.0f))
+#else
+#  define REMAP_CURVE_POINT(x) (x)
+#endif
 
 #define MAX_NUM_POINTS 64
 
