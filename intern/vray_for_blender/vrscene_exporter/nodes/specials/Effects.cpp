@@ -101,7 +101,10 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL:
 					BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
 					// This is a smoke simulation and we need to export smoke data
-					if(smokeMod) {
+					if (NOT(smokeMod)) {
+						PRINT_ERROR("Invalid Smoke modifier!");
+					}
+					else {
 						PointerRNA texVoxelData = RNA_pointer_get(&node.ptr, "TexVoxelData");
 
 						std::string pluginName    = VRayNodeExporter::getPluginName(node, ntree, context);
@@ -239,6 +242,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 		// We don't need to export the whole effect at all because it will cover the whole
 		// scene without gizmo.
 		if (gizmos.empty() || gizmos == "NULL" || gizmos == "List()") {
+			PRINT_ERROR("No smoke gizmos found!");
 			return "NULL";
 		}
 		else {
