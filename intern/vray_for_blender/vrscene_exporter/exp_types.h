@@ -36,6 +36,7 @@
 
 #include "cgr_blender_data.h"
 #include "cgr_json_plugins.h"
+#include "cgr_vrscene.h"
 
 #include "BKE_global.h"
 #include "BKE_depsgraph.h"
@@ -150,7 +151,7 @@ struct NodeAttrs {
 	// For DupliGroup without Instancer
 	std::string  namePrefix;
 	BL::Object   dupliHolder;
-	float        tm[4][4];
+	BLTransform  tm;
 
 };
 

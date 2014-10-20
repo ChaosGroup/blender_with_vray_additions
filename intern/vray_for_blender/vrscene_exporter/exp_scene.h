@@ -158,15 +158,15 @@ public:
 	void                    exportObjectsPost();
 
 private:
-	void                    exportObject(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
-	void                    exportLamp(BL::Object ob, BL::DupliObject dOb=PointerRNA_NULL, const std::string &prefix="");
-
-	int                     exportVRayAsset(BL::Object ob);
+	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportVRayAsset(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportVRayClipper(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    initDupli();
 	void                    exportDupli();
 
-	void                    exportNode(Object *ob, const int &checkUpdated=true, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportNode(Object *ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, const NodeAttrs &attrs=NodeAttrs());
 	std::string             writeNodeFromNodeTree(BL::NodeTree ntree, BL::Node node);
 
