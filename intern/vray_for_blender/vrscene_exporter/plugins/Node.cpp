@@ -580,9 +580,9 @@ void Node::setNamePrefix(const std::string &name_prefix)
 }
 
 
-void Node::setTransform(float tm[4][4])
+void Node::setTransform(const BLTransform &tm)
 {
-	copy_m4_m4(m_tm, tm);
+	::memcpy(m_tm, tm.data, 16 * sizeof(float));
 }
 
 

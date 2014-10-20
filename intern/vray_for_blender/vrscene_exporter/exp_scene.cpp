@@ -346,14 +346,6 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
 		int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
 
-		NodeAttrs dupliAttrs;
-		dupliAttrs.override = true;
-		// If dupli are shown via Instancer we need to hide
-		// original object
-		dupliAttrs.visible  = NOT(useInstancer);
-		dupliAttrs.objectID = overrideObjectID;
-		dupliAttrs.dupliHolder = bl_ob;
-
 		const std::string &duplicatorName = GetIDName(bl_ob);
 
 		BL::Object::dupli_list_iterator b_dup;
@@ -382,21 +374,31 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 			const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + bl_ob.name());
 
+			NodeAttrs dupliAttrs;
+			dupliAttrs.override = true;
+			// If dupli are shown via Instancer we need to hide
+			// original object
+			dupliAttrs.visible  = NOT(useInstancer);
+			dupliAttrs.objectID = overrideObjectID;
+			dupliAttrs.dupliHolder = bl_ob;
+
+			if (NOT(useInstancer) || bl_duplicatedOb.type() == BL::Object::type_LAMP) {
+				dupliAttrs.namePrefix = dupliNamePrefix;
+				dupliAttrs.tm = bl_dupliOb.matrix();
+			}
+
 			if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
-				exportLamp(bl_ob, bl_dupliOb, dupliNamePrefix);
+				exportObject(bl_duplicatedOb, dupliAttrs);
 			}
 			else {
 				if(NOT(useInstancer)) {
-					dupliAttrs.namePrefix = dupliNamePrefix;
-					copy_m4_m4(dupliAttrs.tm, dupliOb->mat);
-
 					// If LightLinker contain duplicator,
 					// we need to exclude it's objects
 					//
 					std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
 					m_lightLinker.excludePlugin(duplicatorName, pluginName);
 
-					exportObject(dupliOb->ob, true, dupliAttrs);
+					exportObject(bl_duplicatedOb, dupliAttrs);
 				}
 				else {
 					std::string dupliBaseName;
@@ -428,8 +430,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					mySys->append(myPa);
 
 					// Set original object transform
-					copy_m4_m4(dupliAttrs.tm, dupliOb->ob->obmat);
-					exportObject(dupliOb->ob, false, dupliAttrs);
+					dupliAttrs.tm = bl_duplicatedOb.matrix_world();
+					exportObject(bl_duplicatedOb, dupliAttrs);
 				}
 			}
 		}
@@ -452,54 +454,52 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	if(ExporterSettings::gSet.b_engine && ExporterSettings::gSet.b_engine.test_break())
 		return;
 
-	if(GEOM_TYPE(ob)) {
-		if(exportVRayAsset(bl_ob) == 0) {
-			// Smoke domain will be exported from Effects
-			if(Node::IsSmokeDomain(ob))
-				return;
-			exportObject(ob);
-		}
-	}
-	else if(LIGHT_TYPE(ob)) {
-		exportLamp(bl_ob);
-	}
+	exportObject(bl_ob);
 
 	// Reset update flag
 	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 }
 
 
-void VRsceneExporter::exportObject(Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
+void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 {
-	const std::string idName = attrs.namePrefix + GetIDName(&ob->id);
+	Object *b_ob = (Object*)ob.ptr.data;
 
-	if(m_exportedObjects.count(idName))
-		return;
-	m_exportedObjects.insert(idName);
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 
-	PointerRNA objectRNA;
-	RNA_id_pointer_create((ID*)ob, &objectRNA);
-	BL::Object bl_ob(objectRNA);
+	if (GEOM_TYPE(b_ob)) {
+		// Smoke domain will be exported from Effects
+		if (Node::IsSmokeDomain(b_ob))
+			return;
 
-	PointerRNA vrayObject  = RNA_pointer_get(&bl_ob.ptr, "vray");
-	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
-	if(RNA_boolean_get(&vrayClipper, "enabled")) {
-		VRayNodeExporter::exportVRayClipper(ExporterSettings::gSet.b_data, bl_ob);
-	}
-	else {
-		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)ob);
-		if(ntree) {
-			exportNodeFromNodeTree(ntree, ob, attrs);
+		if (RNA_boolean_get(&vrayObject, "overrideWithScene")) {
+			exportVRayAsset(ob, attrs);
+		}
+		else if (RNA_boolean_get(&vrayClipper, "enabled")) {
+			exportVRayClipper(ob, attrs);
 		}
 		else {
-			exportNode(ob, checkUpdated, attrs);
+			const std::string idName = attrs.namePrefix + GetIDName(ob);
+			if(m_exportedObjects.count(idName))
+				return;
+			m_exportedObjects.insert(idName);
+
+			BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)b_ob);
+			if(ntree)
+				exportNodeFromNodeTree(ntree, b_ob, attrs);
+			else
+				exportNode(b_ob, attrs);
 		}
+	}
+	else if (LIGHT_TYPE(b_ob)) {
+		exportLamp(ob, attrs);
 	}
 }
 
 
-void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const NodeAttrs &attrs)
+void VRsceneExporter::exportNode(Object *ob, const NodeAttrs &attrs)
 {
 	PRINT_INFO("VRsceneExporter::exportNode(%s)",
 			   ob->id.name);
@@ -507,8 +507,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 	Node *node = new Node(ExporterSettings::gSet.m_sce, ExporterSettings::gSet.m_main, ob);
 	node->setNamePrefix(attrs.namePrefix);
 	if(attrs.override) {
-		NodeAttrs &_attrs = const_cast<NodeAttrs&>(attrs);
-		node->setTransform(_attrs.tm);
+		node->setTransform(attrs.tm);
 		node->setVisiblity(attrs.visible);
 		if(attrs.objectID > -1) {
 			node->setObjectID(attrs.objectID);
@@ -549,7 +548,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 	if(ExporterSettings::gSet.m_exportMeshes) {
 		int writeData = true;
-		if(checkUpdated && ExporterSettings::gSet.DoUpdateCheck())
+		if (ExporterSettings::gSet.DoUpdateCheck())
 			writeData = node->isObjectDataUpdated();
 		if(writeData) {
 			node->initGeometry();
@@ -559,7 +558,7 @@ void VRsceneExporter::exportNode(Object *ob, const int &checkUpdated, const Node
 
 	if(ExporterSettings::gSet.m_exportNodes) {
 		int writeObject = true;
-		if(checkUpdated && ExporterSettings::gSet.DoUpdateCheck())
+		if (ExporterSettings::gSet.DoUpdateCheck())
 			writeObject = node->isObjectUpdated();
 		int toDelete = false;
 		if(writeObject) {
@@ -612,10 +611,9 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	const std::string pluginName = attrs.namePrefix + GetIDName((ID*)ob);
+	const std::string pluginName = attrs.namePrefix + GetIDName(bl_ob, "OB");
 
-	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(ob->obmat, transform);
+	std::string transform = GetTransformHex(bl_ob.matrix_world());
 
 	int visible  = true;
 	int objectID = ob->index;
@@ -693,8 +691,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		visible  = attrs.visible;
 		objectID = attrs.objectID;
 
-		NodeAttrs &_attrs = const_cast<NodeAttrs&>(attrs);
-		GetTransformHex(_attrs.tm, transform);
+		transform = GetTransformHex(attrs.tm);
 
 		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
 		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
@@ -721,7 +718,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 }
 
 
-void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::string &prefix)
+void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 {
 	BL::ID lampID = ob.data();
 	if(NOT(lampID))
@@ -730,7 +727,10 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::
 	BL::Lamp          lamp(lampID);
 	PointerRNA        vrayLamp = RNA_pointer_get(&lamp.ptr, "vray");
 
-	const std::string &pluginName = prefix + GetIDName(ob, "LA");
+	const std::string pluginName = attrs.namePrefix + GetIDName(ob, "LA");
+	if(m_exportedObjects.count(pluginName))
+		return;
+	m_exportedObjects.insert(pluginName);
 
 	// Find plugin ID
 	std::string  pluginID;
@@ -888,11 +888,10 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::
 		}
 	}
 
-	char transform[CGR_TRANSFORM_HEX_SIZE];
-	if(dOb)
-		GetTransformHex(((DupliObject*)dOb.ptr.data)->mat, transform);
-	else
-		GetTransformHex(((Object*)ob.ptr.data)->obmat, transform);
+	std::string transform = GetTransformHex(ob.matrix_world());
+	if (attrs.override) {
+		transform = GetTransformHex(attrs.tm);
+	}
 
 	pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
 
@@ -900,18 +899,20 @@ void VRsceneExporter::exportLamp(BL::Object ob, BL::DupliObject dOb, const std::
 }
 
 
-int VRsceneExporter::exportVRayAsset(BL::Object ob)
+void VRsceneExporter::exportVRayAsset(BL::Object ob, const NodeAttrs &attrs)
 {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-	if (!RNA_boolean_get(&vrayObject, "overrideWithScene"))
-		return 0;
+	PointerRNA vrayAsset  = RNA_pointer_get(&vrayObject, "VRayAsset");
 
-	PointerRNA vrayAsset = RNA_pointer_get(&vrayObject, "VRayAsset");
+	const std::string &pluginName = attrs.namePrefix + "Asset@" + GetIDName(ob);
+	if(m_exportedObjects.count(pluginName))
+		return;
+	m_exportedObjects.insert(pluginName);
 
-	const std::string &pluginName = "Asset@" + GetIDName(ob);
-
-	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(((Object*)ob.ptr.data)->obmat, transform);
+	std::string transform = GetTransformHex(ob.matrix_world());
+	if (attrs.override) {
+		transform = GetTransformHex(attrs.tm);
+	}
 
 	AttributeValueMap pluginAttrs;
 
@@ -927,8 +928,59 @@ int VRsceneExporter::exportVRayAsset(BL::Object ob)
 	pluginAttrs["add_environment"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddEnvironment"));
 
 	VRayNodePluginExporter::exportPlugin("NODE", "VRayScene", pluginName, pluginAttrs);
+}
 
-	return 1;
+
+void VRsceneExporter::exportVRayClipper(BL::Object ob, const NodeAttrs &attrs)
+{
+	PointerRNA vrayObject  = RNA_pointer_get(&ob.ptr, "vray");
+	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+	const std::string &pluginName = attrs.namePrefix + "VRayClipper@" + GetIDName(ob);
+	if(m_exportedObjects.count(pluginName))
+		return;
+	m_exportedObjects.insert(pluginName);
+
+	char transform[CGR_TRANSFORM_HEX_SIZE];
+	GetTransformHex(((Object*)ob.ptr.data)->obmat, transform);
+
+	const std::string &material = VRayNodeExporter::exportMtlMulti(ExporterSettings::gSet.b_data, ob);
+
+	AttributeValueMap pluginAttrs;
+	pluginAttrs["enabled"] = "1";
+	pluginAttrs["affect_light"]     = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "affect_light"));
+	pluginAttrs["only_camera_rays"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "only_camera_rays"));
+	pluginAttrs["clip_lights"]      = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "clip_lights"));
+	pluginAttrs["use_obj_mtl"]      = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "use_obj_mtl"));
+	pluginAttrs["set_material_id"]  = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "set_material_id"));
+	pluginAttrs["material_id"]      = BOOST_FORMAT_INT(RNA_int_get(&vrayClipper, "material_id"));
+	pluginAttrs["object_id"]        = BOOST_FORMAT_INT(ob.pass_index());
+	pluginAttrs["transform"]        = BOOST_FORMAT_TM(transform);
+
+	const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
+	if (NOT(excludeGroupName.empty())) {
+		StrSet exclusion_nodes;
+		BL::BlendData::groups_iterator grIt;
+		for (ExporterSettings::gSet.b_data.groups.begin(grIt); grIt != ExporterSettings::gSet.b_data.groups.end(); ++grIt) {
+			BL::Group gr = *grIt;
+			if (gr.name() == excludeGroupName) {
+				BL::Group::objects_iterator grObIt;
+				for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
+					BL::Object ob = *grObIt;
+					exclusion_nodes.insert(GetIDName(ob));
+				}
+				break;
+			}
+		}
+
+		pluginAttrs["exclusion_mode"] = BOOST_FORMAT_INT(RNA_enum_get(&vrayClipper, "exclusion_mode"));
+		pluginAttrs["exclusion_nodes"] = BOOST_FORMAT_LIST(exclusion_nodes);
+	}
+
+	if (NOT(material.empty()) && material != "NULL")
+		pluginAttrs["material"] = material;
+
+	VRayNodePluginExporter::exportPlugin("NODE", "VRayClipper", pluginName, pluginAttrs);
 }
 
 

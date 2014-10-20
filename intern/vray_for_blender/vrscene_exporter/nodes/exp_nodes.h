@@ -210,7 +210,6 @@ public:
 													 const std::string &manualName="");
 
 	static void             exportVRayEnvironment(VRayNodeContext *context);
-	static void             exportVRayClipper(BL::BlendData bl_data, BL::Object bl_ob);
 	static std::string      exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob);
 
 	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context=NULL);

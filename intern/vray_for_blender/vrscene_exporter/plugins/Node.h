@@ -112,7 +112,7 @@ public:
 	void            setHideFromView(const RenderStats &renderStats);
 	void            setDupliHolder(BL::Object ob);
 	void            setNamePrefix(const std::string &name_prefix);
-	void            setTransform(float tm[4][4]);
+	void            setTransform(const BLTransform &tm);
 
 	static LightLinker *m_lightLinker;
 	static StrSet      *m_scene_nodes;
