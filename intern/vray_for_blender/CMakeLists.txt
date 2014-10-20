@@ -105,7 +105,6 @@ set(SRC
 	vrscene_exporter/nodes/specials/Blender.cpp
 	vrscene_exporter/nodes/specials/UVWGen.cpp
 	vrscene_exporter/nodes/specials/MtlMulti.cpp
-	vrscene_exporter/nodes/specials/VRayClipper.cpp
 	vrscene_exporter/nodes/specials/Effects.cpp
 	vrscene_exporter/nodes/specials/Environment.cpp
 	vrscene_exporter/nodes/specials/Custom.cpp
