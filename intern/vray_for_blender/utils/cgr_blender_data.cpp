@@ -264,6 +264,7 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 				return 0;
 		}
 			break;
+		case OB_MBALL:
 		case OB_SURF:
 		case OB_CURVE: {
 			Mesh *mesh = GetRenderMesh(sce, main, ob);
@@ -274,9 +275,6 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 				return 0;
 			}
 		}
-			break;
-		case OB_MBALL:
-			break;
 		case OB_MESH:
 			break;
 		default:
