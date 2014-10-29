@@ -1223,7 +1223,10 @@ void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, M
 	sp->slot = slot;
 	sp->bmain = CTX_data_main(C);
 
-	if (et && et->render && et->preview_main) {
+	if (et && et->render && *et->preview_filepath) {
+		if (!et->preview_main) {
+			et->preview_main = BLO_load_main_from_file(et->preview_filepath);
+		}
 		sp->pr_main = et->preview_main;
 	}
 	else if ((method != PR_NODE_RENDER) && id_type != ID_TE && use_new_shading) {
