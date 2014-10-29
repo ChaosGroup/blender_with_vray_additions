@@ -160,6 +160,7 @@
 #include "BKE_fcurve.h"
 #include "BKE_pointcache.h"
 #include "BKE_mesh.h"
+#include "BKE_idprop.h"
 
 #ifdef USE_NODE_COMPAT_CUSTOMNODES
 #include "NOD_socket.h"	/* for sock->default_value data */
@@ -3792,6 +3793,11 @@ int BLO_write_file(Main *mainvar, const char *filepath, int write_flags, ReportL
 			}
 		}
 	}
+
+	/* restore fake user flag for ID properties              */
+	/* flag user could be reseted when append/copy/paste etc */
+	/* without this ID properties' data will be wiped out    */
+	IDP_restore_fake_user();
 
 	write_user_block= write_flags & G_FILE_USERPREFS;
 
