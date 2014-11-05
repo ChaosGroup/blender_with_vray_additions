@@ -1217,6 +1217,47 @@ void IDP_ClearProperty(IDProperty *prop)
 	prop->len = prop->totallen = 0;
 }
 
+// Group functions were removed by Campbell Barton:
+//   4b3f1b7540c43999b94c5147eabd6b0b7a6693f8 Cleanup: remove rarely used IDProp iterator
+// Restoring them here for further investigation if they are needed for
+// IDProperty patch
+//
+
+typedef struct IDPIter {
+	void *next;
+	IDProperty *parent;
+} IDPIter;
+
+static void *IDP_GetGroupIterator(IDProperty *prop)
+{
+	IDPIter *iter;
+
+	BLI_assert(prop->type == IDP_GROUP);
+	iter = MEM_mallocN(sizeof(IDPIter), "IDPIter");
+	iter->next = prop->data.group.first;
+	iter->parent = prop;
+	return (void *) iter;
+}
+
+static IDProperty *IDP_GroupIterNext(void *vself)
+{
+	IDPIter *self = (IDPIter *) vself;
+	Link *next = (Link *) self->next;
+	if (self->next == NULL) {
+		MEM_freeN(self);
+		return NULL;
+	}
+
+	self->next = next->next;
+	return (void *) next;
+}
+
+static void IDP_FreeIterBeforeEnd(void *vself)
+{
+	MEM_freeN(vself);
+}
+
+
 /**
  * Unlinks any struct IDProperty<->ID linkage that might be going on.
  */
