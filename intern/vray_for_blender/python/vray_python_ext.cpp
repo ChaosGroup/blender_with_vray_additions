@@ -418,6 +418,21 @@ static PyObject* mExportShaders(PyObject *self, PyObject *args)
 }
 
 
+static void ExportObjectMaterials(BL::BlendData b_data, BL::Object b_ob)
+{
+	BL::Object::material_slots_iterator slIt;
+	for(b_ob.material_slots.begin(slIt); slIt != b_ob.material_slots.end(); ++slIt) {
+		BL::MaterialSlot b_sl = *slIt;
+		if (b_sl) {
+			BL::Material b_ma = b_sl.material();
+			if (b_ma) {
+				VRayNodeExporter::exportMaterial(b_data, b_ma);
+			}
+		}
+	}
+}
+
+
 static PyObject* mExportObject(PyObject *self, PyObject *args)
 {
 	PyObject *py_exporter = NULL;
@@ -438,15 +453,27 @@ static PyObject* mExportObject(PyObject *self, PyObject *args)
 
 	VRsceneExporter *exporter = (VRsceneExporter*)PyLong_AsVoidPtr(py_exporter);
 	if(exporter) {
-		BL::Object::material_slots_iterator slIt;
-		for(b_ob.material_slots.begin(slIt); slIt != b_ob.material_slots.end(); ++slIt) {
-			BL::MaterialSlot b_sl = *slIt;
-			if (b_sl) {
-				BL::Material b_ma = b_sl.material();
-				if (b_ma) {
-					VRayNodeExporter::exportMaterial(b_data, b_ma);
-				}
+		ExportObjectMaterials(b_data, b_ob);
+
+		if(b_ob.is_duplicator()) {
+			b_ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
+
+			BL::Object::dupli_list_iterator b_dup;
+			for(b_ob.dupli_list.begin(b_dup); b_dup != b_ob.dupli_list.end(); ++b_dup) {
+				BL::DupliObject bl_dupliOb      = *b_dup;
+				BL::Object      bl_duplicatedOb =  bl_dupliOb.object();
+
+				if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
+					continue;
+
+				DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
+				if(NOT(GEOM_TYPE(dupliOb->ob)))
+					continue;
+
+				ExportObjectMaterials(b_data, bl_duplicatedOb);
 			}
+
+			b_ob.dupli_list_clear();
 		}
 
 		exporter->exportObjectBase((Object*)b_ob.ptr.data);
