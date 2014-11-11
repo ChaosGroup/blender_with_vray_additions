@@ -146,6 +146,13 @@ GeomStaticMesh::GeomStaticMesh(Scene *scene, Main *main, Object *ob):
 	m_mtlIDsArray = NULL;
 	m_edgeVisArray = NULL;
 
+	m_vertsArraySize = 0;
+	m_facesArraySize = 0;
+	m_normalsArraySize = 0;
+	m_faceNormalsArraySize = 0;
+	m_mtlIDArraySize = 0;
+	m_edgeVisArraySize = 0;
+
 	map_channels.clear();
 
 	dynamic_geometry = 0;
@@ -744,12 +751,12 @@ void GeomStaticMesh::initHash()
 
 	// If not animation don't waste time calculating hashes
 	if(ExporterSettings::gSet.m_isAnimation) {
-		m_hashVertices    = hashArray(m_vertsArray,       m_vertsArraySize       * sizeof(float));
-		m_hashNormals     = hashArray(m_normalsArray,     m_normalsArraySize     * sizeof(float));
-		m_hashFaces       = hashArray(m_facesArray,       m_facesArraySize       * sizeof(int));
-		m_hashFaceNormals = hashArray(m_faceNormalsArray, m_faceNormalsArraySize * sizeof(int));
-		m_hashFaceMtlIDs  = hashArray(m_mtlIDsArray,      m_mtlIDArraySize       * sizeof(int));
-		m_hashEdgeVis     = hashArray(m_edgeVisArray,     m_edgeVisArraySize     * sizeof(int));
+		m_hashVertices    = m_vertsArray       ? hashArray(m_vertsArray,       m_vertsArraySize       * sizeof(float)) : 1;
+		m_hashNormals     = m_normalsArray     ? hashArray(m_normalsArray,     m_normalsArraySize     * sizeof(float)) : 1;
+		m_hashFaces       = m_facesArray       ? hashArray(m_facesArray,       m_facesArraySize       * sizeof(int))   : 1;
+		m_hashFaceNormals = m_faceNormalsArray ? hashArray(m_faceNormalsArray, m_faceNormalsArraySize * sizeof(int))   : 1;
+		m_hashFaceMtlIDs  = m_mtlIDsArray      ? hashArray(m_mtlIDsArray,      m_mtlIDArraySize       * sizeof(int))   : 1;
+		m_hashEdgeVis     = m_edgeVisArray     ? hashArray(m_edgeVisArray,     m_edgeVisArraySize     * sizeof(int))   : 1;
 	}
 
 	freeArrays();
