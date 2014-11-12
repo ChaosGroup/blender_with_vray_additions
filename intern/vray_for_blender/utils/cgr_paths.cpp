@@ -49,6 +49,15 @@ std::string BlenderUtils::GetFullFilepath(const std::string &filepath, ID *holde
 
 	BLI_path_abs(absFilepath, ID_BLEND_PATH_EX(holder));
 
+	// Convert UNC filepath "\\" to "/" on *nix
+	// User then have to mount share "\\MyShare" to "/MyShare"
+#ifndef _WIN32
+	if (absFilepath[0] == '\\' && absFilepath[1] == '\\') {
+		absFilepath[1] = '/';
+		return absFilepath+1;
+	}
+#endif
+
 	return absFilepath;
 }
 
