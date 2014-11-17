@@ -922,10 +922,17 @@ void VRsceneExporter::exportVRayAsset(BL::Object ob, const NodeAttrs &attrs)
 	pluginAttrs["transform"]     = BOOST_FORMAT_TM(transform);
 
 	pluginAttrs["add_nodes"]       = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddNodes"));
-	pluginAttrs["add_materials"]   = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddMaterials"));
 	pluginAttrs["add_lights"]      = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddLights"));
-	pluginAttrs["add_cameras"]     = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddCameras"));
-	pluginAttrs["add_environment"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddEnvironment"));
+
+	// pluginAttrs["add_materials"]   = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddMaterials"));
+	// pluginAttrs["add_cameras"]     = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddCameras"));
+	// pluginAttrs["add_environment"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddEnvironment"));
+
+	pluginAttrs["anim_type"]   = BOOST_FORMAT_INT(RNA_enum_ext_get(&vrayAsset, "anim_type"));
+	pluginAttrs["anim_speed"]  = BOOST_FORMAT_FLOAT(RNA_float_get(&vrayAsset, "anim_speed"));
+	pluginAttrs["anim_offset"] = BOOST_FORMAT_FLOAT(RNA_float_get(&vrayAsset, "anim_offset"));
+	pluginAttrs["anim_start"]  = BOOST_FORMAT_INT(RNA_int_get(&vrayAsset, "anim_start"));
+	pluginAttrs["anim_length"] = BOOST_FORMAT_INT(RNA_int_get(&vrayAsset, "anim_length"));
 
 	VRayNodePluginExporter::exportPlugin("NODE", "VRayScene", pluginName, pluginAttrs);
 }
