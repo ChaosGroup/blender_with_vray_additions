@@ -43,7 +43,6 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_camera.h"
-#include "BLO_readfile.h"
 
 #include "BKE_global.h"
 #include "BKE_report.h"
@@ -70,7 +69,6 @@
 static RenderEngineType internal_render_type = {
 	NULL, NULL,
 	"BLENDER_RENDER", N_("Blender Render"), RE_INTERNAL,
-	"", NULL, false,
 	NULL, NULL, NULL, NULL, NULL, NULL,
 	{NULL, NULL, NULL}
 };
@@ -80,7 +78,6 @@ static RenderEngineType internal_render_type = {
 static RenderEngineType internal_game_type = {
 	NULL, NULL,
 	"BLENDER_GAME", N_("Blender Game"), RE_INTERNAL | RE_GAME,
-	"", NULL, false,
 	NULL, NULL, NULL, NULL, NULL, NULL,
 	{NULL, NULL, NULL}
 };
@@ -146,13 +143,6 @@ RenderEngine *RE_engine_create_ex(RenderEngineType *type, bool use_for_viewport)
 {
 	RenderEngine *engine = MEM_callocN(sizeof(RenderEngine), "RenderEngine");
 	engine->type = type;
-
-	/* initialize additional preview_main properties */
-	/* has to be here to be sure, that external renderer addon is fully loaded */
-	if (type->preview_main && !type->preview_main_initialized) {
-		BLO_verify_custom_data(type->preview_main);
-		type->preview_main_initialized = true;
-	}
 
 	if (use_for_viewport) {
 		engine->flag |= RE_ENGINE_USED_FOR_VIEWPORT;
