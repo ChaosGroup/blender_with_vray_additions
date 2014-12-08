@@ -46,7 +46,6 @@
 #include "BLI_math.h"
 #include "BLI_blenlib.h"
 #include "BLI_utildefines.h"
-#include "BLI_threads.h"
 
 #include "BLO_readfile.h"
 
@@ -1192,7 +1191,6 @@ void ED_preview_icon_job(const bContext *C, void *owner, ID *id, unsigned int *r
 
 	WM_jobs_start(CTX_wm_manager(C), wm_job);
 }
-
 
 void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, MTex *slot, int sizex, int sizey, int method)
 {
