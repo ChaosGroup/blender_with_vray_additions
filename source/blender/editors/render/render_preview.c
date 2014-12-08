@@ -1226,7 +1226,7 @@ void ED_preview_shader_job(const bContext *C, void *owner, ID *id, ID *parent, M
 		if (!et->preview_main) {
 			et->preview_main = BLO_load_main_from_file(et->preview_filepath);
 		}
-		sp->pr_main = et->preview_main;
+		sp->pr_main = et->preview_main ? : G_pr_main;
 	}
 	else if ((method != PR_NODE_RENDER) && id_type != ID_TE && use_new_shading) {
 		sp->pr_main = G_pr_main_cycles;
