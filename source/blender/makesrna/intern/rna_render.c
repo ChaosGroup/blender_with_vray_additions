@@ -634,7 +634,7 @@ static void rna_def_render_engine(BlenderRNA *brna)
 	prop = RNA_def_property(srna, "bl_use_texture_preview", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "type->flag", RE_USE_TEXTURE_PREVIEW);
 	RNA_def_property_flag(prop, PROP_REGISTER_OPTIONAL);
-	
+
 	prop = RNA_def_property(srna, "bl_preview_filepath", PROP_STRING, PROP_NONE);
 	RNA_def_property_string_sdna(prop, NULL, "type->preview_filepath");
 	RNA_def_property_flag(prop, PROP_REGISTER_OPTIONAL);
