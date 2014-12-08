@@ -978,7 +978,8 @@ bool WM_operator_properties_default(PointerRNA *ptr, const bool do_update)
 				StructRNA *ptype = RNA_property_pointer_type(ptr, prop);
 				if (ptype != &RNA_Struct) {
 					PointerRNA opptr = RNA_property_pointer_get(ptr, prop);
-					changed |= WM_operator_properties_default(&opptr, do_update);
+					if (opptr.type)
+						changed |= WM_operator_properties_default(&opptr, do_update);
 				}
 				break;
 			}
