@@ -934,6 +934,25 @@ void VRsceneExporter::exportVRayAsset(BL::Object ob, const NodeAttrs &attrs)
 	pluginAttrs["anim_start"]  = BOOST_FORMAT_INT(RNA_int_get(&vrayAsset, "anim_start"));
 	pluginAttrs["anim_length"] = BOOST_FORMAT_INT(RNA_int_get(&vrayAsset, "anim_length"));
 
+	if (ExporterSettings::gSet.m_mtlOverride) {
+		pluginAttrs["material_override"] = ExporterSettings::gSet.m_mtlOverrideName;
+	}
+
+	if (RNA_boolean_get(&vrayAsset, "use_hide_objects")) {
+		std::string hidden_objects = RNA_std_string_get(&vrayAsset, "hidden_objects");
+		if (hidden_objects.size()) {
+			StrVector hidden_objects_vec;
+			boost::split(hidden_objects_vec, hidden_objects, boost::is_any_of(";"), boost::token_compress_on);
+
+			StrSet hidden_objects_set;
+			for (StrVector::const_iterator sIt = hidden_objects_vec.begin(); sIt != hidden_objects_vec.end(); ++sIt) {
+				hidden_objects_set.insert(BOOST_FORMAT_STRING(*sIt));
+			}
+
+			pluginAttrs["hidden_objects"] = BOOST_FORMAT_LIST(hidden_objects_set);
+		}
+	}
+
 	VRayNodePluginExporter::exportPlugin("NODE", "VRayScene", pluginName, pluginAttrs);
 }
 
