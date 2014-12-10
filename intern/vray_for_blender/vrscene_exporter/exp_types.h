@@ -90,7 +90,7 @@ extern "C" {
 	attrType == "GEOMETRY" || \
 	attrType == "PLUGIN")
 
-#define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s);
+#define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s)
 #define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6g") % f)
 #define BOOST_FORMAT_TM(tm)    boost::str(boost::format("TransformHex(\"%s\")") % tm)
 #define BOOST_FORMAT_INT(i)    boost::str(boost::format("%i") % i)
