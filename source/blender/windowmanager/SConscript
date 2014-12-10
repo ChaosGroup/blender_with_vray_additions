@@ -49,6 +49,7 @@ incs = [
     '../imbuf',
     '../makesdna',
     '../makesrna',
+    '../makesrna/intern',
     '../nodes',
     '../python',
     '../render/extern/include',
