@@ -105,13 +105,13 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 	bpath dstFilepath = dstDirpath / fileName;
 
 	bool needCopy = true;
-
+#if 0
 	if(bfs::exists(dstFilepath)) {
 		if(bfs::file_size(srcFilepath) == bfs::file_size(dstFilepath)) {
 			needCopy = false;
 		}
 	}
-
+#endif
 	if(needCopy) {
 		PRINT_INFO_EX("Copying \"%s\" to \"%s\"...",
 					  fileName.c_str(), dstDirpath.c_str());
