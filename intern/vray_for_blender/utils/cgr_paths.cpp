@@ -122,11 +122,20 @@ std::string BlenderUtils::CopyDRAsset(const std::string &filepath)
 		catch(const bfs::filesystem_error &ex) {
 			PRINT_ERROR("Exception %s: Error copying \"%s\" file to \"%s\"!",
 						ex.what(), fileName.c_str(), dstDirpath.c_str());
-			return filepath;
 		}
 	}
 
-	// XXX: Network path is not supported!
+	std::string finalFilepath = dstFilepath.string();
 
-	return dstFilepath.string();
+	if (ExporterSettings::gSet.m_drNetType == ExporterSettings::eWINDOWS &&
+	    ExporterSettings::gSet.m_drAssetShare == ExporterSettings::eSHARE)
+	{
+		const std::string &uncPrefix = boost::str(boost::format("\\\\%s\\%s\\")
+		                                          % ExporterSettings::gSet.m_hostname
+		                                          % ExporterSettings::gSet.m_drShareName);
+
+		boost::replace_all(finalFilepath, ExporterSettings::gSet.m_drSharePath, uncPrefix);
+	}
+
+	return finalFilepath;
 }
