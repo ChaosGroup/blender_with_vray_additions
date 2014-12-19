@@ -5486,6 +5486,7 @@ static void rna_def_scene_render_data(BlenderRNA *brna)
 	prop = RNA_def_property(srna, "display_mode", PROP_ENUM, PROP_NONE);
 	RNA_def_property_enum_bitflag_sdna(prop, NULL, "displaymode");
 	RNA_def_property_enum_items(prop, display_mode_items);
+	RNA_def_property_enum_default(prop, R_OUTPUT_NONE);
 	RNA_def_property_ui_text(prop, "Display", "Select where rendered images will be displayed");
 	RNA_def_property_update(prop, NC_SCENE | ND_RENDER_OPTIONS, NULL);
 
