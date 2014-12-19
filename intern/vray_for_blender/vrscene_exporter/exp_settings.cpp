@@ -126,6 +126,13 @@ void ExporterSettings::init()
 			}
 		}
 	}
+
+	PointerRNA vrayDR = RNA_pointer_get(&vrayScene, "VRayDR");
+	m_drShareName = RNA_std_string_get(&vrayDR, "share_name");
+	m_drNetType = (VRayDRNetType)RNA_enum_get(&vrayDR, "networkType");
+	m_drAssetShare = (VRayDRAssetShare)RNA_enum_get(&vrayDR, "assetSharing");
+
+	m_hostname = boost::asio::ip::host_name();
 }
 
 

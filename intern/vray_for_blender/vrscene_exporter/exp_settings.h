@@ -25,6 +25,8 @@
 
 #include <Python.h>
 
+#include <boost/asio/ip/host_name.hpp>
+
 #include "cgr_config.h"
 
 #include "BKE_global.h"
@@ -36,7 +38,19 @@
 
 class VRsceneExporter;
 
+
 struct ExporterSettings {
+	enum VRayDRAssetShare {
+		eTRANSFER = 0,
+		eSHARE,
+		eABSOLUTE,
+	};
+
+	enum VRayDRNetType {
+		eWINDOWS = 0,
+		eUNIX,
+	};
+
 	static ExporterSettings gSet;
 
 	ExporterSettings():
@@ -94,6 +108,10 @@ struct ExporterSettings {
 
 	// DR
 	std::string       m_drSharePath;
+	std::string       m_drShareName;
+	VRayDRNetType     m_drNetType;
+	VRayDRAssetShare  m_drAssetShare;
+	std::string       m_hostname;
 
 	VRsceneExporter  *m_exporter;
 
