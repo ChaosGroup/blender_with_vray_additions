@@ -62,6 +62,7 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 
 	filelist_setdir(files, dirPath.c_str());
 	filelist_readdir(files);
+	filelist_filter(files);
 
 	int nFiles = filelist_numfiles(files);
 
