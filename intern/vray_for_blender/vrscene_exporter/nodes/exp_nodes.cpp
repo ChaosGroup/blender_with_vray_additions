@@ -743,9 +743,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 
 	std::string conSockAttrName;
 	if(RNA_struct_find_property(&toSocket.ptr, "vray_attr")) {
-		char rnaStringBuf[CGR_MAX_PLUGIN_NAME];
-		RNA_string_get(&toSocket.ptr, "vray_attr", rnaStringBuf);
-		conSockAttrName = rnaStringBuf;
+		conSockAttrName = RNA_std_string_get(&toSocket.ptr, "vray_attr");
 	}
 
 	if(NOT(conSockAttrName.empty())) {
