@@ -684,28 +684,33 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 				return "NULL";
 			}
 
-			// Forward the real socket
-			toSocket = VRayNodeExporter::getConnectedSocket(groupInputSocket);
-			if(NOT(toSocket.ptr.data))
-				return "NULL";
-
-			// Finally get the node connected to the socket on the Group node
-			toNode = VRayNodeExporter::getConnectedNode(groupInputSocket);
-			if(NOT(toNode)) {
-				PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
-							ntree.name().c_str(), groupNode.name().c_str());
-				return "NULL";
+			if (NOT(groupInputSocket.is_linked())) {
+				connectedPlugin = VRayNodeExporter::exportDefaultSocket(ntree, groupInputSocket);
 			}
+			// Forward the real socket
+			else {
+				toSocket = VRayNodeExporter::getConnectedSocket(groupInputSocket);
+				if(NOT(toSocket.ptr.data))
+					return "NULL";
 
-			// We are going out of group here
-			BL::NodeTree  currentTree  = context->popParentTree();
-			BL::NodeGroup currentGroup = context->popGroupNode();
+				// Finally get the node connected to the socket on the Group node
+				toNode = VRayNodeExporter::getConnectedNode(groupInputSocket);
+				if(NOT(toNode)) {
+					PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
+					            ntree.name().c_str(), groupNode.name().c_str());
+					return "NULL";
+				}
 
-			connectedPlugin = VRayNodeExporter::exportVRayNode(parentTree, toNode, fromSocket, context);
+				// We are going out of group here
+				BL::NodeTree  currentTree  = context->popParentTree();
+				BL::NodeGroup currentGroup = context->popGroupNode();
 
-			// We could go into the group after
-			context->pushGroupNode(currentGroup);
-			context->pushParentTree(currentTree);
+				connectedPlugin = VRayNodeExporter::exportVRayNode(parentTree, toNode, fromSocket, context);
+
+				// We could go into the group after
+				context->pushGroupNode(currentGroup);
+				context->pushParentTree(currentTree);
+			}
 		}
 	}
 	else if(toNode.is_a(&RNA_NodeReroute)) {
