@@ -204,14 +204,11 @@ BL::NodeSocket VRayNodeExporter::getOutputSocketByName(BL::Node node, const std:
 
 BL::NodeSocket VRayNodeExporter::getSocketByAttr(BL::Node node, const std::string &attrName)
 {
-	char rnaStringBuf[CGR_MAX_PLUGIN_NAME];
-
 	BL::Node::inputs_iterator sockIt;
 	for(node.inputs.begin(sockIt); sockIt != node.inputs.end(); ++sockIt) {
 		std::string sockAttrName;
 		if(RNA_struct_find_property(&sockIt->ptr, "vray_attr")) {
-			RNA_string_get(&sockIt->ptr, "vray_attr", rnaStringBuf);
-			sockAttrName = rnaStringBuf;
+			sockAttrName = RNA_std_string_get(&sockIt->ptr, "vray_attr");
 		}
 
 		if(sockAttrName.empty())
