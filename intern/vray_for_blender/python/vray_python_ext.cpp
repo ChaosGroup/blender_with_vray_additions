@@ -151,6 +151,8 @@ static PyObject* mExportInit(PyObject *self, PyObject *args, PyObject *keywds)
 	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(py_data), &dataRNA);
 	BL::BlendData bl_data(dataRNA);
 
+	VRayNodeExporter::init(bl_data);
+
 	ExporterSettings::gSet.reset();
 	ExporterSettings::gSet.init(bl_context, bl_scene, bl_data, bl_engine);
 	ExporterSettings::gSet.m_sce  = (Scene*)bl_scene.ptr.data;
