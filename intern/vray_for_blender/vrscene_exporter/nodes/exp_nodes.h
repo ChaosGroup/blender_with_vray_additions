@@ -177,6 +177,7 @@ private:
 
 class VRayNodeExporter {
 public:
+	static void             init(BL::BlendData data);
 	static void             getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable=false);
 
 	static std::string      getValueFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName);

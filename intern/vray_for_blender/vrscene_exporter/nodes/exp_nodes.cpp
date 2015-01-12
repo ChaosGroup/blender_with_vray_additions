@@ -23,6 +23,10 @@
 #include "exp_nodes.h"
 #include "cgr_paths.h"
 
+extern "C" {
+#  include "BKE_node.h"
+}
+
 
 VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
 StrSet           VRayNodePluginExporter::m_namesCache;
@@ -58,6 +62,18 @@ std::string VRayNodeExporter::getPluginID(BL::Node node)
 	if(RNA_struct_find_property(&node.ptr, "vray_plugin"))
 		return RNA_std_string_get(&node.ptr, "vray_plugin");
 	return "";
+}
+
+
+void VRayNodeExporter::init(BL::BlendData data)
+{
+	// NOTE: On scene save node links are not properly updated for some
+	// reason; simply manually update everything...
+	//
+	BL::BlendData::node_groups_iterator nIt;
+	for (data.node_groups.begin(nIt); nIt != data.node_groups.end(); ++nIt) {
+		ntreeUpdateTree((struct Main*)data.ptr.data, (struct bNodeTree*)(nIt->ptr.data));
+	}
 }
 
 
