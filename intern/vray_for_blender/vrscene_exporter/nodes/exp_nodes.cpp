@@ -27,7 +27,6 @@ extern "C" {
 #  include "BKE_node.h"
 }
 
-
 VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
 StrSet           VRayNodePluginExporter::m_namesCache;
 
@@ -904,8 +903,34 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 				BL::NodeSocket sock = VRayNodeExporter::getSocketByAttr(node, attrName);
 				if(sock) {
 					std::string socketValue = VRayNodeExporter::exportSocket(ntree, sock, context);
-					if(socketValue != "NULL")
+					if(socketValue != "NULL") {
 						pluginAttrs[attrName] = socketValue;
+					}
+					else {
+						if (attrName == "uvwgen") {
+							const std::string uvwgenName = "UVW@" + VRayNodeExporter::getPluginName(node, ntree, context);
+							std::string       uvwgenType = "UVWGenObject";
+							AttributeValueMap uvwgenAttrs;
+
+							if (pluginID == "TexBitmap") {
+								uvwgenType = "UVWGenChannel";
+							}
+							else {
+								if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
+									uvwgenType = "UVWGenProjection";
+									uvwgenAttrs["type"] = "5";
+									uvwgenAttrs["object_space"] = "1";
+								}
+								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
+									uvwgenType = "UVWGenObject";
+								}
+							}
+
+							VRayNodePluginExporter::exportPlugin("TEXTURE", uvwgenType, uvwgenName, uvwgenAttrs);
+
+							pluginAttrs[attrName] = uvwgenName;
+						}
+					}
 				}
 			}
 			else {

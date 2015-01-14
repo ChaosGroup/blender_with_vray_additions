@@ -53,6 +53,8 @@ void ExporterSettings::init()
 	m_useAltInstances   = RNA_boolean_get(&vrayExporter, "use_alt_d_instances");
 	m_subsurfToOSD      = RNA_boolean_get(&vrayExporter, "subsurf_to_osd");
 
+	m_defaultMapping = (VRayDefMapping)RNA_enum_ext_get(&vrayExporter, "default_mapping");
+
 	// Check what layers to use
 	//
 	const int useLayers = RNA_enum_get(&vrayExporter, "activeLayers");

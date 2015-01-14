@@ -51,6 +51,11 @@ struct ExporterSettings {
 		eUNIX,
 	};
 
+	enum VRayDefMapping {
+		eObject = 0,
+		eCube,
+	};
+
 	static ExporterSettings gSet;
 
 	ExporterSettings():
@@ -96,6 +101,7 @@ struct ExporterSettings {
 	int               m_useDisplaceSubdiv;
 	int               m_useAltInstances;
 	int               m_subsurfToOSD;
+	VRayDefMapping    m_defaultMapping;
 
 	std::string       m_mtlOverrideName;
 	BL::Material      m_mtlOverride;
