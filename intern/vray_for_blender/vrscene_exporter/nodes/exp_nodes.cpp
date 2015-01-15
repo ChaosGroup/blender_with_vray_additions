@@ -907,7 +907,7 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 						pluginAttrs[attrName] = socketValue;
 					}
 					else {
-						if (attrName == "uvwgen") {
+						if (pluginType == "TEXTURE" && attrName == "uvwgen") {
 							const std::string uvwgenName = "UVW@" + VRayNodeExporter::getPluginName(node, ntree, context);
 							std::string       uvwgenType = "UVWGenObject";
 							AttributeValueMap uvwgenAttrs;
