@@ -220,8 +220,11 @@ void GeomStaticMesh::init()
 	if (b_sbs)
 		b_sbs.show_render(b_sbs_show_render);
 
+	// NOTE: Seems like manual recalculation is not needed anymore
+#if 0
 	if (b_mesh.use_auto_smooth())
-		b_mesh.calc_normals_split(b_mesh.auto_smooth_angle());
+		b_mesh.calc_normals_split();
+#endif
 
 	b_mesh.calc_tessface();
 

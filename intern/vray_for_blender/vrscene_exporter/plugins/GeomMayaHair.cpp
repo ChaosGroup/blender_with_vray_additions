@@ -307,8 +307,8 @@ void GeomMayaHair::initData()
 		num_hair_vertices_arrSize = child_total;
 		num_hair_vertices_arr = new int[child_total];
 		for(p = 0; p < child_total; ++p) {
-			num_hair_vertices_arr[p] = child_cache[p]->steps;
-			vertices_total_count += child_cache[p]->steps;
+			num_hair_vertices_arr[p] = child_cache[p]->segments;
+			vertices_total_count += child_cache[p]->segments;
 		}
 	}
 	else {
@@ -336,7 +336,7 @@ void GeomMayaHair::initData()
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {
 			child_key   = child_cache[p];
-			child_steps = child_key->steps;
+			child_steps = child_key->segments;
 
 			float hair_fade_width = hair_width;
 			float hair_fade_step  = hair_width / (child_steps+1);
