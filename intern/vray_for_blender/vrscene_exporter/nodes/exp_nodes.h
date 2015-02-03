@@ -265,6 +265,7 @@ private:
 													  VRayNodeContext *context);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
+	static void             exportBitmapBuffer(VRayNodeExportParam, AttributeValueMap &attrs);
 	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 											           VRayNodeContext *context);
 	static std::string      exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
