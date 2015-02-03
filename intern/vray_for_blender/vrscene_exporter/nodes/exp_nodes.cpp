@@ -914,6 +914,7 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 
 							if (pluginID == "TexBitmap") {
 								uvwgenType = "UVWGenChannel";
+								uvwgenAttrs["uvw_channel"] = "0";
 							}
 							else {
 								if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
