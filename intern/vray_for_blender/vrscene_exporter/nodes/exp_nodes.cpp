@@ -847,11 +847,13 @@ std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, co
 
 
 void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
-											 BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-											 VRayNodeContext *context, const AttributeValueMap &manualAttrs)
+											 VRayNodeExportParam,
+											 const AttributeValueMap &manualAttrs,
+											 const std::string &customID,
+											 const std::string &customType)
 {
-	const std::string &pluginType = VRayNodeExporter::getPluginType(node);
-	const std::string &pluginID   = VRayNodeExporter::getPluginID(node);
+	const std::string &pluginType = customType.empty() ? VRayNodeExporter::getPluginType(node) : customType;
+	const std::string &pluginID   = customID.empty()   ? VRayNodeExporter::getPluginID(node)   : customID;
 
 	if(pluginID.empty()) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node plugin ID!",
@@ -944,16 +946,14 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													   VRayNodeContext *context, const AttributeValueMap &manualAttrs,
-													   const std::string &manualName)
+std::string VRayNodeExporter::exportVRayNodeAttributes(VRayNodeExportParam, const AttributeValueMap &customAttrs, const std::string &customName, const std::string &customID, const std::string &customType)
 {
-	const std::string &pluginName = manualName.empty() ? VRayNodeExporter::getPluginName(node, ntree, context) : manualName;
-	const std::string &pluginType = VRayNodeExporter::getPluginType(node);
-	const std::string &pluginID   = VRayNodeExporter::getPluginID(node);
+	const std::string &pluginName = customName.empty() ? VRayNodeExporter::getPluginName(node, ntree, context) : customName;
+	const std::string &pluginType = customType.empty() ? VRayNodeExporter::getPluginType(node)                 : customType;
+	const std::string &pluginID   = customID.empty()   ? VRayNodeExporter::getPluginID(node)                   : customID;
 
 	AttributeValueMap pluginAttrs;
-	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context, manualAttrs);
+	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context, customAttrs, pluginID, pluginType);
 
 	VRayNodePluginExporter::exportPlugin(pluginType, pluginID, pluginName, pluginAttrs);
 
@@ -1090,6 +1090,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeVolumeVRayToon") {
 		return VRayNodeExporter::exportVRayNodeVolumeVRayToon(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeMetaImageTexture") {
+		return VRayNodeExporter::exportVRayNodeMetaImageTexture(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);
