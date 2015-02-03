@@ -172,7 +172,7 @@ private:
 };
 
 
-#define VRayNodeExportParam BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context
+#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context
 
 
 class VRayNodeExporter {
@@ -202,13 +202,18 @@ public:
 	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
 
 	static void             getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
-											      BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-											      VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
-	static std::string      exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-										   VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap());
-	static std::string      exportVRayNodeAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													 VRayNodeContext *context=NULL, const AttributeValueMap &manualAttrs=AttributeValueMap(),
-													 const std::string &manualName="");
+												  VRayNodeExportParam,
+												  const AttributeValueMap &customAttrs=AttributeValueMap(),
+												  const std::string &customID="",
+												  const std::string &customType="");
+
+	static std::string      exportVRayNode(VRayNodeExportParam, const AttributeValueMap &manualAttrs=AttributeValueMap());
+
+	static std::string      exportVRayNodeAttributes(VRayNodeExportParam,
+													 const AttributeValueMap &customAttrs=AttributeValueMap(),
+													 const std::string &customName="",
+													 const std::string &customID="",
+													 const std::string &customType="");
 
 	static void             exportVRayEnvironment(VRayNodeContext *context);
 	static std::string      exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob);
