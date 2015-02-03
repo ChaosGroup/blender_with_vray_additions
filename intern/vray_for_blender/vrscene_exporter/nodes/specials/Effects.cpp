@@ -144,7 +144,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 			BL::Node lightsNode = VRayNodeExporter::getConnectedNode(lightsSock, context);
 			if(lightsNode) {
 				if(lightsNode.bl_idname() == "VRayNodeSelectObject" || lightsNode.bl_idname() == "VRayNodeSelectGroup") {
-					lightsList = VRayNodeExporter::exportVRayNode(ntree, lightsNode, lightsSock);
+					lightsList = VRayNodeExporter::exportVRayNode(ntree, lightsNode, lightsSock, context);
 
 					// NOTE: Attribute expects list even only one object is selected
 					if(lightsNode.bl_idname() == "VRayNodeSelectObject") {
