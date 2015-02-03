@@ -311,7 +311,9 @@ private:
 	static std::string      exportVRayNodeSphereFadeGizmo(VRayNodeExportParam);
 	static std::string      exportVRayNodeVolumeVRayToon(VRayNodeExportParam);
 
-private: 
+	static std::string      exportVRayNodeMetaImageTexture(VRayNodeExportParam);
+
+private:
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);
 	static BL::NodeSocket   getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket);
 
