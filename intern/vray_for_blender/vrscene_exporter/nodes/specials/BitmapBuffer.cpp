@@ -24,14 +24,13 @@
 #include "cgr_paths.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+void VRayNodeExporter::exportBitmapBuffer(VRayNodeExportParam, AttributeValueMap &attrs)
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
 		BL::ImageTexture imageTexture(b_tex.ptr);
 		if(imageTexture) {
-			AttributeValueMap  attrs;
-			std::string        absFilepath;
+			std::string absFilepath;
 
 			BL::Image image = imageTexture.image();
 			if(image) {
@@ -40,7 +39,7 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 
 				if(image.source() == BL::Image::source_SEQUENCE) {
 					BL::ImageUser imageUser = imageTexture.image_user();
-	
+
 					int seqFrame = 0;
 
 					int seqOffset = imageUser.frame_offset();
@@ -90,13 +89,23 @@ std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL:
 							  "\"Color Space\" is forced to \"Gamma Corrected\"",
 							  ntree.name().c_str(), node.name().c_str());
 			}
-
-			return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, attrs);
 		}
 	}
+}
 
-	PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
-				ntree.name().c_str(), node.name().c_str());
+
+std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+{
+	AttributeValueMap bitmapAttrs;
+	exportBitmapBuffer(ntree, node, fromSocket, context, bitmapAttrs);
+
+	if (bitmapAttrs.size()) {
+		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, bitmapAttrs);
+	}
+	else {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
+					ntree.name().c_str(), node.name().c_str());
+	}
 
 	return "NULL";
 }
