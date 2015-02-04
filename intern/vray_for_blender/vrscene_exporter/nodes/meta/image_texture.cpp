@@ -48,16 +48,46 @@ std::string VRayNodeExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam
 		switch (mappingType) {
 			case  0:  mappingPluginID = "UVWGenMayaPlace2dTexture"; break;
 			case  1:  mappingPluginID = "UVWGenProjection"; break;
-			default:  mappingPluginID = "UVWGenObject"; break;
+			case  2:  mappingPluginID = "UVWGenObject"; break;
+			default:
+				break;
 		}
 
-		const std::string &mappingPlugin = "Mapping@" + pluginName;
+		BL::NodeSocket     mappingSock(PointerRNA_NULL);
+		std::string        mappingPlugin;
 		AttributeValueMap  mappingAttrs;
-		exportVRayNodeAttributes(ntree, node, fromSocket, context,
-								 mappingAttrs,
-								 mappingPlugin,
-								 mappingPluginID,
-								 "UVWGEN");
+
+		// This means manually specified mapping node
+		if (mappingPluginID.empty()) {
+			mappingSock = VRayNodeExporter::getSocketByName(node, "Mapping");
+			if (mappingSock && mappingSock.is_linked()) {
+				mappingPlugin = VRayNodeExporter::exportLinkedSocket(ntree, mappingSock, context);
+			}
+			else {
+				// Fallback to some default
+				mappingPlugin = "DefChannelMapping@" + pluginName;
+				mappingAttrs["uvw_channel"] = "0";
+				VRayNodePluginExporter::exportPlugin("TEXTURE", "UVWGenChannel", mappingPlugin, mappingAttrs);
+			}
+		}
+
+		if (mappingPluginID == "UVWGenMayaPlace2dTexture") {
+			BL::NodeSocket rotateFrameTexSock = VRayNodeExporter::getSocketByAttr(node, "rotate_frame_tex");
+			if (rotateFrameTexSock && NOT(rotateFrameTexSock.is_linked())) {
+				const float rotate_frame_tex = DEG_TO_RAD(RNA_float_get(&rotateFrameTexSock.ptr, "value"));
+
+				mappingAttrs["rotate_frame_tex"] = BOOST_FORMAT_FLOAT(rotate_frame_tex);
+			}
+		}
+
+		if (mappingPlugin.empty()) {
+			mappingPlugin = "Mapping@" + pluginName;
+			exportVRayNodeAttributes(ntree, node, fromSocket, context,
+									 mappingAttrs,
+									 mappingPlugin,
+									 mappingPluginID,
+									 "UVWGEN");
+		}
 
 		pluginAttrs["bitmap"] = bitmapPlugin;
 		pluginAttrs["uvwgen"] = mappingPlugin;
