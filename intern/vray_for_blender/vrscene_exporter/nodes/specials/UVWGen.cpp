@@ -28,9 +28,6 @@
 #include <math.h>
 
 
-#define DEG_TO_RAD(d) (d * M_PI / 180.0f)
-
-
 static const char *sMappingType[] = {
 	"angular",
 	"cubic",
