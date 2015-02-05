@@ -54,6 +54,7 @@ struct ExporterSettings {
 	enum VRayDefMapping {
 		eObject = 0,
 		eCube,
+		eChannel
 	};
 
 	static ExporterSettings gSet;
