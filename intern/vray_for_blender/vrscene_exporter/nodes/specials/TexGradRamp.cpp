@@ -27,35 +27,9 @@ std::string VRayNodeExporter::exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
-		std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
-
-		BL::ColorRamp ramp = b_tex.color_ramp();
-
-		StrVector colors;
-		StrVector positions;
-
-		BL::ColorRamp::elements_iterator elIt;
-		int                              elNum = 0;
-		for(ramp.elements.begin(elIt); elIt != ramp.elements.end(); ++elIt) {
-			BL::ColorRampElement el = *elIt;
-
-			std::string colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
-
-			std::string color    = BOOST_FORMAT_ACOLOR(el.color());
-			std::string position = BOOST_FORMAT_FLOAT(el.position());
-
-			AttributeValueMap colAttrs;
-			colAttrs["texture"] = color;
-
-			VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColor", colPluginName, colAttrs);
-
-			colors.push_back(colPluginName);
-			positions.push_back(position);
-		}
-
 		AttributeValueMap manualAttrs;
-		manualAttrs["colors"]    = BOOST_FORMAT_LIST(colors);
-		manualAttrs["positions"] = BOOST_FORMAT_LIST_FLOAT(positions);
+		VRayNodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
+											  manualAttrs, "texture", "colors", "positions");
 
 		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 	}

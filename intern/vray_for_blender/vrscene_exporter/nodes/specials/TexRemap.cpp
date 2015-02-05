@@ -27,53 +27,9 @@ std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Nod
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {
-		std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
-
-		BL::ColorRamp ramp = b_tex.color_ramp();
-
-		StrVector   colors;
-		StrVector   positions;
-		StrVector   types;
-		std::string interpType;
-
-		int interp;
-		switch(ramp.interpolation()) {
-			case BL::ColorRamp::interpolation_CONSTANT: interp = 0; break;
-			case BL::ColorRamp::interpolation_LINEAR:   interp = 1; break;
-			case BL::ColorRamp::interpolation_EASE:     interp = 2; break;
-			case BL::ColorRamp::interpolation_CARDINAL: interp = 3; break;
-			case BL::ColorRamp::interpolation_B_SPLINE: interp = 4; break;
-			default:                                    interp = 1;
-		}
-		interpType = BOOST_FORMAT_INT(interp);
-
-		BL::ColorRamp::elements_iterator elIt;
-		int                              elNum = 0;
-
-		// XXX: Check why in Python I use reversed order
-		//
-		for(ramp.elements.begin(elIt); elIt != ramp.elements.end(); ++elIt) {
-			BL::ColorRampElement el = *elIt;
-
-			std::string colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
-
-			std::string color    = BOOST_FORMAT_ACOLOR(el.color());
-			std::string position = BOOST_FORMAT_FLOAT(el.position());
-
-			AttributeValueMap colAttrs;
-			colAttrs["texture"] = color;
-
-			VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColor", colPluginName, colAttrs);
-
-			colors.push_back(colPluginName);
-			positions.push_back(position);
-			types.push_back(interpType);
-		}
-
 		AttributeValueMap manualAttrs;
-		manualAttrs["color_colors"]    = BOOST_FORMAT_LIST(colors);
-		manualAttrs["color_positions"] = BOOST_FORMAT_LIST_FLOAT(positions);
-		manualAttrs["color_types"]     = BOOST_FORMAT_LIST_INT(types);
+		VRayNodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
+											  manualAttrs, "texture", "color_colors", "color_positions", "color_types");
 
 		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 	}
