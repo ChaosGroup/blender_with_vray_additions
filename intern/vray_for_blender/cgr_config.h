@@ -37,6 +37,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// For M_PI
+#ifdef WIN32
+#  define _USE_MATH_DEFINES
+#endif
+#include <math.h>
+
 #define CGR_PLUGIN_NAME V-Ray For Blender
 
 #ifdef DEBUG
