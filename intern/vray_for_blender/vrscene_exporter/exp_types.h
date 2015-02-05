@@ -332,4 +332,6 @@ class VRayGeom : public VRayExportable {
 
 }
 
+char* GetExportString(const u_int8_t *buf, unsigned bufLen);
+
 #endif // CGR_EXP_TYPES_H

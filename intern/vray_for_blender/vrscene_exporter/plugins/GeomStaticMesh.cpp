@@ -333,7 +333,7 @@ void GeomStaticMesh::initVertices()
 		coordIndex += 3;
 	}
 
-	m_vertices = GetStringZip((u_int8_t*)m_vertsArray, m_vertsArraySize * sizeof(float));
+	m_vertices = GetExportString((u_int8_t*)m_vertsArray, m_vertsArraySize * sizeof(float));
 }
 
 
@@ -468,12 +468,11 @@ void GeomStaticMesh::initFaces()
 		}
 	}
 
-	m_faces           = GetStringZip((u_int8_t*)m_facesArray,       faceVertIndex  * sizeof(int));
-	m_normals         = GetStringZip((u_int8_t*)m_normalsArray,     normArrIndex   * sizeof(float));
-	m_faceNormals     = GetStringZip((u_int8_t*)m_faceNormalsArray, faceNormIndex  * sizeof(int));
-	m_faceMtlIDs      = GetStringZip((u_int8_t*)m_mtlIDsArray,      faceMtlIDIndex * sizeof(int));
-
-	m_edge_visibility = GetStringZip((u_int8_t*)m_edgeVisArray,     m_edgeVisArraySize * sizeof(int));
+	m_faces           = GetExportString((u_int8_t*)m_facesArray,       faceVertIndex  * sizeof(int));
+	m_normals         = GetExportString((u_int8_t*)m_normalsArray,     normArrIndex   * sizeof(float));
+	m_faceNormals     = GetExportString((u_int8_t*)m_faceNormalsArray, faceNormIndex  * sizeof(int));
+	m_faceMtlIDs      = GetExportString((u_int8_t*)m_mtlIDsArray,      faceMtlIDIndex * sizeof(int));
+	m_edge_visibility = GetExportString((u_int8_t*)m_edgeVisArray,     m_edgeVisArraySize * sizeof(int));
 }
 
 
@@ -558,8 +557,8 @@ void GeomStaticMesh::initMapChannels()
 				}
 			}
 
-			mapChannel->uv_faces    = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int));
-			mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, mapVertexArraySize * sizeof(float));
+			mapChannel->uv_faces    = GetExportString((u_int8_t*)mapFaces, vertIndex * sizeof(int));
+			mapChannel->uv_vertices = GetExportString((u_int8_t*)mapVertex, mapVertexArraySize * sizeof(float));
 
 			mapChannel->hashUvFaces = ExporterSettings::gSet.m_isAnimation
 									  ? hashArray(mapFaces, vertIndex * sizeof(int))
@@ -654,8 +653,8 @@ void GeomStaticMesh::initMapChannels()
 				}
 			}
 
-			mapChannel->uv_faces    = GetStringZip((u_int8_t*)mapFaces, vertIndex * sizeof(int));
-			mapChannel->uv_vertices = GetStringZip((u_int8_t*)mapVertex, mapVertexArraySize * sizeof(float));
+			mapChannel->uv_faces    = GetExportString((u_int8_t*)mapFaces, vertIndex * sizeof(int));
+			mapChannel->uv_vertices = GetExportString((u_int8_t*)mapVertex, mapVertexArraySize * sizeof(float));
 
 			mapChannel->hashUvFaces = ExporterSettings::gSet.m_isAnimation
 									  ? hashArray(mapFaces, vertIndex * sizeof(int))

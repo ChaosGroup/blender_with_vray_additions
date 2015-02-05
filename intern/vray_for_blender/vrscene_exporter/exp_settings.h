@@ -57,6 +57,12 @@ struct ExporterSettings {
 		eChannel
 	};
 
+	enum VRayExportFormat {
+		FormatZIP = 0,
+		FormatHEX,
+		FormatPlainText
+	};
+
 	static ExporterSettings gSet;
 
 	ExporterSettings():
@@ -103,6 +109,7 @@ struct ExporterSettings {
 	int               m_useAltInstances;
 	int               m_subsurfToOSD;
 	VRayDefMapping    m_defaultMapping;
+	VRayExportFormat  m_dataExportFormat;
 
 	std::string       m_mtlOverrideName;
 	BL::Material      m_mtlOverride;

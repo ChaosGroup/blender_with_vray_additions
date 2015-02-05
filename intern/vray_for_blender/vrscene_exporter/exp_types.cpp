@@ -243,3 +243,12 @@ void VRayExportable::writeAttributes(PointerRNA *ptr, PluginJson *pluginDesc, st
 		output << "\n\t" << attrName << "=" << m_interpStart << getAttributeValue(ptr, prop, attrName.c_str()) << m_interpEnd << ";";
 	}
 }
+
+
+char* GetExportString(const u_int8_t *buf, unsigned bufLen)
+{
+	if (ExporterSettings::gSet.m_dataExportFormat == ExporterSettings::FormatZIP) {
+		return GetStringZip(buf, bufLen);
+	}
+	return GetHex(buf, bufLen);
+}
