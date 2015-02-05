@@ -55,6 +55,8 @@ void ExporterSettings::init()
 
 	m_defaultMapping = (VRayDefMapping)RNA_enum_ext_get(&vrayExporter, "default_mapping");
 
+	m_dataExportFormat = (VRayExportFormat)RNA_enum_ext_get(&vrayExporter, "data_format");
+
 	// Check what layers to use
 	//
 	const int useLayers = RNA_enum_get(&vrayExporter, "activeLayers");

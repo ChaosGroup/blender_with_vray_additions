@@ -321,7 +321,7 @@ void GeomMayaHair::initData()
 		}
 	}
 
-	num_hair_vertices = GetStringZip((u_int8_t*)num_hair_vertices_arr, num_hair_vertices_arrSize * sizeof(int));
+	num_hair_vertices = GetExportString((u_int8_t*)num_hair_vertices_arr, num_hair_vertices_arrSize * sizeof(int));
 
 	delete [] num_hair_vertices_arr;
 
@@ -381,8 +381,8 @@ void GeomMayaHair::initData()
 		}
 	}
 
-	hair_vertices = GetStringZip((u_int8_t*)hair_vertices_arr, hair_vert_co_index   * sizeof(float));
-	widths        = GetStringZip((u_int8_t*)widths_arr,        vertices_total_count * sizeof(float));
+	hair_vertices = GetExportString((u_int8_t*)hair_vertices_arr, hair_vert_co_index   * sizeof(float));
+	widths        = GetExportString((u_int8_t*)widths_arr,        vertices_total_count * sizeof(float));
 
 	delete [] hair_vertices_arr;
 	delete [] widths_arr;
@@ -449,7 +449,7 @@ void GeomMayaHair::initData()
 
 				MEM_freeN(sd.uvco);
 
-				strand_uvw = GetStringZip((u_int8_t*)uv_vertices_arr, uv_vert_co_index * sizeof(float));
+				strand_uvw = GetExportString((u_int8_t*)uv_vertices_arr, uv_vert_co_index * sizeof(float));
 
 				delete [] uv_vertices_arr;
 			}
