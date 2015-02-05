@@ -265,6 +265,15 @@ private:
 													  VRayNodeContext *context);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 												   VRayNodeContext *context);
+	static std::string      exportVRayNodeTexSoftbox(VRayNodeExportParam);
+
+	static void             exportRampAttribute(VRayNodeExportParam,
+												AttributeValueMap &attrs,
+												const std::string &texAttrName,
+												const std::string &colAttrName,
+												const std::string &posAttrName,
+												const std::string &typesAttrName="");
+
 	static void             exportBitmapBuffer(VRayNodeExportParam, AttributeValueMap &attrs);
 	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
 											           VRayNodeContext *context);
@@ -312,6 +321,9 @@ private:
 	static std::string      exportVRayNodeVolumeVRayToon(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeMetaImageTexture(VRayNodeExportParam);
+
+	static std::string      fromNodePluginID(BL::NodeSocket fromSocket);
+	static std::string      fromNodePluginType(BL::NodeSocket fromSocket);
 
 private:
 	static BL::NodeTree     getNodeGroupTree(BL::Node node);
