@@ -116,7 +116,7 @@ static void getStringHex(const u_int8_t *buf, unsigned nBytes, char *pstr)
 
 char *GetHex(const u_int8_t *data, unsigned dataLen)
 {
-	char *buf = new char[dataLen*2];
+	char *buf = new char[dataLen*2+1];
 
 	getStringHex(data, dataLen, buf);
 
