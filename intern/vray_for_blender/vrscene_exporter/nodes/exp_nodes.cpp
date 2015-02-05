@@ -918,6 +918,10 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 								uvwgenType = "UVWGenChannel";
 								uvwgenAttrs["uvw_channel"] = "0";
 							}
+							else if (pluginID == "TexSoftbox" && VRayNodeExporter::fromNodePluginType(fromSocket) == "LIGHT") {
+								uvwgenType = "UVWGenChannel";
+								uvwgenAttrs["uvw_channel"] = "0";
+							}
 							else {
 								if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
 									uvwgenType = "UVWGenProjection";
@@ -926,6 +930,10 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 								}
 								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
 									uvwgenType = "UVWGenObject";
+								}
+								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eChannel) {
+									uvwgenType = "UVWGenChannel";
+									uvwgenAttrs["uvw_channel"] = "0";
 								}
 							}
 
@@ -1013,6 +1021,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeTexRemap") {
 		return VRayNodeExporter::exportVRayNodeTexRemap(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeTexSoftbox") {
+		return VRayNodeExporter::exportVRayNodeTexSoftbox(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeTexSky") {
 		return VRayNodeExporter::exportVRayNodeTexSky(ntree, node, fromSocket, context);
@@ -1332,4 +1343,24 @@ int VRayNodeExporter::isObjectVisible(BL::Object b_ob)
 	if(NOT(ob->lay & ExporterSettings::gSet.m_activeLayers))
 		return false;
 	return true;
+}
+
+
+std::string VRayNodeExporter::fromNodePluginID(BL::NodeSocket fromSocket)
+{
+	BL::Node fromNode = fromSocket.node();
+	if (fromNode) {
+		return VRayNodeExporter::getPluginID(fromNode);
+	}
+	return "";
+}
+
+
+std::string VRayNodeExporter::fromNodePluginType(BL::NodeSocket fromSocket)
+{
+	BL::Node fromNode = fromSocket.node();
+	if (fromNode) {
+		return VRayNodeExporter::getPluginType(fromNode);
+	}
+	return "";
 }
