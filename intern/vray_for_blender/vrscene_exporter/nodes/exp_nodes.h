@@ -44,6 +44,20 @@
 namespace VRayScene {
 
 
+const char* const EnvironmentMappingType[] = {
+	"angular",
+	"cubic",
+	"spherical",
+	"mirror_ball",
+	"screen",
+	"max_spherical",
+	"spherical_vray",
+	"max_cylindrical",
+	"max_shrink_wrap",
+	NULL
+};
+
+
 typedef std::vector<BL::Object> ObList;
 
 

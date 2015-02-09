@@ -23,20 +23,6 @@
 #include "exp_nodes.h"
 
 
-static const char *sMappingType[] = {
-	"angular",
-	"cubic",
-	"spherical",
-	"mirror_ball",
-	"screen",
-	"max_spherical",
-	"spherical_vray",
-	"max_cylindrical",
-	"max_shrink_wrap",
-	NULL
-};
-
-
 std::string VRayNodeExporter::exportVRayNodeUVWGenChannel(VRayNodeExportParam)
 {
 	AttributeValueMap manualAttrs;
@@ -55,7 +41,7 @@ std::string VRayNodeExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree
 	const int mapping_type = RNA_enum_get(&UVWGenEnvironment, "mapping_type");
 
 	AttributeValueMap  manualAttrs;
-	manualAttrs["mapping_type"] = BOOST_FORMAT_STRING(sMappingType[mapping_type]);
+	manualAttrs["mapping_type"] = BOOST_FORMAT_STRING(EnvironmentMappingType[mapping_type]);
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
 }
