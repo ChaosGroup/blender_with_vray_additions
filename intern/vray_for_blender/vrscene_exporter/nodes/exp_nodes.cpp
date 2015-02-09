@@ -941,6 +941,14 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 
 							pluginAttrs[attrName] = uvwgenName;
 						}
+						else if (attrType == "TRANSFORM" ||
+								 attrType == "TRANSFORM_TEXTURE") {
+							pluginAttrs[attrName] = "TransformHex(\"" CGR_IDENTITY_TM  "\")";
+						}
+						else if (attrType == "MATRIX" ||
+								 attrType == "MATRIX_TEXTURE") {
+							pluginAttrs[attrName] = "Matrix(Vector(1,0,0),Vector(0,1,0),Vector(0,0,1))";
+						}
 					}
 				}
 			}

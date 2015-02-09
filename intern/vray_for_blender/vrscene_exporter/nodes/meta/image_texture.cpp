@@ -49,6 +49,7 @@ std::string VRayNodeExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam
 			case  0:  mappingPluginID = "UVWGenMayaPlace2dTexture"; break;
 			case  1:  mappingPluginID = "UVWGenProjection"; break;
 			case  2:  mappingPluginID = "UVWGenObject"; break;
+			case  3:  mappingPluginID = "UVWGenEnvironment"; break;
 			default:
 				break;
 		}
@@ -78,6 +79,12 @@ std::string VRayNodeExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam
 
 				mappingAttrs["rotate_frame_tex"] = BOOST_FORMAT_FLOAT(rotate_frame_tex);
 			}
+		}
+		else if (mappingPluginID == "UVWGenEnvironment") {
+			PointerRNA UVWGenEnvironment = RNA_pointer_get(&node.ptr, "UVWGenEnvironment");
+			const int mapping_type = RNA_enum_get(&UVWGenEnvironment, "mapping_type");
+
+			mappingAttrs["mapping_type"] = BOOST_FORMAT_STRING(EnvironmentMappingType[mapping_type]);
 		}
 
 		if (mappingPlugin.empty()) {
