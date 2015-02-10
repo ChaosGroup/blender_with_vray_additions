@@ -49,6 +49,22 @@ std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::N
 
 		std::string blend_mode = boost::str(boost::format("%i") % RNA_enum_get(&texSock.ptr, "value"));
 
+		const float blend_amount = RNA_float_get(&texSock.ptr, "blend");
+		if (blend_amount != 1.0f) {
+			const std::string &blendName =  boost::str(boost::format("Tex%sBlend%i") % pluginName % i);
+
+			AttributeValueMap blendAttrs;
+			blendAttrs["color_a"] = texture;
+			blendAttrs["mult_a"]  = "1.0";
+			blendAttrs["mode"]    = "0"; // Mode: "result_a"
+
+			blendAttrs["result_alpha"] = BOOST_FORMAT_FLOAT(blend_amount);
+
+			VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColorOp", blendName, blendAttrs);
+
+			texture = blendName;
+		}
+
 		textures.push_back(texture);
 		blend_modes.push_back(blend_mode);
 	}
