@@ -37,8 +37,8 @@
 #include <string>
 #include <map>
 
-typedef boost::property_tree::ptree         PluginJson;
-typedef std::map<std::string, PluginJson*>  PluginDesc;
+typedef boost::property_tree::ptree        PluginJson;
+typedef std::map<std::string, PluginJson>  PluginDesc;
 
 
 class VRayPluginsDesc {

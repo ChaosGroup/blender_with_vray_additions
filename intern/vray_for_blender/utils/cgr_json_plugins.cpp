@@ -20,6 +20,8 @@
  * * ***** END GPL LICENSE BLOCK *****
  */
 
+#include <boost/filesystem.hpp>
+
 #include "cgr_config.h"
 
 #ifdef WIN32
@@ -58,34 +60,18 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 	PRINT_INFO_LB("Parsing plugin descriptions...");
 	timeMeasure = PIL_check_seconds_timer();
 
-	FileList *files = filelist_new(FILE_UNIX);
+	boost::filesystem::recursive_directory_iterator pIt(dirPath);
+	boost::filesystem::recursive_directory_iterator end;
 
-	filelist_setdir(files, dirPath.c_str());
-	filelist_readdir(files);
-	filelist_filter(files);
+	for (; pIt != end; ++pIt) {
+		const boost::filesystem::path &path = *pIt;
+		if (path.extension() == ".json") {
+			PluginJson &pTree = m_desc[path.stem().c_str()];
 
-	int nFiles = filelist_numfiles(files);
-
-	for(int i = 0; i < nFiles; ++i) {
-		struct direntry *file = filelist_file(files, i);
-		if(NOT(file && (S_ISREG(file->type))))
-			continue;
-		if(NOT(BLI_testextensie(file->path, ".json")))
-			continue;
-
-		std::string fileName(BLI_path_basename(file->path));
-		fileName.erase(fileName.find_last_of("."), std::string::npos);
-
-		PluginJson *pTree = new PluginJson();
-
-		std::ifstream fileStream(file->path);
-		boost::property_tree::json_parser::read_json(fileStream, *pTree);
-
-		m_desc[fileName] = pTree;
+			std::ifstream fileStream(path.c_str());
+			boost::property_tree::json_parser::read_json(fileStream, pTree);
+		}
 	}
-
-	filelist_free(files);
-	MEM_freeN(files);
 
 	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
 	printf(" done [%s]\n", timeMeasureBuf);
@@ -94,8 +80,6 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 
 void VRayPluginsDesc::freeData()
 {
-	for(PluginDesc::iterator it = m_desc.begin(); it != m_desc.end(); ++it)
-		delete it->second;
 	m_desc.clear();
 }
 
@@ -104,5 +88,5 @@ PluginJson* VRayPluginsDesc::getTree(const std::string &name)
 {
 	if(NOT(m_desc.count(name)))
 		return NULL;
-	return m_desc[name];
+	return &m_desc[name];
 }
