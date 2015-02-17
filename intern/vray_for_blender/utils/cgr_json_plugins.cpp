@@ -66,7 +66,9 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 	for (; pIt != end; ++pIt) {
 		const boost::filesystem::path &path = *pIt;
 		if (path.extension() == ".json") {
-			PluginJson &pTree = m_desc[path.stem().c_str()];
+			const std::string &fileName = path.stem().string();
+
+			PluginJson &pTree = m_desc[fileName];
 
 			std::ifstream fileStream(path.c_str());
 			boost::property_tree::json_parser::read_json(fileStream, pTree);
