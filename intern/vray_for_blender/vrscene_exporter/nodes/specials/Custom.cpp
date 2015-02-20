@@ -101,6 +101,7 @@ std::string VRayNodeExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::N
 }
 
 
+
 std::string VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
 	const std::string &pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
@@ -119,12 +120,6 @@ std::string VRayNodeExporter::exportVRayNodeRenderChannelColor(BL::NodeTree ntre
 {
 	AttributeValueMap pluginAttrs;
 	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
-
-	PointerRNA renderChannelColor = RNA_pointer_get(&node.ptr, "RenderChannelColor");
-
-	if (pluginAttrs["name"].length() == 0) {
-		pluginAttrs["name"] = BOOST_FORMAT_STRING(RNA_enum_name_get(&renderChannelColor, "alias"));
-	}
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
 }

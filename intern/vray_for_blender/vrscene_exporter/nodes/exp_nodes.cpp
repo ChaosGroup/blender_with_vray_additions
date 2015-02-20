@@ -30,6 +30,28 @@ extern "C" {
 VRayNodeCache    VRayNodePluginExporter::m_nodeCache;
 StrSet           VRayNodePluginExporter::m_namesCache;
 
+StrSet           VRayNodeExporter::RenderChannelNames;
+
+
+static std::string GetUniqueChannelName(const std::string &baseName)
+{
+	std::string uniqueName = baseName;
+
+	boost::format chanNameFormat("%s.%03i");
+
+	int uniqueSuffix = 0;
+	while (VRayNodeExporter::RenderChannelNames.count(uniqueName)) {
+		uniqueSuffix++;
+		uniqueName = boost::str(chanNameFormat
+								% baseName
+								% uniqueSuffix);
+	}
+
+	VRayNodeExporter::RenderChannelNames.insert(uniqueName);
+
+	return uniqueName;
+}
+
 
 std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext *context)
 {
@@ -959,6 +981,31 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 			}
 		}
 	}
+
+	if (pluginType == "RENDERCHANNEL" && NOT(manualAttrs.count("name"))) {
+		// Value will already contain quotes
+		boost::replace_all(pluginAttrs["name"], "\"", "");
+
+		std::string chanName = pluginAttrs["name"];
+		if (NOT(chanName.length())) {
+			PRINT_WARN("Node tree: \"%s\" => Node: \"%s\" => Render channel name is not set! Generating default..",
+					   ntree.name().c_str(), node.name().c_str());
+
+			if (pluginID == "RenderChannelColor") {
+				PointerRNA renderChannelColor = RNA_pointer_get(&node.ptr, "RenderChannelColor");
+				chanName = RNA_enum_name_get(&renderChannelColor, "alias");
+			}
+			else if (pluginID == "RenderChannelLightSelect") {
+				chanName = "Light Select";
+			}
+			else {
+				chanName = VRayNodeExporter::getPluginName(node, ntree, context);
+			}
+		}
+
+		// Export in quotes
+		pluginAttrs["name"] = BOOST_FORMAT_STRING(GetUniqueChannelName(chanName));
+	}
 }
 
 
@@ -1261,6 +1308,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 void VRayNodePluginExporter::clearNamesCache()
 {
 	VRayNodePluginExporter::m_namesCache.clear();
+	VRayNodeExporter::RenderChannelNames.clear();
 }
 
 

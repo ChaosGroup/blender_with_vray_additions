@@ -347,6 +347,9 @@ private:
 
 	static void             getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, StrVector &points, StrVector &types);
 
+public:
+	static StrSet           RenderChannelNames;
+
 };
 
 
