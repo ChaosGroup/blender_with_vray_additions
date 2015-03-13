@@ -224,7 +224,7 @@ void GeomStaticMesh::init()
 		b_mesh.calc_normals_split();
 	}
 
-	b_mesh.calc_tessface();
+	b_mesh.calc_tessface(true);
 
 	// NOTE: Mesh could actually have no data.
 	// This could be fine for mesh animated with "Build" mod, for example.

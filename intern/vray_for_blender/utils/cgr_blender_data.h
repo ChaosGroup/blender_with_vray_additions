@@ -45,13 +45,9 @@ extern "C" {
 (pset.render_type() == BL::ParticleSettings::render_type_PATH))
 
 
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob);
-void  FreeRenderMesh(Main *main, Mesh *mesh);
-
 int   IsObjectUpdated(Object *ob);
 int   IsObjectDataUpdated(Object *ob);
 
-int   IsMeshAnimated(Object *ob);
 int   IsMeshValid(Scene *sce, Main *main, Object *ob);
 
 std::string GetIDName(ID *id, const std::string &prefix="");

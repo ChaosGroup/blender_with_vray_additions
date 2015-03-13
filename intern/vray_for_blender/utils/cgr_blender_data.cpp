@@ -59,166 +59,6 @@ extern "C" {
 #include <string.h>
 
 
-// Taken from: source/blender/makesrna/intern/rna_main_api.c
-// with a slight modifications
-//
-Mesh* GetRenderMesh(Scene *sce, Main *bmain, Object *ob)
-{
-	Mesh        *tmpmesh = NULL;
-	Curve       *tmpcu = NULL;
-	Curve       *copycu = NULL;
-	Object      *tmpobj = NULL;
-	Object      *basis_ob = NULL;
-	DerivedMesh *dm = NULL;
-	ListBase     disp = {NULL, NULL};
-
-	CustomDataMask    mask = CD_MASK_MESH;
-	EvaluationContext eval_ctx = {0};
-
-	eval_ctx.mode = DAG_EVAL_RENDER;
-
-	switch(ob->type) {
-		case OB_FONT:
-		case OB_CURVE:
-		case OB_SURF:
-			/* copies object and modifiers (but not the data) */
-			tmpobj = BKE_object_copy(ob);
-			tmpcu = (Curve *)tmpobj->data;
-			tmpcu->id.us--;
-
-			/* copies the data */
-			tmpobj->data = BKE_curve_copy( (Curve *) ob->data );
-			copycu = (Curve *)tmpobj->data;
-
-			/* temporarily set edit so we get updates from edit mode, but
-		 * also because for text datablocks copying it while in edit
-		 * mode gives invalid data structures */
-			copycu->editfont = tmpcu->editfont;
-			copycu->editnurb = tmpcu->editnurb;
-
-			/* get updated display list, and convert to a mesh */
-			BKE_displist_make_curveTypes( sce, tmpobj, 0 );
-
-			copycu->editfont = NULL;
-			copycu->editnurb = NULL;
-
-			BKE_mesh_from_nurbs( tmpobj );
-
-			/* nurbs_to_mesh changes the type to a mesh, check it worked */
-			if(tmpobj->type != OB_MESH) {
-				BKE_libblock_free_us(bmain, tmpobj );
-				return NULL;
-			}
-			tmpmesh = (Mesh*)tmpobj->data;
-			BKE_libblock_free_us(bmain, tmpobj );
-
-			break;
-
-		case OB_MBALL:
-			/* metaballs don't have modifiers, so just convert to mesh */
-			basis_ob = BKE_mball_basis_find(sce, ob);
-
-			if (ob != basis_ob)
-				return NULL; /* only do basis metaball */
-
-			tmpmesh = BKE_mesh_add(bmain, "Mesh");
-
-			BKE_displist_make_mball_forRender(&eval_ctx, sce, ob, &disp);
-			BKE_mesh_from_metaball(&disp, tmpmesh);
-			BKE_displist_free(&disp);
-
-			break;
-
-		case OB_MESH:
-			/* Write the render mesh into the dummy mesh */
-			dm = mesh_create_derived_render(sce, ob, mask);
-
-			tmpmesh = BKE_mesh_add(bmain, "Mesh");
-			DM_to_mesh(dm, tmpmesh, ob, mask);
-			dm->release(dm);
-
-			break;
-
-		default:
-			return NULL;
-	}
-
-	/* cycles and exporters rely on this still */
-	BKE_mesh_tessface_ensure(tmpmesh);
-
-	/* we don't assign it to anything */
-	tmpmesh->id.us = 0;
-
-	return tmpmesh;
-}
-
-
-void FreeRenderMesh(Main *main, Mesh *mesh)
-{
-	BKE_libblock_free(main, mesh);
-}
-
-
-int IsMeshAnimated(Object *ob)
-{
-	ModifierData *mod = NULL;
-
-	switch(ob->type) {
-		case OB_CURVE:
-		case OB_SURF:
-		case OB_FONT: {
-			Curve *cu = (Curve*)ob->data;
-			if(cu->adt)
-				return cu->adt->action != NULL;
-		}
-			break;
-		case OB_MBALL: {
-			MetaBall *mb = (MetaBall*)ob->data;
-			if(mb->adt)
-				return mb->adt->action != NULL;
-		}
-			break;
-		case OB_MESH: {
-			Mesh *me = (Mesh*)ob->data;
-			if(me->adt)
-				return me->adt->action != NULL;
-		}
-			break;
-		default:
-			break;
-	}
-
-	mod = (ModifierData*)ob->modifiers.first;
-	while(mod) {
-		switch(mod->type) {
-			case eModifierType_Hook: {
-				HookModifierData *hMod = (HookModifierData*)mod;
-				if(hMod->object)
-					if(hMod->object->adt)
-						return hMod->object->adt->action != NULL;
-			}
-			case eModifierType_Armature:
-			case eModifierType_Array:
-			case eModifierType_Displace:
-			case eModifierType_Softbody:
-			case eModifierType_Explode:
-			case eModifierType_MeshDeform:
-			case eModifierType_ParticleSystem:
-			case eModifierType_SimpleDeform:
-			case eModifierType_ShapeKey:
-			case eModifierType_Screw:
-			case eModifierType_Warp:
-				if(ob->adt)
-					return ob->adt->action != NULL;
-			default:
-				mod = mod->next;
-		}
-	}
-
-	return 0;
-}
-
-
 std::string GetIDName(ID *id, const std::string &prefix)
 {
 	char baseName[MAX_ID_NAME];
@@ -257,23 +97,35 @@ std::string GetIDName(BL::Pointer ptr, const std::string &prefix)
 
 int IsMeshValid(Scene *sce, Main *main, Object *ob)
 {
+	bool valid = true;
+
 	switch(ob->type) {
 		case OB_FONT: {
 			Curve *cu = (Curve*)ob->data;
 			if(cu->str == NULL)
-				return 0;
+				valid = false;
 		}
 			break;
 		case OB_MBALL:
 		case OB_SURF:
 		case OB_CURVE: {
-			Mesh *mesh = GetRenderMesh(sce, main, ob);
-			if(NOT(mesh))
-				return 0;
-			if(NOT(mesh->totface)) {
-				FreeRenderMesh(main, mesh);
-				return 0;
-			}
+			PointerRNA scenePtr;
+			PointerRNA dataPtr;
+			PointerRNA objectPtr;
+
+			RNA_id_pointer_create((ID*)sce,  &scenePtr);
+			RNA_id_pointer_create((ID*)main, &dataPtr);
+			RNA_id_pointer_create((ID*)ob,   &objectPtr);
+
+			BL::Scene     scene = BL::Scene(scenePtr);
+			BL::BlendData data  = BL::BlendData(dataPtr);
+			BL::Object    obj   = BL::Object(objectPtr);
+
+			BL::Mesh mesh = data.meshes.new_from_object(scene, obj, true, 1, false, false);
+
+			valid = mesh && mesh.polygons.length();
+
+			data.meshes.remove(mesh);
 		}
 		case OB_MESH:
 			break;
@@ -281,7 +133,7 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 			break;
 	}
 
-	return 1;
+	return valid;
 }
 
 
