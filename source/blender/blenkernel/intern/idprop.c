@@ -499,6 +499,30 @@ void IDP_restore_fake_user(void)
 	BLI_spin_end(&HashTableLock);
 }
 
+bool IDP_is_ID_used(const ID *id)
+{
+	bool used = false;
+	GHashIterator ghi;
+
+	BLI_spin_lock(&HashTableLock);
+
+	BLI_ghashIterator_init(&ghi, IDP_IDHashTable);
+	for (; !BLI_ghashIterator_done(&ghi); BLI_ghashIterator_step(&ghi)) {
+		ID *data = (ID*)BLI_ghashIterator_getKey(&ghi);
+		if (data) {
+			if (id == data) {
+				used = true;
+				break;
+			}
+		}
+	}
+
+	BLI_spin_unlock(&HashTableLock);
+	BLI_spin_end(&HashTableLock);
+
+	return used;
+}
+
 static GHash *find_or_create_reflist(ID *id)
 {
 	GHash *reflist = BLI_ghash_lookup(IDP_IDHashTable, id);
