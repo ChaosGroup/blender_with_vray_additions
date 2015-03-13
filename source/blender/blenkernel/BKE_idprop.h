@@ -89,6 +89,7 @@ void IDP_init(void);
 void IDP_exit(void);
 /* Restores LIB_FAKEUSER flag after append */
 void IDP_restore_fake_user(void);
+bool IDP_is_ID_used(const ID *id);
 
 typedef void(*IDPWalkFunc)(void *userData, IDProperty *idp);
 /* Calls a function on each IDProperty which references the given ID */

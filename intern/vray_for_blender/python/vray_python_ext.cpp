@@ -41,6 +41,7 @@
 #include "WM_types.h"
 
 extern "C" {
+#  include "BKE_idprop.h"
 #  include "mathutils/mathutils.h"
 }
 
@@ -645,6 +646,23 @@ static PyObject* mUpdatePreview(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* mIsIDUsedInIDProp(PyObject *self, PyObject *args)
+{
+	PyObject *py_object   = NULL;
+
+	if(NOT(PyArg_ParseTuple(args, "O", &py_object))) {
+		return NULL;
+	}
+
+	ID *id = (ID*)PyLong_AsVoidPtr(py_object);
+	if (id && IDP_is_ID_used(id)) {
+		Py_RETURN_TRUE;
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
 	{"start",             mExportStart ,      METH_VARARGS, "Startup init"},
 	{"free", (PyCFunction)mExportFree,        METH_NOARGS,  "Free resources"},
@@ -677,6 +695,8 @@ static PyMethodDef methods[] = {
 	{"setHideFromView",   mSetHideFromView,   METH_VARARGS, "Setup overrides for objects for the current view"},
 
 	{"updatePreview",     mUpdatePreview,     METH_VARARGS, "Generate preview update event"},
+
+	{"isIdUsed",          mIsIDUsedInIDProp,  METH_VARARGS, "Check if ID is used in ID properties"},
 
 	{NULL, NULL, 0, NULL},
 };
