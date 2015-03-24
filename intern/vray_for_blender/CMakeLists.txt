@@ -56,6 +56,8 @@ set(INC
 
 file(GLOB_RECURSE SRC "*.*")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++0x")
+
 blender_add_lib(vray_for_blender "${SRC}" "${INC}" "${INC_SYS}")
 
 # avoid link failure with clang 3.4 debug
