@@ -294,7 +294,9 @@ function(SETUP_LIBDIRS)
 	if(WITH_MEM_JEMALLOC)
 		link_directories(${JEMALLOC_LIBPATH})
 	endif()
-
+	if(WITH_VRAY_FOR_BLENDER)
+		link_directories("$ENV{HOME}/src/appsdk_releases/428/linux/bin")
+	endif()
 	if(WIN32 AND NOT UNIX)
 		link_directories(${PTHREADS_LIBPATH})
 	endif()
@@ -444,6 +446,12 @@ function(setup_liblinks
 	if(WITH_CYCLES OR WITH_COMPOSITOR OR WITH_OPENSUBDIV)
 		target_link_libraries(${target} "extern_clew")
 		target_link_libraries(${target} "extern_cuew")
+	endif()
+
+	if(WITH_VRAY_FOR_BLENDER)
+		target_link_libraries(${target}
+			VRaySDKLibrary
+		)
 	endif()
 
 	#system libraries with no dependencies such as platform link libs or opengl should go last
@@ -675,6 +683,7 @@ function(SETUP_BLENDER_SORTED_LIBS)
 
 	if(WITH_VRAY_FOR_BLENDER)
 		list_insert_after(BLENDER_SORTED_LIBS "bf_python_bmesh" "vray_for_blender")
+		list_insert_after(BLENDER_SORTED_LIBS "vray_for_blender" "vray_for_blender_rt")
 	endif()
 
 	foreach(SORTLIB ${BLENDER_SORTED_LIBS})

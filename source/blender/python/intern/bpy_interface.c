@@ -87,6 +87,7 @@
 
 #ifdef WITH_VRAY_FOR_BLENDER
 #  include "cgr_vray_for_blender.h"
+#  include "cgr_vray_for_blender_rt.h"
 #endif
 
 
@@ -223,6 +224,10 @@ static PyObject *CGR_initPython(void)
 {
 	return (PyObject*)VRayForBlender_initPython();
 }
+static PyObject *CGR_initPythonRT(void)
+{
+	return (PyObject*)VRayForBlenderRT_initPython();
+}
 #endif
 
 static struct _inittab bpy_internal_modules[] = {
@@ -249,6 +254,7 @@ static struct _inittab bpy_internal_modules[] = {
 #endif
 #ifdef WITH_VRAY_FOR_BLENDER
 	{"_vray_for_blender", CGR_initPython},
+	{"_vray_for_blender_rt", CGR_initPythonRT},
 #endif
 	{"gpu", GPU_initPython},
 	{"idprop", BPyInit_idprop},

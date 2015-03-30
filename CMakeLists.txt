@@ -705,7 +705,6 @@ if(HAVE_STDBOOL_H)
 endif()
 
 if(WITH_VRAY_FOR_BLENDER)
-	# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++0x")
 	add_definitions(-DWITH_VRAY_FOR_BLENDER)
 endif()
 

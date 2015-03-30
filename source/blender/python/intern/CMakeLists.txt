@@ -158,6 +158,7 @@ endif()
 if(WITH_VRAY_FOR_BLENDER)
 	list(APPEND INC
 		${CMAKE_SOURCE_DIR}/intern/vray_for_blender
+		${CMAKE_SOURCE_DIR}/intern/vray_for_blender_rt
 	)
 endif()
 

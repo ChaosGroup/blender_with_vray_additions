@@ -56,7 +56,9 @@ set(INC
 
 file(GLOB_RECURSE SRC "*.*")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++0x")
+if (UNIX)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+endif()
 
 blender_add_lib(vray_for_blender "${SRC}" "${INC}" "${INC_SYS}")
 
