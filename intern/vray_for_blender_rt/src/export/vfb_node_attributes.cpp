@@ -1,0 +1,247 @@
+/*
+ * Copyright (c) 2015, Chaos Software Ltd
+ *
+ * V-Ray For Blender
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <boost/format.hpp>
+
+#include "vfb_params_json.h"
+#include "vfb_node_exporter.h"
+#include "vfb_utils_blender.h"
+#include "vfb_utils_string.h"
+#include "vfb_utils_nodes.h"
+
+
+
+void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc)
+{
+	// XXX: Check if we could get rid of ID and use (ID*)propGroup->data
+	// Test with library linking
+	//
+	PropertyRNA *prop = RNA_struct_find_property(propGroup, attrName.c_str());
+	if (NOT(prop)) {
+		PRINT_ERROR("Property '%s' not found!",
+		            attrName.c_str());
+	}
+	else {
+		PropertyType propType = RNA_property_type(prop);
+
+		if (propType == PROP_STRING) {
+			std::string absFilepath = RNA_std_string_get(propGroup, attrName);
+			if (NOT(absFilepath.empty())) {
+				PropertySubType propSubType = RNA_property_subtype(prop);
+				if (propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
+					// BLI_path_abs(value, ID_BLEND_PATH_EX(holder));
+
+					if (propSubType == PROP_FILEPATH) {
+						// absFilepath = BlenderUtils::GetFullFilepath(value, holder);
+						// absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
+					}
+				}
+
+				pluginDesc.add(attrName, absFilepath);
+			}
+		}
+		else if (propType == PROP_BOOLEAN) {
+			pluginDesc.add(attrName, RNA_boolean_get(propGroup, attrName.c_str()));
+		}
+		else if (propType == PROP_INT) {
+			pluginDesc.add(attrName, RNA_int_get(propGroup, attrName.c_str()));
+		}
+		else if (propType == PROP_ENUM) {
+			pluginDesc.add(attrName, RNA_enum_ext_get(propGroup, attrName.c_str()));
+		}
+		else if (propType == PROP_FLOAT) {
+			if (NOT(RNA_property_array_check(prop))) {
+				pluginDesc.add(attrName, RNA_float_get(propGroup, attrName.c_str()));
+			}
+			else {
+				PropertySubType propSubType = RNA_property_subtype(prop);
+				if (propSubType == PROP_COLOR) {
+					if (RNA_property_array_length(propGroup, prop) == 4) {
+						float acolor[4];
+						RNA_float_get_array(propGroup, attrName.c_str(), acolor);
+
+						pluginDesc.add(attrName, AttrAColor(AttrColor(acolor), acolor[3]));
+					}
+					else {
+						float color[3];
+						RNA_float_get_array(propGroup, attrName.c_str(), color);
+
+						pluginDesc.add(attrName, AttrColor(color));
+					}
+				}
+				else {
+					float vector[3];
+					RNA_float_get_array(propGroup, attrName.c_str(), vector);
+
+					pluginDesc.add(attrName, AttrVector(vector));
+				}
+			}
+		}
+		else {
+			PRINT_ERROR("Property '%s': Unsupported property type '%i'.",
+			            RNA_property_identifier(prop), propType);
+		}
+	}
+}
+
+
+void DataExporter::setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID)
+{
+	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
+
+	for (const auto &descIt : pluginParamDesc.attributes) {
+		const std::string         &attrName = descIt.second.name;
+		const ParamDesc::AttrType &attrType = descIt.second.type;
+
+		if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
+			continue;
+		}
+
+		// Skip manually specified attributes
+		if (!pluginDesc.get(attrName)) {
+			// Set non-mapped attributes only
+			if (!ParamDesc::TypeHasSocket(attrType)) {
+				DataExporter::setAttrFromPropGroup(propGroup, (ID*)propGroup->data, attrName, pluginDesc);
+			}
+		}
+	}
+}
+
+
+void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType)
+{
+	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
+	PointerRNA                   propGroup       = RNA_pointer_get(&node.ptr, pluginID.c_str());
+
+	// Set non-mapped attributes
+	setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
+
+	// Set mapped attributes
+	for (const auto &descIt : pluginParamDesc.attributes) {
+		const std::string         &attrName = descIt.second.name;
+		const ParamDesc::AttrType &attrType = descIt.second.type;
+
+		if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
+			continue;
+		}
+
+		// Skip manually specified attributes
+		if (!pluginDesc.get(attrName)) {
+			// PRINT_INFO_EX("  Processing attribute: \"%s\"", attrName.c_str());
+
+			if (ParamDesc::TypeHasSocket(attrType)) {
+				BL::NodeSocket sock = Nodes::GetSocketByAttr(node, attrName);
+				if (sock) {
+					AttrValue socketValue = exportSocket(ntree, sock, context);
+					if (socketValue) {
+						pluginDesc.add(attrName, socketValue);
+					}
+					else {
+						if ((pluginType == ParamDesc::PluginTexture) && (attrName == "uvwgen")) {
+							const std::string uvwgenName = "UVW@" + DataExporter::GenPluginName(node, ntree, context);
+							std::string       uvwgenType = "UVWGenObject";
+
+							PluginDesc uvwgenDesc(uvwgenName, uvwgenType);
+
+							if ((pluginID == "TexBitmap") ||
+							    (DataExporter::GetConnectedNodePluginType(fromSocket) == ParamDesc::PluginLight))
+							{
+								uvwgenDesc.pluginID = "UVWGenChannel";
+								uvwgenDesc.add("uvw_channel", int(0));
+							}
+							else {
+#if 0
+								if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
+									uvwgenType = "UVWGenProjection";
+									uvwgenAttrs["type"] = "5";
+									uvwgenAttrs["object_space"] = "1";
+								}
+								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
+									uvwgenType = "UVWGenObject";
+								}
+								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eChannel) {
+									uvwgenType = "UVWGenChannel";
+									uvwgenAttrs["uvw_channel"] = "0";
+								}
+#endif
+							}
+
+							pluginDesc.add(attrName, m_exporter->export_plugin(uvwgenDesc));
+						}
+#if 0
+						else if (attrType == "TRANSFORM" ||
+						         attrType == "TRANSFORM_TEXTURE") {
+							pluginAttrs[attrName] = "TransformHex(\"" CGR_IDENTITY_TM  "\")";
+						}
+						else if (attrType == "MATRIX" ||
+						         attrType == "MATRIX_TEXTURE") {
+							pluginAttrs[attrName] = "Matrix(Vector(1,0,0),Vector(0,1,0),Vector(0,0,1))";
+						}
+#endif
+					}
+				}
+			}
+		}
+
+#if 0
+		if (pluginType == "RENDERCHANNEL" && NOT(manualAttrs.count("name"))) {
+			// Value will already contain quotes
+			boost::replace_all(pluginAttrs["name"], "\"", "");
+
+			std::string chanName = pluginAttrs["name"];
+			if (NOT(chanName.length())) {
+				PRINT_WARN("Node tree: \"%s\" => Node: \"%s\" => Render channel name is not set! Generating default..",
+				           ntree.name().c_str(), node.name().c_str());
+
+				if (pluginID == "RenderChannelColor") {
+					PointerRNA renderChannelColor = RNA_pointer_get(&node.ptr, "RenderChannelColor");
+					chanName = RNA_enum_name_get(&renderChannelColor, "alias");
+				}
+				else if (pluginID == "RenderChannelLightSelect") {
+					chanName = "Light Select";
+				}
+				else {
+					chanName = NodeExporter::GenPluginName(node, ntree, context);
+				}
+			}
+
+			// Export in quotes
+			pluginAttrs["name"] = BOOST_FORMAT_STRING(GetUniqueChannelName(chanName));
+		}
+#endif
+	}
+}
+
+
+void DataExporter::setAttrsFromNodeAuto(VRayNodeExportParam, PluginDesc &pluginDesc)
+{
+	const ParamDesc::PluginType &pluginType = DataExporter::GetNodePluginType(node);
+	const std::string           &pluginID   = DataExporter::GetNodePluginID(node);
+
+	if (pluginID.empty()) {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node plugin ID!",
+		            ntree.name().c_str(), node.name().c_str());
+	}
+	else if (NOT(RNA_struct_find_property(&node.ptr, pluginID.c_str()))) {
+		PRINT_ERROR("Node tree: %s => Node name: %s => Property group \"%s\" not found!",
+		            ntree.name().c_str(), node.name().c_str(), pluginID.c_str());
+	}
+	else {
+		setAttrsFromNode(ntree, node, fromSocket, context, pluginDesc, pluginID, pluginType);
+	}
+}

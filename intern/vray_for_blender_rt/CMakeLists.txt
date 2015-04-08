@@ -28,18 +28,24 @@ set(INC
 	${CMAKE_SOURCE_DIR}/source/blender/windowmanager
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
 
+	../vray_for_blender
+
 	.
 	src
+	src/params
+	src/export
+	src/export/utils
 
 	/home/bdancer/src/appsdk_releases/428/linux/cpp/include
 )
 
-file(GLOB_RECURSE SRC "*.*")
+file(GLOB_RECURSE HEADERS "*.h")
+file(GLOB_RECURSE SOURCES "*.cpp")
 
 if (UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++11")
 endif()
 
-blender_add_lib(vray_for_blender_rt "${SRC}" "${INC}" "${INC_SYS}")
+blender_add_lib(vray_for_blender_rt "${HEADERS};${SOURCES}" "${INC}" "${INC_SYS}")
 
 add_dependencies(vray_for_blender_rt bf_rna)

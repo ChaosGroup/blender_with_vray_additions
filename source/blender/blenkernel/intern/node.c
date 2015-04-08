@@ -3016,8 +3016,12 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 				WM_main_add_notifier(NC_WORLD    | ND_SHADING_PREVIEW, NULL);
 				WM_main_add_notifier(NC_MATERIAL | ND_SHADING_PREVIEW, NULL);
 			}
-			if (ntree->typeinfo->flags & NTREE_FLAG_EVENT)
+			if (ntree->typeinfo->flags & NTREE_FLAG_EVENT) {
 				BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
+			}
+
+			// Tag update for ID.is_updated()
+			ntree->id.flag |= LIB_ID_RECALC;
 		}
 	}
 

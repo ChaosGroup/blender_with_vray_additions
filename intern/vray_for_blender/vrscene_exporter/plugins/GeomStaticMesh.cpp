@@ -59,28 +59,28 @@ typedef BL::Array<float, 2> UvVert;
 typedef BL::Array<float, 3> ColVert;
 
 
-struct MapVertex {
-	MapVertex() {
+struct ChanVertex {
+	ChanVertex() {
 		index = 0;
 	}
 
-	MapVertex(const UvVert &uv) {
-		MapVertex();
+	ChanVertex(const UvVert &uv) {
+		ChanVertex();
 
 		v[0] = uv.data[0];
 		v[1] = uv.data[1];
 		v[2] = 0.0f;
 	}
 
-	MapVertex(const ColVert &col) {
-		MapVertex();
+	ChanVertex(const ColVert &col) {
+		ChanVertex();
 
 		v[0] = col.data[0];
 		v[1] = col.data[1];
 		v[2] = col.data[2];
 	}
 
-	bool operator == (const MapVertex &_v) const {
+	bool operator == (const ChanVertex &_v) const {
 		return (v[0] == _v.v[0]) && (v[1] == _v.v[1]) && (v[2] == _v.v[2]);
 	}
 
@@ -91,14 +91,14 @@ struct MapVertex {
 
 struct MapVertexHash
 {
-	std::size_t operator () (const MapVertex &_v) const {
+	std::size_t operator () (const ChanVertex &_v) const {
 		MHash hash;
 		MurmurHash3_x86_32(_v.v, 3 * sizeof(float), 42, &hash);
 		return (std::size_t)hash;
 	}
 };
 
-typedef boost::unordered_set<MapVertex, MapVertexHash> UvSet;
+typedef boost::unordered_set<ChanVertex, MapVertexHash> ChanSet;
 
 
 MChan::MChan()
@@ -504,31 +504,31 @@ void GeomStaticMesh::initMapChannels()
 		}
 
 		if(m_totTriFaces) {
-			UvSet uvSet;
+			ChanSet uvSet;
 
 			BL::Mesh::tessfaces_iterator faceIt;
 			int f = 0;
 			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
 				FaceVerts faceVerts = faceIt->vertices_raw();
 
-				uvSet.insert(MapVertex(uvIt->data[f].uv1()));
-				uvSet.insert(MapVertex(uvIt->data[f].uv2()));
-				uvSet.insert(MapVertex(uvIt->data[f].uv3()));
+				uvSet.insert(ChanVertex(uvIt->data[f].uv1()));
+				uvSet.insert(ChanVertex(uvIt->data[f].uv2()));
+				uvSet.insert(ChanVertex(uvIt->data[f].uv3()));
 
 				if(faceVerts[3])
-					uvSet.insert(MapVertex(uvIt->data[f].uv4()));
+					uvSet.insert(ChanVertex(uvIt->data[f].uv4()));
 			}
 
 			f = 0;
-			for (UvSet::iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt, ++f) {
+			for (ChanSet::iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt, ++f) {
 				(*uvVertIt).index = f;
 			}
 
 			const int mapVertexArraySize = 3 * uvSet.size();
 			float *mapVertex = new float[mapVertexArraySize];
 			int c = 0;
-			for (UvSet::const_iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt) {
-				const MapVertex &uv = *uvVertIt;
+			for (ChanSet::const_iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt) {
+				const ChanVertex &uv = *uvVertIt;
 				mapVertex[c++] = uv.v[0];
 				mapVertex[c++] = uv.v[1];
 				mapVertex[c++] = uv.v[2];
@@ -542,16 +542,16 @@ void GeomStaticMesh::initMapChannels()
 			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
 				FaceVerts faceVerts = faceIt->vertices_raw();
 
-				const int v0 = uvSet.find(MapVertex(uvIt->data[f].uv1()))->index;
-				const int v1 = uvSet.find(MapVertex(uvIt->data[f].uv2()))->index;
-				const int v2 = uvSet.find(MapVertex(uvIt->data[f].uv3()))->index;
+				const int v0 = uvSet.find(ChanVertex(uvIt->data[f].uv1()))->index;
+				const int v1 = uvSet.find(ChanVertex(uvIt->data[f].uv2()))->index;
+				const int v2 = uvSet.find(ChanVertex(uvIt->data[f].uv3()))->index;
 
 				mapFaces[vertIndex++] = v0;
 				mapFaces[vertIndex++] = v1;
 				mapFaces[vertIndex++] = v2;
 
 				if(faceVerts[3]) {
-					const int v3 = uvSet.find(MapVertex(uvIt->data[f].uv4()))->index;
+					const int v3 = uvSet.find(ChanVertex(uvIt->data[f].uv4()))->index;
 
 					mapFaces[vertIndex++] = v0;
 					mapFaces[vertIndex++] = v2;
@@ -600,31 +600,31 @@ void GeomStaticMesh::initMapChannels()
 		}
 
 		if(m_totTriFaces) {
-			UvSet uvSet;
+			ChanSet uvSet;
 
 			BL::Mesh::tessfaces_iterator faceIt;
 			int f = 0;
 			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
 				FaceVerts faceVerts = faceIt->vertices_raw();
 
-				uvSet.insert(MapVertex(colIt->data[f].color1()));
-				uvSet.insert(MapVertex(colIt->data[f].color2()));
-				uvSet.insert(MapVertex(colIt->data[f].color3()));
+				uvSet.insert(ChanVertex(colIt->data[f].color1()));
+				uvSet.insert(ChanVertex(colIt->data[f].color2()));
+				uvSet.insert(ChanVertex(colIt->data[f].color3()));
 
 				if(faceVerts[3])
-					uvSet.insert(MapVertex(colIt->data[f].color4()));
+					uvSet.insert(ChanVertex(colIt->data[f].color4()));
 			}
 
 			f = 0;
-			for (UvSet::iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt, ++f) {
+			for (ChanSet::iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt, ++f) {
 				(*uvVertIt).index = f;
 			}
 
 			const int mapVertexArraySize = 3 * uvSet.size();
 			float *mapVertex = new float[mapVertexArraySize];
 			int c = 0;
-			for (UvSet::const_iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt) {
-				const MapVertex &uv = *uvVertIt;
+			for (ChanSet::const_iterator uvVertIt = uvSet.begin(); uvVertIt != uvSet.end(); ++uvVertIt) {
+				const ChanVertex &uv = *uvVertIt;
 				mapVertex[c++] = uv.v[0];
 				mapVertex[c++] = uv.v[1];
 				mapVertex[c++] = uv.v[2];
@@ -638,16 +638,16 @@ void GeomStaticMesh::initMapChannels()
 			for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt, ++f) {
 				FaceVerts faceVerts = faceIt->vertices_raw();
 
-				const int v0 = uvSet.find(MapVertex(colIt->data[f].color1()))->index;
-				const int v1 = uvSet.find(MapVertex(colIt->data[f].color2()))->index;
-				const int v2 = uvSet.find(MapVertex(colIt->data[f].color3()))->index;
+				const int v0 = uvSet.find(ChanVertex(colIt->data[f].color1()))->index;
+				const int v1 = uvSet.find(ChanVertex(colIt->data[f].color2()))->index;
+				const int v2 = uvSet.find(ChanVertex(colIt->data[f].color3()))->index;
 
 				mapFaces[vertIndex++] = v0;
 				mapFaces[vertIndex++] = v1;
 				mapFaces[vertIndex++] = v2;
 
 				if(faceVerts[3]) {
-					const int v3 = uvSet.find(MapVertex(colIt->data[f].color4()))->index;
+					const int v3 = uvSet.find(ChanVertex(colIt->data[f].color4()))->index;
 
 					mapFaces[vertIndex++] = v0;
 					mapFaces[vertIndex++] = v2;

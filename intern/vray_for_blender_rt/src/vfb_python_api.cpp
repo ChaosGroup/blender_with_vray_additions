@@ -23,7 +23,8 @@
 #include <vraysdk.hpp>
 
 #include "cgr_vray_for_blender_rt.h"
-#include "cgr_scene_exporter.h"
+#include "vfb_scene_exporter.h"
+#include "vfb_params_json.h"
 
 #include "DNA_material_types.h"
 #include "BLI_math.h"
@@ -72,7 +73,7 @@ static void python_thread_state_restore(void **python_thread_state)
 }
 
 
-static PyObject* mExporterLoad(PyObject *self)
+static PyObject* PyExporterLoad(PyObject *self, PyObject *args)
 {
 	PRINT_INFO_EX("mExporterLoad()");
 
@@ -86,11 +87,19 @@ static PyObject* mExporterLoad(PyObject *self)
 		}
 	}
 
+	char *jsonDirpath = NULL;
+	if (NOT(PyArg_ParseTuple(args, "s", &jsonDirpath))) {
+		PRINT_ERROR("PyArg_ParseTuple");
+	}
+	else {
+		VRayForBlender::InitPluginDescriptions(jsonDirpath);
+	}
+
 	Py_RETURN_NONE;
 }
 
 
-static PyObject* mExporterUnload(PyObject *self)
+static PyObject* PyExporterUnload(PyObject *self)
 {
 	PRINT_INFO_EX("mExporterUnload()");
 
@@ -103,7 +112,7 @@ static PyObject* mExporterUnload(PyObject *self)
 }
 
 
-static PyObject* mExporterInit(PyObject *self, PyObject *args)
+static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 {
 	PRINT_INFO_EX("mExporterInit()");
 
@@ -119,7 +128,7 @@ static PyObject* mExporterInit(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	/* Create RNA pointers */
+	// Create RNA pointers
 	PointerRNA engineptr;
 	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(pyengine), &engineptr);
 	BL::RenderEngine engine(engineptr);
@@ -148,20 +157,15 @@ static PyObject* mExporterInit(PyObject *self, PyObject *args)
 	RNA_pointer_create(NULL, &RNA_RegionView3D, pylong_as_voidptr_typesafe(pyrv3d), &rv3dptr);
 	BL::RegionView3D rv3d(rv3dptr);
 
-	/* Create exporter */
+	// Create exporter
+	VRayForBlender::ExporterSettings settings(data, scene);
 	VRayForBlender::SceneExporter *exporter = new VRayForBlender::SceneExporter(engine, userpref, data, scene, v3d, rv3d, region);
-
-	python_thread_state_save(&exporter->m_pythonThreadState);
-
-	// exporter->init();
-
-	python_thread_state_restore(&exporter->m_pythonThreadState);
 
 	return PyLong_FromVoidPtr(exporter);
 }
 
 
-static PyObject* mExporterFree(PyObject *self, PyObject *value)
+static PyObject* PyExporterFree(PyObject *self, PyObject *value)
 {
 	PRINT_INFO_EX("mExporterFree()");
 
@@ -171,7 +175,7 @@ static PyObject* mExporterFree(PyObject *self, PyObject *value)
 }
 
 
-static PyObject* mExporterExport(PyObject *self, PyObject *value)
+static PyObject* PyExporterExport(PyObject *self, PyObject *value)
 {
 	PRINT_INFO_EX("mExporterExport()");
 
@@ -181,7 +185,7 @@ static PyObject* mExporterExport(PyObject *self, PyObject *value)
 
 	exporter->init();
 
-	exporter->export_scene();
+	exporter->sync(false);
 	exporter->render_start();
 
 	python_thread_state_restore(&exporter->m_pythonThreadState);
@@ -190,7 +194,7 @@ static PyObject* mExporterExport(PyObject *self, PyObject *value)
 }
 
 
-static PyObject* mExporterUpdate(PyObject *self, PyObject *value)
+static PyObject* PyExporterUpdate(PyObject *self, PyObject *value)
 {
 	PRINT_INFO_EX("mExporterUpdate()");
 
@@ -198,7 +202,7 @@ static PyObject* mExporterUpdate(PyObject *self, PyObject *value)
 
 	python_thread_state_save(&exporter->m_pythonThreadState);
 
-	exporter->synchronize();
+	exporter->sync(true);
 
 	python_thread_state_restore(&exporter->m_pythonThreadState);
 
@@ -206,9 +210,9 @@ static PyObject* mExporterUpdate(PyObject *self, PyObject *value)
 }
 
 
-static PyObject* mExporterDraw(PyObject *self, PyObject *args)
+static PyObject* PyExporterDraw(PyObject *self, PyObject *args)
 {
-	PRINT_INFO_EX("mExporterDraw()");
+	// PRINT_INFO_EX("mExporterDraw()");
 
 	PyObject *pysession = nullptr;
 	PyObject *pyv3d     = nullptr;
@@ -220,12 +224,7 @@ static PyObject* mExporterDraw(PyObject *self, PyObject *args)
 
 	if (pylong_as_voidptr_typesafe(pyrv3d)) {
 		VRayForBlender::SceneExporter *exporter = (VRayForBlender::SceneExporter*)PyLong_AsVoidPtr(pysession);
-
-		/* 3d view drawing */
-		int viewport[4];
-		glGetIntegerv(GL_VIEWPORT, viewport);
-
-		exporter->draw(viewport[2], viewport[3]);
+		exporter->draw();
 	}
 
 	Py_RETURN_NONE;
@@ -233,15 +232,15 @@ static PyObject* mExporterDraw(PyObject *self, PyObject *args)
 
 
 static PyMethodDef methods[] = {
-    {"load",   (PyCFunction)mExporterLoad,    METH_NOARGS,  ""},
-    {"unload", (PyCFunction)mExporterUnload,  METH_NOARGS,  ""},
+    {"load",   PyExporterLoad,    METH_VARARGS,  ""},
+    {"unload", (PyCFunction)PyExporterUnload,  METH_NOARGS,  ""},
 
-    {"init",    mExporterInit,    METH_VARARGS,  ""},
-    {"free",    mExporterFree,    METH_O,        ""},
+    {"init",    PyExporterInit,    METH_VARARGS,  ""},
+    {"free",    PyExporterFree,    METH_O,        ""},
 
-    {"export",  mExporterExport,  METH_O,        ""},
-    {"update",  mExporterUpdate,  METH_O,        ""},
-    {"draw",    mExporterDraw,    METH_VARARGS,  ""},
+    {"export",  PyExporterExport,  METH_O,        ""},
+    {"update",  PyExporterUpdate,  METH_O,        ""},
+    {"draw",    PyExporterDraw,    METH_VARARGS,  ""},
 
     {NULL, NULL, 0, NULL},
 };

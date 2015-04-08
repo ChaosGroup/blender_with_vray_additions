@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "cgr_plugin_exporter.h"
+#include "vfb_plugin_exporter.h"
 
 
 using namespace VRayForBlender;
@@ -89,11 +89,19 @@ static void CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage*, void *user
 }
 
 
-AppSDKRenderImage::AppSDKRenderImage(VRay::VRayImage *image)
+AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
 {
-	w = image->getWidth();
-	h = image->getHeight();
-	pixels = FlipImageRows(image);
+	if (image) {
+#if 0
+		PRINT_INFO_EX("Has some pixels %p (%i x %i)",
+		              image->getPixelData(), image->getWidth(), image->getHeight());
+#endif
+		w = image->getWidth();
+		h = image->getHeight();
+		pixels = FlipImageRows(image);
+
+		delete image;
+	}
 }
 
 
@@ -130,6 +138,8 @@ void AppSdkExporter::init()
 		else {
 			m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			m_vray->setOnDumpMessage(CbDumpMessage);
+			m_vray->setRTImageUpdateTimeout(200);
+			// m_vray->setRTImageUpdateDifference();
 
 			VRay::RendererOptions options = m_vray->getOptions();
 			// options.numThreads = 4;
@@ -181,7 +191,7 @@ void AppSdkExporter::sync()
 #endif
 
 #if 0
-	int res = m_vray->exportScene("/tmp/vrayblender_bdancer/scene_app_sdk.vrscene");
+	int res = m_vray->exportScene("/home/bdancer/Desktop/scene_app_sdk.vrscene");
 	if (res) {
 		PRINT_ERROR("Error exporting scene!");
 	}
@@ -208,24 +218,13 @@ void AppSdkExporter::stop()
 
 RenderImage AppSdkExporter::get_image()
 {
-	RenderImage renderImage;
-
-	VRay::VRayImage *image = m_vray->getImage();
-	if (image && image->getPixelData()) {
-		PRINT_INFO_EX("Have some pixels (%i x %i)",
-		              image->getWidth(), image->getHeight());
-
-		renderImage = AppSDKRenderImage(image);
-	}
-
-	return renderImage;
+	return AppSDKRenderImage(m_vray->getImage());
 }
 
 
 void AppSdkExporter::set_render_size(const int &w, const int &h)
 {
-	m_vray->setWidth(w);
-	m_vray->setHeight(h);
+	m_vray->setImageSize(w, h);
 }
 
 
@@ -255,13 +254,14 @@ void AppSdkExporter::reset_used()
 }
 
 
+// TODO: Support exporting empty list data, could happen with "Build" modifier, for example
+//
 AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 {
 	AttrPlugin plugin;
 
 #define CGR_DEBUG_APPSDK_VALUES  0
 	if (pluginDesc.pluginID.empty()) {
-		// NOTE: Could be done intentionally to skip plugin creation
 		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
 		           pluginDesc.pluginName.c_str());
 	}
@@ -272,59 +272,63 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 			            pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str());
 		}
 		else {
-			plugin.name = plug.getName();
+			plugin.plugin = plug.getName();
 
 			for (const auto &pIt : pluginDesc.pluginAttrs) {
+#if USE_MAP
+				const PluginAttr &p = pIt.second;
+#else
 				const PluginAttr &p = pIt;
+#endif
+
 #if CGR_DEBUG_APPSDK_VALUES
 				PRINT_INFO("Setting plugin parameter: \"%s\" %s.%s",
 				           pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str(), p.paramName.c_str());
 #endif
-				if (p.paramType == PluginAttr::AttrTypeIgnore) {
+				if (p.attrValue.type == ValueTypeUnknown) {
 					continue;
 				}
-
-				if (p.paramType == PluginAttr::AttrTypeInt) {
-					plug.setValue(p.paramName, p.paramValue.valInt);
+				else if (p.attrValue.type == ValueTypeInt) {
+					plug.setValue(p.attrName, p.attrValue.valInt);
 				}
-				else if (p.paramType == PluginAttr::AttrTypeFloat) {
-					plug.setValue(p.paramName, p.paramValue.valFloat);
+				else if (p.attrValue.type == ValueTypeFloat) {
+					plug.setValue(p.attrName, p.attrValue.valFloat);
 				}
-				else if (p.paramType == PluginAttr::AttrTypeColor) {
-					plug.setValue(p.paramName, to_vray_color(p.paramValue.valColor));
+				else if (p.attrValue.type == ValueTypeColor) {
+					plug.setValue(p.attrName, to_vray_color(p.attrValue.valColor));
 				}
-				else if (p.paramType == PluginAttr::AttrTypeVector) {
-					plug.setValue(p.paramName, to_vray_vector(p.paramValue.valVector));
+				else if (p.attrValue.type == ValueTypeVector) {
+					plug.setValue(p.attrName, to_vray_vector(p.attrValue.valVector));
 				}
-				else if (p.paramType == PluginAttr::AttrTypeAColor) {
-					plug.setValue(p.paramName, to_vray_acolor(p.paramValue.valAColor));
+				else if (p.attrValue.type == ValueTypeAColor) {
+					plug.setValue(p.attrName, to_vray_acolor(p.attrValue.valAColor));
 				}
-				else if (p.paramType == PluginAttr::AttrTypePlugin) {
-					std::string pluginName = p.paramValue.valPlugin.name;
-					if (NOT(p.paramValue.valPluginOutput.empty())) {
+				else if (p.attrValue.type == ValueTypePlugin) {
+					std::string pluginName = p.attrValue.valPlugin.plugin;
+					if (NOT(p.attrValue.valPluginOutput.empty())) {
 						pluginName.append("::");
-						pluginName.append(p.paramValue.valPluginOutput);
+						pluginName.append(p.attrValue.valPluginOutput);
 					}
 
-					plug.setValueAsString(p.paramName, pluginName);
+					plug.setValueAsString(p.attrName, pluginName);
 				}
-				else if (p.paramType == PluginAttr::AttrTypeTransform) {
-					plug.setValue(p.paramName, to_vray_transform(p.paramValue.valTransform));
+				else if (p.attrValue.type == ValueTypeTransform) {
+					plug.setValue(p.attrName, to_vray_transform(p.attrValue.valTransform));
 				}
-				else if (p.paramType == PluginAttr::AttrTypeString) {
-					plug.setValue(p.paramName, p.paramValue.valString);
+				else if (p.attrValue.type == ValueTypeString) {
+					plug.setValue(p.attrName, p.attrValue.valString);
 #if CGR_DEBUG_APPSDK_VALUES
 					PRINT_INFO("AttrTypeString:  %s [%s] = %s",
 					           p.paramName.c_str(), plug.getType().c_str(), plug.getValueAsString(p.paramName).c_str());
 #endif
 				}
 #if 0
-				else if (p.paramType == PluginAttr::AttrTypeListPlugin) {
+				else if (p.attrValue.type == ValueTypeListPlugin) {
 					plug.setValue(p.paramName, VRay::Value(p.paramValue.valListValue));
 				}
 #endif
 #if 0
-				else if (p.paramType == PluginAttr::AttrTypeListValue) {
+				else if (p.attrValue.type == ValueTypeListValue) {
 					plug.setValue(p.paramName, VRay::Value(p.paramValue.valListValue));
 #if CGR_DEBUG_APPSDK_VALUES
 					PRINT_INFO("AttrTypeListValue:  %s [%s] = %s",
@@ -332,25 +336,66 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 #endif
 				}
 #endif
-				else if (p.paramType == PluginAttr::AttrTypeListInt) {
-					plug.setValue(p.paramName,
-					              (void*)*p.paramValue.valListInt,
-					              p.paramValue.valListInt.count * sizeof(int));
+				else if (p.attrValue.type == ValueTypeListInt) {
+					plug.setValue(p.attrName,
+					              (void*)*p.attrValue.valListInt,
+					              p.attrValue.valListInt.getBytesCount());
 				}
-				else if (p.paramType == PluginAttr::AttrTypeListFloat) {
-					plug.setValue(p.paramName,
-					              (void*)*p.paramValue.valListFloat,
-					              p.paramValue.valListFloat.count * sizeof(float));
+				else if (p.attrValue.type == ValueTypeListFloat) {
+					plug.setValue(p.attrName,
+					              (void*)*p.attrValue.valListFloat,
+					              p.attrValue.valListFloat.getBytesCount());
 				}
-				else if (p.paramType == PluginAttr::AttrTypeListVector) {
-					plug.setValue(p.paramName,
-					              (void*)*p.paramValue.valListVector,
-					              p.paramValue.valListVector.count * sizeof(AttrVector));
+				else if (p.attrValue.type == ValueTypeListVector) {
+					plug.setValue(p.attrName,
+					              (void*)*p.attrValue.valListVector,
+					              p.attrValue.valListVector.getBytesCount());
 				}
-				else if (p.paramType == PluginAttr::AttrTypeListColor) {
-					plug.setValue(p.paramName,
-					              (void*)*p.paramValue.valListColor,
-					              p.paramValue.valListColor.count * sizeof(AttrColor));
+				else if (p.attrValue.type == ValueTypeListColor) {
+					plug.setValue(p.attrName,
+					              (void*)*p.attrValue.valListColor,
+					              p.attrValue.valListColor.getBytesCount());
+				}
+				else if (p.attrValue.type == ValueTypeListPlugin) {
+					VRay::ValueList pluginList;
+					for (int i = 0; i < p.attrValue.valListPlugin.getCount(); ++i) {
+						pluginList.push_back(VRay::Value((*p.attrValue.valListPlugin)[i].plugin));
+					}
+					plug.setValue(p.attrName, VRay::Value(pluginList));
+				}
+				else if (p.attrValue.type == ValueTypeListString) {
+					VRay::ValueList string_list;
+					for (int i = 0; i < p.attrValue.valListString.getCount(); ++i) {
+						string_list.push_back(VRay::Value((*p.attrValue.valListString)[i]));
+					}
+					plug.setValue(p.attrName, VRay::Value(string_list));
+				}
+				else if (p.attrValue.type == ValueTypeMapChannels) {
+					VRay::ValueList map_channels;
+
+					int i = 0;
+					for (const auto &mcIt : p.attrValue.valMapChannels.data) {
+						const AttrMapChannels::AttrMapChannel &map_channel_data = mcIt.second;
+
+						VRay::ValueList map_channel;
+						map_channel.push_back(VRay::Value(i++));
+
+						// XXX: Craaaazy...
+						VRay::IntList faces;
+						faces.resize(map_channel_data.faces.getCount());
+						memcpy(&faces[0], *map_channel_data.faces, map_channel_data.faces.getBytesCount());
+
+						VRay::VectorList vertices;
+						vertices.resize(map_channel_data.vertices.getCount());
+						memcpy(&vertices[0], *map_channel_data.vertices, map_channel_data.vertices.getBytesCount());
+
+						map_channel.push_back(VRay::Value(vertices));
+						map_channel.push_back(VRay::Value(faces));
+
+						map_channels.push_back(VRay::Value(map_channel));
+					}
+
+					plug.setValue(p.attrName, VRay::Value(map_channels));
 				}
 			}
 		}
@@ -362,12 +407,16 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 
 VRay::Plugin AppSdkExporter::new_plugin(const PluginDesc &pluginDesc)
 {
+#if 0
+	PRINT_WARN("AppSdkExporter::new_plugin(%s \"%s\")",
+	           pluginDesc.pluginID.c_str(), pluginDesc.pluginName.c_str());
+#endif
 	VRay::Plugin plug = m_vray->newPlugin(pluginDesc.pluginName, pluginDesc.pluginID);
-
+#if 0
 	if (NOT(pluginDesc.pluginName.empty())) {
 		m_used_map[pluginDesc.pluginName.c_str()] = PluginUsed(plug);
 	}
-
+#endif
 	return plug;
 }
 
