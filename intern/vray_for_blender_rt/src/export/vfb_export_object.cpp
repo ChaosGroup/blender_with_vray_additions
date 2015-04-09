@@ -19,8 +19,6 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
 
-#include <ctime>
-
 
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 {

@@ -173,6 +173,7 @@ public:
 	AttrValue         exportGeomStaticMesh(BL::Object ob);
 	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
 	AttrValue         exportObject(BL::Object ob, bool check_updated=false);
+	AttrValue         exportLight(BL::Object ob, bool check_updated=false);
 
 	void              exportVRayEnvironment(NodeContext *context);
 
