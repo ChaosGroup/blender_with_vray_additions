@@ -136,30 +136,32 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 
 	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
-	// This is a smoke simulation
-	if(smokeMod) {
-		std::string lightsList;
-		BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(node, "Lights");
-		if(lightsSock && lightsSock.is_linked()) {
-			BL::Node lightsNode = VRayNodeExporter::getConnectedNode(lightsSock, context);
-			if(lightsNode) {
-				if(lightsNode.bl_idname() == "VRayNodeSelectObject" || lightsNode.bl_idname() == "VRayNodeSelectGroup") {
-					lightsList = VRayNodeExporter::exportVRayNode(ntree, lightsNode, lightsSock, context);
+	std::string attr_lights;
+	BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(node, "Lights");
+	if (lightsSock && lightsSock.is_linked()) {
+		BL::Node lightsSelector = VRayNodeExporter::getConnectedNode(lightsSock);
+		if (lightsSelector) {
+			ObList lights;
+			VRayNodeExporter::getNodeSelectObjects(lightsSelector, lights);
 
-					// NOTE: Attribute expects list even only one object is selected
-					if(lightsNode.bl_idname() == "VRayNodeSelectObject") {
-						lightsList = "List(" + lightsList + ")";
-					}
+			if (lights.size()) {
+				StrSet lightsList;
+				for (ObList::const_iterator obIt = lights.begin(); obIt != lights.end(); ++obIt) {
+					lightsList.insert(GetIDName(*obIt, "LA"));
 				}
+				attr_lights = BOOST_FORMAT_LIST(lightsList);
 			}
 		}
+	}
 
+	// This is a smoke simulation
+	if(smokeMod) {
 		ExportSmokeDomain(ExporterSettings::gSet.m_fileGeom,
 						  ExporterSettings::gSet.m_sce,
 						  (Object*)domainOb.ptr.data,
 						  (SmokeModifierData*)smokeMod.ptr.data,
 						  pluginName.c_str(),
-						  lightsList.c_str());
+						  attr_lights.c_str());
 	}
 	// This is just a container - export as mesh
 	else {
@@ -175,9 +177,16 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 		char transform[CGR_TRANSFORM_HEX_SIZE];
 		GetTransformHex(((Object*)domainOb.ptr.data)->obmat, transform);
 
+		PointerRNA EnvFogMeshGizmo = RNA_pointer_get(&node.ptr, "EnvFogMeshGizmo");
+
 		AttributeValueMap pluginAttrs;
 		pluginAttrs["geometry"]  = geomPluginName;
 		pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
+		pluginAttrs["fade_out_radius"] = BOOST_FORMAT_FLOAT(RNA_float_get(&EnvFogMeshGizmo, "fade_out_radius"));
+
+		if (!attr_lights.empty()) {
+			pluginAttrs["lights"] = attr_lights;
+		}
 
 		VRayNodePluginExporter::exportPlugin("EFFECT", "EnvFogMeshGizmo", pluginName, pluginAttrs);
 	}
