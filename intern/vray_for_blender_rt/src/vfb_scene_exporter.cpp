@@ -398,6 +398,10 @@ void SceneExporter::sync_objects(const int &check_updated)
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 		BL::Object ob(*obIt);
 
+		// TODO:
+		// [ ] Track new objects (creation / layer settings change)
+		// [ ] Track deleted objects
+		//
 		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
 		bool is_hidden = ob.hide() || ob.hide_render();
 
