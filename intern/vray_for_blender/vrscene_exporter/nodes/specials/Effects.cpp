@@ -418,7 +418,6 @@ std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, 
 
 std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	// TODO: 'excludeList'
 	// TODO: exclude shaped lights
 
 	AttributeValueMap pluginAttrs;
@@ -428,6 +427,26 @@ std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, B
 	if (IsStdStringDigit(pluginAttrs["lineWidth_tex"])) {
 		// TODO: Check, may be this parameter is always needed
 		pluginAttrs["lineWidth"] = pluginAttrs["lineWidth_tex"];
+	}
+
+	BL::NodeSocket excludeSock = VRayNodeExporter::getSocketByAttr(node, "excludeList");
+	if (excludeSock && excludeSock.is_linked()) {
+		BL::Node obSelector = VRayNodeExporter::getConnectedNode(excludeSock);
+		if (obSelector) {
+			ObList excludeObjects;
+			VRayNodeExporter::getNodeSelectObjects(obSelector, excludeObjects);
+
+			if (excludeObjects.size()) {
+				StrSet excludeList;
+
+				for (ObList::const_iterator obIt = excludeObjects.begin(); obIt != excludeObjects.end(); ++obIt) {
+					BL::Object ob(*obIt);
+					excludeList.insert(GetIDName(ob, "OB"));
+				}
+
+				pluginAttrs["excludeList"] = BOOST_FORMAT_LIST(excludeList);
+			}
+		}
 	}
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
