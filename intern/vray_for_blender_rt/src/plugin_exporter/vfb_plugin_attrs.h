@@ -16,86 +16,24 @@
  * limitations under the License.
  */
 
-#ifndef VRAY_FOR_BLENDER_PLUGIN_EXPORTER_H
-#define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_H
+#ifndef VRAY_FOR_BLENDER_PLUGIN_ATTRS_H
+#define VRAY_FOR_BLENDER_PLUGIN_ATTRS_H
 
 #include "cgr_config.h"
 #include "vfb_util_defines.h"
+#include "vfb_typedefs.h"
 #include "vfb_rna.h"
 
 #include "BLI_math.h"
-#include "MEM_guardedalloc.h"
-#include "RNA_types.h"
-#include "RNA_access.h"
-#include "RNA_blender_cpp.h"
 
-#include <vraysdk.hpp>
-#include <map>
-#include <set>
-
-#include <boost/unordered_map.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
+#include <boost/unordered_map.hpp>
 
 
 namespace VRayForBlender {
 
-
 const int VectorBytesCount  = 3 * sizeof(float);
 const int Vector2BytesCount = 2 * sizeof(float);
-
-
-enum ExpoterType {
-	ExpoterTypeFile = 0,
-	ExpoterTypeCloud,
-	ExpoterTypeZMQ,
-	ExpoterTypeAppSDK,
-};
-
-
-struct ExpoterCallback {
-	typedef boost::function<void(void)> CallbackFunction;
-
-	ExpoterCallback() {}
-	ExpoterCallback(CallbackFunction _cb):
-	    cb(_cb)
-	{}
-
-	operator bool () const {
-		return !!(cb);
-	}
-
-	CallbackFunction cb;
-};
-
-
-struct RenderImage {
-	RenderImage():
-	    pixels(nullptr),
-	    w(0),
-	    h(0)
-	{}
-
-	operator bool () const {
-		return !!(pixels);
-	}
-
-	void free() {
-		FreePtrArr(pixels);
-	}
-
-	float *pixels;
-	int    w;
-	int    h;
-};
-
-
-struct AppSDKRenderImage:
-        public RenderImage
-{
-	AppSDKRenderImage(const VRay::VRayImage *image);
-};
 
 
 struct AttrColor {
@@ -112,7 +50,7 @@ struct AttrColor {
 	{}
 
 	AttrColor(const BlColor &bl_c) {
-		std::memcpy(&r, &bl_c.data[0], VectorBytesCount);
+		memcpy(&r, &bl_c.data[0], VectorBytesCount);
 	}
 
 	AttrColor(float c):
@@ -156,7 +94,7 @@ struct AttrVector {
 	{}
 
 	AttrVector(const BlVector &bl_v) {
-		std::memcpy(&x, &bl_v.data[0], VectorBytesCount);
+		memcpy(&x, &bl_v.data[0], VectorBytesCount);
 	}
 
 	AttrVector(const BlVector2 &bl_v):
@@ -215,7 +153,7 @@ struct AttrVector2 {
 	{}
 
 	AttrVector2(const BlVector2 &bl_v) {
-		std::memcpy(&x, &bl_v.data[0], Vector2BytesCount);
+		memcpy(&x, &bl_v.data[0], Vector2BytesCount);
 	}
 
 	AttrVector2(float vector[2]):
@@ -252,10 +190,10 @@ struct AttrMatrix {
 struct AttrTransform {
 	AttrTransform() {}
 	AttrTransform(const BlTransform &bl_tm) {
-		std::memcpy(&m.v0, &bl_tm.data[0],  VectorBytesCount);
-		std::memcpy(&m.v1, &bl_tm.data[4],  VectorBytesCount);
-		std::memcpy(&m.v2, &bl_tm.data[8],  VectorBytesCount);
-		std::memcpy(&offs, &bl_tm.data[12], VectorBytesCount);
+		memcpy(&m.v0, &bl_tm.data[0],  VectorBytesCount);
+		memcpy(&m.v1, &bl_tm.data[4],  VectorBytesCount);
+		memcpy(&m.v2, &bl_tm.data[8],  VectorBytesCount);
+		memcpy(&offs, &bl_tm.data[12], VectorBytesCount);
 	}
 	AttrTransform(float tm[4][4]):
 	    m(tm),
@@ -332,40 +270,6 @@ typedef AttrList<AttrVector>  AttrListVector;
 typedef AttrList<AttrVector2> AttrListVector2;
 typedef AttrList<AttrPlugin>  AttrListPlugin;
 typedef AttrList<std::string> AttrListString;
-
-
-inline VRay::Color to_vray_color(const AttrColor &c)
-{
-	return VRay::Color(c.r, c.g, c.b);
-}
-
-
-inline VRay::AColor to_vray_acolor(const AttrAColor &ac)
-{
-	return VRay::AColor(to_vray_color(ac.color),
-	                    ac.alpha);
-}
-
-
-inline VRay::Vector to_vray_vector(const AttrVector &v)
-{
-	return VRay::Vector(v.x, v.y, v.z);
-}
-
-
-inline VRay::Matrix to_vray_matrix(const AttrMatrix &m)
-{
-	return VRay::Matrix(to_vray_vector(m.v0),
-	                    to_vray_vector(m.v1),
-	                    to_vray_vector(m.v2));
-}
-
-
-inline VRay::Transform to_vray_transform(const AttrTransform &tm)
-{
-	return VRay::Transform(to_vray_matrix(tm.m),
-	                       to_vray_vector(tm.offs));
-}
 
 
 enum ValueType {
@@ -590,14 +494,7 @@ struct PluginAttr {
 	AttrValue    attrValue;
 
 };
-
-
-#define USE_MAP 1
-#if USE_MAP
-typedef std::map<std::string, PluginAttr> PluginAttrs;
-#else
-typedef std::vector<PluginAttr>           PluginAttrs;
-#endif
+typedef boost::unordered_map<std::string, PluginAttr> PluginAttrs;
 
 
 struct PluginDesc {
@@ -623,35 +520,17 @@ struct PluginDesc {
 	}
 
 	const PluginAttr *get(const std::string &paramName) const {
-#if USE_MAP
 		if (pluginAttrs.count(paramName)) {
 			const auto pIt = pluginAttrs.find(paramName);
 			return &pIt->second;
 		}
-#else
-		for (const auto &pIt : pluginAttrs) {
-			const PluginAttr &p = pIt;
-			if (paramName == p.attrName) {
-				return &p;
-			}
-		}
-#endif
 		return nullptr;
 	}
 
 	PluginAttr *get(const std::string &paramName) {
-#if USE_MAP
 		if (pluginAttrs.count(paramName)) {
 			return &pluginAttrs[paramName];
 		}
-#else
-		for (auto &pIt : pluginAttrs) {
-			PluginAttr &p = pIt;
-			if (paramName == p.attrName) {
-				return &p;
-			}
-		}
-#endif
 		return nullptr;
 	}
 
@@ -661,11 +540,7 @@ struct PluginDesc {
 			*_attr = attr;
 		}
 		else {
-#if USE_MAP
 			pluginAttrs[attr.attrName] = attr;
-#else
-			pluginAttrs.push_back(attr);
-#endif
 		}
 	}
 
@@ -674,12 +549,8 @@ struct PluginDesc {
 	}
 
 	void del(const std::string &attrName) {
-#if USE_MAP
 		auto delIt = pluginAttrs.find(attrName);
 		pluginAttrs.erase(delIt);
-#else
-		// ...
-#endif
 	}
 
 	void showAttributes() const {
@@ -687,97 +558,12 @@ struct PluginDesc {
 		              pluginID.c_str(), pluginName.c_str());
 
 		for (const auto &pIt : pluginAttrs) {
-#if USE_MAP
 			const PluginAttr &p = pIt.second;
-#else
-			const PluginAttr &p = pIt;
-#endif
 			PRINT_INFO_EX("  %s [%s]",
 			              p.attrName.c_str(), p.attrValue.getTypeAsString());
 		}
 	}
 };
-
-
-class PluginExporter
-{
-public:
-	virtual             ~PluginExporter()=0;
-
-public:
-	virtual void         init()=0;
-	virtual void         free()=0;
-
-	virtual void         sync()  {}
-	virtual void         start() {}
-	virtual void         stop()  {}
-
-	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc)=0;
-
-	virtual RenderImage  get_image() { return RenderImage(); }
-	virtual void         set_render_size(const int &w, const int &h) {}
-
-	virtual void         set_callback_on_image_ready(ExpoterCallback cb)      { callback_on_image_ready = cb; }
-	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) { callback_on_rt_image_updated = cb; }
-
-protected:
-	ExpoterCallback      callback_on_image_ready;
-	ExpoterCallback      callback_on_rt_image_updated;
-
-};
-
-
-class AppSdkExporter:
-        public PluginExporter
-{
-	struct PluginUsed {
-		PluginUsed() {}
-		PluginUsed(const VRay::Plugin &p):
-		    plugin(p),
-		    used(true)
-		{}
-
-		VRay::Plugin  plugin;
-		int           used;
-	};
-
-	typedef std::map<std::string, PluginUsed> PluginUsage;
-
-public:
-	AppSdkExporter();
-	virtual             ~AppSdkExporter();
-
-public:
-	virtual void         init();
-	virtual void         free();
-
-	virtual void         sync();
-	virtual void         start();
-	virtual void         stop();
-
-	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc);
-
-	virtual RenderImage  get_image();
-	virtual void         set_render_size(const int &w, const int &h);
-
-	virtual void         set_callback_on_image_ready(ExpoterCallback cb);
-	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb);
-
-
-private:
-	void                 reset_used();
-
-	VRay::Plugin         new_plugin(const PluginDesc &pluginDesc);
-
-	VRay::VRayRenderer  *m_vray;
-
-	PluginUsage          m_used_map;
-
-};
-
-
-PluginExporter* ExporterCreate(ExpoterType type);
-void            ExporterDelete(PluginExporter *exporter);
 
 } // namespace VRayForBlender
 

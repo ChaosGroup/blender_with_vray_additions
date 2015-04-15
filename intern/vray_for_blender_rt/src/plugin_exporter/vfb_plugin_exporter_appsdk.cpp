@@ -16,10 +16,46 @@
  * limitations under the License.
  */
 
-#include "vfb_plugin_exporter.h"
+#include "vfb_plugin_exporter_appsdk.h"
+
+#define CGR_DEBUG_APPSDK_VALUES  0
 
 
 using namespace VRayForBlender;
+
+
+inline VRay::Color to_vray_color(const AttrColor &c)
+{
+	return VRay::Color(c.r, c.g, c.b);
+}
+
+
+inline VRay::AColor to_vray_acolor(const AttrAColor &ac)
+{
+	return VRay::AColor(to_vray_color(ac.color),
+	                    ac.alpha);
+}
+
+
+inline VRay::Vector to_vray_vector(const AttrVector &v)
+{
+	return VRay::Vector(v.x, v.y, v.z);
+}
+
+
+inline VRay::Matrix to_vray_matrix(const AttrMatrix &m)
+{
+	return VRay::Matrix(to_vray_vector(m.v0),
+	                    to_vray_vector(m.v1),
+	                    to_vray_vector(m.v2));
+}
+
+
+inline VRay::Transform to_vray_transform(const AttrTransform &tm)
+{
+	return VRay::Transform(to_vray_matrix(tm.m),
+	                       to_vray_vector(tm.offs));
+}
 
 
 static float* FlipImageRows(const VRay::VRayImage *image)
@@ -102,11 +138,6 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
 
 		delete image;
 	}
-}
-
-
-PluginExporter::~PluginExporter()
-{
 }
 
 
@@ -260,7 +291,6 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 {
 	AttrPlugin plugin;
 
-#define CGR_DEBUG_APPSDK_VALUES  0
 	if (pluginDesc.pluginID.empty()) {
 		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
 		           pluginDesc.pluginName.c_str());
@@ -275,11 +305,7 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 			plugin.plugin = plug.getName();
 
 			for (const auto &pIt : pluginDesc.pluginAttrs) {
-#if USE_MAP
 				const PluginAttr &p = pIt.second;
-#else
-				const PluginAttr &p = pIt;
-#endif
 
 #if CGR_DEBUG_APPSDK_VALUES
 				PRINT_INFO("Setting plugin parameter: \"%s\" %s.%s",
@@ -418,36 +444,4 @@ VRay::Plugin AppSdkExporter::new_plugin(const PluginDesc &pluginDesc)
 	}
 #endif
 	return plug;
-}
-
-
-VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
-{
-	PluginExporter *exporter = nullptr;
-
-	switch (type) {
-		case ExpoterTypeFile:
-			break;
-		case ExpoterTypeCloud:
-			break;
-		case ExpoterTypeZMQ:
-			break;
-		case ExpoterTypeAppSDK:
-			exporter = new AppSdkExporter();
-			break;
-		default:
-			break;
-	}
-
-	if (exporter) {
-		exporter->init();
-	}
-
-	return exporter;
-}
-
-
-void VRayForBlender::ExporterDelete(VRayForBlender::PluginExporter *exporter)
-{
-	FreePtr(exporter);
 }

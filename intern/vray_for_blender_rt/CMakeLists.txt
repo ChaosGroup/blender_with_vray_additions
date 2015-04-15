@@ -33,8 +33,9 @@ set(INC
 	.
 	src
 	src/params
-	src/export
-	src/export/utils
+	src/plugin_exporter
+	src/scene_exporter
+	src/scene_exporter/utils
 
 	/home/bdancer/src/appsdk_releases/428/linux/cpp/include
 )
