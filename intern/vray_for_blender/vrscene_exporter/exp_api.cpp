@@ -102,7 +102,7 @@ static void write_SmokeGizmo(PyObject          *outputFile,
 
 	PYTHON_PRINTF(outputFile, "\nEnvFogMeshGizmo %s {", pluginName);
 	PYTHON_PRINTF(outputFile, "\n\tgeometry=%s;", geometryName);
-	if(strlen(lights)) {
+	if (*lights) {
 		PYTHON_PRINTF(outputFile, "\n\tlights=%s;", lights);
 	}
 	PYTHON_PRINTF(outputFile, "\n\ttransform=interpolate((%d,", sce->r.cfra);
