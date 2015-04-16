@@ -296,6 +296,10 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 		           pluginDesc.pluginName.c_str());
 	}
 	else {
+		if (m_vray->isPaused()) {
+			m_vray->start();
+		}
+
 		VRay::Plugin plug = new_plugin(pluginDesc);
 		if (NOT(plug)) {
 			PRINT_ERROR("Failed to create plugin: %s [%s]",
