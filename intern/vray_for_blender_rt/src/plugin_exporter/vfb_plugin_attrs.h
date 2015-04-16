@@ -115,7 +115,6 @@ struct AttrVector {
 		z(_z)
 	{}
 
-	// Dot product
 	float operator * (const AttrVector other) {
 		return x * other.x + y * other.y + z * other.z;
 	}
@@ -221,45 +220,56 @@ struct AttrPlugin {
 
 template <typename T>
 struct AttrList {
-	typedef boost::shared_ptr<T[]> DataArray;
+	typedef std::vector<T>              DataType;
+	typedef boost::shared_ptr<DataType> DataArray;
 
-	AttrList():
-	    ptr(nullptr),
-	    count(0)
-	{}
-
-	AttrList(const int &size) {
-		setCount(size);
+	AttrList() {
+		init();
 	}
 
-	void setCount(const int &cnt) {
-		count = cnt;
-		ptr   = DataArray(new T[cnt]);
+	AttrList(const int &size) {
+		init();
+		resize(size);
+	}
+
+	void init() {
+		ptr = DataArray(new DataType);
+	}
+
+	void resize(const int &cnt) {
+		ptr.get()->resize(cnt);
+	}
+
+	void append(const T &value) {
+		ptr.get()->push_back(value);
+	}
+
+	void prepend(const T &value) {
+		ptr.get()->insert(0, value);
 	}
 
 	int getCount() const {
-		return count;
+		return ptr.get()->size();
 	}
 
 	int getBytesCount() const {
-		return count * sizeof(T);
+		return getCount() * sizeof(T);
 	}
 
 	T* operator * () {
-		return ptr.get();
+		return &ptr.get()->at(0);
 	}
 
 	const T* operator * () const {
-		return ptr.get();
+		return &ptr.get()->at(0);
 	}
 
 	operator bool () const {
-		return !!count;
+		return ptr && ptr.get()->size();
 	}
 
 private:
-	DataArray  ptr;
-	int        count;
+	DataArray ptr;
 
 };
 
@@ -421,6 +431,7 @@ struct AttrValue {
 		valMapChannels = attrValue;
 	}
 
+	// TODO: Replace with single storage with reinterpret_cast<>
 	int                 valInt;
 	float               valFloat;
 	AttrVector          valVector;
