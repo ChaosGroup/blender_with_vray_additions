@@ -35,8 +35,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 
 	std::string pluginName = GetIDName(ExporterSettings::gSet.m_useAltInstances
 									   ? (ID*)context->obCtx.ob->data
-									   : (ID*)context->obCtx.ob,
-									   "Me");
+									   : (ID*)context->obCtx.ob) + "@Geom";
 
 	if(ExporterSettings::gSet.m_exportMeshes) {
 		if(ExporterSettings::gSet.m_isAnimation) {

@@ -87,7 +87,7 @@ void LightLinker::prepass()
 		if (includeExclude == LightList::typeNone)
 			continue;
 
-		const std::string &lightName = GetIDName((ID*)ob.ptr.data, "LA");
+		const std::string &lightName = GetIDName((ID*)ob.ptr.data);
 
 		m_include_exclude[lightName].obListType = includeExclude;
 		m_include_exclude[lightName].flags      = includeIllumShad;

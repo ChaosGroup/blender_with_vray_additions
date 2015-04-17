@@ -59,19 +59,9 @@ extern "C" {
 #include <string.h>
 
 
-std::string GetIDName(ID *id, const std::string &prefix)
+std::string GetIDName(ID *id)
 {
-	char baseName[MAX_ID_NAME];
-	if (prefix.empty()) {
-		BLI_strncpy(baseName, id->name, MAX_ID_NAME);
-	}
-	else {
-		// NOTE: Skip internal prefix
-		BLI_strncpy(baseName, id->name+2, MAX_ID_NAME);
-	}
-	StripString(baseName);
-
-	std::string idName = prefix + baseName;
+	std::string idName(id->name);
 
 	if(id->lib) {
 		char libFilename[FILE_MAX] = "";
@@ -79,19 +69,17 @@ std::string GetIDName(ID *id, const std::string &prefix)
 		BLI_split_file_part(id->lib->name+2, libFilename, FILE_MAX);
 		BLI_replace_extension(libFilename, FILE_MAX, "");
 
-		StripString(libFilename);
-
 		idName.append("LI");
 		idName.append(libFilename);
 	}
 
-	return idName;
+	return StripString(idName);
 }
 
 
-std::string GetIDName(BL::Pointer ptr, const std::string &prefix)
+std::string GetIDName(BL::Pointer ptr)
 {
-	return GetIDName((ID*)ptr.ptr.data, prefix);
+	return GetIDName((ID*)ptr.ptr.data);
 }
 
 
