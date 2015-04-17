@@ -52,15 +52,14 @@
 using namespace VRayForBlender;
 
 
-SceneExporter::SceneExporter(BL::RenderEngine engine, BL::UserPreferences userpref, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region):
+SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region):
+    m_context(context),
     m_engine(engine),
-    m_userPref(userpref),
     m_data(data),
     m_scene(scene),
     m_view3d(view3d),
     m_region3d(region3d),
     m_region(region),
-    m_context(PointerRNA_NULL), // TODO:
     m_exporter(nullptr)
 {}
 
@@ -186,6 +185,7 @@ void SceneExporter::sync(const int &check_updated)
 	sync_view(check_updated);
 	sync_materials(check_updated);
 	sync_objects(check_updated);
+	sync_effects(check_updated);
 
 	clock_t end = clock();
 
@@ -397,6 +397,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 		BL::Object ob(*obIt);
+		BL::ID data(ob.data());
 
 		// TODO:
 		// [ ] Track new objects (creation / layer settings change)
@@ -407,6 +408,13 @@ void SceneExporter::sync_objects(const int &check_updated)
 
 		bool is_updated      = check_updated ? ob.is_updated()      : true;
 		bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+		if (data) {
+			BL::NodeTree ntree = Nodes::GetNodeTree(data);
+			if (ntree) {
+				is_data_updated |= ntree.is_updated();
+			}
+		}
 
 		if ((!is_hidden) && is_on_visible_layer && (is_updated || is_data_updated)) {
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
@@ -421,6 +429,13 @@ void SceneExporter::sync_objects(const int &check_updated)
 	m_exporter->sync();
 
 	// m_mutex.unlock();
+}
+
+
+void SceneExporter::sync_effects(const int &check_updated)
+{
+	NodeContext ctx;
+	m_data_exporter.exportVRayEnvironment(&ctx);
 }
 
 

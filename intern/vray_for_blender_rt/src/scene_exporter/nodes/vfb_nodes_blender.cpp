@@ -32,7 +32,7 @@ struct MyPoint {
 };
 
 
-void DataExporter::getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types)
+void DataExporter::fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types)
 {
 	BL::ShaderNodeVectorCurve curveNode(node);
 
@@ -48,8 +48,8 @@ void DataExporter::getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, Att
 		const int numPoints = curve.points.length();
 		if (numPoints) {
 			// NOTE: point (x,y) + 2 * handle (x,y) = 6 float
-			points.setCount(numPoints * 6);
-			types.setCount(numPoints);
+			points.resize(numPoints * 6);
+			types.resize(numPoints);
 
 			MyPoint point[MAX_NUM_POINTS];
 

@@ -30,6 +30,7 @@
 typedef BL::Array<float, 16>  BlTransform;
 typedef BL::Array<float, 3>   BlVector;
 typedef BL::Array<float, 2>   BlVector2;
+typedef BL::Array<float, 4>   BlAColor;
 typedef BlVector              BlColor;
 typedef BL::Array<int, 20>    BlLayers;
 

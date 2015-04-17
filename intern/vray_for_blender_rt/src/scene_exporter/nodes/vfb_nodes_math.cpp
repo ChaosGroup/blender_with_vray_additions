@@ -30,7 +30,7 @@ AttrValue DataExporter::exportVRayNodeTransform(VRayNodeExportParam)
 
 	BL::NodeSocket objectSock = Nodes::GetInputSocketByName(node, "Object");
 	if (objectSock && objectSock.is_linked()) {
-		BL::Node selectObjectNode = Nodes::GetConnectedNode(objectSock);
+		BL::Node selectObjectNode = getConnectedNode(objectSock, context);
 		if (selectObjectNode && (selectObjectNode.bl_idname() == "VRayNodeSelectObject")) {
 			BL::Object b_ob = exportVRayNodeSelectObject(ntree, selectObjectNode, objectSock, context);
 			if (b_ob) {

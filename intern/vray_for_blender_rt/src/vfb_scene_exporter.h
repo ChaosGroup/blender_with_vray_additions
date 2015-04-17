@@ -101,8 +101,8 @@ struct ViewParams {
 
 class SceneExporter {
 public:
-	SceneExporter(BL::RenderEngine    engine,
-	              BL::UserPreferences userpref,
+	SceneExporter(BL::Context         context,
+	              BL::RenderEngine    engine,
 	              BL::BlendData       data,
 	              BL::Scene           scene,
 	              BL::SpaceView3D     view3d,
@@ -120,6 +120,7 @@ public:
 	void                 sync_view(const int &check_updated=false);
 	void                 sync_materials(const int &check_updated=false);
 	void                 sync_objects(const int &check_updated=false);
+	void                 sync_effects(const int &check_updated=false);
 
 	void                 draw();
 	void                 resize(int w, int h);
@@ -134,7 +135,6 @@ public:
 
 protected:
 	BL::RenderEngine     m_engine;
-	BL::UserPreferences  m_userPref;
 	BL::BlendData        m_data;
 	BL::Scene            m_scene;
 	BL::SpaceView3D      m_view3d;

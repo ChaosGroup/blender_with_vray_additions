@@ -47,6 +47,9 @@ VRayForBlender::ParamDesc::PluginType VRayForBlender::ParamDesc::GetPluginTypeFr
 	else if (typeString == "EFFECT") {
 		pluginType = ParamDesc::PluginEffect;
 	}
+	else if (typeString == "EFFECT") {
+		pluginType = ParamDesc::PluginEffect;
+	}
 
 	return pluginType;
 }

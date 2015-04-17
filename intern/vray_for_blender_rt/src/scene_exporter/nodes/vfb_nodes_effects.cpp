@@ -15,16 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "vfb_node_exporter.h"
+#include "vfb_utils_nodes.h"
+#include "vfb_utils_blender.h"
+
 
 #if 0
-#include "exp_api.h"
-
-
-static const int sX = 0;
-static const int sY = 5;
-static const int sZ = 10;
-
 
 static BL::SmokeModifier GetSmokeModifier(BL::Object ob)
 {
@@ -127,7 +124,7 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(VRayNodeExportParam)
 }
 
 
-static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, VRayNodeContext *context)
+static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext *context)
 {
 	BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
@@ -184,73 +181,78 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 
 	return pluginName;
 }
+#endif
 
 
-std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(VRayNodeExportParam)
 {
-	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
-	if(objectSock && objectSock.is_linked()) {
-		BL::Node domainNode = VRayNodeExporter::getConnectedNode(objectSock, context);
-		if(domainNode) {
-			StrSet domains;
+	AttrListPlugin domains;
 
+	BL::NodeSocket objectSock = Nodes::GetInputSocketByName(node, "Object");
+	if (objectSock && objectSock.is_linked()) {
+		BL::Node domainNode = getConnectedNode(objectSock, context);
+		if (domainNode) {
 			ObList domainObList;
-			VRayNodeExporter::getNodeSelectObjects(domainNode, domainObList);
+			getSelectorObjectList(domainNode, domainObList);
 
-			if(domainObList.size()) {
-				ObList::const_iterator obIt;
-				for(obIt = domainObList.begin(); obIt != domainObList.end(); ++obIt) {
-					BL::Object domainOb = *obIt;
-					if(VRayNodeExporter::isObjectVisible(domainOb)) {
-						domains.insert(ExportSmokeDomain(ntree, node, domainOb, context));
+			for(ObList::const_iterator obIt = domainObList.begin(); obIt != domainObList.end(); ++obIt) {
+				BL::Object domainOb(*obIt);
+				if (isObjectVisible(domainOb)) {
+					// domains.append(ExportSmokeDomain(ntree, node, domainOb, context));
+				}
+			}
+		}
+	}
+
+	return domains;
+}
+
+
+AttrValue DataExporter::exportVRayNodeEnvironmentFog(VRayNodeExportParam)
+{
+	AttrValue plugin;
+
+	if (m_settings.export_fluids) {
+		PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+		                      "EnvironmentFog");
+
+		bool valid_gizmos = true;
+
+		BL::NodeSocket gizmosSock = Nodes::GetSocketByAttr(node, "gizmos");
+		if (gizmosSock && gizmosSock.is_linked()) {
+			AttrValue gizmos;
+
+			BL::Node conNode = getConnectedNode(gizmosSock, context);
+			if (conNode) {
+				if (conNode.bl_idname() != "VRayNodeEnvFogMeshGizmo") {
+					PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node!");
+				}
+				else {
+					gizmos = exportSocket(ntree, gizmosSock, context);
+					if (!gizmos || (gizmos.type == ValueTypeListPlugin && gizmos.valListPlugin.empty())) {
+						// If socket is linked it means user have attached the gizmo node,
+						// but if gizmos list is empty it means gizmo object is invisible.
+						// We don't need to export the whole effect at all because it will cover the whole
+						// scene without gizmo.
+						valid_gizmos = false;
+					}
+					else {
+						pluginDesc.add("gizmos", gizmos);
 					}
 				}
 			}
+		}
 
-			return BOOST_FORMAT_LIST(domains);
+		if (valid_gizmos) {
+			plugin = exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 		}
 	}
 
-	return "List()";
+	return plugin;
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(VRayNodeExportParam)
-{
-	if (NOT(ExporterSettings::gSet.m_exportSmoke))
-		return "NULL";
-
-	PluginDesc  manualAttrs;
-
-	BL::NodeSocket gizmosSock = VRayNodeExporter::getSocketByAttr(node, "gizmos");
-	if (gizmosSock.is_linked()) {
-		std::string gizmos = "";
-
-		BL::Node conNode = VRayNodeExporter::getConnectedNode(gizmosSock);
-		if (NOT(conNode.bl_idname() == "VRayNodeEnvFogMeshGizmo")) {
-			PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node");
-		}
-		else {
-			gizmos = VRayNodeExporter::exportSocket(ntree, gizmosSock, context);
-		}
-
-		// If socket is linked it means user have attached the gizmo node,
-		// but if gizmos list is empty it means gizmo object is invisible.
-		// We don't need to export the whole effect at all because it will cover the whole
-		// scene without gizmo.
-		if (gizmos.empty() || gizmos == "NULL" || gizmos == "List()") {
-			PRINT_ERROR("No smoke gizmos found!");
-			return "NULL";
-		}
-		else {
-			manualAttrs["gizmos"] = gizmos;
-		}
-	}
-
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
-}
-
-
+#if 0
 std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(VRayNodeExportParam)
 {
 	PluginDesc pluginAttrs;
@@ -360,74 +362,97 @@ std::string VRayNodeExporter::exportVRayNodePhxShaderSim(VRayNodeExportParam)
 
 	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
 }
+#endif
 
 
-std::string VRayNodeExporter::exportVRayNodeSphereFade(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeSphereFadeGizmo(VRayNodeExportParam)
 {
-	StrSet gizmos;
+	AttrValue plugin;
+
+	PointerRNA sphereFadeGizmo = RNA_pointer_get(&node.ptr, "SphereFadeGizmo");
+
+	BL::Object ob = Blender::GetObjectByName(m_data, RNA_std_string_get(&sphereFadeGizmo, "object"));
+	if (ob && ob.type() == BL::Object::type_EMPTY) {
+		BlTransform tm     = ob.matrix_world();
+		const float radius = ob.empty_draw_size() * (tm.data[0] + tm.data[5] + tm.data[10]) / 3.0f;
+
+		// Reset rotation / scale
+		memset(tm.data, 0, 9 * sizeof(float));
+
+		// Set scale to 1.0
+		tm.data[0]  = 1.0f;
+		tm.data[5]  = 1.0f;
+		tm.data[10] = 1.0f;
+
+		PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+		                      "SphereFadeGizmo");
+		pluginDesc.add("radius", radius);
+		pluginDesc.add("transform", AttrTransform(tm));
+
+		plugin = m_exporter->export_plugin(pluginDesc);
+	}
+
+	return plugin;
+}
+
+
+AttrValue DataExporter::exportVRayNodeSphereFade(VRayNodeExportParam)
+{
+	AttrListPlugin gizmos;
 
 	BL::Node::inputs_iterator inIt;
 	for (node.inputs.begin(inIt); inIt != node.inputs.end(); ++inIt) {
 		BL::NodeSocket inSock = *inIt;
 		if (inSock && inSock.is_linked()) {
-			BL::Node connNode = VRayNodeExporter::getConnectedNode(inSock);
+			BL::Node connNode = getConnectedNode(inSock, context);
 			if (connNode && connNode.bl_idname() == "VRayNodeSphereFadeGizmo") {
-				gizmos.insert(VRayNodeExporter::exportLinkedSocket(ntree, inSock, context));
+				AttrValue sphereFadeGizmo = exportLinkedSocket(ntree, inSock, context);
+				if (sphereFadeGizmo && sphereFadeGizmo.type == ValueTypePlugin) {
+					gizmos.append(sphereFadeGizmo.valPlugin);
+				}
 			}
 		}
 	}
 
-	PluginDesc  manualAttrs;
-	manualAttrs["gizmos"] = BOOST_FORMAT_LIST(gizmos);
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+	                      "SphereFade");
+	pluginDesc.add("gizmos", gizmos);
 
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
+	return m_exporter->export_plugin(pluginDesc);
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeVolumeVRayToon(VRayNodeExportParam)
 {
-	PointerRNA sphereFadeGizmo = RNA_pointer_get(&node.ptr, "SphereFadeGizmo");
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+	                      "VolumeVRayToon");
+	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 
-	BL::Object ob = VRayNodeExporter::getObjectByName(RNA_std_string_get(&sphereFadeGizmo, "object"));
-	if (ob && ob.type() == BL::Object::type_EMPTY) {
-		BLTransform tm = ob.matrix_world();
-
-		float radius = ob.empty_draw_size() * (tm.data[sX] + tm.data[sY] + tm.data[sZ]) / 3.0f;
-
-		// Reset rotation / scale
-		::memset(tm.data, 0, 9 * sizeof(float));
-
-		// Set scale to 1.0
-		tm.data[sX] = 1.0f;
-		tm.data[sY] = 1.0f;
-		tm.data[sZ] = 1.0f;
-
-		PluginDesc attrs;
-		attrs["radius"]    = BOOST_FORMAT_FLOAT(radius);
-		attrs["transform"] = BOOST_FORMAT_TM(GetTransformHex(tm));
-
-		return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, attrs);
+	const PluginAttr *lineWidth_tex = pluginDesc.get("lineWidth_tex");
+	if (lineWidth_tex && (lineWidth_tex->attrValue.type == ValueTypeFloat)) {
+		// NOTE: When size is in pixels 'lineWidth_tex' value is ignored
+		pluginDesc.add("lineWidth", lineWidth_tex->attrValue);
 	}
 
-	return "NULL";
-}
+	BL::NodeSocket excludeSock = Nodes::GetSocketByAttr(node, "excludeList");
+	if (excludeSock && excludeSock.is_linked()) {
+		BL::Node obSelector = getConnectedNode(excludeSock, context);
+		if (obSelector) {
+			ObList excludeObjects;
+			getSelectorObjectList(obSelector, excludeObjects);
 
+			if (excludeObjects.size()) {
+				AttrListPlugin excludeList;
 
-std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(VRayNodeExportParam)
-{
-	// TODO: 'excludeList'
-	// TODO: exclude shaped lights
+				for (ObList::const_iterator obIt = excludeObjects.begin(); obIt != excludeObjects.end(); ++obIt) {
+					BL::Object ob(*obIt);
+					excludeList.append(Blender::GetIDName(ob, "OB"));
+				}
 
-	PluginDesc pluginAttrs;
-	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
-
-	// NOTE: When size is in pixels 'lineWidth_tex' value is ignored
-	if (IsStdStringDigit(pluginAttrs["lineWidth_tex"])) {
-		// TODO: Check, may be this parameter is always needed
-		pluginAttrs["lineWidth"] = pluginAttrs["lineWidth_tex"];
+				pluginDesc.add("excludeList", excludeList);
+			}
+		}
 	}
 
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, pluginAttrs);
+	return m_exporter->export_plugin(pluginDesc);
 }
-
-#endif

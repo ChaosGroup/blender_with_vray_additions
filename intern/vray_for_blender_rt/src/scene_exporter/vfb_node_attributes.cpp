@@ -111,12 +111,17 @@ void DataExporter::setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA 
 		if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
 			continue;
 		}
-
+		else if (attrType >= ParamDesc::AttrTypeList && attrType < ParamDesc::AttrTypeListEnd) {
+			continue;
+		}
+		else if (attrType >= ParamDesc::AttrTypeWidgetStart && attrType < ParamDesc::AttrTypeWidgetEnd) {
+			continue;
+		}
 		// Skip manually specified attributes
-		if (!pluginDesc.get(attrName)) {
+		else if (!pluginDesc.get(attrName)) {
 			// Set non-mapped attributes only
 			if (!ParamDesc::TypeHasSocket(attrType)) {
-				DataExporter::setAttrFromPropGroup(propGroup, (ID*)propGroup->data, attrName, pluginDesc);
+				setAttrFromPropGroup(propGroup, (ID*)propGroup->data, attrName, pluginDesc);
 			}
 		}
 	}
@@ -133,15 +138,18 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 
 	// Set mapped attributes
 	for (const auto &descIt : pluginParamDesc.attributes) {
-		const std::string         &attrName = descIt.second.name;
-		const ParamDesc::AttrType &attrType = descIt.second.type;
+		const ParamDesc::AttrDesc &attrDesc = descIt.second;
+		const std::string         &attrName = attrDesc.name;
+		const ParamDesc::AttrType &attrType = attrDesc.type;
 
 		if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
 			continue;
 		}
-
+		else if (attrType >= ParamDesc::AttrTypeList && attrType < ParamDesc::AttrTypeListEnd) {
+			continue;
+		}
 		// Skip manually specified attributes
-		if (!pluginDesc.get(attrName)) {
+		else if (!pluginDesc.get(attrName)) {
 			// PRINT_INFO_EX("  Processing attribute: \"%s\"", attrName.c_str());
 
 			if (ParamDesc::TypeHasSocket(attrType)) {
@@ -152,7 +160,8 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 						pluginDesc.add(attrName, socketValue);
 					}
 					else {
-						if ((pluginType == ParamDesc::PluginTexture) && (attrName == "uvwgen")) {
+						if ((pluginType == ParamDesc::PluginTexture) &&
+						    (attrType == ParamDesc::AttrTypePluginUvwgen)) {
 							const std::string uvwgenName = "UVW@" + DataExporter::GenPluginName(node, ntree, context);
 							std::string       uvwgenType = "UVWGenObject";
 
@@ -195,6 +204,18 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 #endif
 					}
 				}
+			}
+			else if (attrType >= ParamDesc::AttrTypeWidgetRamp) {
+				// To preserve compatibility with already existing projects
+				const std::string texAttrName = (pluginID == "TexGradRamp" || pluginID == "TexRemap")
+				                                ? "texture"
+				                                : attrName;
+
+				fillRampAttributes(ntree, node, fromSocket, context, pluginDesc,
+				                   texAttrName,
+				                   attrDesc.descRamp.colors, attrDesc.descRamp.positions, attrDesc.descRamp.interpolations);
+			}
+			else if (attrType >= ParamDesc::AttrTypeWidgetCurve) {
 			}
 		}
 

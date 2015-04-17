@@ -26,9 +26,14 @@ extern "C" {
 
 BL::NodeTree VRayForBlender::Nodes::GetNodeTree(BL::ID id, const std::string &attr)
 {
-	PointerRNA vrayPtr = RNA_pointer_get(&id.ptr, "vray");
+	BL::NodeTree ntree(PointerRNA_NULL);
 
-	return VRayForBlender::Blender::GetDataFromProperty<BL::NodeTree>(&vrayPtr, attr);
+	if (RNA_struct_find_property(&id.ptr, "vray")) {
+		PointerRNA vrayPtr = RNA_pointer_get(&id.ptr, "vray");
+		ntree = VRayForBlender::Blender::GetDataFromProperty<BL::NodeTree>(&vrayPtr, attr);
+	}
+
+	return ntree;
 }
 
 

@@ -21,8 +21,10 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_math.h"
 
+#include <boost/format.hpp>
 
-int DataExporter::exportBitmapBuffer(VRayNodeExportParam, PluginDesc &pluginDesc)
+
+int DataExporter::fillBitmapAttributes(VRayNodeExportParam, PluginDesc &pluginDesc)
 {
 	BL::Texture texture(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, "texture"));
 	if (texture) {
@@ -100,7 +102,7 @@ AttrValue DataExporter::exportVRayNodeBitmapBuffer(VRayNodeExportParam)
 	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 	PluginDesc pluginDesc(pluginName, "BitmapBuffer");
 
-	if (exportBitmapBuffer(ntree, node, fromSocket, context, pluginDesc)) {
+	if (fillBitmapAttributes(ntree, node, fromSocket, context, pluginDesc)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
 		            ntree.name().c_str(), node.name().c_str());
 	}
@@ -114,20 +116,24 @@ AttrValue DataExporter::exportVRayNodeBitmapBuffer(VRayNodeExportParam)
 }
 
 
-void DataExporter::exportRampAttribute(VRayNodeExportParam, PluginDesc &attrs,
-                                       const std::string &texAttrName, const std::string &colAttrName, const std::string &posAttrName, const std::string &typesAttrName)
+void DataExporter::fillRampAttributes(VRayNodeExportParam,
+                                      PluginDesc &pluginDesc,
+                                      const std::string &texAttrName, const std::string &colAttrName, const std::string &posAttrName, const std::string &typesAttrName)
 {
-#if 0
-	BL::Texture b_tex = NodeExporter::getTextureFromProperty(&node.ptr, texAttrName);
-	if(b_tex) {
-		std::string pluginName = NodeExporter::getPluginName(node, ntree, context) + "@" + texAttrName;
+	static boost::format subPluginNameFmt("%s@%s");
+	static boost::format subTexNameFmt("%sPos%i");
 
-		BL::ColorRamp ramp = b_tex.color_ramp();
+	BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttrName));
+	if (tex) {
+		const std::string &pluginName = boost::str(subPluginNameFmt
+		                                           % DataExporter::GenPluginName(node, ntree, context)
+		                                           % texAttrName);
 
-		StrVector   colors;
-		StrVector   positions;
-		StrVector   types;
-		std::string interpType;
+		BL::ColorRamp ramp = tex.color_ramp();
+
+		AttrListPlugin  colors;
+		AttrListFloat   positions;
+		AttrListInt     types;
 
 		int interp;
 		switch(ramp.interpolation()) {
@@ -138,38 +144,32 @@ void DataExporter::exportRampAttribute(VRayNodeExportParam, PluginDesc &attrs,
 			case BL::ColorRamp::interpolation_B_SPLINE: interp = 4; break;
 			default:                                    interp = 1;
 		}
-		interpType = BOOST_FORMAT_INT(interp);
 
+		int elNum = 0;
 		BL::ColorRamp::elements_iterator elIt;
-		int                              elNum = 0;
+		for (ramp.elements.begin(elIt); elIt != ramp.elements.end(); ++elIt, ++elNum) {
+			BL::ColorRampElement el(*elIt);
 
-		// XXX: Check why in Python I use reversed order
-		//
-		for(ramp.elements.begin(elIt); elIt != ramp.elements.end(); ++elIt) {
-			BL::ColorRampElement el = *elIt;
+			const std::string &colPluginName = boost::str(subTexNameFmt
+			                                              % pluginName
+			                                              % elNum);
 
-			std::string colPluginName = boost::str(boost::format("%sPos%i") % pluginName % elNum++);
+			const float pos = el.position();
 
-			std::string color    = BOOST_FORMAT_ACOLOR(el.color());
-			std::string position = BOOST_FORMAT_FLOAT(el.position());
+			PluginDesc colDesc(colPluginName, "TexAColor");
+			colDesc.add("texture", AttrAColor(el.color()));
 
-			PluginDesc colAttrs;
-			colAttrs["texture"] = color;
-
-			VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColor", colPluginName, colAttrs);
-
-			colors.push_back(colPluginName);
-			positions.push_back(position);
-			types.push_back(interpType);
+			colors.append(m_exporter->export_plugin(colDesc));
+			positions.append(pos);
+			types.append(interp);
 		}
 
-		attrs[colAttrName] = BOOST_FORMAT_LIST(colors);
-		attrs[posAttrName] = BOOST_FORMAT_LIST_FLOAT(positions);
+		pluginDesc.add(colAttrName, colors);
+		pluginDesc.add(posAttrName, positions);
 		if (NOT(typesAttrName.empty())) {
-			attrs[typesAttrName] = BOOST_FORMAT_LIST_INT(types);
+			pluginDesc.add(typesAttrName, types);
 		}
 	}
-#endif
 }
 
 
@@ -188,30 +188,28 @@ AttrValue DataExporter::exportVRayNodeTexEdges(VRayNodeExportParam)
 
 AttrValue DataExporter::exportVRayNodeTexSoftbox(VRayNodeExportParam)
 {
-#if 0
-	PointerRNA texSoftbox = RNA_pointer_get(&node.ptr, "TexSoftbox");
-	PluginDesc manualAttrs;
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+	                      "TexSoftbox");
 
+	PointerRNA texSoftbox = RNA_pointer_get(&node.ptr, "TexSoftbox");
 	if (RNA_boolean_get(&texSoftbox, "grad_vert_on")) {
-		NodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
-		                                  manualAttrs, "ramp_grad_vert", "grad_vert_col", "grad_vert_pos");
+		fillRampAttributes(ntree, node, fromSocket, context,
+		                   pluginDesc, "ramp_grad_vert", "grad_vert_col", "grad_vert_pos");
 	}
 	if (RNA_boolean_get(&texSoftbox, "grad_horiz_on")) {
-		NodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
-		                                  manualAttrs, "ramp_grad_horiz", "grad_horiz_col", "grad_horiz_pos");
+		fillRampAttributes(ntree, node, fromSocket, context,
+		                   pluginDesc, "ramp_grad_horiz", "grad_horiz_col", "grad_horiz_pos");
 	}
 	if (RNA_boolean_get(&texSoftbox, "grad_rad_on")) {
-		NodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
-		                                  manualAttrs, "ramp_grad_rad", "grad_rad_col", "grad_rad_pos");
+		fillRampAttributes(ntree, node, fromSocket, context,
+		                   pluginDesc, "ramp_grad_rad", "grad_rad_col", "grad_rad_pos");
 	}
 	if (RNA_boolean_get(&texSoftbox, "frame_on")) {
-		NodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
-		                                  manualAttrs, "ramp_frame", "frame_col", "frame_pos");
+		fillRampAttributes(ntree, node, fromSocket, context,
+		                   pluginDesc, "ramp_frame", "frame_col", "frame_pos");
 	}
 
-	return NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, manualAttrs);
-#endif
-	return AttrValue();
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 
 
@@ -221,8 +219,7 @@ AttrValue DataExporter::exportVRayNodeTexRemap(VRayNodeExportParam)
 	BL::Texture b_tex = NodeExporter::getTextureFromProperty(&node.ptr, "texture");
 	if(b_tex) {
 		PluginDesc manualAttrs;
-		NodeExporter::exportRampAttribute(ntree, node, fromSocket, context,
-		                                  manualAttrs, "texture", "color_colors", "color_positions", "color_types");
+
 
 		return NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, manualAttrs);
 	}
@@ -268,7 +265,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam)
 	const std::string &bitmapPluginName = "Bitmap@" + pluginName;
 	PluginDesc bitmapDesc(bitmapPluginName, "BitmapBuffer");
 
-	if (exportBitmapBuffer(ntree, node, fromSocket, context, bitmapDesc)) {
+	if (fillBitmapAttributes(ntree, node, fromSocket, context, bitmapDesc)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
 		            ntree.name().c_str(), node.name().c_str());
 	}

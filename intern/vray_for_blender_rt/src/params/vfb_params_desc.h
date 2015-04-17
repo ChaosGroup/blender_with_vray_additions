@@ -28,6 +28,7 @@ namespace ParamDesc {
 
 enum AttrType {
 	AttrTypeIgnore = 0,
+
 	AttrTypeBool,
 	AttrTypeInt,
 	AttrTypeEnum,
@@ -38,11 +39,11 @@ enum AttrType {
 	AttrTypeMatrix,
 	AttrTypeTransform,
 
-	AttrTypeString = 50,
+	AttrTypeString,
 	AttrTypeFilepath,
 	AttrTypeDirpath,
 
-	AttrTypePlugin = 100,
+	AttrTypePlugin,
 	AttrTypePluginBRDF,
 	AttrTypePluginGeometry,
 	AttrTypePluginMaterial,
@@ -71,13 +72,20 @@ enum AttrType {
 	AttrTypeOutputTextureTransform,
 	AttrTypeOutputEnd,
 
-	AttrTypeListInt = 200,
+	AttrTypeWidgetStart,
+	AttrTypeWidgetRamp,
+	AttrTypeWidgetCurve,
+	AttrTypeWidgetEnd,
+
+	AttrTypeList,
+	AttrTypeListInt,
 	AttrTypeListFloat,
 	AttrTypeListVector,
 	AttrTypeListColor,
 	AttrTypeListTransform,
 	AttrTypeListString,
 	AttrTypeListPlugin,
+	AttrTypeListEnd,
 };
 
 
@@ -103,6 +111,18 @@ enum PluginType {
 };
 
 struct AttrDesc {
+	struct ParmRampDesc {
+		std::string  colors;
+		std::string  positions;
+		std::string  interpolations;
+	} descRamp;
+
+	struct ParmCurveDesc {
+		std::string  positions;
+		std::string  values;
+		std::string  interpolations;
+	} descCurve;
+
 	std::string  name;
 	AttrType     type;
 };

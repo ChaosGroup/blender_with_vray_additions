@@ -232,17 +232,21 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket s
 
 AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext *context)
 {
-	if (socket.is_linked())
-		return DataExporter::exportLinkedSocket(ntree, socket, context);
-
-	return DataExporter::exportDefaultSocket(ntree, socket);
+	AttrValue value;
+	if (socket.is_linked()) {
+		value = exportLinkedSocket(ntree, socket, context);
+	}
+	else {
+		value = exportDefaultSocket(ntree, socket);
+	}
+	return value;
 }
 
 
 AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext *context)
 {
 	BL::NodeSocket socket = Nodes::GetInputSocketByName(node, socketName);
-	return DataExporter::exportSocket(ntree, socket, context);
+	return exportSocket(ntree, socket, context);
 }
 
 
@@ -265,75 +269,69 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 	              node.name().c_str(), ntree.name().c_str());
 #endif
 	if (nodeClass == "VRayNodeBlenderOutputMaterial") {
-		attrValue = DataExporter::exportVRayNodeBlenderOutputMaterial(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeBlenderOutputMaterial(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeBlenderOutputGeometry") {
-		attrValue = DataExporter::exportVRayNodeBlenderOutputGeometry(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeBlenderOutputGeometry(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeBRDFLayered") {
-		attrValue = DataExporter::exportVRayNodeBRDFLayered(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeBRDFLayered(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeBRDFVRayMtl") {
-		attrValue = DataExporter::exportVRayNodeBRDFVRayMtl(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeBRDFVRayMtl(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexLayered") {
-		attrValue = DataExporter::exportVRayNodeTexLayered(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexLayered(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexMulti") {
-		attrValue = DataExporter::exportVRayNodeTexMulti(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexMulti(ntree, node, fromSocket, context);
 	}
-#if 0
 	else if (nodeClass == "VRayNodeSelectObject") {
-		BL::Object b_ob = NodeExporter::exportVRayNodeSelectObject(ntree, node, fromSocket, context);
-		if (NOT(b_ob))
-			return "NULL";
-		return GetIDName(b_ob);
+		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, context);
+		if (ob) {
+			attrValue = AttrPlugin(Blender::GetIDName(ob));
+		}
 	}
 	else if (nodeClass == "VRayNodeSelectGroup") {
-		BL::Group b_gr = NodeExporter::exportVRayNodeSelectGroup(ntree, node, fromSocket, context);
-		return NodeExporter::getObjectNameList(b_gr);
+		BL::Group group = exportVRayNodeSelectGroup(ntree, node, fromSocket, context);
+		if (group) {
+			attrValue = DataExporter::getObjectNameList(group);
+		}
 	}
-#endif
 	else if (nodeClass == "VRayNodeLightMesh") {
-		attrValue = DataExporter::exportVRayNodeLightMesh(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeLightMesh(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeGeomDisplacedMesh") {
-		attrValue = DataExporter::exportVRayNodeGeomDisplacedMesh(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeGeomDisplacedMesh(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeGeomStaticSmoothedMesh") {
-		attrValue = DataExporter::exportVRayNodeGeomStaticSmoothedMesh(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeGeomStaticSmoothedMesh(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeBitmapBuffer") {
-		attrValue = DataExporter::exportVRayNodeBitmapBuffer(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexGradRamp") {
-		attrValue = DataExporter::exportVRayNodeTexGradRamp(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexRemap") {
-		attrValue = DataExporter::exportVRayNodeTexRemap(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeBitmapBuffer(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexSoftbox") {
-		attrValue = DataExporter::exportVRayNodeTexSoftbox(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexSoftbox(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexSky") {
-		attrValue = DataExporter::exportVRayNodeTexSky(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexSky(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexFalloff") {
-		attrValue = DataExporter::exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexEdges") {
-		attrValue = DataExporter::exportVRayNodeTexEdges(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexEdges(ntree, node, fromSocket, context);
 	}
 #if 0
 	else if (nodeClass == "VRayNodeTexVoxelData") {
-		plugin = NodeExporter::exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeTexMayaFluid") {
-		plugin = NodeExporter::exportVRayNodeTexMayaFluid(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTexMayaFluid(ntree, node, fromSocket, context);
 	}
 #endif
 	else if (nodeClass == "VRayNodeMtlMulti") {
-		attrValue = DataExporter::exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = Nodes::GetInputSocketByName(node, "Material");
@@ -341,7 +339,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 			PRINT_ERROR("");
 		}
 		else {
-			attrValue = DataExporter::exportLinkedSocket(ntree, materialInSock, context);
+			attrValue = exportLinkedSocket(ntree, materialInSock, context);
 		}
 	}
 	else if (nodeClass == "VRayNodeOutputTexture") {
@@ -350,63 +348,61 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 			PRINT_ERROR("");
 		}
 		else {
-			attrValue = DataExporter::exportLinkedSocket(ntree, textureInSock, context);
+			attrValue = exportLinkedSocket(ntree, textureInSock, context);
 		}
 	}
-#if 0
 	else if (nodeClass == "VRayNodeTransform") {
-		plugin = NodeExporter::exportVRayNodeTransform(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeTransform(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeMatrix") {
-		plugin = NodeExporter::exportVRayNodeMatrix(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeMatrix(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeVector") {
-		plugin = NodeExporter::exportVRayNodeVector(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeVector(ntree, node, fromSocket, context);
 	}
-#endif
-#if 0
 	else if (nodeClass == "VRayNodeEnvFogMeshGizmo") {
-		plugin = NodeExporter::exportVRayNodeEnvFogMeshGizmo(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeEnvFogMeshGizmo(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeEnvironmentFog") {
-		plugin = NodeExporter::exportVRayNodeEnvironmentFog(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeEnvironmentFog(ntree, node, fromSocket, context);
 	}
+#if 0
 	else if (nodeClass == "VRayNodePhxShaderSimVol") {
-		plugin = NodeExporter::exportVRayNodePhxShaderSimVol(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodePhxShaderSimVol(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodePhxShaderSim") {
-		plugin = NodeExporter::exportVRayNodePhxShaderSim(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeSphereFadeGizmo") {
-		plugin = NodeExporter::exportVRayNodeSphereFadeGizmo(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeSphereFade") {
-		plugin = NodeExporter::exportVRayNodeSphereFade(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeVolumeVRayToon") {
-		plugin = NodeExporter::exportVRayNodeVolumeVRayToon(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodePhxShaderSim(ntree, node, fromSocket, context);
 	}
 #endif
+	else if (nodeClass == "VRayNodeSphereFadeGizmo") {
+		attrValue = exportVRayNodeSphereFadeGizmo(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeSphereFade") {
+		attrValue = exportVRayNodeSphereFade(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeVolumeVRayToon") {
+		attrValue = exportVRayNodeVolumeVRayToon(ntree, node, fromSocket, context);
+	}
 	else if (nodeClass == "VRayNodeUVWGenEnvironment") {
-		attrValue = DataExporter::exportVRayNodeUVWGenEnvironment(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeUVWGenEnvironment(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeUVWGenMayaPlace2dTexture") {
-		attrValue = DataExporter::exportVRayNodeUVWGenMayaPlace2dTexture(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeUVWGenMayaPlace2dTexture(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeUVWGenChannel") {
-		attrValue = DataExporter::exportVRayNodeUVWGenChannel(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeUVWGenChannel(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeRenderChannelLightSelect") {
-		attrValue = DataExporter::exportVRayNodeRenderChannelLightSelect(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeRenderChannelLightSelect(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeRenderChannelColor") {
-		attrValue = DataExporter::exportVRayNodeRenderChannelColor(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeRenderChannelColor(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeMetaImageTexture") {
-		attrValue = DataExporter::exportVRayNodeMetaImageTexture(ntree, node, fromSocket, context);
+		attrValue = exportVRayNodeMetaImageTexture(ntree, node, fromSocket, context);
 	}
 	else if (node.is_a(&RNA_ShaderNodeNormal)) {
-		attrValue = DataExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);
+		attrValue = exportBlenderNodeNormal(ntree, node, fromSocket, context);
 	}
 	else {
 		PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
@@ -467,6 +463,25 @@ std::string DataExporter::GetConnectedNodePluginID(BL::NodeSocket fromSocket)
 }
 
 
+int DataExporter::isObjectVisible(BL::Object ob)
+{
+	int visible = true;
+
+	if (!ob) {
+		visible = false;
+	}
+	else if (ob.hide_render()) {
+		// TODO: Check "Render Hidden" setting
+		visible = false;
+	}
+	else {
+		// TODO: Check visible layers settings
+	}
+
+	return visible;
+}
+
+
 std::string DataExporter::getNodeName(BL::Object ob)
 {
 	static boost::format obNameFormat("Node@%s");
@@ -476,6 +491,7 @@ std::string DataExporter::getNodeName(BL::Object ob)
 
 std::string DataExporter::getMeshName(BL::Object ob)
 {
+	// TODO: Check instancing settings
 	static boost::format meshNameFormat("Geom@%s");
 	return boost::str(meshNameFormat % ob.name());
 }
@@ -485,6 +501,13 @@ std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL
 {
 	static boost::format hairNameFormat("Hair@%s|%s|%s");
 	return boost::str(hairNameFormat % ob.name() % psys.name() % pset.name());
+}
+
+
+std::string DataExporter::getLightName(BL::Object ob)
+{
+	static boost::format lampNameFormat("Lamp@%s");
+	return boost::str(lampNameFormat % ob.name());
 }
 
 

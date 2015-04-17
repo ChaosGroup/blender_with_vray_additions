@@ -22,7 +22,6 @@
 
 void DataExporter::exportVRayEnvironment(NodeContext *context)
 {
-#if 0
 	BL::Scene worldScene(PointerRNA_NULL);
 	if (m_engine && m_engine.is_preview()) {
 		worldScene = m_context.scene();
@@ -33,7 +32,7 @@ void DataExporter::exportVRayEnvironment(NodeContext *context)
 
 	BL::World world = worldScene.world();
 	if (!world) {
-		PRINT_WARN("Scene doesn't have World datablock!");
+		PRINT_WARN("Scene doesn't contain a \"World\" datablock!");
 	}
 	else {
 		PointerRNA vrayWorld = RNA_pointer_get(&world.ptr, "vray");
@@ -63,14 +62,12 @@ void DataExporter::exportVRayEnvironment(NodeContext *context)
 						else {
 							BL::Node::inputs_iterator inIt;
 							for (effectsNode.inputs.begin(inIt); inIt != effectsNode.inputs.end(); ++inIt) {
-								BL::NodeSocket inSock = *inIt;
+								BL::NodeSocket inSock(*inIt);
 								if (RNA_boolean_get(&inSock.ptr, "use")) {
-									AttrValue effectName = NodeExporter::exportSocket(worldTree, inSock, context);
-#if 0
-									if (effectName != "NULL") {
-										environment_volume.insert(effectName);
+									AttrValue effect = exportSocket(worldTree, inSock, context);
+									if (effect) {
+										environment_volume.append(effect.valPlugin);
 									}
-#endif
 								}
 							}
 						}
@@ -89,12 +86,14 @@ void DataExporter::exportVRayEnvironment(NodeContext *context)
 							pluginDesc.add("gi_color",      AttrColor(0.0f, 0.0f, 0.0f));
 							pluginDesc.add("reflect_color", AttrColor(0.0f, 0.0f, 0.0f));
 							pluginDesc.add("refract_color", AttrColor(0.0f, 0.0f, 0.0f));
-#if 0
-							pluginDesc["environment_volume"] = BOOST_FORMAT_LIST(environment_volume);
-#endif
+
+							if (!environment_volume.empty()) {
+								pluginDesc.add("environment_volume", environment_volume);
+							}
+
 							// Background
 							BL::NodeSocket bgSock = Nodes::GetSocketByAttr(envNode, "bg_tex");
-							AttrValue bg_tex = NodeExporter::exportSocket(worldTree, bgSock, context);
+							AttrValue bg_tex = exportSocket(worldTree, bgSock, context);
 							AttrValue bg_tex_mult(RNA_float_get(&bgSock.ptr, "multiplier"));
 
 							pluginDesc.add("bg_tex",      bg_tex);
@@ -133,5 +132,4 @@ void DataExporter::exportVRayEnvironment(NodeContext *context)
 
 		m_exporter->export_plugin(pluginDesc);
 	}
-#endif
 }

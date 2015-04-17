@@ -62,6 +62,12 @@ std::string Blender::GetIDName(BL::ID id, const std::string &prefix)
 }
 
 
+std::string VRayForBlender::Blender::GetIDNameAuto(BL::ID id)
+{
+	return VRayForBlender::Blender::GetIDName(id);
+}
+
+
 BL::Object Blender::GetObjectByName(BL::BlendData data, const std::string &name)
 {
 	BL::Object object(PointerRNA_NULL);

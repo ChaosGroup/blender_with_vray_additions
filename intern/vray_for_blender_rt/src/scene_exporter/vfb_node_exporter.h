@@ -138,15 +138,16 @@ public:
 	std::string                   getNodeName(BL::Object ob);
 	std::string                   getMeshName(BL::Object ob);
 	std::string                   getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
+	std::string                   getLightName(BL::Object ob);
 
-	void                          getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
-	void                          exportRampAttribute(VRayNodeExportParam,
-	                                     PluginDesc &attrs,
-	                                     const std::string &texAttrName,
-	                                     const std::string &colAttrName,
-	                                     const std::string &posAttrName,
-	                                     const std::string &typesAttrName="");
-	int                           exportBitmapBuffer(VRayNodeExportParam, PluginDesc &attrs);
+	void                          fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
+	void                          fillRampAttributes(VRayNodeExportParam,
+	                                                 PluginDesc &attrs,
+	                                                 const std::string &texAttrName,
+	                                                 const std::string &colAttrName,
+	                                                 const std::string &posAttrName,
+	                                                 const std::string &typesAttrName="");
+	int                           fillBitmapAttributes(VRayNodeExportParam, PluginDesc &attrs);
 
 public:
 	DataExporter():
@@ -180,10 +181,10 @@ public:
 	AttrValue         exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob);
 	AttrValue         exportMaterial(BL::Material b_ma, bool dont_export=false);
 
-	void              getNodeSelectObjects(BL::Node node, ObList &obList);
+	void              getSelectorObjectList(BL::Node node, ObList &obList);
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
-	AttrValue         getObjectName(BL::Object group);
+	AttrValue         getObjectName(BL::Object ob);
 
 	AttrValue         exportVRayNode(VRayNodeExportParam);
 	AttrValue         exportVRayNodeAuto(VRayNodeExportParam, PluginDesc &pluginDesc);
@@ -192,6 +193,8 @@ public:
 	AttrValue         exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
 	AttrValue         exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext *context=NULL);
 	AttrValue         exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext *context=NULL);
+
+	int               isObjectVisible(BL::Object ob);
 
 private:
 	BL::Object        exportVRayNodeSelectObject(VRayNodeExportParam);
@@ -236,9 +239,7 @@ private:
 	AttrValue         exportBlenderNodeNormal(VRayNodeExportParam);
 
 private:
-	BL::NodeTree      getNodeGroupTree(BL::Node node);
 	BL::NodeSocket    getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket);
-	BL::Texture       getTextureFromProperty(PointerRNA *ptr, const std::string &propName);
 
 public:
 	StrSet            RenderChannelNames;

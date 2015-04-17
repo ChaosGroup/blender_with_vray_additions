@@ -122,7 +122,7 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 			int                child_total = ps->totchildcache;
 			int                tot_verts = 0;
 
-			num_hair_vertices.setCount(child_total);
+			num_hair_vertices.resize(child_total);
 
 			for (int p = 0; p < child_total; ++p) {
 				const int seg_verts = child_cache[p]->segments;
@@ -131,12 +131,12 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 				(*num_hair_vertices)[p] = seg_verts;
 			}
 
-			widths.setCount(tot_verts);
-			hair_vertices.setCount(tot_verts);
+			widths.resize(tot_verts);
+			hair_vertices.resize(tot_verts);
 
 			const bool has_uv = psmd->dm && CustomData_number_of_layers(&psmd->dm->faceData, CD_MTFACE);
 			if (has_uv) {
-				strand_uvw.setCount(tot_verts);
+				strand_uvw.resize(tot_verts);
 			}
 
 			int hair_vert_index = 0;
@@ -187,14 +187,14 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 		else {
 			// Export particles using C++ RNA API
 			//
-			num_hair_vertices.setCount(totparts);
-			widths.setCount(totparts * ren_step);
-			hair_vertices.setCount(totparts * ren_step);
+			num_hair_vertices.resize(totparts);
+			widths.resize(totparts * ren_step);
+			hair_vertices.resize(totparts * ren_step);
 
 			BL::Mesh mesh(ob.data());
 			const bool has_uv = mesh && mesh.tessface_uv_textures.length();
 			if (has_uv) {
-				strand_uvw.setCount(totparts);
+				strand_uvw.resize(totparts);
 			}
 
 			const float hair_fade_step  = hair_width / (ren_step + 1);

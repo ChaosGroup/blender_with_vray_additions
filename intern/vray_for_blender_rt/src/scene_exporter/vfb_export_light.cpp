@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
+#include "vfb_params_json.h"
+
 #include "vfb_node_exporter.h"
+#include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
+
+#include <boost/format.hpp>
 
 
 AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
@@ -67,38 +72,82 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
 
 		if (!pluginID.empty()) {
 			PointerRNA lampPropGroup = RNA_pointer_get(&vrayLamp, pluginID.c_str());
+			PluginDesc pluginDesc(getLightName(ob), pluginID);
 
-			PluginDesc lampDesc(ob.name(), pluginID, "Lamp@");
-			lampDesc.add("transform", AttrTransform(ob.matrix_world()));
+			BL::Node     lightNode(PointerRNA_NULL);
+			BL::NodeTree ntree = Nodes::GetNodeTree(lamp);
+			if (ntree) {
+				static boost::format  lightNodeTypeFmt("VRayNode%s");
+				const std::string    &vrayNodeType = boost::str(lightNodeTypeFmt % pluginID);
+
+				lightNode = Nodes::GetNodeByType(ntree, vrayNodeType);
+			}
+
+			if (ntree && !lightNode) {
+				PRINT_ERROR("Lamp \"%s\" node tree output node is not found!",
+				            ob.name().c_str());
+			}
+
+			const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
+			for (const auto &descIt : pluginParamDesc.attributes) {
+				const std::string         &attrName = descIt.second.name;
+				const ParamDesc::AttrType &attrType = descIt.second.type;
+
+				if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
+					continue;
+				}
+
+				// For lights we are interested in mappable types only in linked sockets
+				// ignore otherwize
+				if (!ParamDesc::TypeHasSocket(attrType)) {
+					setAttrFromPropGroup(&lampPropGroup, (ID*)lamp.ptr.data, attrName, pluginDesc);
+				}
+				else if (lightNode){
+					BL::NodeSocket sock = Nodes::GetSocketByAttr(lightNode, attrName);
+					if (sock && sock.is_linked()) {
+						NodeContext context;
+						AttrValue socketValue = exportSocket(ntree, sock, &context);
+						if (socketValue) {
+							pluginDesc.add(attrName, socketValue);
+						}
+					}
+				}
+			}
+
+			pluginDesc.add("transform", AttrTransform(ob.matrix_world()));
 
 			if (pluginID == "LightRectangle") {
-				BL::AreaLamp  areaLamp(lamp);
+				BL::AreaLamp areaLamp(lamp);
 
 				const float sizeX = areaLamp.size() / 2.0f;
 				const float sizeY = areaLamp.shape() == BL::AreaLamp::shape_SQUARE
 				                    ? sizeX
 				                    : areaLamp.size_y() / 2.0f;
 
-				lampDesc.add("u_size", sizeX);
-				lampDesc.add("v_size", sizeY);
+				pluginDesc.add("u_size", sizeX);
+				pluginDesc.add("v_size", sizeY);
+
+				// Q: Ignoring UI option "use_rect_tex" at all?
+				PluginAttr *rect_tex = pluginDesc.get("rect_tex");
+				bool use_rect_tex = (rect_tex && rect_tex->attrValue.type == ValueTypePlugin);
+				pluginDesc.add("use_rect_tex", use_rect_tex);
 			}
 			else if (pluginID == "LightDome") {
-				// ...
+				// Q: Ignoring UI option "use_dome_tex" at all?
+				PluginAttr *dome_tex = pluginDesc.get("dome_tex");
+				bool use_dome_tex = (dome_tex && dome_tex->attrValue.type == ValueTypePlugin);
+				pluginDesc.add("use_dome_tex", use_dome_tex);
 			}
 			else if (pluginID == "LightSpotMax") {
-				// ...
+				BL::SpotLamp spotLamp(lamp);
+
+				pluginDesc.add("fallsize", spotLamp.spot_size());
 			}
 			else if (ELEM(pluginID, "LightRectangle", "LightSphere", "LightDome")) {
-				lampDesc.add("objectID", ob.pass_index());
+				pluginDesc.add("objectID", ob.pass_index());
 			}
 
-			float color[3];
-			RNA_float_get_array(&lampPropGroup, "color", color);
-
-			lampDesc.add("intensity", RNA_float_get(&lampPropGroup, "intensity"));
-			lampDesc.add("color", AttrColor(color[0], color[1], color[2]));
-
-			plugin = m_exporter->export_plugin(lampDesc);
+			plugin = m_exporter->export_plugin(pluginDesc);
 		}
 	}
 

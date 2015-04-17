@@ -116,26 +116,26 @@ static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 {
 	PRINT_INFO_EX("mExporterInit()");
 
+	PyObject *pycontext  = nullptr;
 	PyObject *pyengine   = nullptr;
-	PyObject *pyuserpref = nullptr;
 	PyObject *pydata     = nullptr;
 	PyObject *pyscene    = nullptr;
 	PyObject *pyregion   = nullptr;
 	PyObject *pyv3d      = nullptr;
 	PyObject *pyrv3d     = nullptr;
 
-	if(!PyArg_ParseTuple(args, "OOOOOOO", &pyengine, &pyuserpref, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d)) {
+	if(!PyArg_ParseTuple(args, "OOOOOOO", &pycontext, &pyengine, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d)) {
 		return NULL;
 	}
 
 	// Create RNA pointers
+	PointerRNA contextPtr;
+	RNA_pointer_create(NULL, &RNA_Context, (void*)PyLong_AsVoidPtr(pyengine), &contextPtr);
+	BL::Context context(contextPtr);
+
 	PointerRNA engineptr;
 	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(pyengine), &engineptr);
 	BL::RenderEngine engine(engineptr);
-
-	PointerRNA userprefptr;
-	RNA_pointer_create(NULL, &RNA_UserPreferences, (void*)PyLong_AsVoidPtr(pyuserpref), &userprefptr);
-	BL::UserPreferences userpref(userprefptr);
 
 	PointerRNA dataptr;
 	RNA_main_pointer_create((Main*)PyLong_AsVoidPtr(pydata), &dataptr);
@@ -158,8 +158,7 @@ static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 	BL::RegionView3D rv3d(rv3dptr);
 
 	// Create exporter
-	VRayForBlender::ExporterSettings settings(data, scene);
-	VRayForBlender::SceneExporter *exporter = new VRayForBlender::SceneExporter(engine, userpref, data, scene, v3d, rv3d, region);
+	VRayForBlender::SceneExporter *exporter = new VRayForBlender::SceneExporter(context, engine, data, scene, v3d, rv3d, region);
 
 	return PyLong_FromVoidPtr(exporter);
 }

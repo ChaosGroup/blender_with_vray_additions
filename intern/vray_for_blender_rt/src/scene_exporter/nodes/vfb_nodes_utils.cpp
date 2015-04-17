@@ -60,7 +60,7 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 		for (group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
 			BL::Object b_ob(*obIt);
 
-			// pluginList.push_back(Blender::GetIDName(b_ob));
+			pluginList.append(Blender::GetIDName(b_ob));
 		}
 	}
 
@@ -68,21 +68,21 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 }
 
 
-void DataExporter::getNodeSelectObjects(BL::Node node, ObList &obList)
+void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 {
-	if(node.bl_idname() == "VRayNodeSelectObject") {
-		BL::Object ob = DataExporter::exportVRayNodeSelectObject(PointerRNA_NULL, node, PointerRNA_NULL, NULL);
-		if(ob) {
+	if (node.bl_idname() == "VRayNodeSelectObject") {
+		BL::Object ob = exportVRayNodeSelectObject(PointerRNA_NULL, node, PointerRNA_NULL, NULL);
+		if (ob) {
 			obList.push_back(ob);
 		}
 	}
-	else if(node.bl_idname() == "VRayNodeSelectGroup") {
-		BL::Group group = DataExporter::exportVRayNodeSelectGroup(PointerRNA_NULL, node, PointerRNA_NULL, NULL);
-		if(group) {
+	else if (node.bl_idname() == "VRayNodeSelectGroup") {
+		BL::Group group = exportVRayNodeSelectGroup(PointerRNA_NULL, node, PointerRNA_NULL, NULL);
+		if (group) {
 			BL::Group::objects_iterator obIt;
-			for(group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
-				BL::Object ob = *obIt;
-				if(ob) {
+			for (group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
+				BL::Object ob(*obIt);
+				if (ob) {
 					obList.push_back(ob);
 				}
 			}

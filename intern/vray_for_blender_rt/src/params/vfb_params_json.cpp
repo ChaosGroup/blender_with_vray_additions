@@ -179,36 +179,37 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 				else if (attrType == "OUTPUT_TRANSFORM_TEXTURE") {
 					attrDesc.type = AttrTypeOutputTextureTransform;
 				}
-#if 0
+				else if (attrType == "LIST") {
+					attrDesc.type = AttrTypeList;
+				}
 				else if (attrType == "WIDGET_RAMP") {
-					attrDesc.type = ParmType::eRamp;
+					attrDesc.type = AttrTypeWidgetRamp;
 
 					const auto &rampDesc = v.second.get_child("attrs");
 					if (rampDesc.count("colors")) {
-						attrDesc.value.defRamp.colors = rampDesc.get_child("colors").data();
+						attrDesc.descRamp.colors = rampDesc.get_child("colors").data();
 					}
 					if (rampDesc.count("positions")) {
-						attrDesc.value.defRamp.positions = rampDesc.get_child("positions").data();
+						attrDesc.descRamp.positions = rampDesc.get_child("positions").data();
 					}
 					if (rampDesc.count("interpolations")) {
-						attrDesc.value.defRamp.interpolations = rampDesc.get_child("interpolations").data();
+						attrDesc.descRamp.interpolations = rampDesc.get_child("interpolations").data();
 					}
 				}
 				else if (attrType == "WIDGET_CURVE") {
-					attrDesc.type = ParmType::eCurve;
+					attrDesc.type = AttrTypeWidgetCurve;
 
 					const auto &curveDesc = v.second.get_child("attrs");
 					if (curveDesc.count("values")) {
-						attrDesc.value.defCurve.values = curveDesc.get_child("values").data();
+						attrDesc.descCurve.values = curveDesc.get_child("values").data();
 					}
 					if (curveDesc.count("positions")) {
-						attrDesc.value.defCurve.positions = curveDesc.get_child("positions").data();
+						attrDesc.descCurve.positions = curveDesc.get_child("positions").data();
 					}
 					if (curveDesc.count("interpolations")) {
-						attrDesc.value.defCurve.interpolations = curveDesc.get_child("interpolations").data();
+						attrDesc.descCurve.interpolations = curveDesc.get_child("interpolations").data();
 					}
 				}
-#endif
 			}
 		}
 	}

@@ -85,7 +85,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 		AttrListString   map_channels_names;
 		AttrMapChannels  map_channels;
 		if (num_channels) {
-			map_channels_names.setCount(num_channels);
+			map_channels_names.resize(num_channels);
 		}
 
 		ChanMap chan_data;
@@ -142,8 +142,8 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 					// Setup channel data
 					AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[chan_name];
 					map_channel.name = chan_name;
-					map_channel.vertices.setCount(chan_data.size());
-					map_channel.faces.setCount(numFaces * 3);
+					map_channel.vertices.resize(chan_data.size());
+					map_channel.faces.resize(numFaces * 3);
 
 					int f = 0;
 					for (ChanSet::iterator setIt = chan_data.begin(); setIt != chan_data.end(); ++setIt, ++f) {

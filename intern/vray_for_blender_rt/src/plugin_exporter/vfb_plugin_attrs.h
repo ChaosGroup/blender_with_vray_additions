@@ -49,8 +49,12 @@ struct AttrColor {
 	    b(b)
 	{}
 
-	AttrColor(const BlColor &bl_c) {
-		memcpy(&r, &bl_c.data[0], VectorBytesCount);
+	AttrColor(const BlColor &c) {
+		memcpy(&r, &c.data[0], VectorBytesCount);
+	}
+
+	AttrColor(const BlAColor &ac) {
+		memcpy(&r, &ac.data[0], VectorBytesCount);
 	}
 
 	AttrColor(float c):
@@ -76,7 +80,7 @@ struct AttrAColor {
 	    alpha(1.0f)
 	{}
 
-	AttrAColor(const AttrColor &c, const float &a):
+	AttrAColor(const AttrColor &c, const float &a=1.0f):
 	    color(c),
 	    alpha(a)
 	{}
@@ -266,6 +270,10 @@ struct AttrList {
 
 	operator bool () const {
 		return ptr && ptr.get()->size();
+	}
+
+	const bool empty() const {
+		return !ptr || (ptr.get()->size() == 0);
 	}
 
 private:
@@ -486,10 +494,14 @@ struct AttrValue {
 	}
 
 	operator bool () const {
-		if (type == ValueTypePlugin) {
-			return !!(valPlugin);
+		bool valid = true;
+		if (type == ValueTypeUnknown) {
+			valid = false;
 		}
-		return true;
+		else if (type == ValueTypePlugin) {
+			valid = !!(valPlugin);
+		}
+		return valid;
 	}
 };
 
@@ -546,13 +558,7 @@ struct PluginDesc {
 	}
 
 	void add(const PluginAttr &attr, const float &time=0.0f) {
-		PluginAttr *_attr = get(attr.attrName);
-		if (_attr) {
-			*_attr = attr;
-		}
-		else {
-			pluginAttrs[attr.attrName] = attr;
-		}
+		pluginAttrs[attr.attrName] = attr;
 	}
 
 	void add(const std::string &attrName, const AttrValue &attrValue, const float &time=0.0f) {

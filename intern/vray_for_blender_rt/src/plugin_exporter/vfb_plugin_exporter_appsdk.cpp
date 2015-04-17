@@ -296,10 +296,6 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 		           pluginDesc.pluginName.c_str());
 	}
 	else {
-		if (m_vray->isPaused()) {
-			m_vray->start();
-		}
-
 		VRay::Plugin plug = new_plugin(pluginDesc);
 		if (NOT(plug)) {
 			PRINT_ERROR("Failed to create plugin: %s [%s]",
@@ -347,25 +343,7 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 				}
 				else if (p.attrValue.type == ValueTypeString) {
 					plug.setValue(p.attrName, p.attrValue.valString);
-#if CGR_DEBUG_APPSDK_VALUES
-					PRINT_INFO("AttrTypeString:  %s [%s] = %s",
-					           p.paramName.c_str(), plug.getType().c_str(), plug.getValueAsString(p.paramName).c_str());
-#endif
 				}
-#if 0
-				else if (p.attrValue.type == ValueTypeListPlugin) {
-					plug.setValue(p.paramName, VRay::Value(p.paramValue.valListValue));
-				}
-#endif
-#if 0
-				else if (p.attrValue.type == ValueTypeListValue) {
-					plug.setValue(p.paramName, VRay::Value(p.paramValue.valListValue));
-#if CGR_DEBUG_APPSDK_VALUES
-					PRINT_INFO("AttrTypeListValue:  %s [%s] = %s",
-					           p.paramName.c_str(), plug.getType().c_str(), plug.getValueAsString(p.paramName).c_str());
-#endif
-				}
-#endif
 				else if (p.attrValue.type == ValueTypeListInt) {
 					plug.setValue(p.attrName,
 					              (void*)*p.attrValue.valListInt,
