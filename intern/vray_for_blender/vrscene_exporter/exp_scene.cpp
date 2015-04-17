@@ -611,7 +611,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	const std::string pluginName = attrs.namePrefix + GetIDName(bl_ob, "OB");
+	const std::string pluginName = attrs.namePrefix + GetIDName(bl_ob);
 
 	std::string transform = GetTransformHex(bl_ob.matrix_world());
 
@@ -727,7 +727,7 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 	BL::Lamp          lamp(lampID);
 	PointerRNA        vrayLamp = RNA_pointer_get(&lamp.ptr, "vray");
 
-	const std::string pluginName = attrs.namePrefix + GetIDName(ob, "LA");
+	const std::string pluginName = attrs.namePrefix + GetIDName(ob);
 	if(m_exportedObjects.count(pluginName))
 		return;
 	m_exportedObjects.insert(pluginName);

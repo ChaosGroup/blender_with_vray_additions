@@ -147,7 +147,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 			if (lights.size()) {
 				StrSet lightsList;
 				for (ObList::const_iterator obIt = lights.begin(); obIt != lights.end(); ++obIt) {
-					lightsList.insert(GetIDName(*obIt, "LA"));
+					lightsList.insert(GetIDName(*obIt));
 				}
 				attr_lights = BOOST_FORMAT_LIST(lightsList);
 			}
@@ -450,7 +450,7 @@ std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, B
 
 				for (ObList::const_iterator obIt = excludeObjects.begin(); obIt != excludeObjects.end(); ++obIt) {
 					BL::Object ob(*obIt);
-					excludeList.insert(GetIDName(ob, "OB"));
+					excludeList.insert(GetIDName(ob));
 				}
 
 				pluginAttrs["excludeList"] = BOOST_FORMAT_LIST(excludeList);

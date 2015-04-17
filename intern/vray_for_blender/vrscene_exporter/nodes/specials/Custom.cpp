@@ -37,7 +37,7 @@ std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node 
 			else {
 				BL::Object sunOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, conNode, sunSock, context);
 				if (sunOb && sunOb.type() == BL::Object::type_LAMP) {
-					attrs["sun"] = GetIDName(sunOb, "LA");
+					attrs["sun"] = GetIDName(sunOb);
 				}
 			}
 		}
@@ -54,7 +54,7 @@ std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node 
 						PointerRNA vrayLight = RNA_pointer_get(&la.ptr, "vray");
 						const int direct_type = RNA_enum_get(&vrayLight, "direct_type");
 						if (direct_type == 1) {
-							attrs["sun"] = GetIDName(ob, "LA");
+							attrs["sun"] = GetIDName(ob);
 							break;
 						}
 					}

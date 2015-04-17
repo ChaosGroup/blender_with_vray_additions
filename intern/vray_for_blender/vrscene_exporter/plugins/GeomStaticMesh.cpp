@@ -269,12 +269,10 @@ void GeomStaticMesh::initName(const std::string &name)
 	if(NOT(name.empty()))
 		m_name = name;
 	else {
-		if(ExporterSettings::gSet.m_useAltInstances) {
-			m_name = GetIDName((ID*)m_ob->data, "Me");
-		}
-		else {
-			m_name = GetIDName((ID*)m_ob, "Me");
-		}
+		m_name = ExporterSettings::gSet.m_useAltInstances
+		         ? GetIDName((ID*)m_ob->data)
+		         : GetIDName((ID*)m_ob);
+		m_name.append("@Geom");
 	}
 }
 
