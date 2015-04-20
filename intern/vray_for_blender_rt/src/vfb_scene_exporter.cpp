@@ -31,8 +31,14 @@
 #include "DNA_screen_types.h"
 #include "BKE_camera.h"
 
+extern "C" {
+#include "BKE_idprop.h"
+#include "BKE_node.h" // For ntreeUpdateTree()
+}
+
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <ctime>
 
@@ -86,6 +92,7 @@ void SceneExporter::init()
 
 void SceneExporter::free()
 {
+	PluginDesc::cache.clear();
 	ExporterDelete(m_exporter);
 }
 
@@ -182,6 +189,8 @@ void SceneExporter::sync(const int &check_updated)
 
 	clock_t begin = clock();
 
+	sync_prepass();
+
 	sync_view(check_updated);
 	sync_materials(check_updated);
 	sync_objects(check_updated);
@@ -193,6 +202,96 @@ void SceneExporter::sync(const int &check_updated)
 
 	PRINT_INFO_EX("Synced in %.3f sec.",
 	              elapsed_secs);
+}
+
+
+static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, const std::string &texAttr)
+{
+	bNodeTree *_ntree = (bNodeTree*)ntree.ptr.data;
+
+	BL::Texture tex(BL::Texture(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttr)));
+	if (tex && (tex.is_updated() || tex.is_updated_data())) {
+		_ntree->id.flag |= LIB_ID_RECALC_ALL;
+	}
+}
+
+
+void SceneExporter::sync_prepass()
+{
+	BL::BlendData::node_groups_iterator nIt;
+	for (m_data.node_groups.begin(nIt); nIt != m_data.node_groups.end(); ++nIt) {
+		BL::NodeTree ntree(*nIt);
+		bNodeTree *_ntree = (bNodeTree*)ntree.ptr.data;
+
+		if (IDP_is_ID_used((ID*)_ntree)) {
+			if (boost::starts_with(ntree.bl_idname(), "VRayNodeTree")) {
+				// NOTE: On scene save node links are not properly updated for some
+				// reason; simply manually update everything...
+				ntreeUpdateTree((Main*)m_data.ptr.data, _ntree);
+
+				// Check nodes
+				BL::NodeTree::nodes_iterator nodeIt;
+				for (ntree.nodes.begin(nodeIt); nodeIt != ntree.nodes.end(); ++nodeIt) {
+					BL::Node node(*nodeIt);
+					if (node.bl_idname() == "VRayNodeMetaImageTexture" ||
+					    node.bl_idname() == "VRayNodeBitmapBuffer"     ||
+					    node.bl_idname() == "VRayNodeTexGradRamp"      ||
+					    node.bl_idname() == "VRayNodeTexRemap") {
+						TagNtreeIfIdPropTextureUpdated(ntree, node, "texture");
+					}
+					else if (node.bl_idname() == "VRayNodeTexSoftBox") {
+						TagNtreeIfIdPropTextureUpdated(ntree, node, "ramp_grad_vert");
+						TagNtreeIfIdPropTextureUpdated(ntree, node, "ramp_grad_horiz");
+						TagNtreeIfIdPropTextureUpdated(ntree, node, "ramp_grad_rad");
+						TagNtreeIfIdPropTextureUpdated(ntree, node, "ramp_frame");
+					}
+				}
+			}
+		}
+	}
+}
+
+
+static float GetLensShift(BL::Object ob)
+{
+	float shift = 0.0f;
+
+	BL::Constraint constraint(PointerRNA_NULL);
+	if (ob.constraints.length()) {
+		BL::Object::constraints_iterator cIt;
+		for (ob.constraints.begin(cIt); cIt != ob.constraints.end(); ++cIt) {
+			BL::Constraint cn(*cIt);
+
+			if ((cn.type() == BL::Constraint::type_TRACK_TO)     ||
+			    (cn.type() == BL::Constraint::type_DAMPED_TRACK) ||
+			    (cn.type() == BL::Constraint::type_LOCKED_TRACK)) {
+				constraint = cn;
+				break;
+			}
+		}
+	}
+
+	if (constraint) {
+		BL::ConstraintTarget ct(constraint);
+		BL::Object target(ct.target());
+		if (target) {
+			const float z_shift = ob.matrix_world().data[14] - target.matrix_world().data[14];
+			const float l = Blender::GetDistanceObOb(ob, target);
+			shift = -1.0f * z_shift / l;
+		}
+	}
+	else {
+		const float rx  = ob.rotation_euler().data[0];
+		const float lsx = rx - M_PI_2;
+		if (fabs(lsx) > 0.0001f) {
+			shift = tanf(lsx);
+		}
+		if (fabs(shift) > M_PI) {
+			shift = 0.0f;
+		}
+	}
+
+	return shift;
 }
 
 
@@ -288,8 +387,6 @@ void SceneExporter::sync_view(const int &check_updated)
 						viewParams.render_view.ortho_width *= aspect;
 					}
 
-					// TODO: Setup crop render if viewport is zoomed
-
 					viewParams.render_view.use_clip_start = RNA_boolean_get(&renderView, "clip_near");
 					viewParams.render_view.use_clip_end   = RNA_boolean_get(&renderView, "clip_far");
 
@@ -297,6 +394,36 @@ void SceneExporter::sync_view(const int &check_updated)
 					viewParams.render_view.clip_end   = camera_data.clip_end();
 
 					viewParams.render_view.tm  = camera.matrix_world();
+
+					PointerRNA physicalCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
+					if (RNA_boolean_get(&physicalCamera, "use")) {
+						float horizontal_offset = -camera_data.shift_x();
+						float vertical_offset   = -camera_data.shift_y();
+						if (aspect < 1.0f) {
+							const float offset_fix = 1.0 / aspect;
+							horizontal_offset *= offset_fix;
+							vertical_offset   *= offset_fix;
+						}
+
+						const float lens_shift = RNA_boolean_get(&physicalCamera, "auto_lens_shift")
+						                         ? GetLensShift(camera)
+						                         : RNA_float_get(&physicalCamera, "lens_shift");
+
+						float focus_distance = Blender::GetCameraDofDistance(camera);
+						if (focus_distance < 0.001f) {
+							focus_distance = 5.0f;
+						}
+
+						PluginDesc physCamDesc("cameraPhysical", "CameraPhysical");
+						physCamDesc.add("fov", viewParams.render_view.fov);
+						physCamDesc.add("horizontal_offset", horizontal_offset);
+						physCamDesc.add("vertical_offset",   vertical_offset);
+						physCamDesc.add("lens_shift",        lens_shift);
+						physCamDesc.add("focus_distance",    focus_distance);
+
+						m_data_exporter.setAttrsFromPropGroupAuto(physCamDesc, &physicalCamera, "CameraPhysical");
+						m_exporter->export_plugin(physCamDesc);
+					}
 				}
 			}
 			else {

@@ -117,6 +117,7 @@ public:
 
 public:
 	void                 sync(const int &check_updated=false);
+	void                 sync_prepass();
 	void                 sync_view(const int &check_updated=false);
 	void                 sync_materials(const int &check_updated=false);
 	void                 sync_objects(const int &check_updated=false);

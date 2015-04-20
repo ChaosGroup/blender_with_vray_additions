@@ -24,6 +24,8 @@
 #include "vfb_typedefs.h"
 #include "vfb_rna.h"
 
+#include "utils/cgr_hash.h"
+
 #include "BLI_math.h"
 
 #include <boost/shared_ptr.hpp>
@@ -129,6 +131,10 @@ struct AttrVector {
 
 	bool operator == (const AttrVector other) {
 		return (x == other.x) && (y == other.y) && (z == other.z);
+	}
+
+	float len() const {
+		return sqrtf(x * x + y * y + z * z);
 	}
 
 	void set(const float &_x, const float &_y, const float &_z) {
@@ -521,6 +527,9 @@ typedef boost::unordered_map<std::string, PluginAttr> PluginAttrs;
 
 
 struct PluginDesc {
+	typedef boost::unordered_map<std::string, PluginDesc> PluginAttrsCache;
+	static PluginAttrsCache cache;
+
 	std::string  pluginName;
 	std::string  pluginID;
 	PluginAttrs  pluginAttrs;

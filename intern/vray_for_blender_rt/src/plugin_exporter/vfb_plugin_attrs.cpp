@@ -17,29 +17,10 @@
  */
 
 #include "vfb_plugin_attrs.h"
-#include "vfb_utils_math.h"
-
-#include "BLI_math.h"
 
 
-BlTransform VRayForBlender::Math::InvertTm(const BlTransform &tm)
-{
-	BlTransform itm;
-
-	float m[4][4];
-	memcpy(&m, &tm.data, sizeof(float[4][4]));
-
-	invert_m4(m);
-	memcpy(&itm.data, m, sizeof(float[4][4]));
-
-	return itm;
-}
+using namespace VRayForBlender;
 
 
-float VRayForBlender::Math::GetDistanceTmTm(BlTransform a, BlTransform b)
-{
-	AttrVector a_offs(&a.data[12]);
-	AttrVector b_offs(&b.data[12]);
-	AttrVector d = a_offs - b_offs;
-	return d.len();
-}
+PluginDesc::PluginAttrsCache PluginDesc::cache;
+

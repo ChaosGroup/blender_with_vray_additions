@@ -37,14 +37,19 @@ int           GetMaterialCount(BL::Object ob);
 
 template <typename T>
 T GetDataFromProperty(PointerRNA *ptr, const std::string &attr) {
+	T val(PointerRNA_NULL);
 	PropertyRNA *ntreeProp = RNA_struct_find_property(ptr, attr.c_str());
 	if (ntreeProp) {
 		if  (RNA_property_type(ntreeProp) == PROP_POINTER) {
-			return T(RNA_pointer_get(ptr, attr.c_str()));
+			val = T(RNA_pointer_get(ptr, attr.c_str()));
 		}
 	}
-	return T(PointerRNA_NULL);
+	return val;
 }
+
+float GetDistanceObOb(BL::Object a, BL::Object b);
+
+float GetCameraDofDistance(BL::Object camera);
 
 } // namespace Blender
 } // namespace VRayForBlender

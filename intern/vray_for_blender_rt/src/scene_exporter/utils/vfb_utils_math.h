@@ -32,6 +32,7 @@ namespace VRayForBlender {
 namespace Math {
 
 BlTransform InvertTm(const BlTransform &tm);
+float       GetDistanceTmTm(BlTransform a, BlTransform b);
 
 } // namespace Math
 } // namespace VRayForBlender

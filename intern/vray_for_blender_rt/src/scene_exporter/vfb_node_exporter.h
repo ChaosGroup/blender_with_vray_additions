@@ -221,13 +221,10 @@ private:
 	AttrValue         exportVRayNodeSphereFadeGizmo(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexEdges(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexFalloff(VRayNodeExportParam);
-	AttrValue         exportVRayNodeTexGradRamp(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexLayered(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexMayaFluid(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexMulti(VRayNodeExportParam);
-	AttrValue         exportVRayNodeTexRemap(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexSky(VRayNodeExportParam);
-	AttrValue         exportVRayNodeTexSoftbox(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexVoxelData(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTransform(VRayNodeExportParam);
 	AttrValue         exportVRayNodeUVWGenChannel(VRayNodeExportParam);

@@ -24,10 +24,6 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-extern "C" {
-#include "BKE_node.h" // For ntreeUpdateTree()
-}
-
 
 static boost::format FormatFloat("%.6g");
 static boost::format FormatString("\"%s\"");
@@ -117,14 +113,6 @@ void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngi
 	m_scene = scene;
 	m_engine = engine;
 	m_context = context;
-
-	// NOTE: On scene save node links are not properly updated for some
-	// reason; simply manually update everything...
-	//
-	BL::BlendData::node_groups_iterator nIt;
-	for (m_data.node_groups.begin(nIt); nIt != m_data.node_groups.end(); ++nIt) {
-		ntreeUpdateTree((struct Main*)data.ptr.data, (struct bNodeTree*)nIt->ptr.data);
-	}
 }
 
 
@@ -143,39 +131,9 @@ void DataExporter::init_defaults()
 	// Export override material
 	//
 	if (!m_settings.override_material.empty()) {
-
+		// TODO
 	}
 }
-
-
-#if 0
-void NodeExporter::getAttributesList(const std::string &pluginID, StrSet &attrSet, bool mappable)
-{
-	const ParamDesc::PluginDesc &pluginDesc = GetPluginDescription(pluginID);
-
-	for (const auto &attrDesc : pluginDesc.attributes) {
-		const std::string         &attrName = attrDesc.name;
-		const ParamDesc::AttrType &attrType = attrDesc.type;
-#if 0
-		if (SKIP_TYPE(attrType))
-			continue;
-
-		if (v.second.count("skip"))
-			if (v.second.get<bool>("skip"))
-				continue;
-
-		if (mappable) {
-			if (MAPPABLE_TYPE(attrType))
-				attrSet.insert(attrName);
-		}
-		else {
-			if (NOT(MAPPABLE_TYPE(attrType)))
-				attrSet.insert(attrName);
-		}
-#endif
-	}
-}
-#endif
 
 
 AttrValue DataExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket)
@@ -259,79 +217,24 @@ AttrValue DataExporter::exportVRayNodeAuto(VRayNodeExportParam, PluginDesc &plug
 }
 
 
-AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext *context)
+AttrValue DataExporter::exportVRayNode(VRayNodeExportParam)
 {
 	AttrValue attrValue;
 
 	const std::string &nodeClass = node.bl_idname();
+
 #if 0
 	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"...",
 	              node.name().c_str(), ntree.name().c_str());
 #endif
+
+	// Outputs
+	//
 	if (nodeClass == "VRayNodeBlenderOutputMaterial") {
 		attrValue = exportVRayNodeBlenderOutputMaterial(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeBlenderOutputGeometry") {
 		attrValue = exportVRayNodeBlenderOutputGeometry(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeBRDFLayered") {
-		attrValue = exportVRayNodeBRDFLayered(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeBRDFVRayMtl") {
-		attrValue = exportVRayNodeBRDFVRayMtl(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexLayered") {
-		attrValue = exportVRayNodeTexLayered(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexMulti") {
-		attrValue = exportVRayNodeTexMulti(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeSelectObject") {
-		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, context);
-		if (ob) {
-			attrValue = AttrPlugin(Blender::GetIDName(ob));
-		}
-	}
-	else if (nodeClass == "VRayNodeSelectGroup") {
-		BL::Group group = exportVRayNodeSelectGroup(ntree, node, fromSocket, context);
-		if (group) {
-			attrValue = DataExporter::getObjectNameList(group);
-		}
-	}
-	else if (nodeClass == "VRayNodeLightMesh") {
-		attrValue = exportVRayNodeLightMesh(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeGeomDisplacedMesh") {
-		attrValue = exportVRayNodeGeomDisplacedMesh(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeGeomStaticSmoothedMesh") {
-		attrValue = exportVRayNodeGeomStaticSmoothedMesh(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeBitmapBuffer") {
-		attrValue = exportVRayNodeBitmapBuffer(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexSoftbox") {
-		attrValue = exportVRayNodeTexSoftbox(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexSky") {
-		attrValue = exportVRayNodeTexSky(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexFalloff") {
-		attrValue = exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexEdges") {
-		attrValue = exportVRayNodeTexEdges(ntree, node, fromSocket, context);
-	}
-#if 0
-	else if (nodeClass == "VRayNodeTexVoxelData") {
-		attrValue = exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodeTexMayaFluid") {
-		attrValue = exportVRayNodeTexMayaFluid(ntree, node, fromSocket, context);
-	}
-#endif
-	else if (nodeClass == "VRayNodeMtlMulti") {
-		attrValue = exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = Nodes::GetInputSocketByName(node, "Material");
@@ -351,6 +254,72 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 			attrValue = exportLinkedSocket(ntree, textureInSock, context);
 		}
 	}
+
+	// Selectors
+	//
+	else if (nodeClass == "VRayNodeSelectObject") {
+		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, context);
+		if (ob) {
+			attrValue = AttrPlugin(Blender::GetIDName(ob));
+		}
+	}
+	else if (nodeClass == "VRayNodeSelectGroup") {
+		BL::Group group = exportVRayNodeSelectGroup(ntree, node, fromSocket, context);
+		if (group) {
+			attrValue = DataExporter::getObjectNameList(group);
+		}
+	}
+
+	// Geometry
+	//
+	else if (nodeClass == "VRayNodeLightMesh") {
+		attrValue = exportVRayNodeLightMesh(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeGeomDisplacedMesh") {
+		attrValue = exportVRayNodeGeomDisplacedMesh(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeGeomStaticSmoothedMesh") {
+		attrValue = exportVRayNodeGeomStaticSmoothedMesh(ntree, node, fromSocket, context);
+	}
+
+	// Textures
+	//
+	else if (nodeClass == "VRayNodeBitmapBuffer") {
+		attrValue = exportVRayNodeBitmapBuffer(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeMetaImageTexture") {
+		attrValue = exportVRayNodeMetaImageTexture(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexSky") {
+		attrValue = exportVRayNodeTexSky(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexFalloff") {
+		attrValue = exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexEdges") {
+		attrValue = exportVRayNodeTexEdges(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexLayered") {
+		attrValue = exportVRayNodeTexLayered(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexMulti") {
+		attrValue = exportVRayNodeTexMulti(ntree, node, fromSocket, context);
+	}
+
+	// Material / BRDF
+	//
+	else if (nodeClass == "VRayNodeBRDFLayered") {
+		attrValue = exportVRayNodeBRDFLayered(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeBRDFVRayMtl") {
+		attrValue = exportVRayNodeBRDFVRayMtl(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeMtlMulti") {
+		attrValue = exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
+	}
+
+	// Math
+	//
 	else if (nodeClass == "VRayNodeTransform") {
 		attrValue = exportVRayNodeTransform(ntree, node, fromSocket, context);
 	}
@@ -360,20 +329,15 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 	else if (nodeClass == "VRayNodeVector") {
 		attrValue = exportVRayNodeVector(ntree, node, fromSocket, context);
 	}
+
+	// Effects
+	//
 	else if (nodeClass == "VRayNodeEnvFogMeshGizmo") {
 		attrValue = exportVRayNodeEnvFogMeshGizmo(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeEnvironmentFog") {
 		attrValue = exportVRayNodeEnvironmentFog(ntree, node, fromSocket, context);
 	}
-#if 0
-	else if (nodeClass == "VRayNodePhxShaderSimVol") {
-		attrValue = exportVRayNodePhxShaderSimVol(ntree, node, fromSocket, context);
-	}
-	else if (nodeClass == "VRayNodePhxShaderSim") {
-		attrValue = exportVRayNodePhxShaderSim(ntree, node, fromSocket, context);
-	}
-#endif
 	else if (nodeClass == "VRayNodeSphereFadeGizmo") {
 		attrValue = exportVRayNodeSphereFadeGizmo(ntree, node, fromSocket, context);
 	}
@@ -383,6 +347,23 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 	else if (nodeClass == "VRayNodeVolumeVRayToon") {
 		attrValue = exportVRayNodeVolumeVRayToon(ntree, node, fromSocket, context);
 	}
+#if 0
+	else if (nodeClass == "VRayNodeTexVoxelData") {
+		attrValue = exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexMayaFluid") {
+		attrValue = exportVRayNodeTexMayaFluid(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodePhxShaderSimVol") {
+		attrValue = exportVRayNodePhxShaderSimVol(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodePhxShaderSim") {
+		attrValue = exportVRayNodePhxShaderSim(ntree, node, fromSocket, context);
+	}
+#endif
+
+	// UVW
+	//
 	else if (nodeClass == "VRayNodeUVWGenEnvironment") {
 		attrValue = exportVRayNodeUVWGenEnvironment(ntree, node, fromSocket, context);
 	}
@@ -392,18 +373,24 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::No
 	else if (nodeClass == "VRayNodeUVWGenChannel") {
 		attrValue = exportVRayNodeUVWGenChannel(ntree, node, fromSocket, context);
 	}
+
+	// Render channels
+	//
 	else if (nodeClass == "VRayNodeRenderChannelLightSelect") {
 		attrValue = exportVRayNodeRenderChannelLightSelect(ntree, node, fromSocket, context);
 	}
 	else if (nodeClass == "VRayNodeRenderChannelColor") {
 		attrValue = exportVRayNodeRenderChannelColor(ntree, node, fromSocket, context);
 	}
-	else if (nodeClass == "VRayNodeMetaImageTexture") {
-		attrValue = exportVRayNodeMetaImageTexture(ntree, node, fromSocket, context);
-	}
+
+	// Blender's
+	//
 	else if (node.is_a(&RNA_ShaderNodeNormal)) {
 		attrValue = exportBlenderNodeNormal(ntree, node, fromSocket, context);
 	}
+
+	// Automatic
+	//
 	else {
 		PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 		                      DataExporter::GetNodePluginID(node));

@@ -172,8 +172,8 @@ void AppSdkExporter::init()
 			m_vray->setRTImageUpdateTimeout(200);
 			// m_vray->setRTImageUpdateDifference();
 
-			VRay::RendererOptions options = m_vray->getOptions();
-			// options.numThreads = 4;
+			VRay::RendererOptions options;
+			options.keepRTRunning = true;
 
 			m_vray->setOptions(options);
 		}
@@ -221,7 +221,7 @@ void AppSdkExporter::sync()
 	}
 #endif
 
-#if 0
+#if 1
 	int res = m_vray->exportScene("/home/bdancer/Desktop/scene_app_sdk.vrscene");
 	if (res) {
 		PRINT_ERROR("Error exporting scene!");
@@ -306,10 +306,9 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 
 			for (const auto &pIt : pluginDesc.pluginAttrs) {
 				const PluginAttr &p = pIt.second;
-
-#if CGR_DEBUG_APPSDK_VALUES
-				PRINT_INFO("Setting plugin parameter: \"%s\" %s.%s",
-				           pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str(), p.paramName.c_str());
+#if 1
+				PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
+				              pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str(), p.attrName.c_str());
 #endif
 				if (p.attrValue.type == ValueTypeUnknown) {
 					continue;
@@ -353,6 +352,7 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 					plug.setValue(p.attrName,
 					              (void*)*p.attrValue.valListFloat,
 					              p.attrValue.valListFloat.getBytesCount());
+					PRINT_INFO_EX("%s = %s" , p.attrName.c_str(), plug.getValueAsString(p.attrName).c_str());
 				}
 				else if (p.attrValue.type == ValueTypeListVector) {
 					plug.setValue(p.attrName,

@@ -205,9 +205,9 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 					}
 				}
 			}
-			else if (attrType >= ParamDesc::AttrTypeWidgetRamp) {
+			else if (attrType == ParamDesc::AttrTypeWidgetRamp) {
 				// To preserve compatibility with already existing projects
-				const std::string texAttrName = (pluginID == "TexGradRamp" || pluginID == "TexRemap")
+				const std::string texAttrName = ((pluginID == "TexGradRamp") || (pluginID == "TexRemap"))
 				                                ? "texture"
 				                                : attrName;
 
@@ -215,7 +215,7 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 				                   texAttrName,
 				                   attrDesc.descRamp.colors, attrDesc.descRamp.positions, attrDesc.descRamp.interpolations);
 			}
-			else if (attrType >= ParamDesc::AttrTypeWidgetCurve) {
+			else if (attrType == ParamDesc::AttrTypeWidgetCurve) {
 			}
 		}
 

@@ -18,6 +18,7 @@
 
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
+#include "vfb_utils_math.h"
 
 #include "DNA_ID.h"
 #include "BKE_global.h"
@@ -141,4 +142,23 @@ std::string Blender::GetFilepath(const std::string &filepath, ID *holder)
 #endif
 
 	return absFilepath;
+}
+
+
+float Blender::GetDistanceObOb(BL::Object a, BL::Object b)
+{
+	return Math::GetDistanceTmTm(a.matrix_world(), b.matrix_world());
+}
+
+
+float Blender::GetCameraDofDistance(BL::Object camera)
+{
+	BL::Camera camera_data(camera.data());
+	BL::Object dofObject(camera_data.dof_object());
+
+	float dofDistance = dofObject
+	                    ? GetDistanceObOb(camera, dofObject)
+	                    : camera_data.dof_distance();
+
+	return dofDistance;
 }
