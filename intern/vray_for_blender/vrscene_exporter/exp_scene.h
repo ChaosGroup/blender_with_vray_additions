@@ -157,6 +157,8 @@ public:
 	void                    exportObjectBase(Object *ob);
 	void                    exportObjectsPost();
 
+	int                     is_interrupted();
+
 private:
 	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
