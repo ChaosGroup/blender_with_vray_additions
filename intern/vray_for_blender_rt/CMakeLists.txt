@@ -37,7 +37,7 @@ set(INC
 	src/scene_exporter
 	src/scene_exporter/utils
 
-	/home/bdancer/src/appsdk_releases/428/linux/cpp/include
+	/home/bdancer/src/appsdk_releases/447/linux/cpp/include
 )
 
 file(GLOB_RECURSE HEADERS "*.h")
