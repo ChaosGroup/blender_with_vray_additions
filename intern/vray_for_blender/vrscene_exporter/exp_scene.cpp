@@ -862,11 +862,13 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 				if(chanSock && chanSock.is_linked() && chanSock.bl_idname() == "VRaySocketRenderChannel") {
 					bool useChan = RNA_boolean_get(&chanSock.ptr, "use");
 					if(useChan) {
-						BL::Node chanNode = VRayNodeExporter::getConnectedNode(chanSock);
+						VRayNodeContext chanCtx;
+						BL::Node chanNode = VRayNodeExporter::getConnectedNode(chanSock, &chanCtx);
 						if(chanNode && chanNode.bl_idname() == "VRayNodeRenderChannelLightSelect") {
 							BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(chanNode, "Lights");
 							if(lightsSock) {
-								BL::Node lightsConNode = VRayNodeExporter::getConnectedNode(lightsSock);
+								VRayNodeContext lightCtx;
+								BL::Node lightsConNode = VRayNodeExporter::getConnectedNode(lightsSock, &lightCtx);
 								if(lightsConNode && IS_OBJECT_SELECT_NODE(lightsConNode)) {
 									ObList lampList;
 									VRayNodeExporter::getNodeSelectObjects(lightsConNode, lampList);
