@@ -29,7 +29,7 @@ std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node 
 
 	BL::NodeSocket sunSock = VRayNodeExporter::getSocketByName(node, "Sun");
 	if (sunSock && sunSock.is_linked()) {
-		BL::Node conNode = VRayNodeExporter::getConnectedNode(sunSock);
+		BL::Node conNode = VRayNodeExporter::getConnectedNode(sunSock, context);
 		if (conNode) {
 			if (NOT(conNode.bl_idname() == "VRayNodeSelectObject")) {
 				PRINT_ERROR("Sun node could be selected only with \"Select Object\" node.");

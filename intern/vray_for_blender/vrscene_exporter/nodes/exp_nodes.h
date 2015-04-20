@@ -209,7 +209,6 @@ public:
 
 	static BL::NodeSocket   getOutputSocketByName(BL::Node node, const std::string &socketName);
 
-	static BL::Node         getConnectedNode(BL::NodeSocket socket);
 	static BL::Node         getConnectedNode(BL::NodeSocket socket, VRayNodeContext *context);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeSocket socket);
 

@@ -267,19 +267,6 @@ BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeSocket socket)
 }
 
 
-BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket socket)
-{
-	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
-	bNodeLink   *link = bSocket->link;
-	if(link) {
-		PointerRNA nodePtr;
-		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_Node, link->fromnode, &nodePtr);
-		return BL::Node(nodePtr);
-	}
-	return BL::Node(PointerRNA_NULL);
-}
-
-
 // NOTE: The same as VRayNodeExporter::exportLinkedSocket,
 // but returns connected node
 //
@@ -360,7 +347,7 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 				return BL::Node(PointerRNA_NULL);
 
 			// Finally get the node connected to the socket on the Group node
-			conNode = VRayNodeExporter::getConnectedNode(groupInputSocket);
+			conNode = VRayNodeExporter::getConnectedNode(groupInputSocket, context);
 			if(NOT(conNode)) {
 				PRINT_ERROR("Group node name: %s => Connected node is not found!",
 							groupNode.name().c_str());
@@ -375,7 +362,7 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 				conSock = VRayNodeExporter::getConnectedSocket(rerouteInSock);
 				if(NOT(conSock.ptr.data))
 					return BL::Node(PointerRNA_NULL);
-				conNode = VRayNodeExporter::getConnectedNode(rerouteInSock);
+				conNode = VRayNodeExporter::getConnectedNode(rerouteInSock, context);
 			}
 		}
 	}
@@ -512,7 +499,7 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 	if(NOT(toSocket.ptr.data))
 		return "NULL";
 
-	BL::Node toNode = VRayNodeExporter::getConnectedNode(fromSocket);
+	BL::Node toNode = VRayNodeExporter::getConnectedNode(fromSocket, context);
 	// NOTE: This could happen while reconnecting nodes and material preview is active
 	if(NOT(toNode.ptr.data))
 		return "NULL";
@@ -589,7 +576,7 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 				return "NULL";
 
 			// Finally get the node connected to the socket on the Group node
-			toNode = VRayNodeExporter::getConnectedNode(groupInputSocket);
+			toNode = VRayNodeExporter::getConnectedNode(groupInputSocket, context);
 			if(NOT(toNode)) {
 				PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
 							ntree.name().c_str(), groupNode.name().c_str());
@@ -614,7 +601,7 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 				toSocket = VRayNodeExporter::getConnectedSocket(rerouteInSock);
 				if(NOT(toSocket.ptr.data))
 					return "NULL";
-				toNode = VRayNodeExporter::getConnectedNode(rerouteInSock);
+				toNode = VRayNodeExporter::getConnectedNode(rerouteInSock, context);
 				if(toNode) {
 					pluginName = VRayNodeExporter::getPluginName(toNode, ntree, context);
 				}
@@ -647,7 +634,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 	if(NOT(toSocket.ptr.data))
 		return "NULL";
 
-	BL::Node toNode = VRayNodeExporter::getConnectedNode(fromSocket);
+	BL::Node toNode = VRayNodeExporter::getConnectedNode(fromSocket, context);
 	// NOTE: This could happen while reconnecting nodes and material preview is active
 	if(NOT(toNode.ptr.data))
 		return "NULL";
@@ -728,7 +715,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 					return "NULL";
 
 				// Finally get the node connected to the socket on the Group node
-				toNode = VRayNodeExporter::getConnectedNode(groupInputSocket);
+				toNode = VRayNodeExporter::getConnectedNode(groupInputSocket, context);
 				if(NOT(toNode)) {
 					PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
 					            ntree.name().c_str(), groupNode.name().c_str());
@@ -754,7 +741,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 				toSocket = VRayNodeExporter::getConnectedSocket(rerouteInSock);
 				if(NOT(toSocket.ptr.data))
 					return "NULL";
-				toNode = VRayNodeExporter::getConnectedNode(rerouteInSock);
+				toNode = VRayNodeExporter::getConnectedNode(rerouteInSock, context);
 				if(toNode) {
 					connectedPlugin = VRayNodeExporter::exportVRayNode(ntree, toNode, fromSocket, context);
 				}
