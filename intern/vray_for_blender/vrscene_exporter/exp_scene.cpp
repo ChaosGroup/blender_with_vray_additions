@@ -63,23 +63,30 @@ const char* MyParticle::velocity = "00000000000000000000000000000000000000000000
 
 static int IsDuplicatorRenderable(BL::Object ob)
 {
-	if(NOT(ob.is_duplicator()))
-		return true;
+	bool is_renderable = false;
 
-	if(ob.dupli_type() != BL::Object::dupli_type_NONE)
-		return false;
+	if (!ob.is_duplicator()) {
+		is_renderable = true;
+	}
+	else {
+		if (ob.dupli_type() != BL::Object::dupli_type_NONE ||
+		    ob.dupli_type() != BL::Object::dupli_type_FRAMES) {
+			is_renderable = true;
+		}
 
-	if(ob.particle_systems.length()) {
-		BL::Object::particle_systems_iterator psysIt;
-		for(ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
-			BL::ParticleSystem   psys = *psysIt;
-			BL::ParticleSettings pset = psys.settings();
-			if(pset.use_render_emitter())
-				return true;
+		if (ob.particle_systems.length()) {
+			BL::Object::particle_systems_iterator psysIt;
+			for (ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
+				BL::ParticleSettings pset(psysIt->settings());
+				if (pset.use_render_emitter()) {
+					is_renderable = true;
+					break;
+				}
+			}
 		}
 	}
 
-	return false;
+	return is_renderable;
 }
 
 
