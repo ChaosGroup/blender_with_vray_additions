@@ -138,6 +138,7 @@ struct VRayObjectContext {
 	Main        *main;
 	Object      *ob;
 
+	NodeAttrs    nodeAttrs;
 	std::string  mtlOverrideName;
 };
 
