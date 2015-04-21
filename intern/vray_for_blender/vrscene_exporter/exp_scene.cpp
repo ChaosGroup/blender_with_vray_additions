@@ -328,6 +328,29 @@ void VRsceneExporter::exportClearCaches()
 }
 
 
+static bool IsMeshLight(BL::Object ob)
+{
+	bool is_mesh_light = false;
+
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)ob.ptr.data);
+	if (ntree) {
+		BL::Node nodeOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeObjectOutput");
+		if (nodeOutput) {
+			BL::NodeSocket geometrySocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
+			if (geometrySocket && geometrySocket.is_linked()) {
+				VRayNodeContext ctx;
+				BL::Node geomNode = VRayNodeExporter::getConnectedNode(geometrySocket, &ctx);
+				if (geomNode && geomNode.bl_idname() == "VRayNodeLightMesh") {
+					is_mesh_light = true;
+				}
+			}
+		}
+	}
+
+	return is_mesh_light;
+}
+
+
 void VRsceneExporter::exportObjectBase(Object *ob)
 {
 	if(NOT(GEOM_TYPE(ob) || EMPTY_TYPE(ob) || LIGHT_TYPE(ob)))
@@ -392,6 +415,8 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 					const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + bl_ob.name());
 
+					const bool is_light = bl_duplicatedOb.type() == BL::Object::type_LAMP || IsMeshLight(bl_duplicatedOb);
+
 					NodeAttrs dupliAttrs;
 					dupliAttrs.override = true;
 					// If dupli are shown via Instancer we need to hide
@@ -400,12 +425,12 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 					dupliAttrs.objectID = overrideObjectID;
 					dupliAttrs.dupliHolder = bl_ob;
 
-					if (NOT(useInstancer) || bl_duplicatedOb.type() == BL::Object::type_LAMP) {
+					if (NOT(useInstancer) || is_light) {
 						dupliAttrs.namePrefix = dupliNamePrefix;
 						dupliAttrs.tm = bl_dupliOb.matrix();
 					}
 
-					if(bl_duplicatedOb.type() == BL::Object::type_LAMP) {
+					if (is_light) {
 						exportObject(bl_duplicatedOb, dupliAttrs);
 					}
 					else {
@@ -639,6 +664,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	nodeCtx.obCtx.ob   = ob;
 	nodeCtx.obCtx.sce  = ExporterSettings::gSet.m_sce;
 	nodeCtx.obCtx.main = ExporterSettings::gSet.m_main;
+	nodeCtx.obCtx.nodeAttrs = attrs;
 	nodeCtx.obCtx.mtlOverrideName = ExporterSettings::gSet.m_mtlOverrideName;
 
 	// Export object main properties

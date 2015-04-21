@@ -25,26 +25,45 @@
 
 std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context->obCtx.ob)) {
+	std::string plugin = "NULL";
+
+	if (NOT(context->obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
-					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
+		            ntree.name().c_str(), node.name().c_str());
+	}
+	else {
+		BL::NodeSocket geomSock = VRayNodeExporter::getSocketByName(node, "Geometry");
+		if (NOT(geomSock.is_linked())) {
+			PRINT_ERROR("Node tree: %s => Node name: %s => Geometry socket is not linked!",
+			            ntree.name().c_str(), node.name().c_str());
+		}
+		else {
+			PointerRNA obPtr;
+			RNA_id_pointer_create((ID*)context->obCtx.ob, &obPtr);
+			BL::Object ob(obPtr);
+
+			std::string pluginName = "MeshLight@" + GetIDName(ob);
+
+			std::string transform = GetTransformHex(ob.matrix_world());
+			int         objectID  = ob.pass_index();
+
+			NodeAttrs &attrs = context->obCtx.nodeAttrs;
+			if (attrs.override) {
+				pluginName = attrs.namePrefix + pluginName;
+				objectID   = attrs.objectID;
+				transform  = GetTransformHex(attrs.tm);
+			}
+
+			AttributeValueMap manualAttrs;
+			manualAttrs["geometry"]  = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
+			manualAttrs["transform"] = BOOST_FORMAT_TM(transform);
+			manualAttrs["objectID"]  = BOOST_FORMAT_INT(objectID);
+
+			plugin = VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context,
+			                                                    /* customAttrs */ manualAttrs,
+			                                                    /* customName  */ pluginName);
+		}
 	}
 
-	BL::NodeSocket geomSock = VRayNodeExporter::getSocketByName(node, "Geometry");
-	if(NOT(geomSock.is_linked())) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Geometry socket is not linked!",
-					ntree.name().c_str(), node.name().c_str());
-
-		return "NULL";
-	}
-
-	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(context->obCtx.ob->obmat, transform);
-
-	AttributeValueMap manualAttrs;
-	manualAttrs["geometry"]  = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
-	manualAttrs["transform"] = BOOST_FORMAT_TM(transform);
-
-	return VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context, manualAttrs);
+	return plugin;
 }
