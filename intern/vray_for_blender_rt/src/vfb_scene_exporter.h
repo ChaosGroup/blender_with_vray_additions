@@ -120,6 +120,7 @@ public:
 	void                 sync_prepass();
 	void                 sync_view(const int &check_updated=false);
 	void                 sync_materials(const int &check_updated=false);
+	void                 sync_object(BL::Object ob, const int &check_updated=false);
 	void                 sync_objects(const int &check_updated=false);
 	void                 sync_effects(const int &check_updated=false);
 
@@ -127,9 +128,12 @@ public:
 	void                 resize(int w, int h);
 	void                 tag_update();
 	void                 tag_redraw();
+	void                 tag_ntree(BL::NodeTree ntree, bool updated=true);
 
 	void                 render_start();
 	void                 render_stop();
+
+	int                  is_interrupted();
 
 public:
 	void                *m_pythonThreadState;
@@ -148,7 +152,6 @@ private:
 	DataExporter         m_data_exporter;
 	ViewParams           m_viewParams;
 
-	std::set<void*>      m_id_cache;
 };
 
 }

@@ -29,6 +29,7 @@
 #include "DNA_view3d_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
+#include "DNA_object_types.h"
 #include "BKE_camera.h"
 
 extern "C" {
@@ -39,6 +40,7 @@ extern "C" {
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/format.hpp>
 
 #include <ctime>
 
@@ -196,6 +198,8 @@ void SceneExporter::sync(const int &check_updated)
 	sync_objects(check_updated);
 	sync_effects(check_updated);
 
+	m_data_exporter.sync();
+
 	clock_t end = clock();
 
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
@@ -207,17 +211,21 @@ void SceneExporter::sync(const int &check_updated)
 
 static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, const std::string &texAttr)
 {
-	bNodeTree *_ntree = (bNodeTree*)ntree.ptr.data;
 
 	BL::Texture tex(BL::Texture(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttr)));
 	if (tex && (tex.is_updated() || tex.is_updated_data())) {
-		_ntree->id.flag |= LIB_ID_RECALC_ALL;
+		PRINT_INFO_EX("Texture %s is updated...",
+		              tex.name().c_str());
+		DataExporter::tag_ntree(ntree);
 	}
 }
 
 
 void SceneExporter::sync_prepass()
 {
+	m_data_exporter.m_id_cache.clear();
+	m_data_exporter.m_id_track.reset_usage();
+
 	BL::BlendData::node_groups_iterator nIt;
 	for (m_data.node_groups.begin(nIt); nIt != m_data.node_groups.end(); ++nIt) {
 		BL::NodeTree ntree(*nIt);
@@ -494,9 +502,12 @@ void SceneExporter::sync_materials(const int &check_updated)
 			const bool is_updated = check_updated
 			                        ? (ma.is_updated() || ntree.is_updated())
 			                        : true;
+
 			if (is_updated) {
 				m_data_exporter.exportMaterial(ma);
 			}
+
+			DataExporter::tag_ntree(ntree, false);
 		}
 	}
 }
@@ -514,36 +525,22 @@ static inline uint get_layer(BlLayers array)
 }
 
 
-void SceneExporter::sync_objects(const int &check_updated)
+void SceneExporter::sync_object(BL::Object ob, const int &check_updated)
 {
-	PRINT_INFO_EX("SceneExporter->sync_objects(%i)",
-	              check_updated);
+	if (!m_data_exporter.m_id_cache.contains(ob)) {
+		m_data_exporter.m_id_cache.insert(ob);
 
-	// Sync objects
-	//
-	BL::Scene::objects_iterator obIt;
-	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-		BL::Object ob(*obIt);
-		BL::ID data(ob.data());
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 
-		// TODO:
-		// [ ] Track new objects (creation / layer settings change)
-		// [ ] Track deleted objects
-		//
 		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
-		bool is_hidden = ob.hide() || ob.hide_render();
+		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
 
-		bool is_updated      = check_updated ? ob.is_updated()      : true;
-		bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+		// const int data_updated = RNA_int_get(&vrayObject, "data_updated");
 
-		if (data) {
-			BL::NodeTree ntree = Nodes::GetNodeTree(data);
-			if (ntree) {
-				is_data_updated |= ntree.is_updated();
-			}
-		}
+		if ((!is_hidden)) {
+			PRINT_INFO_EX("Syncing: %s...",
+			              ob.name().c_str());
 
-		if ((!is_hidden) && is_on_visible_layer && (is_updated || is_data_updated)) {
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
 				m_data_exporter.exportObject(ob, check_updated);
 			}
@@ -551,11 +548,120 @@ void SceneExporter::sync_objects(const int &check_updated)
 				m_data_exporter.exportLight(ob, check_updated);
 			}
 		}
+
+		// Reset update flag
+		RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
+	}
+}
+
+
+void SceneExporter::sync_objects(const int &check_updated)
+{
+	PRINT_INFO_EX("SceneExporter->sync_objects(%i)",
+	              check_updated);
+
+	// TODO:
+	// [ ] Track new objects (creation / layer settings change)
+	// [ ] Track deleted objects
+
+	const int recalc_mode = 2;
+
+	// Sync objects
+	//
+	BL::Scene::objects_iterator obIt;
+	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+		if (!is_interrupted()) {
+			BL::Object ob(*obIt);
+
+			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+
+			if (ob.is_duplicator()) {
+				bool process_duplis = true;
+
+				// TODO: "process_duplis"
+
+				if (process_duplis) {
+					const int dupli_override_id   = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
+					const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+
+					ob.dupli_list_create(m_scene, recalc_mode);
+
+					AttrInstancer instances;
+					if (dupli_use_instancer) {
+						int num_instances = 0;
+
+						BL::Object::dupli_list_iterator dupIt;
+						for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
+							BL::DupliObject dupliOb(*dupIt);
+							BL::Object      dupOb(dupliOb.object());
+
+							const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
+							const bool is_light = Blender::IsLight(dupOb);
+
+							if (!is_hidden && !is_light) {
+								num_instances++;
+							}
+						}
+
+						instances.data.resize(num_instances);
+					}
+
+					BL::Object::dupli_list_iterator dupIt;
+					int dupli_instance = 0;
+					for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
+						if (!is_interrupted()) {
+							BL::DupliObject dupliOb(*dupIt);
+							BL::Object      dupOb(dupliOb.object());
+
+							const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
+
+							const bool is_light = Blender::IsLight(dupOb);
+							const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
+
+							if (!is_hidden && supported_type) {
+								if (is_light) {
+									// ...
+								}
+								else {
+									if (dupli_use_instancer) {
+										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+										instancer_item.index = dupli_instance; // TODO: Handle "persistent_id"
+										instancer_item.tm    = dupliOb.matrix();
+
+										sync_object(dupOb, check_updated);
+
+										instancer_item.node = m_data_exporter.getNodeName(dupOb);
+
+										dupli_instance++;
+									}
+									else {
+
+									}
+								}
+							}
+						}
+					}
+
+					ob.dupli_list_clear();
+
+					if (dupli_use_instancer) {
+						static boost::format InstancerFmt("Dupli@%s");
+
+						PluginDesc instancerDesc(boost::str(InstancerFmt % m_data_exporter.getNodeName(ob)), "Instancer");
+						instancerDesc.add("instances", instances);
+
+						m_exporter->export_plugin(instancerDesc);
+					}
+				}
+			}
+
+			if (!is_interrupted()) {
+				sync_object(ob, check_updated);
+			}
+		}
 	}
 
 	m_exporter->sync();
-
-	// m_mutex.unlock();
 }
 
 
@@ -594,4 +700,14 @@ void SceneExporter::tag_redraw()
 #if 0
 	}
 #endif
+}
+
+
+int SceneExporter::is_interrupted()
+{
+	bool export_interrupt = false;
+	if (m_engine && m_engine.test_break()) {
+		export_interrupt = true;
+	}
+	return export_interrupt;
 }

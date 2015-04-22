@@ -221,7 +221,7 @@ void AppSdkExporter::sync()
 	}
 #endif
 
-#if 1
+#if 0
 	int res = m_vray->exportScene("/home/bdancer/Desktop/scene_app_sdk.vrscene");
 	if (res) {
 		PRINT_ERROR("Error exporting scene!");
@@ -405,11 +405,50 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 
 					plug.setValue(p.attrName, VRay::Value(map_channels));
 				}
+				else if (p.attrValue.type == ValueTypeInstancer) {
+					VRay::ValueList instancer;
+
+					for (int i = 0; i < p.attrValue.valInstancer.data.getCount(); ++i) {
+						const AttrInstancer::Item &item = (*p.attrValue.valInstancer.data)[i];
+
+						// XXX: Also pretty crazy...
+						VRay::ValueList instance;
+						instance.push_back(VRay::Value(item.index));
+						instance.push_back(VRay::Value(to_vray_transform(item.tm)));
+						instance.push_back(VRay::Value(to_vray_transform(item.vel)));
+						instance.push_back(VRay::Value(item.node));
+
+						instancer.push_back(VRay::Value(instance));
+					}
+
+					plug.setValue(p.attrName, VRay::Value(instancer));
+				}
 			}
 		}
 	}
 
 	return plugin;
+}
+
+int AppSdkExporter::remove_plugin(const std::string &pluginName)
+{
+	bool res = false;
+
+	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
+	if (plugin) {
+		res = m_vray->removePlugin(plugin);
+
+		PRINT_WARN("Removing: %s [%i]",
+		           pluginName.c_str(), res);
+
+		VRay::Error err = m_vray->getLastError();
+		if (err != VRay::SUCCESS) {
+			PRINT_ERROR("Error removing plugin: %s",
+			            err.toString().c_str());
+		}
+	}
+
+	return res;
 }
 
 

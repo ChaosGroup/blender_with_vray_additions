@@ -337,6 +337,19 @@ struct AttrMapChannels {
 };
 
 
+struct AttrInstancer {
+	struct Item {
+		int            index;
+		AttrTransform  tm;
+		AttrTransform  vel;
+		AttrPlugin     node;
+	};
+	typedef AttrList<Item> Items;
+
+	Items data;
+};
+
+
 struct AttrValue {
 	typedef AttrList<AttrValue> AttrListValue;
 
@@ -444,6 +457,10 @@ struct AttrValue {
 		type = ValueTypeMapChannels;
 		valMapChannels = attrValue;
 	}
+	AttrValue(const AttrInstancer &attrValue) {
+		type = ValueTypeInstancer;
+		valInstancer = attrValue;
+	}
 
 	// TODO: Replace with single storage with reinterpret_cast<>
 	int                 valInt;
@@ -469,6 +486,7 @@ struct AttrValue {
 	AttrListString      valListString;
 
 	AttrMapChannels     valMapChannels;
+	AttrInstancer       valInstancer;
 
 	ValueType           type;
 

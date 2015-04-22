@@ -51,6 +51,12 @@ float GetDistanceObOb(BL::Object a, BL::Object b);
 
 float GetCameraDofDistance(BL::Object camera);
 
+int IsHairEmitter(BL::Object ob);
+int IsEmitterRenderable(BL::Object ob);
+int IsDuplicatorRenderable(BL::Object ob);
+int IsGeometry(BL::Object ob);
+int IsLight(BL::Object ob);
+
 } // namespace Blender
 } // namespace VRayForBlender
 

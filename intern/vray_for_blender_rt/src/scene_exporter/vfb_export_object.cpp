@@ -18,6 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
+#include "vfb_utils_nodes.h"
 
 
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
@@ -28,6 +29,24 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 
 	bool is_updated      = check_updated ? ob.is_updated()      : true;
 	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+	if (!is_updated && ob.parent()) {
+		BL::Object parent(ob.parent());
+		is_updated = parent.is_updated();
+	}
+	if (!is_data_updated && ob.parent()) {
+		BL::Object parent(ob.parent());
+		is_data_updated = parent.is_updated_data();
+	}
+
+	BL::ID data(ob.data());
+	if (data) {
+		BL::NodeTree ntree = Nodes::GetNodeTree(data);
+		if (ntree) {
+			is_data_updated |= ntree.is_updated();
+			DataExporter::tag_ntree(ntree, false);
+		}
+	}
 
 	const int num_materials = Blender::GetMaterialCount(ob);
 
@@ -41,6 +60,9 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 			geom = geometry.valPlugin;
 		}
 	}
+
+	const std::string &nodePluginName = getNodeName(ob);
+	m_id_track.insert(ob, nodePluginName);
 
 	if (is_updated) {
 		if (num_materials) {
@@ -100,7 +122,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 	}
 
 	if (geom && mtl && (is_updated || is_data_updated)) {
-		PluginDesc nodeDesc(ob.name(), "Node", "Node@");
+		PluginDesc nodeDesc(nodePluginName, "Node");
 		nodeDesc.add("geometry", geom);
 		nodeDesc.add("material", mtl);
 		nodeDesc.add("transform", AttrTransform(ob.matrix_world()));
@@ -125,6 +147,12 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 					const int hair_is_data_updated = check_updated
 					                                 ? (is_data_updated || pset.is_updated())
 					                                 : true;
+
+					const std::string hairNodeName = "Node@" + getHairName(ob, psys, pset);
+
+					// Put hair node to the object dependent plugines
+					// (will be used to remove plugin when object is removed)
+					m_id_track.insert(ob, hairNodeName);
 
 					AttrValue hair_geom;
 					if (!(hair_is_data_updated) || !(m_settings.export_meshes)) {
@@ -152,15 +180,12 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 					}
 
 					if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated)) {
-						PluginDesc hairNodeDesc(getHairName(ob, psys, pset), "Node", "Node@");
+						PluginDesc hairNodeDesc(hairNodeName, "Node");
 						hairNodeDesc.add("geometry", hair_geom);
 						hairNodeDesc.add("material", hair_mtl);
 						hairNodeDesc.add("transform", AttrTransform(ob.matrix_world()));
 						hairNodeDesc.add("objectID", ob.pass_index());
 
-						// XXX: Put hair node to the object dependent plugines
-						// (will be used to remove plugin when object is removed)
-						//
 						m_exporter->export_plugin(hairNodeDesc);
 					}
 				}

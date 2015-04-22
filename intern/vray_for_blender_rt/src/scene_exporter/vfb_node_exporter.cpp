@@ -107,6 +107,25 @@ void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
 }
 
 
+void DataExporter::sync()
+{
+	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.cend(); ) {
+		const IdTrack::IdDep &dep = dIt->second;
+		if (dep.used) {
+			++dIt;
+		}
+		else {
+			for (const auto &plugin : dep.plugins) {
+				PRINT_ERROR("Removing plugin: %s",
+				            plugin.c_str());
+				m_exporter->remove_plugin(plugin);
+			}
+			m_id_track.data.erase(dIt++);
+		}
+	}
+}
+
+
 void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context)
 {
 	m_data = data;
@@ -508,4 +527,16 @@ ParamDesc::PluginType DataExporter::GetConnectedNodePluginType(BL::NodeSocket fr
 	}
 
 	return pluginType;
+}
+
+
+void DataExporter::tag_ntree(BL::NodeTree ntree, bool updated)
+{
+	ID *_ntree = (ID*)ntree.ptr.data;
+	if (updated) {
+		_ntree->flag |=  LIB_ID_RECALC_ALL;
+	}
+	else {
+		_ntree->flag &= ~LIB_ID_RECALC_ALL;
+	}
 }

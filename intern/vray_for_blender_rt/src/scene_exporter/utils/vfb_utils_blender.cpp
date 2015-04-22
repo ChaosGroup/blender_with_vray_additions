@@ -162,3 +162,93 @@ float Blender::GetCameraDofDistance(BL::Object camera)
 
 	return dofDistance;
 }
+
+
+int Blender::IsHairEmitter(BL::Object ob)
+{
+	int has_hair = false;
+
+	BL::Object::modifiers_iterator modIt;
+	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
+		BL::Modifier mod(*modIt);
+		if (mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+			BL::ParticleSystemModifier pmod(mod);
+			BL::ParticleSystem psys(pmod.particle_system());
+			if (psys) {
+				BL::ParticleSettings pset(psys.settings());
+				if (pset &&
+				    pset.type()        == BL::ParticleSettings::type_HAIR &&
+				    pset.render_type() == BL::ParticleSettings::render_type_PATH) {
+					has_hair = true;
+					break;
+				}
+			}
+		}
+	}
+
+	return has_hair;
+}
+
+
+int Blender::IsEmitterRenderable(BL::Object ob)
+{
+	int render_emitter = true;
+
+	if (ob.particle_systems.length()) {
+		BL::Object::particle_systems_iterator psysIt;
+		for (ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
+			BL::ParticleSettings pset(psysIt->settings());
+			if (!pset.use_render_emitter()) {
+				render_emitter = false;
+				break;
+			}
+		}
+	}
+
+	return render_emitter;
+}
+
+
+int Blender::IsDuplicatorRenderable(BL::Object ob)
+{
+	bool is_renderable = false;
+
+	if (!ob.is_duplicator()) {
+		is_renderable = true;
+	}
+	else {
+		if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
+		    ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
+			is_renderable = true;
+		}
+		if (ob.particle_systems.length()) {
+			is_renderable = IsEmitterRenderable(ob);
+		}
+	}
+
+	return is_renderable;
+}
+
+
+int Blender::IsGeometry(BL::Object ob)
+{
+	int is_geometry = false;
+	if (ob.type() == BL::Object::type_MESH    ||
+	    ob.type() == BL::Object::type_CURVE   ||
+	    ob.type() == BL::Object::type_SURFACE ||
+	    ob.type() == BL::Object::type_FONT    ||
+	    ob.type() == BL::Object::type_META) {
+		is_geometry = true;
+	}
+	return is_geometry;
+}
+
+
+int Blender::IsLight(BL::Object ob)
+{
+	int is_light = false;
+	if (ob.type() == BL::Object::type_LAMP) {
+		is_light = true;
+	}
+	return is_light;
+}

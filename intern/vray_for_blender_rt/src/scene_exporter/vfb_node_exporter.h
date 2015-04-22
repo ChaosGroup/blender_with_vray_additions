@@ -24,6 +24,8 @@
 #include "vfb_typedefs.h"
 #include "vfb_params_desc.h"
 
+#include "DNA_ID.h"
+
 
 using namespace VRayForBlender;
 
@@ -102,7 +104,61 @@ private:
 };
 
 
-#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext *context
+// Used to skip already exported objects
+//
+struct IdCache {
+	int contains(BL::ID id) {
+		return m_data.find(id.ptr.data) != m_data.end();
+	}
+
+	void insert(BL::ID id) {
+		m_data.insert(id.ptr.data);
+	}
+
+	void clear() {
+		m_data.clear();
+	}
+
+private:
+	std::set<void*> m_data;
+
+};
+
+
+// Used to track object deletion / creation
+//
+struct IdTrack {
+	struct IdDep {
+		std::set<std::string>  plugins;
+		int                    used;
+	};
+
+	int contains(BL::ID id) {
+		return data.find(id.ptr.data) != data.end();
+	}
+
+	void clear() {
+		data.clear();
+	}
+
+	void insert(BL::ID id, const std::string &plugin) {
+		IdDep &dep = data[id.ptr.data];
+		dep.plugins.insert(plugin);
+		dep.used = true;
+	}
+
+	void reset_usage() {
+		for (auto &dIt : data) {
+			ID    *id  = (ID*)dIt.first;
+			IdDep &dep = dIt.second;
+			dep.used = false;
+		}
+	}
+
+	typedef std::map<void*, IdDep> TrackMap;
+	TrackMap data;
+
+};
 
 
 struct DataDefaults {
@@ -114,6 +170,9 @@ struct DataDefaults {
 	AttrValue  default_material;
 	AttrValue  override_material;
 };
+
+
+#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext *context
 
 
 class DataExporter {
@@ -160,6 +219,7 @@ public:
 
 	void              init(PluginExporter *exporter);
 	void              init(PluginExporter *exporter, ExporterSettings settings);
+	void              sync();
 
 	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context);
 	void              init_defaults();
@@ -184,7 +244,6 @@ public:
 	void              getSelectorObjectList(BL::Node node, ObList &obList);
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
-	AttrValue         getObjectName(BL::Object ob);
 
 	AttrValue         exportVRayNode(VRayNodeExportParam);
 	AttrValue         exportVRayNodeAuto(VRayNodeExportParam, PluginDesc &pluginDesc);
@@ -195,6 +254,8 @@ public:
 	AttrValue         exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext *context=NULL);
 
 	int               isObjectVisible(BL::Object ob);
+
+	static void       tag_ntree(BL::NodeTree ntree, bool updated=true);
 
 private:
 	BL::Object        exportVRayNodeSelectObject(VRayNodeExportParam);
@@ -250,6 +311,11 @@ private:
 	PluginExporter   *m_exporter;
 	ExporterSettings  m_settings;
 	DataDefaults      m_defaults;
+
+	// XXX: Add accessors
+public:
+	IdCache           m_id_cache;
+	IdTrack           m_id_track;
 
 };
 

@@ -100,6 +100,7 @@ public:
 	virtual void         stop()  {}
 
 	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc)=0;
+	virtual int          remove_plugin(const std::string &pluginName) { return 0; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }
 	virtual void         set_render_size(const int&, const int&) {}
