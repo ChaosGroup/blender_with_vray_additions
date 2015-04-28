@@ -1274,15 +1274,15 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		output = ExporterSettings::gSet.m_fileLights;
 	}
 	else if(pluginType == "GEOMETRY") {
-		if(pluginID == "GeomDisplacedMesh"      ||
-		   pluginID == "GeomStaticSmoothedMesh" ||
-		   pluginID == "GeomPlane")
+		if (  pluginID == "GeomStaticMesh"
+		   || pluginID == "GeomMayaHair"
+		   )
 		{
-			// Store dynamic geometry plugins in 'Node' file
-			output = ExporterSettings::gSet.m_fileObject;
+			output = ExporterSettings::gSet.m_fileGeom;
 		}
 		else {
-			output = ExporterSettings::gSet.m_fileGeom;
+			// Store dynamic geometry plugins in 'Node' file
+			output = ExporterSettings::gSet.m_fileObject;
 		}
 	}
 
