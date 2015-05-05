@@ -24,6 +24,7 @@
 
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/format.hpp>
 
 
 struct ChanVertex {
@@ -61,51 +62,171 @@ struct MapVertexHash {
 typedef boost::unordered_set<ChanVertex, MapVertexHash>  ChanSet;
 typedef boost::unordered_map<std::string, ChanSet>       ChanMap;
 
+// NOTE: Move to some header and use in UVWGenMayaPlace2dTexture
+static boost::format UvChanNameFmt("Uv%s");
+static boost::format ColChanNameFmt("Col%s");
 
-AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
-{
-	AttrValue geom;
 
-	BL::Mesh mesh = m_data.meshes.new_from_object(m_scene, ob, true, 2, false, false);
-	if (!mesh) {
-		PRINT_ERROR("Object: %s => Incorrect mesh!",
-		            ob.name().c_str());
+struct MapChannelBase {
+	MapChannelBase(BL::Mesh mesh, int numFaces):
+	    mesh(mesh),
+	    num_faces(numFaces)
+	{
+		num_channels = mesh.tessface_uv_textures.length() +
+		               mesh.tessface_vertex_colors.length();
 	}
-	else {
-		const int useAutoSmooth = mesh.use_auto_smooth();
-		if (useAutoSmooth) {
-			mesh.calc_normals_split();
-		}
 
-		mesh.calc_tessface(true);
+	virtual void init()=0;
+	virtual void init_attributes(AttrListString &map_channels_names, AttrMapChannels &map_channels)=0;
+	virtual bool needProcessFaces() const { return false; }
+	virtual int  get_map_face_vertex_index(const std::string &layerName, const ChanVertex &cv) { return -1; }
 
-		const int num_channels = mesh.tessface_uv_textures.length() +
-		                         mesh.tessface_vertex_colors.length();
+	int numChannels() const {
+		return num_channels;
+	}
 
-		AttrListString   map_channels_names;
-		AttrMapChannels  map_channels;
+protected:
+	BL::Mesh  mesh;
+	int       num_channels;
+	int       num_faces;
+
+};
+
+
+struct MapChannelRaw:
+        MapChannelBase
+{
+	MapChannelRaw(BL::Mesh mesh, int numFaces):
+	    MapChannelBase(mesh, numFaces)
+	{}
+
+	virtual void init() override {}
+	virtual void init_attributes(AttrListString &map_channels_names, AttrMapChannels &map_channels) override {
 		if (num_channels) {
+			// Init storage
+			//
+			BL::Mesh::tessface_uv_textures_iterator uvIt;
+			for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
+				BL::MeshTextureFaceLayer  uvLayer(*uvIt);
+				const std::string        &uvLayerName = boost::str(UvChanNameFmt % uvLayer.name());
+
+				// Setup channel data storage
+				AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[uvLayerName];
+				map_channel.name = uvLayerName;
+				map_channel.vertices.resize(num_faces * 3);
+				map_channel.faces.resize(num_faces * 3);
+			}
+
+			BL::Mesh::tessface_vertex_colors_iterator colIt;
+			for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
+				BL::MeshColorLayer  colLayer(*colIt);
+				const std::string  &colLayerName = boost::str(ColChanNameFmt % colLayer.name());
+
+				// Setup channel data storage
+				AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[colLayerName];
+				map_channel.name = colLayerName;
+				map_channel.vertices.resize(num_faces * 3);
+				map_channel.faces.resize(num_faces * 3);
+			}
+
+			// Fill data
+			//
+			BL::Mesh::tessfaces_iterator faceIt;
+			int faceIdx = 0;
+			int chanVertIndex = 0;
+			for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
+				BlFace faceVerts = faceIt->vertices_raw();
+
+				BL::Mesh::tessface_uv_textures_iterator uvIt;
+				for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
+					BL::MeshTextureFaceLayer  uvLayer(*uvIt);
+					const std::string        &uvLayerName = boost::str(UvChanNameFmt % uvLayer.name());
+
+					AttrMapChannels::AttrMapChannel &uv_channel = map_channels.data[uvLayerName];
+
+					const AttrVector v0(uvLayer.data[faceIdx].uv1());
+					const AttrVector v1(uvLayer.data[faceIdx].uv2());
+					const AttrVector v2(uvLayer.data[faceIdx].uv3());
+
+					(*uv_channel.vertices)[chanVertIndex+0] = v0;
+					(*uv_channel.vertices)[chanVertIndex+1] = v1;
+					(*uv_channel.vertices)[chanVertIndex+2] = v2;
+
+					if (faceVerts[3]) {
+						const AttrVector v3(uvLayer.data[faceIdx].uv4());
+
+						(*uv_channel.vertices)[chanVertIndex+3] = v0;
+						(*uv_channel.vertices)[chanVertIndex+4] = v2;
+						(*uv_channel.vertices)[chanVertIndex+5] = v3;
+					}
+				}
+
+				BL::Mesh::tessface_vertex_colors_iterator colIt;
+				for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
+					BL::MeshColorLayer  colLayer(*colIt);
+					const std::string  &colLayerName = boost::str(ColChanNameFmt % colLayer.name());
+
+					AttrMapChannels::AttrMapChannel &col_channel = map_channels.data[colLayerName];
+
+					const AttrVector v0(colLayer.data[faceIdx].color1());
+					const AttrVector v1(colLayer.data[faceIdx].color2());
+					const AttrVector v2(colLayer.data[faceIdx].color3());
+
+					(*col_channel.vertices)[chanVertIndex+0] = v0;
+					(*col_channel.vertices)[chanVertIndex+1] = v1;
+					(*col_channel.vertices)[chanVertIndex+2] = v2;
+
+					if (faceVerts[3]) {
+						const AttrVector v3(colLayer.data[faceIdx].color4());
+
+						(*col_channel.vertices)[chanVertIndex+3] = v0;
+						(*col_channel.vertices)[chanVertIndex+4] = v2;
+						(*col_channel.vertices)[chanVertIndex+5] = v3;
+					}
+				}
+
+				chanVertIndex += faceVerts[3] ? 6 : 3;
+			}
+
+			// Setup face data
+			for (auto &mcIt : map_channels.data) {
+				for (int i = 0; i < mcIt.second.faces.ptr()->size(); ++i) {
+					(*mcIt.second.faces)[i] = i;
+				}
+			}
+
+			// Store channel names
 			map_channels_names.resize(num_channels);
+			int i = 0;
+			for (const auto &mcIt : map_channels.data) {
+				(*map_channels_names)[i++] = mcIt.second.name;
+			}
 		}
+	}
+};
 
-		ChanMap chan_data;
 
-		int numFaces  = 0;
-		int faceIdx   = 0;
+struct MapChannelMerge:
+        MapChannelBase
+{
+	MapChannelMerge(BL::Mesh mesh, int numFaces):
+	    MapChannelBase(mesh, numFaces)
+	{}
 
-		BL::Mesh::tessfaces_iterator faceIt;
-		for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
-			BlFace faceVerts = faceIt->vertices_raw();
+	virtual void init() override {
+		if (num_channels) {
+			BL::Mesh::tessfaces_iterator faceIt;
+			int faceIdx = 0;
+			for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
+				BlFace faceVerts = faceIt->vertices_raw();
 
-			// If face is quad we split it into 2 tris
-			numFaces += faceVerts[3] ? 2 : 1;
-
-			if (num_channels) {
 				BL::Mesh::tessface_uv_textures_iterator uvIt;
 				for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 					BL::MeshTextureFaceLayer uvLayer(*uvIt);
 
-					ChanSet &uvSet = chan_data[uvLayer.name()];
+					const std::string &layerName = boost::str(UvChanNameFmt % uvLayer.name());
+
+					ChanSet &uvSet = chan_data[layerName];
 
 					uvSet.insert(ChanVertex(uvLayer.data[faceIdx].uv1()));
 					uvSet.insert(ChanVertex(uvLayer.data[faceIdx].uv2()));
@@ -115,11 +236,14 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 						uvSet.insert(ChanVertex(uvLayer.data[faceIdx].uv4()));
 					}
 				}
+
 				BL::Mesh::tessface_vertex_colors_iterator colIt;
 				for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 					BL::MeshColorLayer colLayer(*colIt);
 
-					ChanSet &colSet = chan_data[colLayer.name()];
+					const std::string &layerName = boost::str(ColChanNameFmt % colLayer.name());
+
+					ChanSet &colSet = chan_data[layerName];
 
 					colSet.insert(ChanVertex(colLayer.data[faceIdx].color1()));
 					colSet.insert(ChanVertex(colLayer.data[faceIdx].color2()));
@@ -131,39 +255,100 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 				}
 			}
 		}
+	}
 
-		if (numFaces) {
-			if (num_channels) {
-				int chanIdx = 0;
-				for (ChanMap::iterator setsIt = chan_data.begin(); setsIt != chan_data.end(); ++setsIt, ++chanIdx) {
-					const std::string &chan_name = setsIt->first;
-					ChanSet           &chan_data = setsIt->second;
+	virtual void init_attributes(AttrListString &map_channels_names, AttrMapChannels &map_channels) override {
+		if (num_channels) {
+			for (ChanMap::iterator setsIt = chan_data.begin(); setsIt != chan_data.end(); ++setsIt) {
+				const std::string &chan_name = setsIt->first;
+				ChanSet           &chan_data = setsIt->second;
 
-					// Setup channel data
-					AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[chan_name];
-					map_channel.name = chan_name;
-					map_channel.vertices.resize(chan_data.size());
-					map_channel.faces.resize(numFaces * 3);
+				// Setup channel data storage
+				AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[chan_name];
+				map_channel.name = chan_name;
+				map_channel.vertices.resize(chan_data.size());
+				map_channel.faces.resize(num_faces * 3);
 
-					int f = 0;
-					for (ChanSet::iterator setIt = chan_data.begin(); setIt != chan_data.end(); ++setIt, ++f) {
-						const ChanVertex &map_vertex = *setIt;
+				int f = 0;
+				for (ChanSet::iterator setIt = chan_data.begin(); setIt != chan_data.end(); ++setIt, ++f) {
+					const ChanVertex &map_vertex = *setIt;
 
-						// Set vertex index for lookup from faces
-						map_vertex.index = f;
+					// Set vertex index for lookup from faces
+					map_vertex.index = f;
 
-						// Store channel vertex
-						(*map_channel.vertices)[f] = map_vertex.v;
-					}
+					// Store channel vertex
+					(*map_channel.vertices)[f] = map_vertex.v;
 				}
 			}
 
+			// Store channel names
+			map_channels_names.resize(num_channels);
+			int i = 0;
+			for (const auto &mcIt : map_channels.data) {
+				(*map_channels_names)[i++] = mcIt.second.name;
+			}
+		}
+	}
+
+	virtual bool needProcessFaces() const override { return true; }
+
+	virtual int get_map_face_vertex_index(const std::string &layerName, const ChanVertex &cv) override {
+		return chan_data[layerName].find(cv)->index;
+	}
+
+private:
+	ChanMap  chan_data;
+
+};
+
+
+AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
+{
+	AttrValue geom;
+
+	const bool merge_channel_vertices = false;
+
+	BL::Mesh mesh = m_data.meshes.new_from_object(m_scene, ob, true, 2, false, false);
+	if (!mesh) {
+		PRINT_ERROR("Object: %s => Incorrect mesh!",
+		            ob.name().c_str());
+	}
+	else {
+		const int useAutoSmooth = mesh.use_auto_smooth();
+		if (useAutoSmooth) {
+			mesh.calc_normals_split();
+		}
+		mesh.calc_tessface(true);
+
+		BL::Mesh::tessfaces_iterator faceIt;
+		int numFaces  = 0;
+		for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt) {
+			BlFace faceVerts = faceIt->vertices_raw();
+
+			// If face is quad we split it into 2 tris
+			numFaces += faceVerts[3] ? 2 : 1;
+		}
+
+		if (numFaces) {
 			AttrListVector  vertices(mesh.vertices.length());
 			AttrListInt     faces(numFaces * 3);
 			AttrListVector  normals(numFaces * 3);
 			AttrListInt     faceNormals(numFaces * 3);
 			AttrListInt     face_mtlIDs(numFaces);
 			AttrListInt     edge_visibility(numFaces / 10 + ((numFaces % 10 > 0) ? 1 : 0));
+
+			AttrListString  map_channels_names;
+			AttrMapChannels map_channels;
+
+			MapChannelBase *channels_data = nullptr;
+			if (merge_channel_vertices) {
+				channels_data = new MapChannelMerge(mesh, numFaces);
+			}
+			else {
+				channels_data = new MapChannelRaw(mesh, numFaces);
+			}
+			channels_data->init();
+			channels_data->init_attributes(map_channels_names, map_channels);
 
 			memset((*edge_visibility), 0, edge_visibility.getBytesCount());
 
@@ -271,28 +456,27 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 				}
 
 				// Store UV / vertex colors
-				if (num_channels) {
+				if (channels_data->numChannels() && channels_data->needProcessFaces()) {
 					int channel_vert_index = chanVertIndex;
 
 					BL::Mesh::tessface_uv_textures_iterator uvIt;
 					for (mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 						BL::MeshTextureFaceLayer uvLayer(*uvIt);
 
-						const std::string &layer_name = uvLayer.name();
+						const std::string &layerName = boost::str(UvChanNameFmt % uvLayer.name());
 
-						ChanSet     &uvSet  = chan_data[layer_name];
-						AttrListInt &uvData = map_channels.data[layer_name].faces;
+						AttrListInt &uvData = map_channels.data[layerName].faces;
 
-						const int v0 = uvSet.find(ChanVertex(uvLayer.data[faceIdx].uv1()))->index;
-						const int v1 = uvSet.find(ChanVertex(uvLayer.data[faceIdx].uv2()))->index;
-						const int v2 = uvSet.find(ChanVertex(uvLayer.data[faceIdx].uv3()))->index;
+						const int v0 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv1()));
+						const int v1 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv2()));
+						const int v2 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv3()));
 
 						(*uvData)[channel_vert_index+0] = v0;
 						(*uvData)[channel_vert_index+1] = v1;
 						(*uvData)[channel_vert_index+2] = v2;
 
 						if (faceVerts[3]) {
-							const int v3 = uvSet.find(ChanVertex(uvLayer.data[faceIdx].uv4()))->index;
+							const int v3 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv4()));
 
 							(*uvData)[channel_vert_index+3] = v0;
 							(*uvData)[channel_vert_index+4] = v2;
@@ -304,21 +488,20 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 					for (mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 						BL::MeshColorLayer colLayer(*colIt);
 
-						const std::string &layer_name = colLayer.name();
+						const std::string &layerName = boost::str(ColChanNameFmt % colLayer.name());
 
-						ChanSet     &colSet  = chan_data[layer_name];
-						AttrListInt &colData = map_channels.data[layer_name].faces;
+						AttrListInt &colData = map_channels.data[layerName].faces;
 
-						const int v0 = colSet.find(ChanVertex(colLayer.data[faceIdx].color1()))->index;
-						const int v1 = colSet.find(ChanVertex(colLayer.data[faceIdx].color2()))->index;
-						const int v2 = colSet.find(ChanVertex(colLayer.data[faceIdx].color3()))->index;
+						const int v0 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color1()));
+						const int v1 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color2()));
+						const int v2 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color3()));
 
 						(*colData)[channel_vert_index+0] = v0;
 						(*colData)[channel_vert_index+1] = v1;
 						(*colData)[channel_vert_index+2] = v2;
 
 						if (faceVerts[3]) {
-							const int v3 = colSet.find(ChanVertex(colLayer.data[faceIdx].color4()))->index;
+							const int v3 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color4()));
 
 							(*colData)[channel_vert_index+3] = v0;
 							(*colData)[channel_vert_index+4] = v2;
@@ -340,12 +523,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 			geomDesc.add("face_mtlIDs", face_mtlIDs);
 			geomDesc.add("edge_visibility", edge_visibility);
 
-			if (num_channels) {
-				int i = 0;
-				for (const auto &mcIt : map_channels.data) {
-					// Store channel name
-					(*map_channels_names)[i++] = mcIt.second.name;
-				}
+			if (channels_data->numChannels()) {
 				geomDesc.add("map_channels_names", map_channels_names);
 				geomDesc.add("map_channels",       map_channels);
 			}
