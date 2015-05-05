@@ -72,6 +72,8 @@ struct RenderImage {
 	    h(0)
 	{}
 
+	virtual ~RenderImage() {}
+
 	operator bool () const {
 		return !!(pixels);
 	}
@@ -91,13 +93,14 @@ class PluginExporter
 public:
 	virtual             ~PluginExporter()=0;
 
-public:
 	virtual void         init()=0;
 	virtual void         free()=0;
 
 	virtual void         sync()  {}
 	virtual void         start() {}
 	virtual void         stop()  {}
+
+	virtual void         export_vrscene(const std::string &filepath) {}
 
 	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc)=0;
 	virtual int          remove_plugin(const std::string &pluginName) { return 0; }

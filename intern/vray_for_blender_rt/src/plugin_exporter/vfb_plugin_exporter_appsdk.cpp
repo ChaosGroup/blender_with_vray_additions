@@ -220,18 +220,6 @@ void AppSdkExporter::sync()
 		m_vray->start();
 	}
 #endif
-
-#if 0
-	int res = m_vray->exportScene("/home/bdancer/Desktop/scene_app_sdk.vrscene");
-	if (res) {
-		PRINT_ERROR("Error exporting scene!");
-	}
-	VRay::Error err = m_vray->getLastError();
-	if (err != VRay::SUCCESS) {
-		PRINT_ERROR("Error: %s",
-		            err.toString().c_str());
-	}
-#endif
 }
 
 
@@ -330,9 +318,9 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 				}
 				else if (p.attrValue.type == ValueTypePlugin) {
 					std::string pluginName = p.attrValue.valPlugin.plugin;
-					if (NOT(p.attrValue.valPluginOutput.empty())) {
+					if (NOT(p.attrValue.valPlugin.output.empty())) {
 						pluginName.append("::");
-						pluginName.append(p.attrValue.valPluginOutput);
+						pluginName.append(p.attrValue.valPlugin.output);
 					}
 
 					plug.setValueAsString(p.attrName, pluginName);
@@ -449,6 +437,25 @@ int AppSdkExporter::remove_plugin(const std::string &pluginName)
 	}
 
 	return res;
+}
+
+
+void AppSdkExporter::export_vrscene(const std::string &filepath)
+{
+	VRay::VRayExportSettings exportParams;
+	exportParams.useHexFormat = false;
+	exportParams.compressed = false;
+
+	int res = m_vray->exportScene(filepath, &exportParams);
+	if (res) {
+		PRINT_ERROR("Error exporting scene!");
+	}
+
+	VRay::Error err = m_vray->getLastError();
+	if (err != VRay::SUCCESS) {
+		PRINT_ERROR("Error: %s",
+		            err.toString().c_str());
+	}
 }
 
 

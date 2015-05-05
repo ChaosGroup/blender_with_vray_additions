@@ -19,6 +19,7 @@
 #include "vfb_plugin_exporter.h"
 #include "vfb_plugin_exporter_appsdk.h"
 #include "vfb_plugin_exporter_file.h"
+#include "vfb_plugin_exporter_zmq.h"
 
 
 using namespace VRayForBlender;
@@ -27,6 +28,17 @@ using namespace VRayForBlender;
 PluginExporter::~PluginExporter()
 {
 }
+
+
+class NullExporter:
+        public PluginExporter
+{
+public:
+	virtual            ~NullExporter() {}
+	virtual void        init() {}
+	virtual void        free() {}
+	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc) { return AttrPlugin(); }
+};
 
 
 VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
@@ -38,8 +50,10 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 			exporter = new VrsceneExporter();
 			break;
 		case ExpoterTypeCloud:
+			exporter = new NullExporter();
 			break;
 		case ExpoterTypeZMQ:
+			exporter = new ZmqExporter();
 			break;
 		case ExpoterTypeAppSDK:
 			exporter = new AppSdkExporter();

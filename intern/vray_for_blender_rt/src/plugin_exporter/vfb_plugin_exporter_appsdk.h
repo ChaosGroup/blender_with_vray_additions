@@ -63,6 +63,8 @@ public:
 	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc);
 	virtual int          remove_plugin(const std::string &pluginName);
 
+	virtual void         export_vrscene(const std::string &filepath);
+
 	virtual RenderImage  get_image();
 	virtual void         set_render_size(const int &w, const int &h);
 
