@@ -274,123 +274,88 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam)
 
 AttrValue DataExporter::exportVRayNodeTexMulti(VRayNodeExportParam)
 {
-#if 0
-	std::string pluginName = NodeExporter::getPluginName(node, ntree, context);
+	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
-	StrVector textures;
-	StrVector textures_ids;
-
-	BL::NodeSocket textureDefaultSock = NodeExporter::getSocketByName(node, "Default");
+	AttrListPlugin textures;
+	AttrListInt    textures_ids;
 
 	for(int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
-		std::string texSockName = boost::str(boost::format("Texture %i") % i);
+		static boost::format sockTexFmt("Texture %i");
 
-		BL::NodeSocket texSock = NodeExporter::getSocketByName(node, texSockName);
-		if(NOT(texSock))
-			continue;
+		const std::string &texSockName = boost::str(sockTexFmt % i);
 
-		if(NOT(texSock.is_linked()))
-			continue;
+		BL::NodeSocket texSock = Nodes::GetInputSocketByName(node, texSockName);
+		if (texSock && texSock.is_linked()) {
+			AttrValue texture = exportLinkedSocket(ntree, texSock, context);
 
-		std::string texture   = NodeExporter::exportLinkedSocket(ntree, texSock, context);
-		std::string textureID = BOOST_FORMAT_INT(RNA_int_get(&texSock.ptr, "value"));
-
-		textures.push_back(texture);
-		textures_ids.push_back(textureID);
+			textures.append(texture.valPlugin);
+			textures_ids.append(RNA_int_get(&texSock.ptr, "value"));
+		}
 	}
 
-	PluginDesc pluginAttrs;
-	pluginAttrs["textures_list"]   = BOOST_FORMAT_LIST(textures);
-	pluginAttrs["ids_list"]        = BOOST_FORMAT_LIST_INT(textures_ids);
-	pluginAttrs["mode"]            = BOOST_FORMAT_INT(RNA_enum_get(&node.ptr, "mode"));
-	pluginAttrs["default_texture"] = NodeExporter::exportLinkedSocket(ntree, textureDefaultSock, context);
+	PluginDesc pluginDesc(pluginName, "TexMulti");
+	pluginDesc.add("textures_list", textures);
+	pluginDesc.add("ids_list", textures_ids);
+	pluginDesc.add("mode", RNA_enum_get(&node.ptr, "mode"));
 
-	VRayNodePluginExporter::exportPlugin("TEXTURE", "TexMulti", pluginName, pluginAttrs);
+	BL::NodeSocket textureDefaultSock = Nodes::GetInputSocketByName(node, "Default");
+	if (textureDefaultSock && textureDefaultSock.is_linked()) {
+		pluginDesc.add("default_texture", exportLinkedSocket(ntree, textureDefaultSock, context));
+	}
 
-	return pluginName;
-#endif
-	return AttrValue();
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 
 
 AttrValue DataExporter::exportVRayNodeTexLayered(VRayNodeExportParam)
 {
-#if 0
-	std::string pluginName = NodeExporter::getPluginName(node, ntree, context);
+	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
-	StrVector textures;
-	StrVector blend_modes;
+	AttrListPlugin  textures;
+	AttrListInt     blend_modes;
 
 	for(int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
-		std::string texSockName = boost::str(boost::format("Texture %i") % i);
+		static boost::format  sockTexFmt("Texture %i");
+		const std::string    &texSockName = boost::str(sockTexFmt % i);
 
-		BL::NodeSocket texSock = NodeExporter::getSocketByName(node, texSockName);
-		if(NOT(texSock))
-			continue;
+		BL::NodeSocket texSock = Nodes::GetInputSocketByName(node, texSockName);
+		if (texSock && texSock.is_linked()) {
+			AttrValue texture = exportLinkedSocket(ntree, texSock, context);
+			if (texture) {
+				// XXX: For some reason TexLayered doesn't like ::out_smth
+				texture.valPlugin.output.clear();
 
-		if(NOT(texSock.is_linked()))
-			continue;
+				const int   blend_mode   = RNA_enum_get(&texSock.ptr, "value");
+				const float blend_amount = RNA_float_get(&texSock.ptr, "blend");
 
-		std::string texture = NodeExporter::exportLinkedSocket(ntree, texSock, context);
+				// If blend amount is less then 1.0f we'll modify alpha
+				if (blend_amount < 1.0f) {
+					static boost::format  texBlendNameFmt("Tex%sBlend%i");
+					const std::string    &blendName = boost::str(texBlendNameFmt % pluginName % i);
 
-		// NOTE: For some reason TexLayered doesn't like ::out_smth
-		size_t semiPos = texture.find("::");
-		if(semiPos != std::string::npos)
-			texture.erase(texture.begin()+semiPos, texture.end());
+					PluginDesc blendDesc(blendName, "TexAColor");
+					blendDesc.add("color_a", texture);
+					blendDesc.add("mult_a", 1.0f);
+					blendDesc.add("mode", 0); // Mode: "result_a"
+					blendDesc.add("result_alpha", blend_amount);
 
-		std::string blend_mode = boost::str(boost::format("%i") % RNA_enum_get(&texSock.ptr, "value"));
+					texture = m_exporter->export_plugin(blendDesc);
+				}
 
-		const float blend_amount = RNA_float_get(&texSock.ptr, "blend");
-		if (blend_amount != 1.0f) {
-			const std::string &blendName =  boost::str(boost::format("Tex%sBlend%i") % pluginName % i);
-
-			PluginDesc blendAttrs;
-			blendAttrs["color_a"] = texture;
-			blendAttrs["mult_a"]  = "1.0";
-			blendAttrs["mode"]    = "0"; // Mode: "result_a"
-
-			blendAttrs["result_alpha"] = BOOST_FORMAT_FLOAT(blend_amount);
-
-			VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColorOp", blendName, blendAttrs);
-
-			texture = blendName;
-		}
-
-		textures.push_back(texture);
-		blend_modes.push_back(blend_mode);
-	}
-
-	std::reverse(textures.begin(), textures.end());
-	std::reverse(blend_modes.begin(), blend_modes.end());
-
-	PluginDesc pluginAttrs;
-	pluginAttrs["textures"]    = BOOST_FORMAT_LIST(textures);
-	pluginAttrs["blend_modes"] = BOOST_FORMAT_LIST_INT(blend_modes);
-
-	StrVector mappableValues;
-	mappableValues.push_back("alpha");
-	mappableValues.push_back("alpha_mult");
-	mappableValues.push_back("alpha_offset");
-	mappableValues.push_back("nouvw_color");
-	mappableValues.push_back("color_mult");
-	mappableValues.push_back("color_offset");
-
-	for(StrVector::const_iterator mvIt = mappableValues.begin(); mvIt != mappableValues.end(); ++mvIt) {
-		const std::string attrName = *mvIt;
-
-		BL::NodeSocket attrSock = NodeExporter::getSocketByAttr(node, attrName);
-		if(attrSock) {
-			std::string socketValue = NodeExporter::exportSocket(ntree, attrSock);
-			if(socketValue != "NULL")
-				pluginAttrs[attrName] = socketValue;
+				textures.append(texture.valPlugin);
+				blend_modes.append(blend_mode);
+			}
 		}
 	}
 
-	VRayNodePluginExporter::exportPlugin("TEXTURE", "TexLayered", pluginName, pluginAttrs);
+	std::reverse(textures.ptr()->begin(), textures.ptr()->end());
+	std::reverse(blend_modes.ptr()->begin(), blend_modes.ptr()->end());
 
-	return pluginName;
-#endif
-	return AttrValue();
+	PluginDesc pluginDesc(pluginName, "TexLayered");
+	pluginDesc.add("textures", textures);
+	pluginDesc.add("blend_modes", blend_modes);
+
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 
 
