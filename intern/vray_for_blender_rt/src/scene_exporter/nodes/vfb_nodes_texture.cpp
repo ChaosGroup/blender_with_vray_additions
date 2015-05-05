@@ -20,8 +20,7 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_math.h"
-
-#include <boost/format.hpp>
+#include "vfb_utils_mesh.h"
 
 
 int DataExporter::fillBitmapAttributes(VRayNodeExportParam, PluginDesc &pluginDesc)
@@ -442,3 +441,19 @@ AttrValue DataExporter::exportVRayNodeTexFalloff(VRayNodeExportParam)
 	return AttrValue();
 }
 
+
+AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(VRayNodeExportParam)
+{
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+	                      "TexMeshVertexColorChannel");
+
+	// Export attributes automatically from node
+	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+
+	PluginAttr *channel_name = pluginDesc.get("channel_name");
+	if (channel_name) {
+		channel_name->attrValue.valString = boost::str(Mesh::ColChanNameFmt % channel_name->attrValue.valString);
+	}
+
+	return m_exporter->export_plugin(pluginDesc);
+}

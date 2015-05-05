@@ -324,6 +324,9 @@ AttrValue DataExporter::exportVRayNode(VRayNodeExportParam)
 	else if (nodeClass == "VRayNodeTexMulti") {
 		attrValue = exportVRayNodeTexMulti(ntree, node, fromSocket, context);
 	}
+	else if (nodeClass == "VRayNodeTexMeshVertexColorChannel") {
+		attrValue = exportVRayNodeTexMeshVertexColorChannel(ntree, node, fromSocket, context);
+	}
 
 	// Material / BRDF
 	//

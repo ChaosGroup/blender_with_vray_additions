@@ -19,6 +19,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_math.h"
+#include "vfb_utils_mesh.h"
 
 
 AttrValue DataExporter::exportVRayNodeUVWGenChannel(VRayNodeExportParam)
@@ -59,5 +60,13 @@ AttrValue DataExporter::exportVRayNodeUVWGenMayaPlace2dTexture(VRayNodeExportPar
 		pluginDesc.add("rotate_frame_tex", rotate_frame_tex);
 	}
 
-	return DataExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+	// Export attributes automatically from node
+	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+
+	PluginAttr *uv_set_name = pluginDesc.get("uv_set_name");
+	if (uv_set_name) {
+		uv_set_name->attrValue.valString = boost::str(Mesh::UvChanNameFmt % uv_set_name->attrValue.valString);
+	}
+
+	return m_exporter->export_plugin(pluginDesc);
 }

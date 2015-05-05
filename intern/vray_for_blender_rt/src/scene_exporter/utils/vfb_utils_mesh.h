@@ -20,10 +20,26 @@
 #define VRAY_FOR_BLENDER_UTILS_MESH_H
 
 #include "vfb_rna.h"
+#include "vfb_plugin_attrs.h"
+
+#include <boost/format.hpp>
 
 
 namespace VRayForBlender {
 namespace Mesh {
+
+extern boost::format UvChanNameFmt;
+extern boost::format ColChanNameFmt;
+
+struct ExportOptions {
+	ExportOptions():
+	    merge_channel_vertices(false)
+	{}
+
+	bool  merge_channel_vertices;
+};
+
+int FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, ExportOptions options, PluginDesc &pluginDesc);
 
 } // namespace Mesh
 } // namespace VRayForBlender

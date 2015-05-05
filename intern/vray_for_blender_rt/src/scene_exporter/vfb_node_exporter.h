@@ -287,6 +287,7 @@ private:
 	AttrValue         exportVRayNodeTexMulti(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexSky(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTexVoxelData(VRayNodeExportParam);
+	AttrValue         exportVRayNodeTexMeshVertexColorChannel(VRayNodeExportParam);
 	AttrValue         exportVRayNodeTransform(VRayNodeExportParam);
 	AttrValue         exportVRayNodeUVWGenChannel(VRayNodeExportParam);
 	AttrValue         exportVRayNodeUVWGenEnvironment(VRayNodeExportParam);

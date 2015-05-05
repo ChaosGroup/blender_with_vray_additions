@@ -24,169 +24,170 @@
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 {
 	AttrPlugin  node;
-	AttrPlugin  geom;
-	AttrPlugin  mtl;
-
-	bool is_updated      = check_updated ? ob.is_updated()      : true;
-	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
-
-	if (!is_updated && ob.parent()) {
-		BL::Object parent(ob.parent());
-		is_updated = parent.is_updated();
-	}
-	if (!is_data_updated && ob.parent()) {
-		BL::Object parent(ob.parent());
-		is_data_updated = parent.is_updated_data();
-	}
 
 	BL::ID data(ob.data());
 	if (data) {
+		AttrPlugin  geom;
+		AttrPlugin  mtl;
+
+		bool is_updated      = check_updated ? ob.is_updated()      : true;
+		bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+		if (!is_updated && ob.parent()) {
+			BL::Object parent(ob.parent());
+			is_updated = parent.is_updated();
+		}
+		if (!is_data_updated && ob.parent()) {
+			BL::Object parent(ob.parent());
+			is_data_updated = parent.is_updated_data();
+		}
+
 		BL::NodeTree ntree = Nodes::GetNodeTree(data);
 		if (ntree) {
 			is_data_updated |= ntree.is_updated();
 			DataExporter::tag_ntree(ntree, false);
 		}
-	}
 
-	const int num_materials = Blender::GetMaterialCount(ob);
+		const int num_materials = Blender::GetMaterialCount(ob);
 
-	if (!(is_data_updated) || !(m_settings.export_meshes)) {
-		// XXX: Check for valid mesh?
-		geom = AttrPlugin(getMeshName(ob));
-	}
-	else {
-		AttrValue geometry = exportGeomStaticMesh(ob);
-		if (geometry) {
-			geom = geometry.valPlugin;
+		if (!(is_data_updated) || !(m_settings.export_meshes)) {
+			// XXX: Check for valid mesh?
+			geom = AttrPlugin(getMeshName(ob));
 		}
-	}
-
-	const std::string &nodePluginName = getNodeName(ob);
-	m_id_track.insert(ob, nodePluginName);
-
-	if (is_updated) {
-		if (num_materials) {
-			// Use single material
-			if (num_materials == 1) {
-				BL::Material ma(ob.material_slots[0].material());
-				if (ma) {
-					AttrValue material = exportMaterial(ma, true);
-					if (!material.type == ValueTypePlugin) {
-						PRINT_ERROR("Failed to export material: \"%s\"",
-						            ma.name().c_str());
-					}
-					else {
-						mtl = material.valPlugin;
-					}
-				}
+		else {
+			AttrValue geometry = exportGeomStaticMesh(ob);
+			if (geometry) {
+				geom = geometry.valPlugin;
 			}
-			// Export MtlMulti
-			else {
-				AttrListPlugin mtls_list(num_materials);
-				AttrListInt    ids_list(num_materials);
+		}
 
-				int maIdx   = 0;
-				int slotIdx = 0; // For cases with empty slots
+		const std::string &nodePluginName = getNodeName(ob);
+		m_id_track.insert(ob, nodePluginName);
 
-				BL::Object::material_slots_iterator slotIt;
-				for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
-					BL::Material ma((*slotIt).material());
+		if (is_updated) {
+			if (num_materials) {
+				// Use single material
+				if (num_materials == 1) {
+					BL::Material ma(ob.material_slots[0].material());
 					if (ma) {
-						// Get material name only
 						AttrValue material = exportMaterial(ma, true);
 						if (!material.type == ValueTypePlugin) {
 							PRINT_ERROR("Failed to export material: \"%s\"",
 							            ma.name().c_str());
 						}
 						else {
-							(*ids_list)[maIdx]  = slotIdx;
-							(*mtls_list)[maIdx] = material.valPlugin;
-							maIdx++;
+							mtl = material.valPlugin;
 						}
 					}
 				}
+				// Export MtlMulti
+				else {
+					AttrListPlugin mtls_list(num_materials);
+					AttrListInt    ids_list(num_materials);
 
-				PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
-				mtlMultiDesc.add("mtls_list", mtls_list);
-				mtlMultiDesc.add("ids_list", ids_list);
-				mtlMultiDesc.add("wrap_id", true);
+					int maIdx   = 0;
+					int slotIdx = 0; // For cases with empty slots
 
-				mtl = m_exporter->export_plugin(mtlMultiDesc);
+					BL::Object::material_slots_iterator slotIt;
+					for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
+						BL::Material ma((*slotIt).material());
+						if (ma) {
+							// Get material name only
+							AttrValue material = exportMaterial(ma, true);
+							if (!material.type == ValueTypePlugin) {
+								PRINT_ERROR("Failed to export material: \"%s\"",
+								            ma.name().c_str());
+							}
+							else {
+								(*ids_list)[maIdx]  = slotIdx;
+								(*mtls_list)[maIdx] = material.valPlugin;
+								maIdx++;
+							}
+						}
+					}
+
+					PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
+					mtlMultiDesc.add("mtls_list", mtls_list);
+					mtlMultiDesc.add("ids_list", ids_list);
+					mtlMultiDesc.add("wrap_id", true);
+
+					mtl = m_exporter->export_plugin(mtlMultiDesc);
+				}
+			}
+			if (!mtl) {
+				mtl = m_defaults.override_material
+				      ? m_defaults.override_material.valPlugin
+				      : m_defaults.default_material.valPlugin;
 			}
 		}
-		if (!mtl) {
-			mtl = m_defaults.override_material
-			      ? m_defaults.override_material.valPlugin
-			      : m_defaults.default_material.valPlugin;
+
+		if (geom && mtl && (is_updated || is_data_updated)) {
+			PluginDesc nodeDesc(nodePluginName, "Node");
+			nodeDesc.add("geometry", geom);
+			nodeDesc.add("material", mtl);
+			nodeDesc.add("transform", AttrTransform(ob.matrix_world()));
+			nodeDesc.add("objectID", ob.pass_index());
+
+			node = m_exporter->export_plugin(nodeDesc);
 		}
-	}
 
-	if (geom && mtl && (is_updated || is_data_updated)) {
-		PluginDesc nodeDesc(nodePluginName, "Node");
-		nodeDesc.add("geometry", geom);
-		nodeDesc.add("material", mtl);
-		nodeDesc.add("transform", AttrTransform(ob.matrix_world()));
-		nodeDesc.add("objectID", ob.pass_index());
+		BL::Object::modifiers_iterator modIt;
+		for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
+			BL::Modifier mod(*modIt);
+			if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+				BL::ParticleSystemModifier psm(mod);
+				BL::ParticleSystem psys = psm.particle_system();
+				if (psys) {
+					BL::ParticleSettings pset(psys.settings());
+					if (pset && (pset.type() == BL::ParticleSettings::type_HAIR) && (pset.render_type() == BL::ParticleSettings::render_type_PATH)) {
+						const int hair_is_updated = check_updated
+						                            ? (is_updated || pset.is_updated())
+						                            : true;
 
-		node = m_exporter->export_plugin(nodeDesc);
-	}
+						const int hair_is_data_updated = check_updated
+						                                 ? (is_data_updated || pset.is_updated())
+						                                 : true;
 
-	BL::Object::modifiers_iterator modIt;
-	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
-		BL::Modifier mod(*modIt);
-		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-			BL::ParticleSystemModifier psm(mod);
-			BL::ParticleSystem psys = psm.particle_system();
-			if (psys) {
-				BL::ParticleSettings pset(psys.settings());
-				if (pset && (pset.type() == BL::ParticleSettings::type_HAIR) && (pset.render_type() == BL::ParticleSettings::render_type_PATH)) {
-					const int hair_is_updated = check_updated
-					                            ? (is_updated || pset.is_updated())
-					                            : true;
+						const std::string hairNodeName = "Node@" + getHairName(ob, psys, pset);
 
-					const int hair_is_data_updated = check_updated
-					                                 ? (is_data_updated || pset.is_updated())
-					                                 : true;
+						// Put hair node to the object dependent plugines
+						// (will be used to remove plugin when object is removed)
+						m_id_track.insert(ob, hairNodeName);
 
-					const std::string hairNodeName = "Node@" + getHairName(ob, psys, pset);
-
-					// Put hair node to the object dependent plugines
-					// (will be used to remove plugin when object is removed)
-					m_id_track.insert(ob, hairNodeName);
-
-					AttrValue hair_geom;
-					if (!(hair_is_data_updated) || !(m_settings.export_meshes)) {
-						hair_geom = AttrPlugin(getHairName(ob, psys, pset));
-					}
-					else {
-						AttrValue geometry = exportGeomMayaHair(ob, psys, psm);
-						if (geometry) {
-							hair_geom = geometry.valPlugin;
+						AttrValue hair_geom;
+						if (!(hair_is_data_updated) || !(m_settings.export_meshes)) {
+							hair_geom = AttrPlugin(getHairName(ob, psys, pset));
 						}
-					}
-
-					AttrValue hair_mtl;
-					const int hair_mtl_index = pset.material() - 1;
-					if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
-						BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
-						if (hair_material) {
-							hair_mtl = exportMaterial(hair_material, true);
+						else {
+							AttrValue geometry = exportGeomMayaHair(ob, psys, psm);
+							if (geometry) {
+								hair_geom = geometry.valPlugin;
+							}
 						}
-					}
-					if (!hair_mtl) {
-						hair_mtl = m_defaults.override_material
-						           ? m_defaults.override_material.valPlugin
-						           : m_defaults.default_material.valPlugin;
-					}
 
-					if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated)) {
-						PluginDesc hairNodeDesc(hairNodeName, "Node");
-						hairNodeDesc.add("geometry", hair_geom);
-						hairNodeDesc.add("material", hair_mtl);
-						hairNodeDesc.add("transform", AttrTransform(ob.matrix_world()));
-						hairNodeDesc.add("objectID", ob.pass_index());
+						AttrValue hair_mtl;
+						const int hair_mtl_index = pset.material() - 1;
+						if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
+							BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
+							if (hair_material) {
+								hair_mtl = exportMaterial(hair_material, true);
+							}
+						}
+						if (!hair_mtl) {
+							hair_mtl = m_defaults.override_material
+							           ? m_defaults.override_material.valPlugin
+							           : m_defaults.default_material.valPlugin;
+						}
 
-						m_exporter->export_plugin(hairNodeDesc);
+						if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated)) {
+							PluginDesc hairNodeDesc(hairNodeName, "Node");
+							hairNodeDesc.add("geometry", hair_geom);
+							hairNodeDesc.add("material", hair_mtl);
+							hairNodeDesc.add("transform", AttrTransform(ob.matrix_world()));
+							hairNodeDesc.add("objectID", ob.pass_index());
+
+							m_exporter->export_plugin(hairNodeDesc);
+						}
 					}
 				}
 			}
