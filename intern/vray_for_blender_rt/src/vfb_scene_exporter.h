@@ -150,6 +150,7 @@ protected:
 private:
 	PluginExporter      *m_exporter;
 	DataExporter         m_data_exporter;
+	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
 
 };

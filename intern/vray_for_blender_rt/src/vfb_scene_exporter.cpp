@@ -80,13 +80,13 @@ SceneExporter::~SceneExporter()
 
 void SceneExporter::init()
 {
-	m_exporter = ExporterCreate(ExpoterTypeAppSDK);
+	m_settings.init(m_data, m_scene);
+
+	m_exporter = ExporterCreate(m_settings.exporter_type);
 	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 
-	ExporterSettings settings(m_data, m_scene);
-
-	m_data_exporter.init(m_exporter, settings);
+	m_data_exporter.init(m_exporter, m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);
 	m_data_exporter.init_defaults();
 }
@@ -180,7 +180,10 @@ void SceneExporter::draw()
 
 void SceneExporter::render_start()
 {
-	m_exporter->start();
+	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
+	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+		m_exporter->start();
+	}
 }
 
 
@@ -206,6 +209,16 @@ void SceneExporter::sync(const int &check_updated)
 
 	PRINT_INFO_EX("Synced in %.3f sec.",
 	              elapsed_secs);
+
+	// Sync data (will removed deleted objects)
+	m_exporter->sync();
+
+	// Export stuff after sync
+	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
+	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+		const std::string filepath = "/home/bdancer/Desktop/scene_app_sdk.vrscene";
+		m_exporter->export_vrscene(filepath);
+	}
 }
 
 
@@ -660,8 +673,6 @@ void SceneExporter::sync_objects(const int &check_updated)
 			}
 		}
 	}
-
-	m_exporter->sync();
 }
 
 

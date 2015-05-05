@@ -28,8 +28,8 @@ ExporterSettings::ExporterSettings():
     export_meshes(true)
 {}
 
-ExporterSettings::ExporterSettings(BL::BlendData data, BL::Scene scene):
-    ExporterSettings()
+
+void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 {
 	PointerRNA vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
 	PointerRNA vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
@@ -108,6 +108,9 @@ ExporterSettings::ExporterSettings(BL::BlendData data, BL::Scene scene):
 		}
 	}
 #endif
+
+	exporter_type = (ExpoterType)RNA_enum_get(&vrayExporter, "backend");
+	work_mode     = (WorkMode)RNA_enum_get(&vrayExporter, "work_mode");
 }
 
 

@@ -22,6 +22,7 @@
 #include <Python.h>
 
 #include "vfb_rna.h"
+#include "vfb_plugin_exporter.h"
 
 
 namespace VRayForBlender {
@@ -109,6 +110,12 @@ struct ExporterSettings {
 		ExportFormatASCII
 	};
 
+	enum WorkMode {
+		WorkModeRender,
+		WorkModeRenderAndExport,
+		WorkModeExportOnly,
+	};
+
 	enum ActiveLayers {
 		ActiveLayersScene = 0,
 		ActiveLayersAll,
@@ -116,7 +123,7 @@ struct ExporterSettings {
 	};
 
 	ExporterSettings();
-	ExporterSettings(BL::BlendData data, BL::Scene scene);
+	void              init(BL::BlendData data, BL::Scene scene);
 
 	bool              check_data_updates();
 	bool              is_first_frame();
@@ -124,6 +131,9 @@ struct ExporterSettings {
 	SettingsAnimation settings_animation;
 	SettingsDR        settings_dr;
 	SettingsFiles     settings_files;
+
+	ExpoterType       exporter_type;
+	WorkMode          work_mode;
 
 	// Export options
 	BlLayers          active_layers;
