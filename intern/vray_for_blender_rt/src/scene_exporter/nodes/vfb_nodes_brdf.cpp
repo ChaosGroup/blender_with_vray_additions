@@ -29,9 +29,9 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(VRayNodeExportParam)
 	AttrListPlugin brdfs;
 	AttrListPlugin weights;
 
-	boost::format sockBrdfFormat("BRDF %i");
-	boost::format sockWeigthFormat("Weight %i");
-	boost::format weighTexFormat(pluginName + "W%i");
+	static boost::format sockBrdfFormat("BRDF %i");
+	static boost::format sockWeigthFormat("Weight %i");
+	static boost::format weighTexFormat(pluginName + "W%i");
 
 	for (int i = 1; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
 		const std::string &brdfSockName = boost::str(sockBrdfFormat % i);
@@ -55,10 +55,9 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(VRayNodeExportParam)
 				// NOTE: Plugin type is 'TEXTURE', but we want it to be written along with 'BRDF'
 				weight = m_exporter->export_plugin(weigthDesc);
 			}
-#if 0
-			brdfs.push_back(brdf.valPlugin);
-			weights.push_back(weight.valPlugin);
-#endif
+
+			brdfs.append(brdf.valPlugin);
+			weights.append(weight.valPlugin);
 		}
 	}
 
