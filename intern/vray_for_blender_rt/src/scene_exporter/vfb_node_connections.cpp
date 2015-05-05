@@ -329,7 +329,7 @@ AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fr
 			if (!conSockAttrName.empty()) {
 				if (!(conSockAttrName == "uvwgen" || conSockAttrName == "bitmap")) {
 					// Store output attribute name
-					attrValue.valPluginOutput = conSockAttrName;
+					attrValue.valPlugin.output = conSockAttrName;
 				}
 			}
 		}

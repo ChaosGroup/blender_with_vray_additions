@@ -225,6 +225,7 @@ struct AttrPlugin {
 	}
 
 	std::string  plugin;
+	std::string  output;
 };
 
 
@@ -243,23 +244,23 @@ struct AttrList {
 	}
 
 	void init() {
-		ptr = DataArray(new DataType);
+		m_ptr = DataArray(new DataType);
 	}
 
 	void resize(const int &cnt) {
-		ptr.get()->resize(cnt);
+		m_ptr.get()->resize(cnt);
 	}
 
 	void append(const T &value) {
-		ptr.get()->push_back(value);
+		m_ptr.get()->push_back(value);
 	}
 
 	void prepend(const T &value) {
-		ptr.get()->insert(0, value);
+		m_ptr.get()->insert(0, value);
 	}
 
 	int getCount() const {
-		return ptr.get()->size();
+		return m_ptr.get()->size();
 	}
 
 	int getBytesCount() const {
@@ -267,23 +268,27 @@ struct AttrList {
 	}
 
 	T* operator * () {
-		return &ptr.get()->at(0);
+		return &m_ptr.get()->at(0);
 	}
 
 	const T* operator * () const {
-		return &ptr.get()->at(0);
+		return &m_ptr.get()->at(0);
 	}
 
 	operator bool () const {
-		return ptr && ptr.get()->size();
+		return m_ptr && m_ptr.get()->size();
 	}
 
 	const bool empty() const {
-		return !ptr || (ptr.get()->size() == 0);
+		return !m_ptr || (m_ptr.get()->size() == 0);
+	}
+
+	DataType* ptr() {
+		return m_ptr.get();
 	}
 
 private:
-	DataArray ptr;
+	DataArray m_ptr;
 
 };
 
@@ -357,6 +362,10 @@ struct AttrValue {
 	    type(ValueTypeUnknown)
 	{}
 
+	AttrValue(const AttrValue &other) {
+		*this = other;
+	}
+
 	AttrValue(const std::string &attrValue) {
 		type = ValueTypeString;
 		valString = attrValue;
@@ -375,7 +384,7 @@ struct AttrValue {
 	AttrValue(const AttrPlugin attrValue, const std::string &output) {
 		type = ValueTypePlugin;
 		valPlugin = attrValue;
-		valPluginOutput = output;
+		valPlugin.output = output;
 	}
 
 	AttrValue(const AttrColor &c) {
@@ -475,7 +484,6 @@ struct AttrValue {
 	AttrTransform       valTransform;
 
 	AttrPlugin          valPlugin;
-	std::string         valPluginOutput;
 
 	AttrListInt         valListInt;
 	AttrListFloat       valListFloat;
