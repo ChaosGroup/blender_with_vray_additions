@@ -256,6 +256,14 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam)
 
 			setAttrsFromNode(ntree, node, fromSocket, context, mappingDesc, mappingPluginID, ParamDesc::PluginUvwgen);
 
+			PluginAttr *uv_set_name = mappingDesc.get("uv_set_name");
+			if (uv_set_name) {
+				uv_set_name->attrValue.valString = boost::str(Mesh::UvChanNameFmt % uv_set_name->attrValue.valString);
+			}
+			else {
+				mappingDesc.add("uv_set_name", "UvUVMap");
+			}
+
 			mappingPlugin = m_exporter->export_plugin(mappingDesc);
 		}
 

@@ -67,6 +67,9 @@ AttrValue DataExporter::exportVRayNodeUVWGenMayaPlace2dTexture(VRayNodeExportPar
 	if (uv_set_name) {
 		uv_set_name->attrValue.valString = boost::str(Mesh::UvChanNameFmt % uv_set_name->attrValue.valString);
 	}
+	else {
+		pluginDesc.add("uv_set_name", "UvUVMap");
+	}
 
 	return m_exporter->export_plugin(pluginDesc);
 }
