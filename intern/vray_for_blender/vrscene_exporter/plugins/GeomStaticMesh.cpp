@@ -251,7 +251,7 @@ void GeomStaticMesh::preInit()
 
 void GeomStaticMesh::freeData()
 {
-	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"GeomStaticMesh::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
+	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED "GeomStaticMesh::freeData(" COLOR_YELLOW "%s" COLOR_RED ")" COLOR_DEFAULT, m_name.c_str());
 
 	FREE_ARRAY(m_vertices);
 	FREE_ARRAY(m_normals);
