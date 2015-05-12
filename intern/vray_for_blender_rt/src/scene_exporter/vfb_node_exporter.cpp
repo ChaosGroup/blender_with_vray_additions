@@ -109,7 +109,7 @@ void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
 
 void DataExporter::sync()
 {
-	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.cend(); ) {
+	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.end(); ) {
 		const IdTrack::IdDep &dep = dIt->second;
 		if (dep.used) {
 			++dIt;
