@@ -706,6 +706,14 @@ endif()
 
 if(WITH_VRAY_FOR_BLENDER)
 	add_definitions(-DWITH_VRAY_FOR_BLENDER)
+
+	string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" APPSDK_HOST_SYSTEM_NAME)
+
+	set(APPSDK_VERSION "447" CACHE STRING "V-Ray AppSDK verstion")
+	set(APPSDK_PATH "$ENV{HOME}/src/appsdk_releases" CACHE PATH "V-Ray AppSDK location")
+	set(APPSDK_ROOT "${APPSDK_PATH}/${APPSDK_VERSION}/${APPSDK_HOST_SYSTEM_NAME}" CACHE PATH "V-Ray AppSDK root" FORCE)
+
+	message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
 endif()
 
 
