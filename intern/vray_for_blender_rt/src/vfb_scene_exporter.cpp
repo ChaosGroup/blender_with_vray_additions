@@ -526,11 +526,11 @@ void SceneExporter::sync_materials(const int &check_updated)
 }
 
 
-static inline uint get_layer(BlLayers array)
+static inline unsigned int get_layer(BlLayers array)
 {
-	uint layer = 0;
+	unsigned int layer = 0;
 
-	for(uint i = 0; i < 20; i++)
+	for(unsigned int i = 0; i < 20; i++)
 		if (array[i])
 			layer |= (1 << i);
 
