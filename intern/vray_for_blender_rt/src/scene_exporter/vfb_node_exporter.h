@@ -149,7 +149,9 @@ struct IdTrack {
 
 	void reset_usage() {
 		for (auto &dIt : data) {
+#if 0
 			ID    *id  = (ID*)dIt.first;
+#endif
 			IdDep &dep = dIt.second;
 			dep.used = false;
 		}
