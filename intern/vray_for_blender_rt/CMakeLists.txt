@@ -12,6 +12,7 @@ set(INC_SYS
 )
 
 set(INC
+	${CMAKE_SOURCE_DIR}/extern/glew/include
 	${CMAKE_SOURCE_DIR}/intern/guardedalloc
 	${CMAKE_SOURCE_DIR}/intern/smoke/extern
 	${CMAKE_SOURCE_DIR}/source/blender/blenkernel
