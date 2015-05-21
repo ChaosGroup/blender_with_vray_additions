@@ -113,7 +113,9 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 
 			valid = mesh && mesh.polygons.length();
 
-			data.meshes.remove(mesh);
+			if (mesh) {
+				data.meshes.remove(mesh);
+			}
 		}
 		case OB_MESH:
 			break;
