@@ -387,7 +387,7 @@ AttrValue DataExporter::exportVRayNodeSphereFadeGizmo(VRayNodeExportParam)
 		PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 		                      "SphereFadeGizmo");
 		pluginDesc.add("radius", radius);
-		pluginDesc.add("transform", AttrTransform(tm));
+		pluginDesc.add("transform", AttrTransformFromBlTransform(tm));
 
 		plugin = m_exporter->export_plugin(pluginDesc);
 	}

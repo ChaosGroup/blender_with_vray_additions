@@ -156,7 +156,7 @@ void DataExporter::fillRampAttributes(VRayNodeExportParam,
 			const float pos = el.position();
 
 			PluginDesc colDesc(colPluginName, "TexAColor");
-			colDesc.add("texture", AttrAColor(el.color()));
+			colDesc.add("texture", AttrColorFromBlColor(el.color()));
 
 			colors.append(m_exporter->export_plugin(colDesc));
 			positions.append(pos);

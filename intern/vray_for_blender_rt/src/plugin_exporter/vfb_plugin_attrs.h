@@ -36,253 +36,58 @@
 
 namespace VRayForBlender {
 
+// import everything, as these are types used extensively in this namespace
+using namespace VRayBaseTypes;
+
 const int VectorBytesCount  = 3 * sizeof(float);
 const int Vector2BytesCount = 2 * sizeof(float);
 
-
-<<<<<<< HEAD
-struct AttrValue;
-
-
-struct AttrColor {
-	AttrColor():
-	    r(0.0f),
-	    g(0.0f),
-	    b(0.0f)
-	{}
-
-	AttrColor(const float &r, const float &g, const float &b):
-	    r(r),
-	    g(g),
-	    b(b)
-	{}
-=======
-struct AttrColor : public VRayBaseTypes::AttrColorBase {
-	AttrColor(const AttrColorBase & o): AttrColorBase(o) {}
-	AttrColor(): AttrColorBase() {}
->>>>>>> add: Initial integration with zmqlib & remote vray
-
-	AttrColor(const BlColor &c) {
-		memcpy(&r, &c.data[0], VectorBytesCount);
-	}
-
-	AttrColor(const BlAColor &ac) {
-		memcpy(&r, &ac.data[0], VectorBytesCount);
-	}
-
-	AttrColor(const float &r, const float &g, const float &b): AttrColorBase(r, g, b) {}
-
-	AttrColor(float c): AttrColorBase(c) {}
-
-	AttrColor(float color[4]): AttrColorBase(color) {}
-};
-
-
-struct AttrAColor: public VRayBaseTypes::AttrAColorBase {
-	AttrAColor(): AttrAColorBase() {}
-
-	AttrAColor(const AttrColor &c, const float &a = 1.0f): AttrAColorBase(c, a) {}
-};
-
-
-struct AttrVector: public VRayBaseTypes::AttrVectorBase {
-	AttrVector(const AttrVectorBase & o): AttrVectorBase(o) {}
-
-	AttrVector(): AttrVectorBase() {}
-
-	AttrVector(const BlVector &bl_v) {
-		memcpy(&x, &bl_v.data[0], VectorBytesCount);
-	}
-
-	AttrVector(const BlVector2 &bl_v) {
-		x = bl_v.data[0];
-		y = bl_v.data[1];
-		z = 0.0f;
-	}
-
-	float operator * (const AttrVector other) {
-		return x * other.x + y * other.y + z * other.z;
-	}
-
-	AttrVector operator - (const AttrVector other) {
-		return AttrVector(x - other.x, y - other.y, z - other.z);
-	}
-
-	bool operator == (const AttrVector other) {
-		return (x == other.x) && (y == other.y) && (z == other.z);
-	}
-
-	AttrVector(float vector[3]): AttrVectorBase(vector) {}
-
-	AttrVector(const float &_x, const float &_y, const float &_z): AttrVectorBase(x, y, z) {}
-};
-
-
-struct AttrVector2: public VRayBaseTypes::AttrVector2Base {
-	AttrVector2(): AttrVector2Base() {}
-
-	AttrVector2(const BlVector2 &bl_v) {
-		memcpy(&x, &bl_v.data[0], Vector2BytesCount);
-	}
-
-	AttrVector2(float vector[2]): AttrVector2Base(vector) {}
-};
-
-
-struct AttrMatrix: public VRayBaseTypes::AttrMatrixBase {
-	AttrMatrix(const AttrMatrixBase & o): AttrMatrixBase(o) {}
-
-	AttrMatrix(): VRayBaseTypes::AttrMatrixBase() {}
-
-	AttrMatrix(float tm[3][3]): AttrMatrixBase(tm) {}
-
-	AttrMatrix(float tm[4][4]): AttrMatrixBase(tm) {}
-};
-
-
-struct AttrTransform: public VRayBaseTypes::AttrTransformBase {
-	AttrTransform(): AttrTransformBase() {}
-	
-	AttrTransform(const BlTransform &bl_tm) {
-		memcpy(&m.v0, &bl_tm.data[0],  VectorBytesCount);
-		memcpy(&m.v1, &bl_tm.data[4],  VectorBytesCount);
-		memcpy(&m.v2, &bl_tm.data[8],  VectorBytesCount);
-		memcpy(&offs, &bl_tm.data[12], VectorBytesCount);
-	}
-
-	AttrTransform(float tm[4][4]): AttrTransformBase(tm) {}
-};
-
-
-struct AttrPlugin: public VRayBaseTypes::AttrPluginBase {
-	AttrPlugin(): AttrPluginBase() {}
-
-<<<<<<< HEAD
-	AttrPlugin& operator=(const std::string &name) {
-		plugin = name;
-		return *this;
-	}
-
-	AttrPlugin& operator=(const AttrValue &attrValue);
-
-	std::string  plugin;
-	std::string  output;
-=======
-	AttrPlugin(const std::string &name): AttrPluginBase(name) {}
->>>>>>> add: Initial integration with zmqlib & remote vray
-};
-
-
-template <typename T>
-struct AttrList: public VRayBaseTypes::AttrListBase<T> {
-	AttrList(): AttrListBase<T>() {}
-
-	VRayBaseTypes::ValueType getType() const;
-
-	VRayBaseTypes::AttrListBase<T> toBase() const {
-		return VRayBaseTypes::AttrListBase<T>(*this);
-	}
-
-	AttrList(const int &size): AttrListBase<T>(size) {}
-};
-
-typedef AttrList<int>         AttrListInt;
-typedef AttrList<float>       AttrListFloat;
-typedef AttrList<AttrColor>   AttrListColor;
-typedef AttrList<AttrVector>  AttrListVector;
-typedef AttrList<AttrVector2> AttrListVector2;
-typedef AttrList<AttrPlugin>  AttrListPlugin;
-typedef AttrList<std::string> AttrListString;
-
-
-inline VRayBaseTypes::ValueType AttrListInt::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListInt;
+// convert functions from BL types to vray base types
+inline VRayBaseTypes::AttrColor AttrColorFromBlColor(const BlColor &c) {
+	VRayBaseTypes::AttrColor color;
+	memcpy(&color, c.data, VectorBytesCount);
+	return color;
 }
 
-inline VRayBaseTypes::ValueType AttrListFloat::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListFloat;
+inline VRayBaseTypes::AttrColor AttrColorFromBlColor(const BlAColor &c) {
+	VRayBaseTypes::AttrColor color;
+	memcpy(&color, c.data, VectorBytesCount + sizeof(float));
+	return color;
 }
 
-inline VRayBaseTypes::ValueType AttrListColor::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListColor;
+inline VRayBaseTypes::AttrVector AttrVectorFromBlVector(const BlVector &bl_v) {
+	VRayBaseTypes::AttrVector vector;
+	memcpy(&vector, bl_v.data, VectorBytesCount);
+	return vector;
 }
 
-inline VRayBaseTypes::ValueType AttrListVector::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListVector;
+inline VRayBaseTypes::AttrVector AttrVectorFromBlVector(const BlVector2 &bl_v) {
+	VRayBaseTypes::AttrVector vector;
+	memcpy(&vector, bl_v.data, Vector2BytesCount);
+	vector.z = 0.0f;
+	return vector;
 }
 
-inline VRayBaseTypes::ValueType AttrListVector2::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListVector2;
+inline VRayBaseTypes::AttrVector2 AttrVector2FromBlVector(const BlVector2 &bl_v) {
+	VRayBaseTypes::AttrVector2 vector;
+	memcpy(&vector, bl_v.data, Vector2BytesCount);
+	return vector;
 }
 
-inline VRayBaseTypes::ValueType AttrListPlugin::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListPlugin;
+inline VRayBaseTypes::AttrTransform AttrTransformFromBlTransform(const BlTransform &bl_tm) {
+	VRayBaseTypes::AttrTransform tm;
+	memcpy(&tm.m.v0, &bl_tm.data[0], VectorBytesCount);
+	memcpy(&tm.m.v1, &bl_tm.data[4], VectorBytesCount);
+	memcpy(&tm.m.v2, &bl_tm.data[8], VectorBytesCount);
+	memcpy(&tm.offs, &bl_tm.data[12], VectorBytesCount);
+	return tm;
 }
-
-inline VRayBaseTypes::ValueType AttrListString::getType() const {
-	return VRayBaseTypes::ValueType::ValueTypeListString;
-}
-
-enum ValueType {
-	ValueTypeUnknown = 0,
-
-	ValueTypeInt,
-	ValueTypeFloat,
-	ValueTypeColor,
-	ValueTypeAColor,
-	ValueTypeVector,
-	ValueTypeMatrix,
-	ValueTypeTransform,
-	ValueTypeString,
-	ValueTypePlugin,
-
-	ValueTypeListInt,
-	ValueTypeListFloat,
-	ValueTypeListColor,
-	ValueTypeListVector,
-	ValueTypeListMatrix,
-	ValueTypeListTransform,
-	ValueTypeListString,
-	ValueTypeListPlugin,
-
-	ValueTypeListValue,
-
-	ValueTypeInstancer,
-	ValueTypeMapChannels,
-};
-
-
-struct AttrMapChannels: public VRayBaseTypes::AttrMapChannelsBase {
-	struct AttrMapChannel {
-		AttrListVector vertices;
-		AttrListInt    faces;
-		std::string    name;
-	};
-	typedef boost::unordered_map<std::string, AttrMapChannel> MapChannelsMap;
-
-	MapChannelsMap data;
-};
-
-
-struct AttrInstancer: public VRayBaseTypes::AttrInstancerBase {
-	struct Item {
-		int            index;
-		AttrTransform  tm;
-		AttrTransform  vel;
-		AttrPlugin     node;
-	};
-	typedef AttrList<Item> Items;
-
-	Items data;
-};
-
 
 struct AttrValue {
 	typedef AttrList<AttrValue> AttrListValue;
 
 	AttrValue():
-	    type(ValueTypeUnknown)
-	{}
+		type(ValueTypeUnknown) {}
 
 	AttrValue(const AttrValue &other) {
 		*this = other;
@@ -422,52 +227,42 @@ struct AttrValue {
 
 	const char *getTypeAsString() const {
 		switch (type) {
-			case ValueTypeInt:           return "Int";
-			case ValueTypeFloat:         return "Float";
-			case ValueTypeColor:         return "Color";
-			case ValueTypeAColor:        return "AColor";
-			case ValueTypeVector:        return "Vector";
-			case ValueTypeTransform:     return "Transform";
-			case ValueTypeString:        return "String";
-			case ValueTypePlugin:        return "Plugin";
-			case ValueTypeListInt:       return "ListInt";
-			case ValueTypeListFloat:     return "ListFloat";
-			case ValueTypeListColor:     return "ListColor";
-			case ValueTypeListVector:    return "ListVector";
-			case ValueTypeListMatrix:    return "ListMatrix";
-			case ValueTypeListTransform: return "ListTransform";
-			case ValueTypeListString:    return "ListString";
-			case ValueTypeListPlugin:    return "ListPlugin";
-			case ValueTypeListValue:     return "ListValue";
-			case ValueTypeInstancer:     return "Instancer";
-			case ValueTypeMapChannels:   return "Map Channels";
-			default:
-				break;
+		case ValueTypeInt:           return "Int";
+		case ValueTypeFloat:         return "Float";
+		case ValueTypeColor:         return "Color";
+		case ValueTypeAColor:        return "AColor";
+		case ValueTypeVector:        return "Vector";
+		case ValueTypeTransform:     return "Transform";
+		case ValueTypeString:        return "String";
+		case ValueTypePlugin:        return "Plugin";
+		case ValueTypeListInt:       return "ListInt";
+		case ValueTypeListFloat:     return "ListFloat";
+		case ValueTypeListColor:     return "ListColor";
+		case ValueTypeListVector:    return "ListVector";
+		case ValueTypeListMatrix:    return "ListMatrix";
+		case ValueTypeListTransform: return "ListTransform";
+		case ValueTypeListString:    return "ListString";
+		case ValueTypeListPlugin:    return "ListPlugin";
+		case ValueTypeListValue:     return "ListValue";
+		case ValueTypeInstancer:     return "Instancer";
+		case ValueTypeMapChannels:   return "Map Channels";
+		default:
+			break;
 		}
 		return "Unknown";
 	}
 
-	operator bool () const {
+	operator bool() const {
 		bool valid = true;
 		if (type == ValueTypeUnknown) {
 			valid = false;
-		}
-		else if (type == ValueTypePlugin) {
+		} else if (type == ValueTypePlugin) {
 			valid = !!(valPlugin);
 		}
 		return valid;
 	}
 };
 
-
-inline AttrPlugin& AttrPlugin::operator=(const AttrValue &attrValue)
-{
-	if (attrValue.type == ValueTypePlugin) {
-		*this = attrValue.valPlugin;
-	}
-
-	return *this;
-}
 
 
 struct PluginAttr {
@@ -477,14 +272,12 @@ struct PluginAttr {
 	    attrValue(attrValue),
 	    time(time)
 	{}
-
 	std::string  attrName;
 	AttrValue    attrValue;
 	double       time;
 
 };
 typedef boost::unordered_map<std::string, PluginAttr> PluginAttrs;
-
 
 struct PluginDesc {
 	typedef boost::unordered_map<std::string, PluginDesc> PluginAttrsCache;
@@ -495,10 +288,9 @@ struct PluginDesc {
 	PluginAttrs  pluginAttrs;
 
 	//PluginDesc() {}
-	PluginDesc(const std::string &plugin_name, const std::string &plugin_id, const std::string &prefix=""):
+	PluginDesc(const std::string &plugin_name, const std::string &plugin_id, const std::string &prefix = ""):
 		pluginName(plugin_name),
-		pluginID(plugin_id)
-	{
+		pluginID(plugin_id) {
 		if (!prefix.empty()) {
 			pluginName.insert(0, prefix);
 		}
@@ -526,12 +318,13 @@ struct PluginDesc {
 		return nullptr;
 	}
 
-	void add(const PluginAttr &attr) {
+
+	void add(const PluginAttr &attr, const float &time = 0.0f) {
 		pluginAttrs[attr.attrName] = attr;
 	}
 
-	void add(const std::string &attrName, const AttrValue &attrValue, const float &time=0.0f) {
-		add(PluginAttr(attrName, attrValue, time));
+	void add(const std::string &attrName, const AttrValue &attrValue, const float &time = 0.0f) {
+		add(PluginAttr(attrName, attrValue), time);
 	}
 
 	void del(const std::string &attrName) {
@@ -541,7 +334,7 @@ struct PluginDesc {
 
 	void showAttributes() const {
 		PRINT_INFO_EX("Plugin \"%s.%s\" parameters:",
-		              pluginID.c_str(), pluginName.c_str());
+			pluginID.c_str(), pluginName.c_str());
 
 		for (const auto &pIt : pluginAttrs) {
 			const PluginAttr &p = pIt.second;
@@ -551,14 +344,6 @@ struct PluginDesc {
 	}
 };
 
-} // namespace VRayForBlender
 
-namespace VRayBaseTypes {
-	inline VRayBaseTypes::ValueType VRayBaseTypes::AttrListBase<VRayForBlender::AttrVector>::getType() const {
-		return VRayBaseTypes::ValueType::ValueTypeListVector;
-	}
-	inline VRayBaseTypes::ValueType VRayBaseTypes::AttrListBase<VRayForBlender::AttrColor>::getType() const {
-		return VRayBaseTypes::ValueType::ValueTypeListColor;
-	}
-}
+} // namespace VRayForBlender
 #endif // VRAY_FOR_BLENDER_PLUGIN_EXPORTER_H

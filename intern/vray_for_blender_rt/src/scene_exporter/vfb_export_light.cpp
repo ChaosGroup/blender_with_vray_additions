@@ -136,7 +136,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
 					}
 				}
 
-				pluginDesc.add("transform", AttrTransform(ob.matrix_world()));
+				pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 
 				if (pluginID == "LightRectangle") {
 					BL::AreaLamp areaLamp(lamp);

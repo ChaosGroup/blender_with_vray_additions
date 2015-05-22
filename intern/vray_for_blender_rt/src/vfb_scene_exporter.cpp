@@ -525,7 +525,7 @@ void SceneExporter::sync_view(const int &check_updated)
 
 			PluginDesc viewDesc("renderView", "RenderView");
 			viewDesc.add("fov", viewParams.render_view.fov);
-			viewDesc.add("transform", AttrTransform(viewParams.render_view.tm));
+			viewDesc.add("transform", AttrTransformFromBlTransform(viewParams.render_view.tm));
 
 			viewDesc.add("clipping",     (viewParams.render_view.use_clip_start || viewParams.render_view.use_clip_end));
 			viewDesc.add("clipping_near", viewParams.render_view.clip_start);
@@ -680,7 +680,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 									if (dupli_use_instancer) {
 										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
 										instancer_item.index = dupli_instance; // TODO: Handle "persistent_id"
-										instancer_item.tm    = dupliOb.matrix();
+										instancer_item.tm    = AttrTransformFromBlTransform(dupliOb.matrix());
 
 										sync_object(dupOb, check_updated);
 

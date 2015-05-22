@@ -40,12 +40,12 @@ struct ChanVertex {
 	{}
 
 	ChanVertex(const BlVertUV &uv):
-	    v(uv),
+	    v(AttrVectorFromBlVector(uv)),
 	    index(0)
 	{}
 
 	ChanVertex(const BlVertCol &col):
-	    v(col),
+	    v(AttrVectorFromBlVector(col)),
 	    index(0)
 	{}
 

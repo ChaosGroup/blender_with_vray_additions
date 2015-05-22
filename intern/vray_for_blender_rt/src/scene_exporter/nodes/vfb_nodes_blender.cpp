@@ -22,7 +22,6 @@
 
 using namespace VRayForBlender;
 
-
 #define MAX_NUM_POINTS 64
 
 

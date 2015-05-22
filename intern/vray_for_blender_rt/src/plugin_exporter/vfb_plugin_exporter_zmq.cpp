@@ -182,16 +182,16 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valTransform));
 			break;
 		case ValueTypeListInt:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListInt.toBase()));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListInt));
 			break;
 		case ValueTypeListFloat:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListFloat.toBase()));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListFloat));
 			break;
 		case ValueTypeListVector:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListVector.toBase()));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListVector));
 			break;
 		case ValueTypeListColor:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListColor.toBase()));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListColor));
 			break;
 		case ValueTypeListPlugin:
 			PRINT_INFO_EX("--- > UNIMPLEMENTED ValueTypeListPlugin");
