@@ -599,7 +599,7 @@ void VRsceneExporter::exportNode(Object *ob, const NodeAttrs &attrs)
 	if(ExporterSettings::gSet.m_exportNodes) {
 		int writeObject = true;
 		if (ExporterSettings::gSet.DoUpdateCheck())
-			writeObject = node->isObjectUpdated();
+			writeObject = node->isObjectUpdated() || node->isObjectDataUpdated();
 		int toDelete = false;
 		if(writeObject) {
 			toDelete = node->write(ExporterSettings::gSet.m_fileObject, ExporterSettings::gSet.m_frameCurrent);
