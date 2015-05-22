@@ -214,30 +214,33 @@ void GeomStaticMesh::init()
 	}
 
 	b_mesh = b_data.meshes.new_from_object(b_scene, b_object, true, 2, false, false);
-	if (NOT(b_mesh))
-		return;
-
-	if (b_sbs)
-		b_sbs.show_render(b_sbs_show_render);
-
-	if (b_mesh.use_auto_smooth()) {
-		b_mesh.calc_normals_split();
+	if (!b_mesh) {
+		EMPTY_HEX_DATA(m_vertices);
+		EMPTY_HEX_DATA(m_faces);
 	}
+	else {
+		if (b_sbs) {
+			b_sbs.show_render(b_sbs_show_render);
+		}
+		if (b_mesh.use_auto_smooth()) {
+			b_mesh.calc_normals_split();
+		}
+		b_mesh.calc_tessface(true);
 
-	b_mesh.calc_tessface(true);
+		// NOTE: Mesh could actually have no data.
+		// This could be fine for mesh animated with "Build" mod, for example.
 
-	// NOTE: Mesh could actually have no data.
-	// This could be fine for mesh animated with "Build" mod, for example.
+		initVertices();
+		initFaces();
+		initMapChannels();
+		initAttributes();
 
-	initVertices();
-	initFaces();
-	initMapChannels();
-	initAttributes();
+		preInit();
+		initHash();
 
-	preInit();
-	initHash();
-
-	b_data.meshes.remove(b_mesh);
+		b_data.meshes.remove(b_mesh);
+		b_mesh = BL::Mesh(PointerRNA_NULL);
+	}
 }
 
 
@@ -311,13 +314,12 @@ const MChan* GeomStaticMesh::getMapChannel(const int i) const
 
 void GeomStaticMesh::initVertices()
 {
-	const int totvert = b_mesh.vertices.length();
-	if(NOT(totvert)) {
+	if(NOT(b_mesh && b_mesh.vertices.length())) {
 		EMPTY_HEX_DATA(m_vertices);
 		return;
 	}
 
-	m_vertsArraySize = 3 * totvert;
+	m_vertsArraySize = 3 * b_mesh.vertices.length();
 	m_vertsArray     = new float[m_vertsArraySize];
 
 	BL::Mesh::vertices_iterator vertIt;
@@ -335,7 +337,7 @@ void GeomStaticMesh::initVertices()
 
 void GeomStaticMesh::initFaces()
 {
-	if(NOT(b_mesh.tessfaces.length())) {
+	if(NOT(b_mesh && b_mesh.tessfaces.length())) {
 		EMPTY_HEX_DATA(m_faces);
 		EMPTY_HEX_DATA(m_normals);
 		EMPTY_HEX_DATA(m_faceNormals);

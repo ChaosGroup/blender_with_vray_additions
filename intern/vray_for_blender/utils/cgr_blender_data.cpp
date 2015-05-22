@@ -83,6 +83,33 @@ std::string GetIDName(BL::Pointer ptr)
 }
 
 
+static bool is_mesh_valid(Scene *sce, Main *main, Object *ob, bool check_length=true)
+{
+	PointerRNA scenePtr;
+	PointerRNA dataPtr;
+	PointerRNA objectPtr;
+
+	RNA_id_pointer_create((ID*)sce,  &scenePtr);
+	RNA_id_pointer_create((ID*)main, &dataPtr);
+	RNA_id_pointer_create((ID*)ob,   &objectPtr);
+
+	BL::Scene     scene = BL::Scene(scenePtr);
+	BL::BlendData data  = BL::BlendData(dataPtr);
+	BL::Object    obj   = BL::Object(objectPtr);
+
+	bool valid = !!(obj.data());
+	if (valid && check_length) {
+		BL::Mesh mesh = data.meshes.new_from_object(scene, obj, true, 1, false, false);
+		valid = mesh && mesh.polygons.length();
+		if (mesh) {
+			data.meshes.remove(mesh);
+		}
+	}
+
+	return valid;
+}
+
+
 int IsMeshValid(Scene *sce, Main *main, Object *ob)
 {
 	bool valid = true;
@@ -95,28 +122,12 @@ int IsMeshValid(Scene *sce, Main *main, Object *ob)
 		}
 			break;
 		case OB_MBALL:
+			valid = is_mesh_valid(sce, main, ob);
+			break;
 		case OB_SURF:
-		case OB_CURVE: {
-			PointerRNA scenePtr;
-			PointerRNA dataPtr;
-			PointerRNA objectPtr;
-
-			RNA_id_pointer_create((ID*)sce,  &scenePtr);
-			RNA_id_pointer_create((ID*)main, &dataPtr);
-			RNA_id_pointer_create((ID*)ob,   &objectPtr);
-
-			BL::Scene     scene = BL::Scene(scenePtr);
-			BL::BlendData data  = BL::BlendData(dataPtr);
-			BL::Object    obj   = BL::Object(objectPtr);
-
-			BL::Mesh mesh = data.meshes.new_from_object(scene, obj, true, 1, false, false);
-
-			valid = mesh && mesh.polygons.length();
-
-			if (mesh) {
-				data.meshes.remove(mesh);
-			}
-		}
+		case OB_CURVE:
+			valid = is_mesh_valid(sce, main, ob, false);
+			break;
 		case OB_MESH:
 			break;
 		default:
