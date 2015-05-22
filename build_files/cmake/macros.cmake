@@ -297,6 +297,8 @@ function(SETUP_LIBDIRS)
 	if(WITH_VRAY_FOR_BLENDER)
 		link_directories(${APPSDK_ROOT}/bin)
 		link_directories(${APPSDK_PATH}/devel)
+		link_directories(${ZMQ_WRAPPER_PATH}/lib)
+		link_directories(${ZMQ_PATH}/lib)
 	endif()
 	if(WIN32 AND NOT UNIX)
 		link_directories(${PTHREADS_LIBPATH})
@@ -453,6 +455,8 @@ function(setup_liblinks
 		target_link_libraries(${target}
 			VRaySDKLibrary
 		)
+		target_link_libraries(${target} ${ZMQ_LIB})
+		target_link_libraries(${target} ${ZMQ_WRAPPER_LIB})
 	endif()
 
 	#system libraries with no dependencies such as platform link libs or opengl should go last

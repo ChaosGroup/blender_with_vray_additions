@@ -21,8 +21,17 @@
 
 #include "vfb_plugin_exporter.h"
 
+#include "zmq_wrapper.h"
+#include "zmq_message.hpp"
 
 namespace VRayForBlender {
+
+
+struct ZmqRenderImage:
+	public RenderImage {
+	void update(const VRayMessage &);
+};
+
 
 class ZmqExporter:
         public PluginExporter
@@ -38,8 +47,13 @@ public:
 	virtual void        start();
 	virtual void        stop();
 
-	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
+	virtual RenderImage  get_image();
+	virtual void set_render_size(const int &w, const int &h);
 
+	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
+private:
+	ZmqClient * m_Client;
+	ZmqRenderImage m_CurrentImage;
 };
 
 } // namespace VRayForBlender

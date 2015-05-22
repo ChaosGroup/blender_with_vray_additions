@@ -713,6 +713,26 @@ if(WITH_VRAY_FOR_BLENDER)
 	set(APPSDK_PATH "$ENV{HOME}/src/appsdk_releases" CACHE PATH "V-Ray AppSDK location")
 	set(APPSDK_ROOT "${APPSDK_PATH}/${APPSDK_VERSION}/${APPSDK_HOST_SYSTEM_NAME}" CACHE PATH "V-Ray AppSDK root" FORCE)
 
+	set(ZMQ_PATH "" CACHE PATH "ZMQ lib location")
+	set(ZMQ_WRAPPER_PATH "" CACHE PATH "ZMQ wrapper location")
+
+	find_library(ZMQ_LIB
+		NAMES zmq
+		PATHS ${ZMQ_PATH}/lib
+	)
+
+	find_library(ZMQ_WRAPPER_LIB
+		NAMES zmq_wrapper
+		PATHS ${ZMQ_WRAPPER_PATH}/lib
+	)
+
+	if(ZMQ_LIB OR NOT ZMQ_WRAPPER_LIB)
+		message(SEND_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
+	else()
+		message(STATUS "Using ZMQ & ZMQ wrapper")
+	endif()
+
+
 	message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
 endif()
 
