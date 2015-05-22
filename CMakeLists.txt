@@ -726,7 +726,7 @@ if(WITH_VRAY_FOR_BLENDER)
 		PATHS ${ZMQ_WRAPPER_PATH}/lib
 	)
 
-	if(ZMQ_LIB OR NOT ZMQ_WRAPPER_LIB)
+	if(NOT ZMQ_LIB OR NOT ZMQ_WRAPPER_LIB)
 		message(SEND_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
 	else()
 		message(STATUS "Using ZMQ & ZMQ wrapper")
