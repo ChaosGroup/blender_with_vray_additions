@@ -194,26 +194,13 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListColor));
 			break;
 		case ValueTypeListPlugin:
-			PRINT_INFO_EX("--- > UNIMPLEMENTED ValueTypeListPlugin");
-			//VRay::ValueList pluginList;
-			//for (int i = 0; i < p.attrValue.valListPlugin.getCount(); ++i) {
-			//	pluginList.push_back(VRay::Value((*p.attrValue.valListPlugin)[i].plugin));
-			//}
-			//plug.setValue(p.attrName, VRay::Value(pluginList));
-			//m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListPlugin));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListPlugin));
 			break;
 		case ValueTypeListString:
-			PRINT_INFO_EX("--- > UNIMPLEMENTED ValueTypeListString");
-			//VRay::ValueList string_list;
-			//for (int i = 0; i < p.attrValue.valListString.getCount(); ++i) {
-			//	string_list.push_back(VRay::Value((*p.attrValue.valListString)[i]));
-			//}
-			//plug.setValue(p.attrName, VRay::Value(string_list));
-			//m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListString));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListString));
 			break;
 		case ValueTypeMapChannels:
-			PRINT_INFO_EX("--- > UNIMPLEMENTED ValueTypeMapChannels");
-			//m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
 		case ValueTypeInstancer:
 			PRINT_INFO_EX("--- > UNIMPLEMENTED ValueTypeInstancer");
