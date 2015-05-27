@@ -6,6 +6,7 @@ add_definitions(
 )
 
 set(INC_SYS
+	${JPEG_INCLUDE_DIR}
 	${PYTHON_INCLUDE_DIRS}
 	${ZLIB_INCLUDE_DIRS}
 	${BOOST_INCLUDE_DIR}

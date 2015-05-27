@@ -17,17 +17,91 @@
  */
 
 #include "vfb_plugin_exporter_zmq.h"
+#include "jpeglib.h"
+
+static std::mutex imgMutex;
 
 using namespace VRayForBlender;
 
+struct JpegErrorManager {
+	jpeg_error_mgr pub;
+	jmp_buf setjmp_buffer;
+};
+
+static void jpegErrorExit(j_common_ptr cinfo) {
+	JpegErrorManager * myerr = (JpegErrorManager*)cinfo->err;
+	(*cinfo->err->output_message) (cinfo);
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
+static float * jpegToPixelData(unsigned char * data, int size) {
+	jpeg_decompress_struct jpegInfo;
+	JpegErrorManager jpegError;
+
+	jpegInfo.err = jpeg_std_error(&jpegError.pub);
+
+	jpegError.pub.error_exit = jpegErrorExit;
+
+	if (setjmp(jpegError.setjmp_buffer)) {
+		jpeg_destroy_decompress(&jpegInfo);
+		return nullptr;
+	}
+
+	jpeg_create_decompress(&jpegInfo);
+	jpeg_mem_src(&jpegInfo, data, size);
+
+	if (jpeg_read_header(&jpegInfo, TRUE) != JPEG_HEADER_OK) {
+		return nullptr;
+	}
+
+	jpegInfo.out_color_space = JCS_EXT_RGBA;
+	
+	if (!jpeg_start_decompress(&jpegInfo)) {
+		return nullptr;
+	}
+
+	int rowStride = jpegInfo.output_width * jpegInfo.output_components;
+	float * imageData = new float[jpegInfo.output_height * rowStride];
+	JSAMPARRAY buffer = (*jpegInfo.mem->alloc_sarray)((j_common_ptr)&jpegInfo, JPOOL_IMAGE, rowStride, 1);
+
+	int c = 0;
+	while (jpegInfo.output_scanline < jpegInfo.output_height) {
+		jpeg_read_scanlines(&jpegInfo, buffer, 1);
+
+		float * dest = imageData + c * rowStride;
+		unsigned char * source = buffer[0];
+
+		for (int r = 0; r < jpegInfo.image_width * jpegInfo.output_components; ++r) {
+			dest[r] = source[r] / 255.f;
+		}
+
+		++c;
+	}
+
+	jpeg_finish_decompress(&jpegInfo);
+	jpeg_destroy_decompress(&jpegInfo);
+
+	return imageData;
+}
+
 void ZmqRenderImage::update(const VRayMessage & msg) {
-	const float * imgData = reinterpret_cast<const float *>(msg.getValue<VRayBaseTypes::AttrImage>()->data.get());
+	auto img = msg.getValue<VRayBaseTypes::AttrImage>();
+	const float * imgData = nullptr;
+	bool freeData = false;
+
+	if (img->imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
+		imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img->data.get()), img->size);
+		freeData = true;
+	} else if (img->imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
+		imgData = reinterpret_cast<const float *>(img->data.get());
+	}
+
+	if (!imgData) {
+		return;
+	}
 	
-	this->w = msg.getValue<VRayBaseTypes::AttrImage>()->width;
-	this->h = msg.getValue<VRayBaseTypes::AttrImage>()->height;
-	
-	const int imgWidth = w;
-	const int imgHeight = h;
+	const int imgWidth = msg.getValue<VRayBaseTypes::AttrImage>()->width;
+	const int imgHeight = msg.getValue<VRayBaseTypes::AttrImage>()->height;
 
 	const int rowSize = 4 * imgWidth;
 	const int imageSize = rowSize * imgHeight;
@@ -43,7 +117,7 @@ void ZmqRenderImage::update(const VRayMessage & msg) {
 	for (int row = 0; row < halfHeight; ++row) {
 		bottomRow = imgHeight - row - 1;
 
-		const int topRowStart = row       * rowSize;
+		const int topRowStart =    row       * rowSize;
 		const int bottomRowStart = bottomRow * rowSize;
 
 		float *topRowPtr = myImage + topRowStart;
@@ -55,8 +129,18 @@ void ZmqRenderImage::update(const VRayMessage & msg) {
 	}
 
 	delete[] buf;
-	delete[] pixels;
-	this->pixels = myImage;
+	if (freeData) {
+		delete[] imgData;
+	}
+
+	{
+		std::unique_lock<std::mutex> lock(imgMutex);
+
+		this->w = imgWidth;
+		this->h = imgHeight;
+		delete[] pixels;
+		this->pixels = myImage;
+	}
 }
 
 
@@ -75,6 +159,8 @@ RenderImage ZmqExporter::get_image() {
 	RenderImage img;
 
 	if (this->m_CurrentImage.pixels) {
+		std::unique_lock<std::mutex> lock(imgMutex);
+
 		img.w = this->m_CurrentImage.w;
 		img.h = this->m_CurrentImage.h;
 		img.pixels = new float[this->m_CurrentImage.w * this->m_CurrentImage.h * 4];
@@ -212,7 +298,6 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 			break;
 		}
 	}
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::ExportScene, "D:/dev/exported.vrscene"));
 
 	AttrPlugin plugin;
 	plugin.plugin = name;
