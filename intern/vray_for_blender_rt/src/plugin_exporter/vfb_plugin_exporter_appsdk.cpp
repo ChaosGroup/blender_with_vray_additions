@@ -59,43 +59,6 @@ inline VRay::Transform to_vray_transform(const AttrTransform &tm)
 }
 
 
-static float* FlipImageRows(const VRay::VRayImage *image)
-{
-	const int imgWidth  = image->getWidth();
-	const int imgHeight = image->getHeight();
-
-	const int rowSize = 4 * imgWidth;
-	const int imageSize = rowSize * imgHeight;
-
-	float *buf = new float[rowSize];
-
-	float *myImage = new float[imageSize];
-
-	std::memcpy(myImage, image->getPixelData(), imageSize * sizeof(float));
-
-	const int halfHeight = imgHeight / 2;
-	int bottomRow = 0;
-
-	for(int row = 0; row < halfHeight; ++row) {
-		bottomRow = imgHeight - row - 1;
-
-		const int topRowStart    = row       * rowSize;
-		const int bottomRowStart = bottomRow * rowSize;
-
-		float *topRowPtr    = myImage + topRowStart;
-		float *bottomRowPtr = myImage + bottomRowStart;
-
-		std::memcpy(buf,          topRowPtr,    rowSize * sizeof(float));
-		std::memcpy(topRowPtr,    bottomRowPtr, rowSize * sizeof(float));
-		std::memcpy(bottomRowPtr, buf,          rowSize * sizeof(float));
-	}
-
-	delete [] buf;
-
-	return myImage;
-}
-
-
 static void CbDumpMessage(VRay::VRayRenderer&, const char *msg, int level, void*)
 {
 	if (level <= VRay::MessageError) {
@@ -135,7 +98,9 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
 #endif
 		w = image->getWidth();
 		h = image->getHeight();
-		pixels = FlipImageRows(image);
+
+		pixels = new float[w * h * 4];
+		std::memcpy(pixels, image->getPixelData(), w * h * 4 * sizeof(float));
 
 		delete image;
 	}

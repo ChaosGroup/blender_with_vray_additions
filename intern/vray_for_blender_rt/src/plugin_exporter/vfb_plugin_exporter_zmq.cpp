@@ -106,29 +106,10 @@ void ZmqRenderImage::update(const VRayMessage & msg) {
 	const int rowSize = 4 * imgWidth;
 	const int imageSize = rowSize * imgHeight;
 
-	float *buf = new float[rowSize];
-
 	float * myImage = new float[imageSize];
 	memcpy(myImage, imgData, imageSize * sizeof(float));
 
-	const int halfHeight = imgHeight / 2;
-	int bottomRow = 0;
 
-	for (int row = 0; row < halfHeight; ++row) {
-		bottomRow = imgHeight - row - 1;
-
-		const int topRowStart =    row       * rowSize;
-		const int bottomRowStart = bottomRow * rowSize;
-
-		float *topRowPtr = myImage + topRowStart;
-		float *bottomRowPtr = myImage + bottomRowStart;
-
-		std::memcpy(buf, topRowPtr, rowSize * sizeof(float));
-		std::memcpy(topRowPtr, bottomRowPtr, rowSize * sizeof(float));
-		std::memcpy(bottomRowPtr, buf, rowSize * sizeof(float));
-	}
-
-	delete[] buf;
 	if (freeData) {
 		delete[] imgData;
 	}

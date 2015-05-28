@@ -163,7 +163,6 @@ void SceneExporter::draw()
 	GLuint texid;
 	glGenTextures(1, &texid);
 	glBindTexture(GL_TEXTURE_2D, texid);
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, m_viewParams.render_size.w, m_viewParams.render_size.h, 0, GL_RGBA, GL_FLOAT, image.pixels);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image.pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -171,7 +170,9 @@ void SceneExporter::draw()
 	glEnable(GL_TEXTURE_2D);
 
 	glPushMatrix();
-	glTranslatef(0.0f, 0.0f, 0.0f);
+
+	glRotatef(180.0, 1.0, 0.0, 0.0);
+	glTranslatef(0.0f, -image.h, 0.0f);
 
 	glBegin(GL_QUADS);
 	glTexCoord2f(0.0f, 0.0f);
