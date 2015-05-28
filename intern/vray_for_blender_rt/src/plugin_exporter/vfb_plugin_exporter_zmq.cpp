@@ -86,39 +86,26 @@ static float * jpegToPixelData(unsigned char * data, int size) {
 
 void ZmqRenderImage::update(const VRayMessage & msg) {
 	auto img = msg.getValue<VRayBaseTypes::AttrImage>();
-	const float * imgData = nullptr;
-	bool freeData = false;
 
 	if (img->imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
-		imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img->data.get()), img->size);
-		freeData = true;
-	} else if (img->imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
-		imgData = reinterpret_cast<const float *>(img->data.get());
-	}
-
-	if (!imgData) {
-		return;
-	}
+		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img->data.get()), img->size);
 	
-	const int imgWidth = msg.getValue<VRayBaseTypes::AttrImage>()->width;
-	const int imgHeight = msg.getValue<VRayBaseTypes::AttrImage>()->height;
-
-	const int rowSize = 4 * imgWidth;
-	const int imageSize = rowSize * imgHeight;
-
-	float * myImage = new float[imageSize];
-	memcpy(myImage, imgData, imageSize * sizeof(float));
-
-
-	if (freeData) {
-		delete[] imgData;
-	}
-
-	{
 		std::unique_lock<std::mutex> lock(imgMutex);
 
-		this->w = imgWidth;
-		this->h = imgHeight;
+		this->w = img->width;
+		this->h = img->height;
+		delete[] pixels;
+		this->pixels = imgData;
+	} else if (img->imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
+		const float * imgData = reinterpret_cast<const float *>(img->data.get());
+		float * myImage = new float[img->width * img->height * 4];
+		
+		std::unique_lock<std::mutex> lock(imgMutex);
+
+		memcpy(myImage, imgData, img->width * img->height * 4 * sizeof(float));
+
+		this->w = img->width;
+		this->h = img->height;
 		delete[] pixels;
 		this->pixels = myImage;
 	}
