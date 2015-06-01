@@ -769,8 +769,10 @@ void GeomStaticMesh::initHash()
 
 void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool keyFrame)
 {
+	VRayExportable::initInterpolate(ExporterSettings::gSet.m_frameCurrent);
+
 	GeomStaticMesh *prevMesh  = (GeomStaticMesh*)prevState;
-	int             prevFrame = ExporterSettings::gSet.m_frameCurrent - ExporterSettings::gSet.m_frameStep;
+	const float     prevFrame = ExporterSettings::gSet.m_frameCurrent - ExporterSettings::gSet.m_frameStep;
 
 	PYTHON_PRINTF(output, "\nGeomStaticMesh %s {", m_name.c_str());
 

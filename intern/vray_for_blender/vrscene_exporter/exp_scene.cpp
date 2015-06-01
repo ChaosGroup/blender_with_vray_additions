@@ -573,6 +573,7 @@ void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 					           scene.frame_current_final(), ob.name().c_str());
 
 					// Set exporter settings
+					VRayExportable::initInterpolate(float_frame);
 					ExporterSettings::gSet.m_frameCurrent = float_frame;
 					ExporterSettings::gSet.m_frameStep    = subframe_step;
 
@@ -588,6 +589,7 @@ void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 
 				// Restore frame
 				scene.frame_set(frame_current, 0.0f);
+				VRayExportable::initInterpolate(frame_current);
 
 				// Restore settings
 				ExporterSettings::gSet.m_frameCurrent = m_frameCurrent;

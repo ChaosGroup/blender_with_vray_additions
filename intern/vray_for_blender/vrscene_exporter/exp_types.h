@@ -214,7 +214,7 @@ public:
 	// Is will call virtual writeData() for actual data write.
 	// It will also setup interpolate statements prefix and suffix for animation.
 	//
-	int write(PyObject *output, float frame=INT_MIN);
+	int write(PyObject *output, float frame);
 
 	// Set property group; used to get plugin parameters from Blender Node's propertry groups
 	//
