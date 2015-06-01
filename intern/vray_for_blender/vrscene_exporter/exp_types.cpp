@@ -144,20 +144,21 @@ void VRayExportable::writeAttribute(PointerRNA *ptr, const char *propName, const
 }
 
 
-int VRayExportable::write(PyObject *output, int frame)
+int VRayExportable::write(PyObject *output, float frame)
 {
 	VRayScene::WriteFlag exitCode = VRayScene::eFreeData;
 
 	if(NOT(getHash()))
 		return exitCode;
 
-	// Allows to skip already exported data,
-	// useful when using dupli.
-	//
-	if(m_exportNameCache.find(m_name) != m_exportNameCache.end())
-		return exitCode;
-
-	m_exportNameCache.insert(m_name);
+	if (ExporterSettings::gSet.m_anim_check_cache) {
+		// Allows to skip already exported data,
+		// useful when using dupli.
+		//
+		if(m_exportNameCache.find(m_name) != m_exportNameCache.end())
+			return exitCode;
+		m_exportNameCache.insert(m_name);
+	}
 
 	if(NOT(ExporterSettings::gSet.m_isAnimation)) {
 		writeData(output, NULL);
@@ -179,10 +180,12 @@ int VRayExportable::write(PyObject *output, int frame)
 				VRayExportable *prevState = m_frameCache.getData(m_name);
 
 				if(currentHash != prevHash) {
-					int cacheFrame = m_frameCache.getFrame(m_name);
-					int prevFrame  = frame - ExporterSettings::gSet.m_frameStep;
+					// Cached frame
+					const float cacheFrame = m_frameCache.getFrame(m_name);
 
-					int needKeyFrame = cacheFrame < prevFrame;
+					// We need a keyframe if stored value is more then "frame step"
+					// behind the current value
+					const int needKeyFrame = cacheFrame < (frame - ExporterSettings::gSet.m_frameStep);
 
 					initInterpolate(frame);
 					writeData(output, prevState, needKeyFrame);

@@ -214,7 +214,7 @@ public:
 	// Is will call virtual writeData() for actual data write.
 	// It will also setup interpolate statements prefix and suffix for animation.
 	//
-	int write(PyObject *output, int frame=INT_MIN);
+	int write(PyObject *output, float frame=INT_MIN);
 
 	// Set property group; used to get plugin parameters from Blender Node's propertry groups
 	//
@@ -228,9 +228,9 @@ public:
 	static void initPluginDesc(const std::string &dirPath) { m_pluginDesc.init(dirPath); }
 	static void freePluginDesc()                           { m_pluginDesc.freeData();    }
 
-	static void initInterpolate(int frame) {
+	static void initInterpolate(float frame) {
 		if(ExporterSettings::gSet.m_isAnimation) {
-			sprintf(m_interpStart, "interpolate((%d,", frame);
+			sprintf(m_interpStart, "interpolate((%g,", frame);
 			sprintf(m_interpEnd,   "))");
 		}
 		else {

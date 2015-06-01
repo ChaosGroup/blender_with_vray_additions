@@ -1174,10 +1174,11 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 {
 	// Check names cache not to export duplicated data for this frame
 	//
-	if(m_namesCache.find(pluginName) != m_namesCache.end())
-		return 1;
-
-	m_namesCache.insert(pluginName);
+	if (ExporterSettings::gSet.m_anim_check_cache) {
+		if(m_namesCache.find(pluginName) != m_namesCache.end())
+			return 1;
+		m_namesCache.insert(pluginName);
+	}
 
 	bool pluginIsInCache = ExporterSettings::gSet.m_isAnimation ? m_nodeCache.pluginInCache(pluginName) : false;
 
@@ -1198,8 +1199,8 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 		else {
 			MHash attrHash = HashCode(attrValue.c_str());
 
-			const int currentFrame = ExporterSettings::gSet.m_frameCurrent;
-			const int prevFrame    = currentFrame - ExporterSettings::gSet.m_frameStep;
+			const float currentFrame = ExporterSettings::gSet.m_frameCurrent;
+			const float prevFrame    = currentFrame - ExporterSettings::gSet.m_frameStep;
 
 			const int attrNonAnim = NOT_ANIMATABLE_TYPE(attrType);
 
@@ -1222,7 +1223,7 @@ int VRayNodePluginExporter::exportPlugin(const std::string &pluginType, const st
 					if(cachedHash == attrHash)
 						continue;
 
-					const int         cachedFrame = m_nodeCache.getCachedFrame(pluginName, attrName);
+					const float       cachedFrame = m_nodeCache.getCachedFrame(pluginName, attrName);
 					const std::string cachedValue = m_nodeCache.getCachedValue(pluginName, attrName);
 
 					outAttributes << "\n\t" << attrName << "=interpolate(";

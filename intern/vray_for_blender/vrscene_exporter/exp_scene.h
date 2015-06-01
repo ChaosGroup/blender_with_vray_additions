@@ -160,6 +160,8 @@ public:
 	int                     is_interrupted();
 
 private:
+	void                    exportObjectEx(BL::Object ob, const NodeAttrs &attrs);
+
 	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportVRayAsset(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());

@@ -33,12 +33,12 @@ template<typename T>
 struct AnimationFrame {
 	AnimationFrame() {
 		hash  = 0;
-		frame = 0;
+		frame = 0.0f;
 		data  = NULL;
 	}
 
 	MHash    hash;
-	int      frame;
+	float    frame;
 	T*       data;
 };
 
@@ -60,7 +60,7 @@ public:
 		cache.clear();
 	}
 
-	void update(const std::string &name, const MHash &hash, const int &frame, T *data) {
+	void update(const std::string &name, const MHash &hash, const float &frame, T *data) {
 		if(cache.count(name)) {
 			if (cache[name].data) {
 				delete cache[name].data;
@@ -78,10 +78,10 @@ public:
 		return 0;
 	}
 
-	int getFrame(const std::string &name) {
+	float getFrame(const std::string &name) {
 		if(cache.count(name))
 			return cache[name].frame;
-		return -1;
+		return -1.0f;
 	}
 
 	T* getData(const std::string &name) {

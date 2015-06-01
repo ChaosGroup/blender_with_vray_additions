@@ -162,12 +162,14 @@ void ExporterSettings::reset()
 	m_exportSmoke  = true;
 
 	m_isAnimation  = false;
-	m_frameCurrent = 0;
-	m_frameStart   = 1;
-	m_frameStep    = 1;
+	m_frameCurrent = 0.0f;
+	m_frameStart   = 1.0f;
+	m_frameStep    = 1.0f;
 
 	m_mtlOverrideName = "";
 	m_drSharePath = "";
+
+	m_anim_check_cache = true;
 }
 
 
