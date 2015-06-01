@@ -170,18 +170,16 @@ void SceneExporter::draw()
 	glEnable(GL_TEXTURE_2D);
 
 	glPushMatrix();
-
-	glRotatef(180.0, 1.0, 0.0, 0.0);
-	glTranslatef(0.0f, -image.h, 0.0f);
+	glTranslatef(0.0f, 0.0f, 0.0f);
 
 	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex2f(0.0f, 0.0f);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex2f((float)m_viewParams.render_size.w, 0.0f);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex2f((float)m_viewParams.render_size.w, (float)m_viewParams.render_size.h);
 	glTexCoord2f(0.0f, 1.0f);
+	glVertex2f(0.0f, 0.0f);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex2f((float)m_viewParams.render_size.w, 0.0f);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex2f((float)m_viewParams.render_size.w, (float)m_viewParams.render_size.h);
+	glTexCoord2f(0.0f, 0.0f);
 	glVertex2f(0.0f, (float)m_viewParams.render_size.h);
 	glEnd();
 
