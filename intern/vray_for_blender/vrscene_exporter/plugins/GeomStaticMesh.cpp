@@ -476,6 +476,10 @@ void GeomStaticMesh::initFaces()
 
 void GeomStaticMesh::initMapChannels()
 {
+	if(NOT(b_mesh && b_mesh.tessfaces.length())) {
+		return;
+	}
+
 	int channelCount = 0;
 	channelCount += b_mesh.tessface_uv_textures.length();
 	channelCount += b_mesh.tessface_vertex_colors.length();
