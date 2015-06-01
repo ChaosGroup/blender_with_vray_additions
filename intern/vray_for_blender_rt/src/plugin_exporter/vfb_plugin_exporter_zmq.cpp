@@ -119,6 +119,9 @@ ZmqExporter::ZmqExporter(): m_Client(new ZmqClient())
 
 ZmqExporter::~ZmqExporter()
 {
+	stop();
+	free();
+	m_Client->setFlushOnExit(true);
 	delete m_Client;
 }
 
@@ -151,6 +154,7 @@ void ZmqExporter::init()
 		});
 
 		m_Client->connect("tcp://127.0.0.1:5555");
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 	} catch (zmq::error_t &e) {
 		std::cerr << e.what() << std::endl;
 	}
@@ -223,14 +227,7 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valAColor));
 			break;
 		case ValueTypePlugin:
-			{
-				std::string pluginData = attr.attrValue.valPlugin.plugin;;
-				if (NOT(attr.attrValue.valPlugin.output.empty())) {
-					pluginData.append("::");
-					pluginData.append(attr.attrValue.valPlugin.output);
-				}
-				m_Client->send(VRayMessage::createMessage(name, attr.attrName, pluginData, true));
-			}
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valPlugin));
 			break;
 		case ValueTypeTransform:
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valTransform));
@@ -257,8 +254,7 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
 		case ValueTypeInstancer:
-			PRINT_INFO_EX("--- > UNIMPLEMENTED ValueTypeInstancer");
-			//m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
 			break;
 		default:
 			PRINT_INFO_EX("--- > UNIMPLEMENTED DEFAULT");
