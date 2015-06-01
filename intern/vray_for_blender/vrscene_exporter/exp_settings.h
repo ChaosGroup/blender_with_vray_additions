@@ -70,7 +70,8 @@ struct ExporterSettings {
 		b_scene(PointerRNA_NULL),
 		b_data(PointerRNA_NULL),
 		b_engine(PointerRNA_NULL),
-		m_mtlOverride(PointerRNA_NULL)
+		m_mtlOverride(PointerRNA_NULL),
+		m_anim_check_cache(true)
 	{}
 
 	void              init(BL::Context context, BL::Scene scene, BL::BlendData data, BL::RenderEngine engine);
@@ -116,9 +117,9 @@ struct ExporterSettings {
 
 	// Animation options
 	int               m_isAnimation;
-	int               m_frameCurrent;
-	int               m_frameStart;
-	int               m_frameStep;
+	float             m_frameCurrent;
+	float             m_frameStart;
+	float             m_frameStep;
 
 	// DR
 	std::string       m_drSharePath;
@@ -128,6 +129,8 @@ struct ExporterSettings {
 	std::string       m_hostname;
 
 	VRsceneExporter  *m_exporter;
+
+	int               m_anim_check_cache;
 
 };
 

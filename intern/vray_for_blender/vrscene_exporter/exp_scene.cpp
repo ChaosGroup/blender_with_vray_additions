@@ -171,7 +171,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	double timeMeasure = 0.0;
 	char   timeMeasureBuf[32];
 
-	PRINT_INFO_EX("Exporting data for frame %i...", ExporterSettings::gSet.m_frameCurrent);
+	PRINT_INFO_EX("Exporting data for frame %g...", ExporterSettings::gSet.m_frameCurrent);
 	timeMeasure = PIL_check_seconds_timer();
 
 	Base *base = NULL;
@@ -283,12 +283,12 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	exportClearCaches();
 
 	if(exportInterrupt) {
-		PRINT_INFO_EX("Exporting data for frame %i is interruped! [%s]",
+		PRINT_INFO_EX("Exporting data for frame %g is interruped! [%s]",
 		              ExporterSettings::gSet.m_frameCurrent, timeMeasureBuf);
 		return 1;
 	}
 
-	PRINT_INFO_EX("Exporting data for frame %i done [%s]",
+	PRINT_INFO_EX("Exporting data for frame %g done [%s]",
 	              ExporterSettings::gSet.m_frameCurrent, timeMeasureBuf);
 
 	return 0;
@@ -501,6 +501,29 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 }
 
 
+void VRsceneExporter::exportObjectEx(BL::Object ob, const NodeAttrs &attrs)
+{
+	if (ob.type() == BL::Object::type_MESH    ||
+	    ob.type() == BL::Object::type_CURVE   ||
+	    ob.type() == BL::Object::type_SURFACE ||
+	    ob.type() == BL::Object::type_FONT    ||
+	    ob.type() == BL::Object::type_META)
+	{
+		Object *b_ob = (Object*)ob.ptr.data;
+		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)b_ob);
+		if(ntree) {
+			exportNodeFromNodeTree(ntree, b_ob, attrs);
+		}
+		else {
+			exportNode(b_ob, attrs);
+		}
+	}
+	else if (ob.type() == BL::Object::type_LAMP) {
+		exportLamp(ob, attrs);
+	}
+}
+
+
 void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 {
 	Object *b_ob = (Object*)ob.ptr.data;
@@ -526,15 +549,57 @@ void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 				return;
 			m_exportedObjects.insert(idName);
 
-			BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)b_ob);
-			if(ntree)
-				exportNodeFromNodeTree(ntree, b_ob, attrs);
-			else
-				exportNode(b_ob, attrs);
+			const int subframes = RNA_int_get(&vrayObject, "subframes");
+			if (subframes) {
+				BL::Scene scene(ExporterSettings::gSet.b_scene);
+
+				const float m_frameCurrent = ExporterSettings::gSet.m_frameCurrent;
+				const float m_frameStep    = ExporterSettings::gSet.m_frameStep;
+
+				const int frame_current = scene.frame_current();
+				const float subframe_step = 1.0f / (subframes + 1);
+
+				// Don't check cache
+				ExporterSettings::gSet.m_anim_check_cache = false;
+
+				float f = 0.0f;
+				while (f < 1.0f) {
+					const float float_frame = frame_current + f;
+
+					// Set subframe
+					scene.frame_set(frame_current, f);
+
+					PRINT_INFO("Exporting sub-frame %.3f for object %s",
+					           scene.frame_current_final(), ob.name().c_str());
+
+					// Set exporter settings
+					ExporterSettings::gSet.m_frameCurrent = float_frame;
+					ExporterSettings::gSet.m_frameStep    = subframe_step;
+
+					f += subframe_step;
+					if (f >= 1.0f) {
+						// On the last subframe add object to name cache to avoid
+						// duplicate export
+						ExporterSettings::gSet.m_anim_check_cache = true;
+					}
+
+					exportObjectEx(ob, attrs);
+				}
+
+				// Restore frame
+				scene.frame_set(frame_current, 0.0f);
+
+				// Restore settings
+				ExporterSettings::gSet.m_frameCurrent = m_frameCurrent;
+				ExporterSettings::gSet.m_frameStep    = m_frameStep;
+			}
+			else {
+				exportObjectEx(ob, attrs);
+			}
 		}
 	}
 	else if (LIGHT_TYPE(b_ob)) {
-		exportLamp(ob, attrs);
+		exportObjectEx(ob, attrs);
 	}
 }
 
@@ -1095,7 +1160,7 @@ void VRsceneExporter::exportDupli()
 		const MyPartSystem *parts    = sysIt->second;
 
 		PYTHON_PRINTF(out, "\nInstancer Dulpi%s {", StripString(psysName).c_str());
-		PYTHON_PRINTF(out, "\n\tinstances=%sList(%i", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
+		PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");
 			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {

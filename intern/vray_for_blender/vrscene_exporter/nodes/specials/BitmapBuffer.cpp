@@ -48,7 +48,7 @@ void VRayNodeExporter::exportBitmapBuffer(VRayNodeExportParam, AttributeValueMap
 					int seqEnd    = seqLength - seqStart + 1;
 
 					if(imageUser.use_cyclic()) {
-						seqFrame = ((ExporterSettings::gSet.m_frameCurrent - seqStart) % seqLength) + 1;
+						seqFrame = ((int(ExporterSettings::gSet.m_frameCurrent) - seqStart) % seqLength) + 1;
 					}
 					else {
 						if(ExporterSettings::gSet.m_frameCurrent < seqStart){

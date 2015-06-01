@@ -62,7 +62,7 @@ typedef std::vector<BL::Object> ObList;
 
 
 struct AttrValue {
-	int          frame;
+	float        frame;
 	std::string  value;
 	MHash        hash;
 };
@@ -77,13 +77,13 @@ public:
 		return m_pluginCache.find(pluginName) != m_pluginCache.end();
 	}
 
-	void addToCache(const std::string &pluginName, const std::string &attrName, const int &frame, const std::string &attrValue, const MHash &hash) {
+	void addToCache(const std::string &pluginName, const std::string &attrName, const float &frame, const std::string &attrValue, const MHash &hash) {
 		m_pluginCache[pluginName][attrName].frame = frame;
 		m_pluginCache[pluginName][attrName].value = attrValue;
 		m_pluginCache[pluginName][attrName].hash  = hash;
 	}
 
-	const int getCachedFrame(const std::string &pluginName, const std::string &attrName) {
+	const float getCachedFrame(const std::string &pluginName, const std::string &attrName) {
 		return m_pluginCache[pluginName][attrName].frame;
 	}
 
