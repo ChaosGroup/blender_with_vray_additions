@@ -63,11 +63,11 @@
 
 #define PYTHON_PRINT_KEYFRAME(output, attr, type, curData, curHash, prevData, prevHash) \
 if(curHash != prevHash) { \
-	PYTHON_PRINT(output, "\n\t"attr"=interpolate("); \
-	PYTHON_PRINTF(output, "(%g,"type"(\"", prevFrame); \
+	PYTHON_PRINT(output, "\n\t" attr "=interpolate("); \
+	PYTHON_PRINTF(output, "(%g," type  "(\"", prevFrame); \
 	PYTHON_PRINT(output, prevData); \
 	PYTHON_PRINT(output, "\")),"); \
-	PYTHON_PRINTF(output, "(%g,"type"(\"", ExporterSettings::gSet.m_frameCurrent); \
+	PYTHON_PRINTF(output, "(%g," type "(\"", ExporterSettings::gSet.m_frameCurrent); \
 	PYTHON_PRINT(output, curData); \
 	PYTHON_PRINT(output, "\"))"); \
 	PYTHON_PRINT(output, ");"); \
@@ -75,8 +75,8 @@ if(curHash != prevHash) { \
 
 #define PYTHON_PRINT_FRAME(output, attr, type, curData, curHash, prevData, prevHash) \
 if(curHash != prevHash) { \
-	PYTHON_PRINT(output, "\n\t"attr"=interpolate("); \
-	PYTHON_PRINTF(output, "(%g,"type"(\"", ExporterSettings::gSet.m_frameCurrent); \
+	PYTHON_PRINT(output, "\n\t" attr "=interpolate("); \
+	PYTHON_PRINTF(output, "(%g," type "(\"", ExporterSettings::gSet.m_frameCurrent); \
 	PYTHON_PRINT(output, curData); \
 	PYTHON_PRINT(output, "\")));"); \
 }
