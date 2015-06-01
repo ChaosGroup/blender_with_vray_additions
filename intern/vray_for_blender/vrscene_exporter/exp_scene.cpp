@@ -297,6 +297,52 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 void VRsceneExporter::exportObjectsPost()
 {
+	// Export subframe data
+	//
+	for (SubframeObjects::const_iterator sfIt = m_subframeObjects.begin(); sfIt != m_subframeObjects.end(); ++sfIt) {
+		const int        subframes = sfIt->first;
+		const ObjectSet &objects   = sfIt->second;
+
+		BL::Scene scene(ExporterSettings::gSet.b_scene);
+
+		// Store settings
+		const float m_frameCurrent = ExporterSettings::gSet.m_frameCurrent;
+		const float m_frameStep    = ExporterSettings::gSet.m_frameStep;
+		const int   frame_current  = scene.frame_current();
+
+		const float subframe_step = 1.0f / (subframes + 1);
+
+		// Don't check cache
+		ExporterSettings::gSet.m_anim_check_cache = false;
+
+		// We've already exported "frame_current"
+		for (float f = subframe_step; f < 1.0f; f += subframe_step) {
+			const float float_frame = frame_current + f;
+
+			// Set exporter settings
+			scene.frame_set(frame_current, f);
+			VRayExportable::initInterpolate(float_frame);
+			ExporterSettings::gSet.m_frameCurrent = float_frame;
+			ExporterSettings::gSet.m_frameStep    = subframe_step;
+
+			BL::Scene scene(ExporterSettings::gSet.b_scene);
+			for (ObjectSet::const_iterator obIt = objects.begin(); obIt != objects.end(); ++obIt) {
+				BL::Object ob(*obIt);
+
+				PRINT_INFO("Exporting sub-frame %.3f for object %s",
+				           scene.frame_current_final(), ob.name().c_str());
+
+				exportObjectEx(ob);
+			}
+		}
+
+		// Restore settings
+		scene.frame_set(frame_current, 0.0f);
+		VRayExportable::initInterpolate(frame_current);
+		ExporterSettings::gSet.m_frameCurrent = m_frameCurrent;
+		ExporterSettings::gSet.m_frameStep    = m_frameStep;
+	}
+
 	// Export dupli/particle systems
 	exportDupli();
 
@@ -319,6 +365,7 @@ int VRsceneExporter::is_interrupted()
 void VRsceneExporter::exportClearCaches()
 {
 	m_hideFromView.clear();
+	m_subframeObjects.clear();
 
 	// Clean plugin names cache
 	VRayNodePluginExporter::clearNamesCache();
@@ -551,53 +598,10 @@ void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 
 			const int subframes = RNA_int_get(&vrayObject, "subframes");
 			if (subframes) {
-				BL::Scene scene(ExporterSettings::gSet.b_scene);
-
-				const float m_frameCurrent = ExporterSettings::gSet.m_frameCurrent;
-				const float m_frameStep    = ExporterSettings::gSet.m_frameStep;
-
-				const int frame_current = scene.frame_current();
-				const float subframe_step = 1.0f / (subframes + 1);
-
-				// Don't check cache
-				ExporterSettings::gSet.m_anim_check_cache = false;
-
-				float f = 0.0f;
-				while (f < 1.0f) {
-					const float float_frame = frame_current + f;
-
-					// Set subframe
-					scene.frame_set(frame_current, f);
-
-					PRINT_INFO("Exporting sub-frame %.3f for object %s",
-					           scene.frame_current_final(), ob.name().c_str());
-
-					// Set exporter settings
-					VRayExportable::initInterpolate(float_frame);
-					ExporterSettings::gSet.m_frameCurrent = float_frame;
-					ExporterSettings::gSet.m_frameStep    = subframe_step;
-
-					f += subframe_step;
-					if (f >= 1.0f) {
-						// On the last subframe add object to name cache to avoid
-						// duplicate export
-						ExporterSettings::gSet.m_anim_check_cache = true;
-					}
-
-					exportObjectEx(ob, attrs);
-				}
-
-				// Restore frame
-				scene.frame_set(frame_current, 0.0f);
-				VRayExportable::initInterpolate(frame_current);
-
-				// Restore settings
-				ExporterSettings::gSet.m_frameCurrent = m_frameCurrent;
-				ExporterSettings::gSet.m_frameStep    = m_frameStep;
+				m_subframeObjects[subframes].insert(ob);
 			}
-			else {
-				exportObjectEx(ob, attrs);
-			}
+
+			exportObjectEx(ob, attrs);
 		}
 	}
 	else if (LIGHT_TYPE(b_ob)) {

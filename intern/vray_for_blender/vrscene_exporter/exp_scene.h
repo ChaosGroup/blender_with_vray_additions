@@ -137,6 +137,8 @@ public:
 
 };
 
+typedef std::set<BL::Object> ObjectSet;
+typedef std::map<int, ObjectSet> SubframeObjects;
 
 class VRsceneExporter {
 public:
@@ -160,7 +162,7 @@ public:
 	int                     is_interrupted();
 
 private:
-	void                    exportObjectEx(BL::Object ob, const NodeAttrs &attrs);
+	void                    exportObjectEx(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
@@ -181,6 +183,8 @@ private:
 	HideFromView            m_hideFromView;
 
 	LightLinker             m_lightLinker;
+
+	SubframeObjects         m_subframeObjects;
 
 	PYTHON_PRINT_BUF;
 
