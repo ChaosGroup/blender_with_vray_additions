@@ -430,6 +430,13 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			}
 		}
 
+		// If object is a duplicator, but is used in parent's dupli,
+		// then skip it (parent's dupli export will handle it)
+		BL::Object parent(bl_ob.parent());
+		if (parent && (parent.dupli_type() != BL::Object::dupli_type_NONE)) {
+			process_dupli = false;
+		}
+
 		if (process_dupli) {
 			bl_ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
 
