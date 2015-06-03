@@ -147,8 +147,8 @@ void ZmqExporter::init()
 		m_Client->setCallback([this](VRayMessage & message, ZmqWrapper * client) {
 			if (message.getType() == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeImage) {
 				this->m_CurrentImage.update(message);
-				if (callback_on_image_ready) {
-					callback_on_image_ready.cb();
+				if (this->callback_on_rt_image_updated) {
+					callback_on_rt_image_updated.cb();
 				}
 			}
 		});
