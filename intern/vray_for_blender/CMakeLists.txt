@@ -58,4 +58,9 @@ file(GLOB_RECURSE SRC "*.*")
 
 blender_add_lib(vray_for_blender "${SRC}" "${INC}" "${INC_SYS}")
 
+# avoid link failure with clang 3.4 debug
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} VERSION_LESS '3.4')
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gline-tables-only")
+endif()
+
 add_dependencies(vray_for_blender bf_rna)
