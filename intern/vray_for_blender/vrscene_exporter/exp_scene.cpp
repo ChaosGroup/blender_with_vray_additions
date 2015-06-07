@@ -69,11 +69,6 @@ static int IsDuplicatorRenderable(BL::Object ob)
 		is_renderable = true;
 	}
 	else {
-		if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
-		    ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
-			is_renderable = true;
-		}
-
 		if (ob.particle_systems.length()) {
 			BL::Object::particle_systems_iterator psysIt;
 			for (ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
@@ -84,7 +79,10 @@ static int IsDuplicatorRenderable(BL::Object ob)
 				}
 			}
 		}
-	}
+		else if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
+			ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
+			is_renderable = true;
+		}	}
 
 	return is_renderable;
 }
