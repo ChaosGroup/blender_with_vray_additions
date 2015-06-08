@@ -301,7 +301,6 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 
 		// Restoring context
 		if(context) {
-			context->popParentTree();
 			context->popGroupNode();
 		}
 	}
