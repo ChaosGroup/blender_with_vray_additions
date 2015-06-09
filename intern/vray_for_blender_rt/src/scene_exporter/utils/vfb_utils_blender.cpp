@@ -217,12 +217,12 @@ int Blender::IsDuplicatorRenderable(BL::Object ob)
 		is_renderable = true;
 	}
 	else {
-		if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
-		    ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
-			is_renderable = true;
-		}
 		if (ob.particle_systems.length()) {
 			is_renderable = IsEmitterRenderable(ob);
+		}
+		else if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
+		         ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
+			is_renderable = true;
 		}
 	}
 

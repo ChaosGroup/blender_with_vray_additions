@@ -55,7 +55,7 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 
 	const int is_preview = false;
 	if (!is_preview) {
-		psys.set_resolution(m_scene, ob, 2);
+		psys.set_resolution(m_scene, ob, EvalModeRender);
 	}
 
 	BL::ParticleSettings pset(psys.settings());
@@ -247,7 +247,7 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 	}
 
 	if (!is_preview) {
-		psys.set_resolution(m_scene, ob, 1);
+		psys.set_resolution(m_scene, ob, EvalModePreview);
 	}
 
 	return hair;

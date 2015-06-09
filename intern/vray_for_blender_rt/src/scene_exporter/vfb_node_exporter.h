@@ -46,22 +46,35 @@ const char* const EnvironmentMappingType[] = {
 
 struct ObjectContext {
 	ObjectContext():
-	    scene(PointerRNA_NULL),
 	    data(PointerRNA_NULL),
-	    object(PointerRNA_NULL)
+	    scene(PointerRNA_NULL),
+	    object(PointerRNA_NULL),
+	    merge_uv(false)
 	{}
 
-	BL::Scene      scene;
+	ObjectContext(BL::BlendData data, BL::Scene scene, BL::Object object):
+	    data(data),
+	    scene(scene),
+	    object(object),
+	    merge_uv(false)
+	{}
+
 	BL::BlendData  data;
+	BL::Scene      scene;
 	BL::Object     object;
 
 	std::string    override_material;
+	bool           merge_uv;
 };
 
 
 class NodeContext {
 public:
 	NodeContext() {}
+
+	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object):
+	    object_context(data, scene, object)
+	{}
 
 	BL::NodeTree getNodeTree() {
 		if(parent.size())
@@ -179,6 +192,11 @@ struct DataDefaults {
 
 class DataExporter {
 public:
+	enum EvalMode {
+		EvalModePreview = 1,
+		EvalModeRender  = 2,
+	};
+
 	enum UserAttributeType {
 		UserAttributeInt = 0,
 		UserAttributeFloat,
@@ -240,7 +258,7 @@ public:
 
 	void              exportVRayEnvironment(NodeContext *context);
 
-	AttrValue         exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob);
+	AttrValue         exportMtlMulti(BL::Object ob);
 	AttrValue         exportMaterial(BL::Material b_ma, bool dont_export=false);
 
 	void              getSelectorObjectList(BL::Node node, ObList &obList);

@@ -38,6 +38,9 @@ const int VectorBytesCount  = 3 * sizeof(float);
 const int Vector2BytesCount = 2 * sizeof(float);
 
 
+struct AttrValue;
+
+
 struct AttrColor {
 	AttrColor():
 	    r(0.0f),
@@ -223,6 +226,13 @@ struct AttrPlugin {
 	operator bool () const {
 		return !plugin.empty();
 	}
+
+	AttrPlugin& operator=(const std::string &name) {
+		plugin = name;
+		return *this;
+	}
+
+	AttrPlugin& operator=(const AttrValue &attrValue);
 
 	std::string  plugin;
 	std::string  output;
@@ -538,15 +548,27 @@ struct AttrValue {
 };
 
 
+inline AttrPlugin& AttrPlugin::operator=(const AttrValue &attrValue)
+{
+	if (attrValue.type == ValueTypePlugin) {
+		*this = attrValue.valPlugin;
+	}
+
+	return *this;
+}
+
+
 struct PluginAttr {
 	PluginAttr() {}
-	PluginAttr(const std::string &attrName, const AttrValue &attrValue):
+	PluginAttr(const std::string &attrName, const AttrValue &attrValue, double time=0.0):
 	    attrName(attrName),
-	    attrValue(attrValue)
+	    attrValue(attrValue),
+	    time(time)
 	{}
 
 	std::string  attrName;
 	AttrValue    attrValue;
+	double       time;
 
 };
 typedef boost::unordered_map<std::string, PluginAttr> PluginAttrs;
@@ -592,12 +614,12 @@ struct PluginDesc {
 		return nullptr;
 	}
 
-	void add(const PluginAttr &attr, const float &time=0.0f) {
+	void add(const PluginAttr &attr) {
 		pluginAttrs[attr.attrName] = attr;
 	}
 
 	void add(const std::string &attrName, const AttrValue &attrValue, const float &time=0.0f) {
-		add(PluginAttr(attrName, attrValue), time);
+		add(PluginAttr(attrName, attrValue, time));
 	}
 
 	void del(const std::string &attrName) {
@@ -611,8 +633,8 @@ struct PluginDesc {
 
 		for (const auto &pIt : pluginAttrs) {
 			const PluginAttr &p = pIt.second;
-			PRINT_INFO_EX("  %s [%s]",
-			              p.attrName.c_str(), p.attrValue.getTypeAsString());
+			PRINT_INFO_EX("  %s at %.3f [%s]",
+			              p.attrName.c_str(), p.time, p.attrValue.getTypeAsString());
 		}
 	}
 };

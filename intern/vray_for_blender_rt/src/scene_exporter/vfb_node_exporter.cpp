@@ -56,8 +56,8 @@ std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeC
 	std::string pluginName = Blender::GetIDName(ntree, "NT") + "N" + node.name();
 
 	if (context) {
-		BL::NodeTree  parent = context->getNodeTree();
-		BL::NodeGroup group  = context->getGroupNode();
+		BL::NodeTree  parent(context->getNodeTree());
+		BL::NodeGroup group(context->getGroupNode());
 		if (parent) {
 			pluginName += Blender::GetIDName(parent, "NP");
 		}
@@ -500,9 +500,13 @@ std::string DataExporter::getNodeName(BL::Object ob)
 
 std::string DataExporter::getMeshName(BL::Object ob)
 {
-	// TODO: Check instancing settings
 	static boost::format meshNameFormat("Geom@%s");
-	return boost::str(meshNameFormat % ob.name());
+
+	BL::ID data_id = ob.is_modified(m_scene, EvalModeRender)
+	                 ? ob
+	                 : ob.data();
+
+	return boost::str(meshNameFormat % data_id.name());
 }
 
 

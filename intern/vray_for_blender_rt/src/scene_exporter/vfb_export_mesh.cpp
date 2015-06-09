@@ -25,7 +25,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 {
 	AttrValue geom;
 
-	PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh", "Geom@");
+	PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
 
 	VRayForBlender::Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;

@@ -18,6 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_mesh.h"
 
 
 AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(VRayNodeExportParam)
@@ -103,6 +104,10 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(VRayNodeExportParam
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
+			if (m_settings.use_displace_subdiv) {
+				context->object_context.merge_uv = true;
+			}
+
 			AttrValue mesh = exportLinkedSocket(ntree, meshSock, context, (m_settings.export_meshes == 0));
 			if (!mesh) {
 				PRINT_ERROR("Node tree: %s => Node name: %s => Error exporting connected mesh!",
@@ -131,56 +136,30 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(VRayNodeExportParam
 
 AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(VRayNodeExportParam)
 {
-#if 0
-	if(NOT(context->object_context.ob && context->object_context.ob->data)) {
+	AttrValue  attrValue;
+	BL::Object ob(context->object_context.object);
+
+	if (!(ob && ob.data())) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
-		return "NULL";
 	}
+	else {
+		PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
+		attrValue = AttrPlugin(geomDesc.pluginName);
 
-	std::string pluginName = GetIDName(ExporterSettings::gSet.m_useAltInstances
-	                                   ? (ID*)context->object_context.ob->data
-	                                   : (ID*)context->object_context.ob,
-	                                   "Me");
+		if (m_settings.export_meshes) {
+			VRayForBlender::Mesh::ExportOptions options;
+			options.merge_channel_vertices = context->object_context.merge_uv;
 
-	if(ExporterSettings::gSet.m_exportMeshes) {
-		if(ExporterSettings::gSet.m_isAnimation) {
-			if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context->object_context.ob))) {
-				return pluginName;
+			int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
+			if (!err) {
+				// Set additional attributes from the node
+				setAttrsFromNodeAuto(ntree, node, fromSocket, context, geomDesc);
+
+				attrValue = m_exporter->export_plugin(geomDesc);
 			}
-		}
-
-		PointerRNA obRNA;
-		RNA_id_pointer_create((ID*)context->object_context.ob, &obRNA);
-		BL::Object ob(obRNA);
-		BL::ID     dataID = ob.data();
-
-		// Check mesh name in "Alt-D" cache
-		int geometryCached = false;
-		if (dataID && ExporterSettings::gSet.m_useAltInstances) {
-			geometryCached = Node::sMeshCache.count(dataID);
-			if (geometryCached) {
-				pluginName = Node::sMeshCache[dataID];
-			}
-		}
-
-		if (NOT(geometryCached)) {
-			VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->object_context.sce, context->object_context.main, context->object_context.ob);
-			geomStaticMesh->init();
-			geomStaticMesh->initName(pluginName);
-			geomStaticMesh->initAttributes(&node.ptr);
-
-			int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
-			if(toDelete)
-				delete geomStaticMesh;
-		}
-
-		if (dataID && ExporterSettings::gSet.m_useAltInstances && NOT(geometryCached)) {
-			Node::sMeshCache.insert(std::make_pair(dataID, pluginName));
 		}
 	}
 
-	return pluginName;
-#endif
-	return AttrValue();
+	return attrValue;
 }

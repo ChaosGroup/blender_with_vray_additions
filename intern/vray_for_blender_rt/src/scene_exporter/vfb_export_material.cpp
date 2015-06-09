@@ -18,6 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_blender.h"
 
 
 AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
@@ -46,4 +47,49 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
 	}
 
 	return material;
+}
+
+
+AttrValue DataExporter::exportMtlMulti(BL::Object ob)
+{
+	AttrValue mtl;
+
+	const int numMaterials = Blender::GetMaterialCount(ob);
+
+	// Use single material
+	if (numMaterials) {
+		if (numMaterials == 1) {
+			BL::Material ma(ob.material_slots[0].material());
+			if (ma) {
+				mtl = exportMaterial(ma, true);
+			}
+		}
+		// Export MtlMulti
+		else {
+			AttrListPlugin mtls_list(numMaterials);
+			AttrListInt    ids_list(numMaterials);
+
+			int maIdx   = 0;
+			int slotIdx = 0; // For cases with empty slots
+
+			BL::Object::material_slots_iterator slotIt;
+			for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
+				BL::Material ma((*slotIt).material());
+				if (ma) {
+					(*ids_list)[maIdx]  = slotIdx;
+					(*mtls_list)[maIdx] = exportMaterial(ma, true);
+					maIdx++;
+				}
+			}
+
+			PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
+			mtlMultiDesc.add("mtls_list", mtls_list);
+			mtlMultiDesc.add("ids_list", ids_list);
+			mtlMultiDesc.add("wrap_id", true);
+
+			mtl = m_exporter->export_plugin(mtlMultiDesc);
+		}
+	}
+
+	return mtl;
 }

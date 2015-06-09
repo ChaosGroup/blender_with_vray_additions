@@ -59,7 +59,6 @@ BL::Node DataExporter::getConnectedNode(BL::NodeSocket fromSocket, NodeContext *
 
 		// Restoring context
 		if (context) {
-			context->popParentTree();
 			context->popGroupNode();
 		}
 	}
