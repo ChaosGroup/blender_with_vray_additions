@@ -20,13 +20,12 @@
 #define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H
 
 #include "vfb_plugin_exporter.h"
+#include "vfb_plugin_manager.h"
 
 #include "zmq_wrapper.h"
 #include "zmq_message.hpp"
 
 namespace VRayForBlender {
-
-
 struct ZmqRenderImage:
 	public RenderImage {
 	void update(const VRayMessage &);
@@ -54,8 +53,8 @@ public:
 private:
 	ZmqClient * m_Client;
 	ZmqRenderImage m_CurrentImage;
+	PluginManager pluginManager;
 };
-
 } // namespace VRayForBlender
 
 #endif // VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H

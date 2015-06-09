@@ -55,7 +55,7 @@ static float * jpegToPixelData(unsigned char * data, int size) {
 	}
 
 	jpegInfo.out_color_space = JCS_EXT_RGBA;
-	
+
 	if (!jpeg_start_decompress(&jpegInfo)) {
 		return nullptr;
 	}
@@ -89,7 +89,7 @@ void ZmqRenderImage::update(const VRayMessage & msg) {
 
 	if (img->imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img->data.get()), img->size);
-	
+
 		std::unique_lock<std::mutex> lock(imgMutex);
 
 		this->w = img->width;
@@ -99,7 +99,7 @@ void ZmqRenderImage::update(const VRayMessage & msg) {
 	} else if (img->imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
 		const float * imgData = reinterpret_cast<const float *>(img->data.get());
 		float * myImage = new float[img->width * img->height * 4];
-		
+
 		std::unique_lock<std::mutex> lock(imgMutex);
 
 		memcpy(myImage, imgData, img->width * img->height * 4 * sizeof(float));
@@ -137,7 +137,7 @@ RenderImage ZmqExporter::get_image() {
 		img.pixels = new float[this->m_CurrentImage.w * this->m_CurrentImage.h * 4];
 		memcpy(img.pixels, this->m_CurrentImage.pixels, this->m_CurrentImage.w * this->m_CurrentImage.h * 4 * sizeof(float));
 	}
-	
+
 	return img;
 }
 
@@ -158,7 +158,6 @@ void ZmqExporter::init()
 	} catch (zmq::error_t &e) {
 		std::cerr << e.what() << std::endl;
 	}
-	
 }
 
 
@@ -170,7 +169,6 @@ void ZmqExporter::free()
 
 void ZmqExporter::sync()
 {
-
 }
 
 void ZmqExporter::set_render_size(const int &w, const int &h) {
@@ -189,8 +187,10 @@ void ZmqExporter::stop()
 }
 
 
-AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
+AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 {
+    const auto & pluginDesc = pluginManager.filterPlugin(pDesc);
+
 	if (pluginDesc.pluginID.empty()) {
 		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
 			pluginDesc.pluginName.c_str());
@@ -199,7 +199,7 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 	const std::string & name = pluginDesc.pluginName;
 
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
-	
+
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
 		PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
@@ -265,6 +265,6 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc &pluginDesc)
 
 	AttrPlugin plugin;
 	plugin.plugin = name;
-	
+
 	return plugin;
 }
