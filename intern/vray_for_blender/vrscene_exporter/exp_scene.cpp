@@ -80,9 +80,10 @@ static int IsDuplicatorRenderable(BL::Object ob)
 			}
 		}
 		else if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
-			ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
+		         ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
 			is_renderable = true;
-		}	}
+		}
+	}
 
 	return is_renderable;
 }
@@ -413,138 +414,149 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 	if(data_updated)
 		PRINT_INFO("Base object %s (update: %i)", ob->id.name, data_updated);
 
-	if(bl_ob.is_duplicator()) {
-		bool process_dupli = true;
+	int skip_export = false;
 
-		// If object is a dupli group holder and it's not animated -
-		// export it only for the first frame
-		//
-		if(ExporterSettings::gSet.DoUpdateCheck()) {
-			if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE) {
-				if(NOT(IsObjectUpdated((Object*)bl_ob.ptr.data) ||
-				       IsObjectDataUpdated((Object*)bl_ob.ptr.data))) {
-					process_dupli = false;
+	// If object has a parent duplicator then skip it
+	// Parent export will handle it
+	BL::Object parent(bl_ob.parent());
+	if (parent && parent.is_duplicator()) {
+		skip_export = true;
+	}
+
+	if (!skip_export) {
+		if(bl_ob.is_duplicator()) {
+			bool process_dupli = true;
+
+			// If object is a dupli group holder and it's not animated -
+			// export it only for the first frame
+			//
+			if(ExporterSettings::gSet.DoUpdateCheck()) {
+				if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE) {
+					if(NOT(IsObjectUpdated((Object*)bl_ob.ptr.data) ||
+					       IsObjectDataUpdated((Object*)bl_ob.ptr.data))) {
+						process_dupli = false;
+					}
 				}
 			}
-		}
 
-		// If object is a duplicator, but is used in parent's dupli,
-		// then skip it (parent's dupli export will handle it)
-		BL::Object parent(bl_ob.parent());
-		if (parent && (parent.dupli_type() != BL::Object::dupli_type_NONE)) {
-			process_dupli = false;
-		}
+			// If object is a duplicator, but is used in parent's dupli,
+			// then skip it (parent's dupli export will handle it)
+			BL::Object parent(bl_ob.parent());
+			if (parent && parent.is_duplicator()) {
+				process_dupli = false;
+			}
 
-		if (process_dupli) {
-			bl_ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
+			if (process_dupli) {
+				bl_ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
 
-			int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
-			int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
+				int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
+				int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
 
-			const std::string &duplicatorName = GetIDName(bl_ob);
+				const std::string &duplicatorName = GetIDName(bl_ob);
 
-			BL::Object::dupli_list_iterator b_dup;
-			for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
-				if (NOT(is_interrupted())) {
-					BL::DupliObject bl_dupliOb      = *b_dup;
-					BL::Object      bl_duplicatedOb =  bl_dupliOb.object();
+				BL::Object::dupli_list_iterator b_dup;
+				for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
+					if (NOT(is_interrupted())) {
+						BL::DupliObject bl_dupliOb      = *b_dup;
+						BL::Object      bl_duplicatedOb =  bl_dupliOb.object();
 
-					if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
-						continue;
+						if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
+							continue;
 
-					// Duplicated object could be duplicator itself
-					// Check if we need to show it
-					if(NOT(IsDuplicatorRenderable(bl_duplicatedOb)))
-						continue;
+						// Duplicated object could be duplicator itself
+						// Check if we need to show it
+						if(NOT(IsDuplicatorRenderable(bl_duplicatedOb)))
+							continue;
 
-					DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
+						DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
 
-					if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
-						continue;
+						if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
+							continue;
 
-					MHash persistendID;
-					MurmurHash3_x86_32((const void*)bl_dupliOb.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+						MHash persistendID;
+						MurmurHash3_x86_32((const void*)bl_dupliOb.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
 
-					const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + bl_ob.name());
+						const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + bl_ob.name());
 
-					const bool is_light = bl_duplicatedOb.type() == BL::Object::type_LAMP || IsMeshLight(bl_duplicatedOb);
+						const bool is_light = bl_duplicatedOb.type() == BL::Object::type_LAMP || IsMeshLight(bl_duplicatedOb);
 
-					NodeAttrs dupliAttrs;
-					dupliAttrs.override = true;
-					// If dupli are shown via Instancer we need to hide
-					// original object
-					dupliAttrs.visible  = NOT(useInstancer);
-					dupliAttrs.objectID = overrideObjectID;
-					dupliAttrs.dupliHolder = bl_ob;
+						NodeAttrs dupliAttrs;
+						dupliAttrs.override = true;
+						// If dupli are shown via Instancer we need to hide
+						// original object
+						dupliAttrs.visible  = NOT(useInstancer);
+						dupliAttrs.objectID = overrideObjectID;
+						dupliAttrs.dupliHolder = bl_ob;
 
-					if (NOT(useInstancer) || is_light) {
-						dupliAttrs.namePrefix = dupliNamePrefix;
-						dupliAttrs.tm = bl_dupliOb.matrix();
-					}
+						if (NOT(useInstancer) || is_light) {
+							dupliAttrs.namePrefix = dupliNamePrefix;
+							dupliAttrs.tm = bl_dupliOb.matrix();
+						}
 
-					if (is_light) {
-						exportObject(bl_duplicatedOb, dupliAttrs);
-					}
-					else {
-						if(NOT(useInstancer)) {
-							// If LightLinker contain duplicator,
-							// we need to exclude it's objects
-							//
-							std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
-							m_lightLinker.excludePlugin(duplicatorName, pluginName);
-
+						if (is_light) {
 							exportObject(bl_duplicatedOb, dupliAttrs);
 						}
 						else {
-							std::string dupliBaseName;
+							if(NOT(useInstancer)) {
+								// If LightLinker contain duplicator,
+								// we need to exclude it's objects
+								//
+								std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
+								m_lightLinker.excludePlugin(duplicatorName, pluginName);
 
-							BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
-							if(NOT(bl_psys))
-								dupliBaseName = bl_ob.name();
-							else {
-								BL::ParticleSettings bl_pset = bl_psys.settings();
-								dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+								exportObject(bl_duplicatedOb, dupliAttrs);
 							}
+							else {
+								std::string dupliBaseName;
 
-							MyPartSystem *mySys = m_psys.get(dupliBaseName);
-							MyParticle *myPa = new MyParticle();
-							myPa->nodeName = GetIDName(&dupliOb->ob->id);
-							myPa->particleId = persistendID;
-							// Instancer use original object's transform,
-							// so apply inverse matrix here.
-							// When linking from file 'imat' is not valid,
-							// so better to always calculate inverse matrix ourselves.
-							//
-							float duplicatedTmInv[4][4];
-							copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
-							invert_m4(duplicatedTmInv);
-							float dupliTm[4][4];
-							mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
-							GetTransformHex(dupliTm, myPa->transform);
+								BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
+								if(NOT(bl_psys))
+									dupliBaseName = bl_ob.name();
+								else {
+									BL::ParticleSettings bl_pset = bl_psys.settings();
+									dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+								}
 
-							mySys->append(myPa);
+								MyPartSystem *mySys = m_psys.get(dupliBaseName);
+								MyParticle *myPa = new MyParticle();
+								myPa->nodeName = GetIDName(&dupliOb->ob->id);
+								myPa->particleId = persistendID;
+								// Instancer use original object's transform,
+								// so apply inverse matrix here.
+								// When linking from file 'imat' is not valid,
+								// so better to always calculate inverse matrix ourselves.
+								//
+								float duplicatedTmInv[4][4];
+								copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
+								invert_m4(duplicatedTmInv);
+								float dupliTm[4][4];
+								mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
+								GetTransformHex(dupliTm, myPa->transform);
 
-							// Set original object transform
-							dupliAttrs.tm = bl_duplicatedOb.matrix_world();
-							exportObject(bl_duplicatedOb, dupliAttrs);
+								mySys->append(myPa);
+
+								// Set original object transform
+								dupliAttrs.tm = bl_duplicatedOb.matrix_world();
+								exportObject(bl_duplicatedOb, dupliAttrs);
+							}
 						}
 					}
 				}
+
+				bl_ob.dupli_list_clear();
 			}
-
-			bl_ob.dupli_list_clear();
 		}
-	}
 
-	bool process_base_object = IsDuplicatorRenderable(bl_ob);
-	if (Node::HasHair(ob)) {
-		// If there is fur we are checking for "Render Emitter"
-		process_base_object = Node::DoRenderEmitter(ob);
-	}
+		bool process_base_object = IsDuplicatorRenderable(bl_ob);
+		if (Node::HasHair(ob)) {
+			// If there is fur we are checking for "Render Emitter"
+			process_base_object = Node::DoRenderEmitter(ob);
+		}
 
-	if (!is_interrupted()) {
-		if (process_base_object) {
-			exportObject(bl_ob);
+		if (!is_interrupted()) {
+			if (process_base_object) {
+				exportObject(bl_ob);
+			}
 		}
 	}
 
