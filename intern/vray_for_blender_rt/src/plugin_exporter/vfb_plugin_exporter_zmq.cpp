@@ -200,10 +200,21 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
 
+	bool timeSet = false;
+	float lastTime = 0;
+
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
 		PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
 			name.c_str(), pluginDesc.pluginID.c_str(), attr.attrName.c_str());
+
+		if (!timeSet) {
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, AttrSimpleType<float>(attr.time)));
+			timeSet = true;
+		} else if (lastTime != attr.time) {
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, AttrSimpleType<float>(attr.time)));
+			lastTime = attr.time;
+		}
 
 		switch (attr.attrValue.type) {
 		case ValueTypeUnknown:

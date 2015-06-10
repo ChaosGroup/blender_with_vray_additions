@@ -266,7 +266,7 @@ struct AttrValue {
 
 
 struct PluginAttr {
-	PluginAttr() {}
+	PluginAttr(): time(0) {}
 	PluginAttr(const std::string &attrName, const AttrValue &attrValue, double time=0.0):
 	    attrName(attrName),
 	    attrValue(attrValue),
@@ -275,7 +275,6 @@ struct PluginAttr {
 	std::string  attrName;
 	AttrValue    attrValue;
 	double       time;
-
 };
 typedef boost::unordered_map<std::string, PluginAttr> PluginAttrs;
 
