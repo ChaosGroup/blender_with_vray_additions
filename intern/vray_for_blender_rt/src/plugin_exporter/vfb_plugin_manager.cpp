@@ -93,29 +93,43 @@ PluginManager::PluginManager() {}
 PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
 	auto & pluginDesc = const_cast<PluginDesc&>(pDesc);
 
-	const std::string & key = pluginDesc.pluginName + pluginDesc.pluginID;
+	const auto & key = pluginDesc.pluginName + pluginDesc.pluginID;
 
-	auto & item = cache.find(key);
+	auto & cacheEntry = cache.find(key);
 
-	if (item == cache.end()) {
+	if (cacheEntry == cache.end()) {
 		cache.insert(make_pair(key, pluginDesc.pluginAttrs));
 		return pluginDesc;
 	}
 
 	PluginDesc filteredDesc(pluginDesc.pluginName, pluginDesc.pluginID);
 
-	for (auto & cacheIt : item->second) {
-		auto inputIt = pluginDesc.pluginAttrs.find(cacheIt.first);
+	// all input keys will be stored here, any cache entry with key not here must be removed
+	std::set<std::string> validCacheKeys;
 
-		if (inputIt == pluginDesc.pluginAttrs.end()) {
+	for (const auto & inputItem : pluginDesc.pluginAttrs) {
+		// add input key to validate cache keys
+		validCacheKeys.insert(inputItem.first);
+
+		auto & cacheItem = cacheEntry->second.find(inputItem.first);
+
+		// the input item is not present in cache - add it to both cache and output
+		if (cacheItem == cacheEntry->second.end()) {
+			cacheEntry->second.insert(inputItem);
+			pluginDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
 			continue;
 		}
 
-		bool same = compare(cacheIt.second.attrValue, inputIt->second.attrValue);
+		// item is both in cache and input
+		if (!compare(inputItem.second.attrValue, cacheItem->second.attrValue)) {
+			cacheItem->second = inputItem.second;
+			filteredDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
+		}
+	}
 
-		if (!same) {
-			cacheIt.second = inputIt->second;
-			filteredDesc.add(cacheIt.second.attrName, cacheIt.second.attrValue);
+	for (auto & cacheItem : cacheEntry->second) {
+		if (validCacheKeys.find(cacheItem.first) == validCacheKeys.end()) {
+			cacheEntry->second.erase(cacheItem.first);
 		}
 	}
 
