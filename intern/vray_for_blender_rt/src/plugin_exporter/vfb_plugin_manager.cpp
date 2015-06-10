@@ -127,9 +127,10 @@ PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
 		}
 	}
 
-	for (auto & cacheItem : cacheEntry->second) {
-		if (validCacheKeys.find(cacheItem.first) == validCacheKeys.end()) {
-			cacheEntry->second.erase(cacheItem.first);
+	// remove cache entries which are not in the input
+	for (auto & iter = cacheEntry->second.cbegin(), end = cacheEntry->second.cend(); iter != end; ++iter) {
+		if (validCacheKeys.find(iter->first) == validCacheKeys.end()) {
+			cacheEntry->second.erase(iter);
 		}
 	}
 
