@@ -20,6 +20,7 @@
 #include "vfb_plugin_exporter_appsdk.h"
 #include "vfb_plugin_exporter_file.h"
 #include "vfb_plugin_exporter_zmq.h"
+#include "vfb_export_settings.h"
 
 
 using namespace VRayForBlender;
@@ -40,8 +41,11 @@ public:
 	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc) { return AttrPlugin(); }
 };
 
+VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type) {
+	return VRayForBlender::ExporterCreate(type, ExporterSettings());
+}
 
-VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
+VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type, const ExporterSettings & settings)
 {
 	PluginExporter *exporter = nullptr;
 
@@ -63,6 +67,7 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 	}
 
 	if (exporter) {
+		exporter->set_settings(settings);
 		exporter->init();
 	}
 

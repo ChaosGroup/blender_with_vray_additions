@@ -110,6 +110,9 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 
 	exporter_type = (ExpoterType)RNA_enum_get(&vrayExporter, "backend");
 	work_mode     = (WorkMode)RNA_enum_get(&vrayExporter, "work_mode");
+
+	zmq_server_port    = RNA_int_get(&vrayExporter, "zmq_port");
+	zmq_server_address = RNA_std_string_get(&vrayExporter, "zmq_address");
 }
 
 

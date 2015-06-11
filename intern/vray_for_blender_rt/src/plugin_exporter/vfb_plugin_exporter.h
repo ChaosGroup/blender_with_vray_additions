@@ -87,6 +87,7 @@ struct RenderImage {
 	int    h;
 };
 
+struct ExporterSettings;
 
 class PluginExporter
 {
@@ -95,6 +96,8 @@ public:
 
 	virtual void         init()=0;
 	virtual void         free()=0;
+
+	virtual void         set_settings(const ExporterSettings &) {}
 
 	virtual void         sync()  {}
 	virtual void         start() {}
@@ -117,6 +120,7 @@ protected:
 
 };
 
+PluginExporter* ExporterCreate(ExpoterType type, const ExporterSettings &);
 PluginExporter* ExporterCreate(ExpoterType type);
 void            ExporterDelete(PluginExporter *exporter);
 

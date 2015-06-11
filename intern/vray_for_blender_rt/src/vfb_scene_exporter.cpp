@@ -110,7 +110,7 @@ void SceneExporter::init()
 {
 	m_settings.init(m_data, m_scene);
 
-	m_exporter = ExporterCreate(m_settings.exporter_type);
+	m_exporter = ExporterCreate(m_settings.exporter_type, m_settings);
 	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 

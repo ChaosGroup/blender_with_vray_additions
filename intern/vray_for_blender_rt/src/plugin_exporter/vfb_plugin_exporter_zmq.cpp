@@ -17,6 +17,7 @@
  */
 
 #include "vfb_plugin_exporter_zmq.h"
+#include "vfb_export_settings.h"
 #include "jpeglib.h"
 
 static std::mutex imgMutex;
@@ -152,12 +153,19 @@ void ZmqExporter::init()
 				}
 			}
 		});
+		char portStr[32];
+		snprintf(portStr, 32, ":%d", this->m_ServerPort);
 
-		m_Client->connect("tcp://127.0.0.1:5555");
+		m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 	} catch (zmq::error_t &e) {
-		std::cerr << e.what() << std::endl;
+		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
 	}
+}
+
+void ZmqExporter::set_settings(const ExporterSettings & settings) {
+	this->m_ServerPort = settings.zmq_server_port;
+	this->m_ServerAddress = settings.zmq_server_address;
 }
 
 
@@ -165,7 +173,6 @@ void ZmqExporter::free()
 {
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
 }
-
 
 void ZmqExporter::sync()
 {
@@ -189,7 +196,7 @@ void ZmqExporter::stop()
 
 AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 {
-    const auto & pluginDesc = pluginManager.filterPlugin(pDesc);
+	const auto & pluginDesc = m_PluginManager.filterPlugin(pDesc);
 
 	if (pluginDesc.pluginID.empty()) {
 		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
@@ -209,10 +216,10 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 			name.c_str(), pluginDesc.pluginID.c_str(), attr.attrName.c_str());
 
 		if (!timeSet) {
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, AttrSimpleType<float>(attr.time)));
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, attr.time));
 			timeSet = true;
 		} else if (lastTime != attr.time) {
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, AttrSimpleType<float>(attr.time)));
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, attr.time));
 			lastTime = attr.time;
 		}
 

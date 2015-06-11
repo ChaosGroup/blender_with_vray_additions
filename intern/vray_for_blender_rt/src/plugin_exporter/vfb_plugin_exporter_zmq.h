@@ -41,6 +41,8 @@ public:
 
 public:
 	virtual void        init();
+	virtual void        set_settings(const ExporterSettings &);
+
 	virtual void        free();
 	virtual void        sync();
 	virtual void        start();
@@ -51,9 +53,11 @@ public:
 
 	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
 private:
+	int m_ServerPort;
+	std::string m_ServerAddress;
 	ZmqClient * m_Client;
 	ZmqRenderImage m_CurrentImage;
-	PluginManager pluginManager;
+	PluginManager m_PluginManager;
 };
 } // namespace VRayForBlender
 
