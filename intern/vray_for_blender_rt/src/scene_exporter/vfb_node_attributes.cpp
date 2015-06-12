@@ -167,7 +167,7 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 								                                        % sock.node().name()
 								                                        % sock.name());
 
-								const bool is_float_socket = (fromSocket.rna_type().identifier().find("Float") != std::string::npos);
+								const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
 								if (is_float_socket) {
 									PluginDesc multTex(multPluginName, "TexFloatOp");
 									multTex.add("float_a", socketValue);
