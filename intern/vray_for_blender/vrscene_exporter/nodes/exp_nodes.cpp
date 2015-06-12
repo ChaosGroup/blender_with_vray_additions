@@ -914,6 +914,38 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 				if(sock) {
 					std::string socketValue = VRayNodeExporter::exportSocket(ntree, sock, context);
 					if(socketValue != "NULL") {
+						if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
+							const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
+							if (mult != 1.0f) {
+								static boost::format multFmt("N%sS%sMult");
+
+								std::string multPluginName = boost::str(multFmt
+								                                        % sock.node().name()
+								                                        % sock.name());
+								StripString(multPluginName);
+
+								const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
+								if (is_float_socket) {
+									AttributeValueMap multTex;
+									multTex["float_a"] = socketValue;
+									multTex["float_b"] = BOOST_FORMAT_FLOAT(mult);
+									multTex["mode"]    = "2"; // product
+
+									VRayNodePluginExporter::exportPlugin("TEXTURE", "TexFloatOp", multPluginName, multTex);
+								}
+								else {
+									AttributeValueMap multTex;
+									multTex["color_a"] = socketValue;
+									multTex["mult_a"]  = BOOST_FORMAT_FLOAT(mult);
+									multTex["mode"]    = "0"; // result_a
+
+									VRayNodePluginExporter::exportPlugin("TEXTURE", "TexAColorOp", multPluginName, multTex);
+								}
+
+								socketValue = multPluginName;
+							}
+						}
+
 						pluginAttrs[attrName] = socketValue;
 					}
 					else {
