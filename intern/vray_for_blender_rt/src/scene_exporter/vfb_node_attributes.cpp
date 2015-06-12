@@ -162,6 +162,7 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 							if (mult != 1.0f) {
 								static boost::format multFmt("N%sS%sA%sMult");
 
+								// XXX: Name here could be an issue with group nodes
 								std::string multPluginName = boost::str(multFmt
 								                                        % DataExporter::GenPluginName(node, ntree, context)
 								                                        % sock.node().name()
