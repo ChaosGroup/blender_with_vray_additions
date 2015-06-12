@@ -157,6 +157,36 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 				if (sock) {
 					AttrValue socketValue = exportSocket(ntree, sock, context);
 					if (socketValue) {
+						if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
+							const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
+							if (mult != 1.0f) {
+								static boost::format multFmt("N%sS%sA%sMult");
+
+								std::string multPluginName = boost::str(multFmt
+								                                        % DataExporter::GenPluginName(node, ntree, context)
+								                                        % sock.node().name()
+								                                        % sock.name());
+
+								const bool is_float_socket = (fromSocket.rna_type().identifier().find("Float") != std::string::npos);
+								if (is_float_socket) {
+									PluginDesc multTex(multPluginName, "TexFloatOp");
+									multTex.add("float_a", socketValue);
+									multTex.add("float_b", mult);
+									multTex.add("mode", 2); // "product"
+
+									socketValue = m_exporter->export_plugin(multTex);
+								}
+								else {
+									PluginDesc multTex(multPluginName, "TexAColorOp");
+									multTex.add("color_a", socketValue);
+									multTex.add("mult_a", mult);
+									multTex.add("mode", 0); // "result_a"
+
+									socketValue = m_exporter->export_plugin(multTex);
+								}
+							}
+						}
+
 						pluginDesc.add(attrName, socketValue);
 					}
 					else {
