@@ -18,6 +18,7 @@
 
 #include "vfb_plugin_exporter_appsdk.h"
 
+
 #define CGR_DEBUG_APPSDK_VALUES  0
 
 
@@ -340,7 +341,6 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 					plug.setValue(p.attrName,
 					              (void*)*p.attrValue.valListFloat,
 					              p.attrValue.valListFloat.getBytesCount());
-					PRINT_INFO_EX("%s = %s" , p.attrName.c_str(), plug.getValueAsString(p.attrName).c_str());
 				}
 				else if (p.attrValue.type == ValueTypeListVector) {
 					plug.setValue(p.attrName,
