@@ -917,9 +917,10 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 						if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
 							const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
 							if (mult != 1.0f) {
-								static boost::format multFmt("N%sS%sMult");
+								static boost::format multFmt("NT%sN%sS%sMult");
 
 								std::string multPluginName = boost::str(multFmt
+								                                        % ntree.name()
 								                                        % sock.node().name()
 								                                        % sock.name());
 								StripString(multPluginName);
