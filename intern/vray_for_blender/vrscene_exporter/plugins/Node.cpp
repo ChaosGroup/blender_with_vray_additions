@@ -123,37 +123,45 @@ void VRayScene::Node::initName(const std::string &name)
 
 int VRayScene::Node::preInitGeometry()
 {
-	if (NOT(IsMeshValid(m_sce, m_main, m_ob))) {
-		return 0;
-	}
+	int res = 0;
 
-	if (ExporterSettings::gSet.m_useAltInstances) {
-		BL::ID dataID = m_bl_ob.data();
-		if (dataID) {
-			m_geometryCached = Node::sMeshCache.count(dataID);
-			if (m_geometryCached) {
-				m_geometryName = Node::sMeshCache[dataID];
+	BL::ID dataID = m_bl_ob.data();
+	if (dataID) {
+		if (IsMeshValid(m_sce, m_main, m_ob)) {
+			PointerRNA obRNA;
+			RNA_id_pointer_create((ID*)m_ob, &obRNA);
+			BL::Object ob(obRNA);
+
+			PointerRNA sceRNA;
+			RNA_id_pointer_create((ID*)m_sce, &sceRNA);
+			BL::Scene sce(sceRNA);
+
+			const bool could_instance = CouldInstance(sce, ob);
+
+			BL::ID dataKey = could_instance
+			                 ? ob.data()
+			                 : ob;
+
+			if (could_instance && Node::sMeshCache.count(dataKey)) {
+				m_geometryCached = true;
+				m_geometryName   = Node::sMeshCache[dataKey];
 			}
+			else {
+				m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob);
+				m_geometry->preInit();
+
+				// We will delete geometry as soon as possible,
+				// so store name here
+				m_geometryName = m_geometry->getName();
+
+				Node::sMeshCache[dataKey] = m_geometryName;
+			}
+
+			res = 1;
 		}
 	}
 
-	if (NOT(m_geometryCached)) {
-		m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob);
-		m_geometry->preInit();
-
-		// We will delete geometry as soon as possible,
-		// so store name here
-		m_geometryName = m_geometry->getName();
-
-		if (ExporterSettings::gSet.m_useAltInstances) {
-			BL::ID dataID = m_bl_ob.data();
-			if (dataID) {
-				Node::sMeshCache.insert(std::make_pair(dataID, m_geometryName));
-			}
-		}
-	}
-
-	return 1;
+	return res;
 }
 
 
