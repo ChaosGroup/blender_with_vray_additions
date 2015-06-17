@@ -27,50 +27,57 @@
 
 std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
 {
-	if(NOT(context->obCtx.ob && context->obCtx.ob->data)) {
+	std::string pluginName = "NULL";
+
+	if (NOT(context->obCtx.ob && context->obCtx.ob->data)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
-					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
+		            ntree.name().c_str(), node.name().c_str());
 	}
-
-	std::string pluginName = GetIDName(ExporterSettings::gSet.m_useAltInstances
-									   ? (ID*)context->obCtx.ob->data
-									   : (ID*)context->obCtx.ob) + "@Geom";
-
-	if(ExporterSettings::gSet.m_exportMeshes) {
-		if(ExporterSettings::gSet.m_isAnimation) {
-			if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context->obCtx.ob))) {
-				return pluginName;
-			}
-		}
-
+	else {
 		PointerRNA obRNA;
 		RNA_id_pointer_create((ID*)context->obCtx.ob, &obRNA);
 		BL::Object ob(obRNA);
-		BL::ID     dataID = ob.data();
 
-		// Check mesh name in "Alt-D" cache
-		int geometryCached = false;
-		if (dataID && ExporterSettings::gSet.m_useAltInstances) {
-			geometryCached = Node::sMeshCache.count(dataID);
-			if (geometryCached) {
-				pluginName = Node::sMeshCache[dataID];
+		PointerRNA sceRNA;
+		RNA_id_pointer_create((ID*)context->obCtx.sce, &sceRNA);
+		BL::Scene sce(sceRNA);
+
+		BL::ID dataID = ob.data();
+		if (dataID) {
+			const bool could_instance = CouldInstance(sce, ob);
+
+			pluginName = GetIDName(could_instance
+			                       ? (ID*)context->obCtx.ob->data
+			                       : (ID*)context->obCtx.ob) + "@Geom";
+
+			if(ExporterSettings::gSet.m_exportMeshes) {
+				if(ExporterSettings::gSet.m_isAnimation) {
+					if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context->obCtx.ob))) {
+						return pluginName;
+					}
+				}
+
+				BL::ID dataKey = could_instance
+				                 ? ob.data()
+				                 : ob;
+
+				if (could_instance && Node::sMeshCache.count(dataKey)) {
+					pluginName = Node::sMeshCache[dataKey];
+				}
+				else {
+					VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob);
+					geomStaticMesh->init();
+					geomStaticMesh->initName(pluginName);
+					geomStaticMesh->initAttributes(&node.ptr);
+
+					int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
+					if(toDelete) {
+						delete geomStaticMesh;
+					}
+
+					Node::sMeshCache[dataKey] = pluginName;
+				}
 			}
-		}
-
-		if (NOT(geometryCached)) {
-			VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob);
-			geomStaticMesh->init();
-			geomStaticMesh->initName(pluginName);
-			geomStaticMesh->initAttributes(&node.ptr);
-
-			int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
-			if(toDelete)
-				delete geomStaticMesh;
-		}
-
-		if (dataID && ExporterSettings::gSet.m_useAltInstances && NOT(geometryCached)) {
-			Node::sMeshCache.insert(std::make_pair(dataID, pluginName));
 		}
 	}
 

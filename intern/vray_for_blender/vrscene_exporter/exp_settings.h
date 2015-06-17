@@ -107,7 +107,6 @@ struct ExporterSettings {
 	unsigned int      m_activeLayers;
 	int               m_useHideFromView;
 	int               m_useDisplaceSubdiv;
-	int               m_useAltInstances;
 	int               m_subsurfToOSD;
 	VRayDefMapping    m_defaultMapping;
 	VRayExportFormat  m_dataExportFormat;

@@ -235,7 +235,6 @@ void GeomStaticMesh::init()
 		initMapChannels();
 		initAttributes();
 
-		preInit();
 		initHash();
 
 		b_data.meshes.remove(b_mesh);
@@ -272,10 +271,11 @@ void GeomStaticMesh::initName(const std::string &name)
 	if(NOT(name.empty()))
 		m_name = name;
 	else {
-		m_name = ExporterSettings::gSet.m_useAltInstances
-		         ? GetIDName((ID*)m_ob->data)
-		         : GetIDName((ID*)m_ob);
-		m_name.append("@Geom");
+		const bool could_instance = CouldInstance(b_scene, b_object);
+
+		m_name = GetIDName(could_instance
+		                   ? (ID*)m_ob->data
+		                   : (ID*)m_ob) + "@Geom";
 	}
 }
 

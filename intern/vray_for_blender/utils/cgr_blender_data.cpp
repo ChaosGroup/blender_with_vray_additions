@@ -59,6 +59,21 @@ extern "C" {
 #include <string.h>
 
 
+bool CouldInstance(BL::Scene scene, BL::Object ob)
+{
+	bool could_instance = true;
+
+	if (ob.type() == BL::Object::type_META) {
+		could_instance = false;
+	}
+	else if (ob.is_modified(scene, 2)) {
+		could_instance = false;
+	}
+
+	return could_instance;
+}
+
+
 std::string GetIDName(ID *id)
 {
 	std::string idName(id->name);

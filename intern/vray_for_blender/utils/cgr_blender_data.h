@@ -44,6 +44,7 @@ extern "C" {
 (pset.type()        == BL::ParticleSettings::type_HAIR) && \
 (pset.render_type() == BL::ParticleSettings::render_type_PATH))
 
+bool CouldInstance(BL::Scene scene, BL::Object ob);
 
 int   IsObjectUpdated(Object *ob);
 int   IsObjectDataUpdated(Object *ob);
