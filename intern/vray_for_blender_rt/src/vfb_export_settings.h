@@ -27,7 +27,6 @@
 
 namespace VRayForBlender {
 
-
 struct SettingsDR {
 	enum SharingType {
 		SharingTypeTransfer = 0,
@@ -147,7 +146,6 @@ struct ExporterSettings {
 
 	int               use_hide_from_view;
 	int               use_displace_subdiv;
-	int               use_alt_instances;
 	int               use_subsurf_to_osd;
 
 	std::string       override_material;

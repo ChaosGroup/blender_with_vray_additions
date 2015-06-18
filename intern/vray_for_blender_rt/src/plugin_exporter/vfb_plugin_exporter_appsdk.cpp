@@ -158,16 +158,18 @@ void AppSdkExporter::init()
 {
 	if (!m_vray) {
 		try {
-			m_vray = new VRay::VRayRenderer();
+			VRay::RendererOptions options;
+			options.noLicense = false;
+			options.noDR = true;
+			m_vray = new VRay::VRayRenderer(options);
 		}
-		catch (...) {
+		catch (std::exception &e) {
+			PRINT_ERROR("Error initializing renderer! Error: \"%s\"",
+			            e.what());
 			m_vray = nullptr;
 		}
 
-		if (!m_vray) {
-			PRINT_ERROR("Error initializing renderer!");
-		}
-		else {
+		if (m_vray) {
 			m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			m_vray->setOnDumpMessage(CbDumpMessage);
 			m_vray->setRTImageUpdateTimeout(200);
@@ -393,6 +395,7 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 
 					plug.setValue(p.attrName, VRay::Value(map_channels));
 				}
+#if 0
 				else if (p.attrValue.type == ValueTypeInstancer) {
 					VRay::ValueList instancer;
 
@@ -411,6 +414,7 @@ AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
 
 					plug.setValue(p.attrName, VRay::Value(instancer));
 				}
+#endif
 			}
 		}
 	}

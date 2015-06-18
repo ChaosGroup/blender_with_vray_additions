@@ -26,6 +26,12 @@
 
 #include <vector>
 
+namespace VRayForBlender {
+
+enum EvalMode {
+	EvalModePreview = 1,
+	EvalModeRender  = 2,
+};
 
 typedef BL::Array<float, 16>  BlTransform;
 typedef BL::Array<float, 3>   BlVector;
@@ -49,5 +55,7 @@ std::string  RNA_enum_identifier_get(PointerRNA *ptr, const char *attrName);
 std::string  RNA_enum_name_get(PointerRNA *ptr, const char *attrName);
 
 EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName);
+
+} // namespace VRayForBlender
 
 #endif // VRAY_FOR_BLENDER_RNA_H

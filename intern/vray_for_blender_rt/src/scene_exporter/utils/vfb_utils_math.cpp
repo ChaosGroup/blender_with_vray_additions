@@ -22,6 +22,9 @@
 #include "BLI_math.h"
 
 
+using namespace VRayForBlender;
+
+
 BlTransform VRayForBlender::Math::InvertTm(const BlTransform &tm)
 {
 	BlTransform itm;

@@ -61,11 +61,18 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(VRayNodeExportParam)
 		}
 	}
 
+	AttrValue transparency = exportSocket(ntree, node, "Transparency", context);
+
 	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 	                      "BRDFLayered");
+
 	pluginDesc.add("brdfs", brdfs);
 	pluginDesc.add("weights", weights);
-	pluginDesc.add("transparency", exportSocket(ntree, node, "Transparency"));
+
+	if (transparency) {
+		pluginDesc.add("transparency", transparency);
+	}
+
 	pluginDesc.add("additive_mode", RNA_boolean_get(&node.ptr, "additive_mode"));
 
 	return m_exporter->export_plugin(pluginDesc);

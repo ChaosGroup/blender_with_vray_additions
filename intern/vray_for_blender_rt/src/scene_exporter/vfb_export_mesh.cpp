@@ -29,6 +29,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 
 	VRayForBlender::Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;
+	options.mode = m_evalMode;
 
 	int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 	if (!err) {

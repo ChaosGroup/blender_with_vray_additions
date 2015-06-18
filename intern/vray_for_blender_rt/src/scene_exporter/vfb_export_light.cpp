@@ -128,7 +128,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
 						BL::NodeSocket sock = Nodes::GetSocketByAttr(lightNode, attrName);
 						if (sock && sock.is_linked()) {
 							NodeContext context;
-							AttrValue socketValue = exportSocket(ntree, sock, &context);
+							AttrValue socketValue = exportSocket(ntree, sock, context);
 							if (socketValue) {
 								pluginDesc.add(attrName, socketValue);
 							}

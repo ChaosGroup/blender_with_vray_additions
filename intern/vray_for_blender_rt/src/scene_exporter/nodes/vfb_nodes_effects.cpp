@@ -124,7 +124,7 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(VRayNodeExportParam)
 }
 
 
-static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext *context)
+static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context)
 {
 	BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 

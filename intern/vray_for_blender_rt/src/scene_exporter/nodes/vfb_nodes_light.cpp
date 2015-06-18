@@ -18,12 +18,12 @@
 #include "vfb_node_exporter.h"
 
 
-AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext *context)
+AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	AttrValue attrValue;
 
 #if 0
-	if(NOT(context->object_context.ob)) {
+	if(NOT(context.object_context.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
@@ -38,7 +38,7 @@ AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node nod
 	}
 
 	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(context->object_context.ob->obmat, transform);
+	GetTransformHex(context.object_context.ob->obmat, transform);
 
 	PluginDesc manualAttrs;
 	manualAttrs["geometry"]  = NodeExporter::exportLinkedSocket(ntree, geomSock, context);

@@ -37,7 +37,6 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 	export_hair         = RNA_boolean_get(&vrayExporter, "use_hair");
 	export_fluids       = RNA_boolean_get(&vrayExporter, "use_smoke");
 	use_displace_subdiv = RNA_boolean_get(&vrayExporter, "use_displace");
-	use_alt_instances   = RNA_boolean_get(&vrayExporter, "use_alt_d_instances");
 	use_subsurf_to_osd  = RNA_boolean_get(&vrayExporter, "subsurf_to_osd");
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&vrayExporter, "default_mapping");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&vrayExporter, "data_format");

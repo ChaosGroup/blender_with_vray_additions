@@ -56,6 +56,8 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 			geom = AttrPlugin(getMeshName(ob));
 		}
 		else {
+			// TODO: Check if already exported mesh could be reused
+
 			if (!ntree) {
 				geom = exportGeomStaticMesh(ob);
 				if (!geom) {
@@ -86,13 +88,13 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 					else {
 						NodeContext context(m_data, m_scene, ob);
 
-						geom = DataExporter::exportSocket(ntree, geometrySocket, &context);
+						geom = DataExporter::exportSocket(ntree, geometrySocket, context);
 						if (!geom) {
 							PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
 							            ob.name().c_str(), ntree.name().c_str());
 						}
 						else {
-							BL::Node geometryNode = DataExporter::getConnectedNode(geometrySocket, &context);
+							BL::Node geometryNode = DataExporter::getConnectedNode(geometrySocket, context);
 
 							isMeshLight = geometryNode.bl_idname() == "VRayNodeLightMesh";
 
@@ -112,7 +114,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 									mtl = exportMtlMulti(ob);
 								}
 								else {
-									mtl = DataExporter::exportSocket(ntree, materialSocket, &context);
+									mtl = DataExporter::exportSocket(ntree, materialSocket, context);
 									if (!mtl) {
 										PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
 										            ob.name().c_str(), ntree.name().c_str());

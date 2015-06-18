@@ -27,7 +27,10 @@
 #include "rna_internal_types.h"
 
 
-std::string RNA_path_get(PointerRNA *ptr, const std::string &attrName)
+using namespace VRayForBlender;
+
+
+std::string VRayForBlender::RNA_path_get(PointerRNA *ptr, const std::string &attrName)
 {
 	char filepath[FILE_MAX] = "";
 
@@ -38,7 +41,7 @@ std::string RNA_path_get(PointerRNA *ptr, const std::string &attrName)
 }
 
 
-std::string RNA_std_string_get(PointerRNA *ptr, const std::string &attrName)
+std::string VRayForBlender::RNA_std_string_get(PointerRNA *ptr, const std::string &attrName)
 {
 	char buf[512] = "";
 
@@ -48,7 +51,7 @@ std::string RNA_std_string_get(PointerRNA *ptr, const std::string &attrName)
 }
 
 
-EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName)
+EnumPropertyItem *VRayForBlender::RNA_enum_item(PointerRNA *ptr, const char *attrName)
 {
 	int enum_item_index = RNA_enum_get(ptr, attrName);
 
@@ -60,7 +63,7 @@ EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName)
 }
 
 
-std::string RNA_enum_identifier_get(PointerRNA *ptr, const char *attrName)
+std::string VRayForBlender::RNA_enum_identifier_get(PointerRNA *ptr, const char *attrName)
 {
 	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
 	if (enum_item->identifier)
@@ -69,7 +72,7 @@ std::string RNA_enum_identifier_get(PointerRNA *ptr, const char *attrName)
 }
 
 
-std::string RNA_enum_name_get(PointerRNA *ptr, const char *attrName)
+std::string VRayForBlender::RNA_enum_name_get(PointerRNA *ptr, const char *attrName)
 {
 	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
 	if (enum_item->name)
@@ -78,7 +81,7 @@ std::string RNA_enum_name_get(PointerRNA *ptr, const char *attrName)
 }
 
 
-int RNA_enum_ext_get(PointerRNA *ptr, const char *attrName)
+int VRayForBlender::RNA_enum_ext_get(PointerRNA *ptr, const char *attrName)
 {
 	int enum_item_index = RNA_enum_get(ptr, attrName);
 	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);

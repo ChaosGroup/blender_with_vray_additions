@@ -51,19 +51,18 @@ using namespace VRayForBlender;
 using namespace VRayForBlender::Nodes;
 
 
-std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext *context)
+std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context)
 {
 	std::string pluginName = Blender::GetIDName(ntree, "NT") + "N" + node.name();
 
-	if (context) {
-		BL::NodeTree  parent(context->getNodeTree());
-		BL::NodeGroup group(context->getGroupNode());
-		if (parent) {
-			pluginName += Blender::GetIDName(parent, "NP");
-		}
-		if (group) {
-			pluginName += Blender::GetIDName(parent, "GR");
-		}
+	BL::NodeTree parent(context.getNodeTree());
+	if (parent) {
+		pluginName += Blender::GetIDName(parent, "NP");
+	}
+
+	BL::NodeGroup group(context.getGroupNode());
+	if (group) {
+		pluginName += Blender::GetIDName(parent, "GR");
 	}
 
 	return String::StripString(pluginName);
@@ -97,6 +96,7 @@ std::string DataExporter::GetNodePluginID(BL::Node node)
 void DataExporter::init(PluginExporter *exporter)
 {
 	m_exporter = exporter;
+	m_evalMode = EvalModePreview;
 }
 
 
@@ -207,7 +207,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket s
 }
 
 
-AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext *context)
+AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context)
 {
 	AttrValue value;
 	if (socket.is_linked()) {
@@ -220,7 +220,7 @@ AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, 
 }
 
 
-AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext *context)
+AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext &context)
 {
 	BL::NodeSocket socket = Nodes::GetInputSocketByName(node, socketName);
 	return exportSocket(ntree, socket, context);

@@ -308,7 +308,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 {
 	int err = 0;
 
-	BL::Mesh mesh = data.meshes.new_from_object(scene, ob, true, 2, false, false);
+	BL::Mesh mesh = data.meshes.new_from_object(scene, ob, true, options.mode, false, false);
 	if (!mesh) {
 		PRINT_ERROR("Object: %s => Incorrect mesh!",
 		            ob.name().c_str());

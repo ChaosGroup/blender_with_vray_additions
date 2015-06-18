@@ -20,7 +20,7 @@
 #include "vfb_utils_nodes.h"
 
 
-void DataExporter::exportVRayEnvironment(NodeContext *context)
+void DataExporter::exportVRayEnvironment(NodeContext &context)
 {
 	BL::Scene worldScene(PointerRNA_NULL);
 	if (m_engine && m_engine.is_preview()) {

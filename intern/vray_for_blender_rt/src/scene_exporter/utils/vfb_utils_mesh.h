@@ -33,10 +33,12 @@ extern boost::format ColChanNameFmt;
 
 struct ExportOptions {
 	ExportOptions():
-	    merge_channel_vertices(false)
+	    merge_channel_vertices(false),
+	    mode(EvalModeRender)
 	{}
 
-	bool  merge_channel_vertices;
+	bool     merge_channel_vertices;
+	EvalMode mode;
 };
 
 int FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, ExportOptions options, PluginDesc &pluginDesc);

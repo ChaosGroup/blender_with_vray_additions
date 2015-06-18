@@ -25,7 +25,7 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(VRayNodeExportParam)
 {
 	AttrValue attrValue;
 
-	if (!context->object_context.object) {
+	if (!context.object_context.object) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
@@ -93,7 +93,7 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(VRayNodeExportParam
 {
 	AttrValue attrValue;
 
-	if (!context->object_context.object) {
+	if (!context.object_context.object) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
@@ -105,7 +105,7 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(VRayNodeExportParam
 		}
 		else {
 			if (m_settings.use_displace_subdiv) {
-				context->object_context.merge_uv = true;
+				context.object_context.merge_uv = true;
 			}
 
 			AttrValue mesh = exportLinkedSocket(ntree, meshSock, context, (m_settings.export_meshes == 0));
@@ -137,7 +137,7 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(VRayNodeExportParam
 AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(VRayNodeExportParam)
 {
 	AttrValue  attrValue;
-	BL::Object ob(context->object_context.object);
+	BL::Object ob(context.object_context.object);
 
 	if (!(ob && ob.data())) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
@@ -149,7 +149,8 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(VRayNodeExportParam)
 
 		if (m_settings.export_meshes) {
 			VRayForBlender::Mesh::ExportOptions options;
-			options.merge_channel_vertices = context->object_context.merge_uv;
+			options.merge_channel_vertices = context.object_context.merge_uv;
+			options.mode = m_evalMode;
 
 			int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 			if (!err) {

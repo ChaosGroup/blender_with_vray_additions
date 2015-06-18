@@ -28,7 +28,7 @@
 // NOTE: The same as VRayNodeExporter::exportLinkedSocket,
 // but returns connected node
 //
-BL::Node DataExporter::getConnectedNode(BL::NodeSocket fromSocket, NodeContext *context)
+BL::Node DataExporter::getConnectedNode(BL::NodeSocket fromSocket, NodeContext &context)
 {
 	BL::NodeSocket conSock = Nodes::GetConnectedSocket(fromSocket);
 	// NOTE: This could happen while reconnecting nodes and material preview is active
@@ -45,9 +45,7 @@ BL::Node DataExporter::getConnectedNode(BL::NodeSocket fromSocket, NodeContext *
 	//
 	if (conNode.is_a(&RNA_ShaderNodeGroup) || conNode.is_a(&RNA_NodeCustomGroup)) {
 		// Setting nested context
-		if (context) {
-			context->pushGroupNode(conNode.ptr);
-		}
+		context.pushGroupNode(conNode.ptr);
 
 		// Get real socket / node to export
 		conSock = DataExporter::getNodeGroupSocketReal(conNode, conSock);
@@ -58,58 +56,50 @@ BL::Node DataExporter::getConnectedNode(BL::NodeSocket fromSocket, NodeContext *
 		conNode = conSock.node();
 
 		// Restoring context
-		if (context) {
-			context->popGroupNode();
-		}
+		context.popGroupNode();
 	}
 	else if (conNode.is_a(&RNA_NodeGroupInput)) {
-		if (NOT(context)) {
-			PRINT_ERROR("No context for NodeGroupInput!");
+		BL::NodeGroup groupNode  = context.getGroupNode();
+		if (NOT(groupNode)) {
+			PRINT_ERROR("Socket: %s => No group node and / or tree in context!",
+			            fromSocket.name().c_str());
 			return BL::Node(PointerRNA_NULL);
 		}
-		else {
-			BL::NodeGroup groupNode  = context->getGroupNode();
-			if (NOT(groupNode)) {
-				PRINT_ERROR("Socket: %s => No group node and / or tree in context!",
-				            fromSocket.name().c_str());
-				return BL::Node(PointerRNA_NULL);
-			}
 
-			// Find socket connected to fromSocket on the Group Input node
-			BL::NodeSocket inputNodeSocket = Nodes::GetConnectedSocket(fromSocket);
+		// Find socket connected to fromSocket on the Group Input node
+		BL::NodeSocket inputNodeSocket = Nodes::GetConnectedSocket(fromSocket);
 
-			// Now have to find a correspondent socket on the Group node
-			// and then export connected node from the parent tree
-			//
-			BL::NodeSocket groupInputSocket(PointerRNA_NULL);
-			BL::Node::inputs_iterator inIt;
-			for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
-				BL::NodeSocket sock = *inIt;
-				if (sock.name().empty())
-					continue;
-				if (inputNodeSocket.name() == sock.name()) {
-					groupInputSocket = sock;
-					break;
-				}
+		// Now have to find a correspondent socket on the Group node
+		// and then export connected node from the parent tree
+		//
+		BL::NodeSocket groupInputSocket(PointerRNA_NULL);
+		BL::Node::inputs_iterator inIt;
+		for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
+			BL::NodeSocket sock = *inIt;
+			if (sock.name().empty())
+				continue;
+			if (inputNodeSocket.name() == sock.name()) {
+				groupInputSocket = sock;
+				break;
 			}
-			if (NOT(groupInputSocket)) {
-				PRINT_ERROR("Group node name: %s => Node tree: %s => Input socket not found!",
-				            groupNode.name().c_str(), groupNode.node_tree().name().c_str());
-				return BL::Node(PointerRNA_NULL);
-			}
+		}
+		if (NOT(groupInputSocket)) {
+			PRINT_ERROR("Group node name: %s => Node tree: %s => Input socket not found!",
+			            groupNode.name().c_str(), groupNode.node_tree().name().c_str());
+			return BL::Node(PointerRNA_NULL);
+		}
 
-			// Forward the real socket
-			conSock = Nodes::GetConnectedSocket(groupInputSocket);
-			if (NOT(conSock.ptr.data))
-				return BL::Node(PointerRNA_NULL);
+		// Forward the real socket
+		conSock = Nodes::GetConnectedSocket(groupInputSocket);
+		if (NOT(conSock.ptr.data))
+			return BL::Node(PointerRNA_NULL);
 
-			// Finally get the node connected to the socket on the Group node
-			conNode = DataExporter::getConnectedNode(groupInputSocket, context);
-			if (NOT(conNode)) {
-				PRINT_ERROR("Group node name: %s => Connected node is not found!",
-				            groupNode.name().c_str());
-				return BL::Node(PointerRNA_NULL);
-			}
+		// Finally get the node connected to the socket on the Group node
+		conNode = DataExporter::getConnectedNode(groupInputSocket, context);
+		if (NOT(conNode)) {
+			PRINT_ERROR("Group node name: %s => Connected node is not found!",
+			            groupNode.name().c_str());
+			return BL::Node(PointerRNA_NULL);
 		}
 	}
 	else if (conNode.is_a(&RNA_NodeReroute)) {
@@ -191,7 +181,7 @@ BL::NodeSocket DataExporter::getNodeGroupSocketReal(BL::Node node, BL::NodeSocke
 }
 
 
-AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fromSocket, NodeContext *context, bool dont_export)
+AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fromSocket, NodeContext &context, bool dont_export)
 {
 	AttrValue attrValue;
 
@@ -206,10 +196,8 @@ AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fr
 			BL::NodeTree groupTree = Nodes::GetGroupNodeTree(toNode);
 
 			// Setting nested context
-			if (context) {
-				context->pushGroupNode(toNode.ptr);
-				context->pushParentTree(ntree);
-			}
+			context.pushGroupNode(toNode.ptr);
+			context.pushParentTree(ntree);
 
 			// Get real socket / node to export
 			toSocket = DataExporter::getNodeGroupSocketReal(toNode, toSocket);
@@ -225,70 +213,63 @@ AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fr
 			}
 
 			// Restoring context
-			if (context) {
-				context->popParentTree();
-				context->popGroupNode();
-			}
+			context.popParentTree();
+			context.popGroupNode();
 		}
 		else if (toNode.is_a(&RNA_NodeGroupInput)) {
-			if (NOT(context)) {
-				PRINT_ERROR("No context for NodeGroupInput!");
+			BL::NodeGroup groupNode  = context.getGroupNode();
+			BL::NodeTree  parentTree = context.getNodeTree();
+			if (NOT(groupNode && parentTree)) {
+				PRINT_ERROR("Node tree: %s => No group node and / or tree in context!",
+				            ntree.name().c_str());
 			}
 			else {
-				BL::NodeGroup groupNode  = context->getGroupNode();
-				BL::NodeTree  parentTree = context->getNodeTree();
-				if (NOT(groupNode && parentTree)) {
-					PRINT_ERROR("Node tree: %s => No group node and / or tree in context!",
-					            ntree.name().c_str());
+				// Find socket connected to fromSocket on the Group Input node
+				BL::NodeSocket inputNodeSocket = Nodes::GetConnectedSocket(fromSocket);
+
+				// Now have to find a correspondent socket on the Group node
+				// and then export connected node from the parent tree
+				//
+				BL::NodeSocket groupInputSocket(PointerRNA_NULL);
+				BL::Node::inputs_iterator inIt;
+				for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
+					BL::NodeSocket sock = *inIt;
+					if (sock.name().empty())
+						continue;
+					if (inputNodeSocket.name() == sock.name()) {
+						groupInputSocket = sock;
+						break;
+					}
 				}
+				if (NOT(groupInputSocket)) {
+					PRINT_ERROR("Node tree: %s => Group node name: %s => Input socket not found!",
+					            ntree.name().c_str(), groupNode.name().c_str());
+				}
+				else if (NOT(groupInputSocket.is_linked())) {
+					attrValue = DataExporter::exportDefaultSocket(ntree, groupInputSocket);
+				}
+				// Forward the real socket
 				else {
-					// Find socket connected to fromSocket on the Group Input node
-					BL::NodeSocket inputNodeSocket = Nodes::GetConnectedSocket(fromSocket);
-
-					// Now have to find a correspondent socket on the Group node
-					// and then export connected node from the parent tree
-					//
-					BL::NodeSocket groupInputSocket(PointerRNA_NULL);
-					BL::Node::inputs_iterator inIt;
-					for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
-						BL::NodeSocket sock = *inIt;
-						if (sock.name().empty())
-							continue;
-						if (inputNodeSocket.name() == sock.name()) {
-							groupInputSocket = sock;
-							break;
+					toSocket = Nodes::GetConnectedSocket(groupInputSocket);
+					if (toSocket) {
+						// Finally get the node connected to the socket on the Group node
+						toNode = DataExporter::getConnectedNode(groupInputSocket, context);
+						if (NOT(toNode)) {
+							PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
+							            ntree.name().c_str(), groupNode.name().c_str());
 						}
-					}
-					if (NOT(groupInputSocket)) {
-						PRINT_ERROR("Node tree: %s => Group node name: %s => Input socket not found!",
-						            ntree.name().c_str(), groupNode.name().c_str());
-					}
-					else if (NOT(groupInputSocket.is_linked())) {
-						attrValue = DataExporter::exportDefaultSocket(ntree, groupInputSocket);
-					}
-					// Forward the real socket
-					else {
-						toSocket = Nodes::GetConnectedSocket(groupInputSocket);
-						if (toSocket) {
-							// Finally get the node connected to the socket on the Group node
-							toNode = DataExporter::getConnectedNode(groupInputSocket, context);
-							if (NOT(toNode)) {
-								PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
-								            ntree.name().c_str(), groupNode.name().c_str());
-							}
-							else {
-								// We are going out of group here
-								BL::NodeTree  currentTree  = context->popParentTree();
-								BL::NodeGroup currentGroup = context->popGroupNode();
+						else {
+							// We are going out of group here
+							BL::NodeTree  currentTree  = context.popParentTree();
+							BL::NodeGroup currentGroup = context.popGroupNode();
 
-								attrValue = dont_export
-								            ? AttrPlugin(DataExporter::GenPluginName(toNode, parentTree, context))
-								            : exportVRayNode(parentTree, toNode, fromSocket, context);
+							attrValue = dont_export
+							            ? AttrPlugin(DataExporter::GenPluginName(toNode, parentTree, context))
+							            : exportVRayNode(parentTree, toNode, fromSocket, context);
 
-								// We could go into the group after
-								context->pushGroupNode(currentGroup);
-								context->pushParentTree(currentTree);
-							}
+							// We could go into the group after
+							context.pushGroupNode(currentGroup);
+							context.pushParentTree(currentTree);
 						}
 					}
 				}

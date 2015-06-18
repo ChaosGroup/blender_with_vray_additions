@@ -24,14 +24,14 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(VRayNodeExportParam)
 {
 	AttrPlugin output_material;
 #if 0
-	if (!context->object_context.object) {
+	if (!context.object_context.object) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 	}
 	else {
 		PluginDesc pluginDesc;
 
-		std::string mtlName = Node::GetNodeMtlMulti(context->object_context.ob, context->object_context.mtlOverrideName, pluginDesc);
+		std::string mtlName = Node::GetNodeMtlMulti(context.object_context.ob, context.object_context.mtlOverrideName, pluginDesc);
 
 		// NOTE: Function could return only one material in 'mtlName'
 		if(pluginDesc.find("mtls_list") == pluginDesc.end())

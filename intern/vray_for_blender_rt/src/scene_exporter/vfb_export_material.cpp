@@ -38,8 +38,8 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
 					if (materialSock) {
 						NodeContext ctx;
 						material = dont_export
-						           ? exportLinkedSocket(ntree, materialSock, &ctx, true)
-						           : exportVRayNode(ntree, output, materialSock, &ctx);
+						           ? exportLinkedSocket(ntree, materialSock, ctx, true)
+						           : exportVRayNode(ntree, output, materialSock, ctx);
 					}
 				}
 			}

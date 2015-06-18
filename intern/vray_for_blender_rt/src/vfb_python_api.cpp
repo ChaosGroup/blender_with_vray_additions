@@ -81,8 +81,9 @@ static PyObject* PyExporterLoad(PyObject *self, PyObject *args)
 		try {
 			VRayInit = new VRay::VRayInit(false);
 		}
-		catch (...) {
-			PRINT_INFO_EX("Error initing V-Ray");
+		catch (std::exception &e) {
+			PRINT_INFO_EX("Error initing V-Ray! Error: \"%s\"",
+			              e.what());
 			VRayInit = nullptr;
 		}
 	}

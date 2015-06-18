@@ -187,16 +187,11 @@ struct DataDefaults {
 };
 
 
-#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext *context
+#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context
 
 
 class DataExporter {
 public:
-	enum EvalMode {
-		EvalModePreview = 1,
-		EvalModeRender  = 2,
-	};
-
 	enum UserAttributeType {
 		UserAttributeInt = 0,
 		UserAttributeFloat,
@@ -205,7 +200,7 @@ public:
 	};
 
 	// Generate unique plugin name from node
-	static std::string            GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext *context);
+	static std::string            GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context);
 
 	// Get plugin type / id from node
 	static ParamDesc::PluginType  GetNodePluginType(BL::Node node);
@@ -249,14 +244,14 @@ public:
 	void              setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc);
 	void              setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID);
 
-	BL::Node          getConnectedNode(BL::NodeSocket fromSocket, NodeContext *context);
+	BL::Node          getConnectedNode(BL::NodeSocket fromSocket, NodeContext &context);
 
 	AttrValue         exportGeomStaticMesh(BL::Object ob);
 	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
 	AttrValue         exportObject(BL::Object ob, bool check_updated=false);
 	AttrValue         exportLight(BL::Object ob, bool check_updated=false);
 
-	void              exportVRayEnvironment(NodeContext *context);
+	void              exportVRayEnvironment(NodeContext &context);
 
 	AttrValue         exportMtlMulti(BL::Object ob);
 	AttrValue         exportMaterial(BL::Material b_ma, bool dont_export=false);
@@ -268,10 +263,10 @@ public:
 	AttrValue         exportVRayNode(VRayNodeExportParam);
 	AttrValue         exportVRayNodeAuto(VRayNodeExportParam, PluginDesc &pluginDesc);
 
-	AttrValue         exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext *context, bool dont_export=false);
+	AttrValue         exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context, bool dont_export=false);
 	AttrValue         exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
-	AttrValue         exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext *context=NULL);
-	AttrValue         exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext *context=NULL);
+	AttrValue         exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context);
+	AttrValue         exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext &context);
 
 	int               isObjectVisible(BL::Object ob);
 
@@ -332,6 +327,8 @@ private:
 	PluginExporter   *m_exporter;
 	ExporterSettings  m_settings;
 	DataDefaults      m_defaults;
+
+	EvalMode          m_evalMode;
 
 	// XXX: Add accessors
 public:

@@ -60,6 +60,10 @@ extern "C" {
 using namespace VRayForBlender;
 
 
+static StrSet RenderSettingsPlugins;
+static StrSet RenderGIPlugins;
+
+
 SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region):
     m_context(context),
     m_engine(engine),
@@ -69,7 +73,31 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     m_region3d(region3d),
     m_region(region),
     m_exporter(nullptr)
-{}
+{
+	if (!RenderSettingsPlugins.size()) {
+		RenderSettingsPlugins.insert("SettingsOptions");
+		RenderSettingsPlugins.insert("SettingsColorMapping");
+		RenderSettingsPlugins.insert("SettingsDMCSampler");
+		RenderSettingsPlugins.insert("SettingsImageSampler");
+		RenderSettingsPlugins.insert("SettingsGI");
+		RenderSettingsPlugins.insert("SettingsIrradianceMap");
+		RenderSettingsPlugins.insert("SettingsLightCache");
+		RenderSettingsPlugins.insert("SettingsDMCGI");
+		RenderSettingsPlugins.insert("SettingsRaycaster");
+		RenderSettingsPlugins.insert("SettingsRegionsGenerator");
+#if 0
+		RenderSettingsPlugins.insert("SettingsOutput");
+		RenderSettingsPlugins.insert("SettingsRTEngine");
+#endif
+	}
+
+	if (!RenderGIPlugins.size()) {
+		RenderGIPlugins.insert("SettingsGI");
+		RenderGIPlugins.insert("SettingsLightCache");
+		RenderGIPlugins.insert("SettingsIrradianceMap");
+		RenderGIPlugins.insert("SettingsDMCGI");
+	}
+}
 
 
 SceneExporter::~SceneExporter()
@@ -196,6 +224,18 @@ void SceneExporter::sync(const int &check_updated)
 
 	sync_prepass();
 
+	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
+
+	for (const auto &pluginID : RenderSettingsPlugins) {
+		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
+
+		PluginDesc pluginDesc(pluginID, pluginID);
+
+		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
+
+		m_exporter->export_plugin(pluginDesc);
+	}
+
 	sync_view(check_updated);
 	sync_materials(check_updated);
 	sync_objects(check_updated);
@@ -210,7 +250,7 @@ void SceneExporter::sync(const int &check_updated)
 	PRINT_INFO_EX("Synced in %.3f sec.",
 	              elapsed_secs);
 
-	// Sync data (will removed deleted objects)
+	// Sync data (will remove deleted objects)
 	m_exporter->sync();
 
 	// Export stuff after sync
@@ -679,7 +719,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 void SceneExporter::sync_effects(const int &check_updated)
 {
 	NodeContext ctx;
-	m_data_exporter.exportVRayEnvironment(&ctx);
+	m_data_exporter.exportVRayEnvironment(ctx);
 }
 
 
