@@ -92,6 +92,9 @@ struct ExporterSettings;
 class PluginExporter
 {
 public:
+	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
+
+
 	virtual             ~PluginExporter()=0;
 
 	virtual void         init()=0;
@@ -113,10 +116,12 @@ public:
 
 	virtual void         set_callback_on_image_ready(ExpoterCallback cb)      { callback_on_image_ready = cb; }
 	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) { callback_on_rt_image_updated = cb; }
+	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
+	UpdateMessageCb      on_message_update;
 
 };
 

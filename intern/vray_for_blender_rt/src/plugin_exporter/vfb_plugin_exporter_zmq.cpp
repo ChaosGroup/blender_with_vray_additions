@@ -20,8 +20,6 @@
 #include "vfb_export_settings.h"
 #include "jpeglib.h"
 
-static std::mutex imgMutex;
-
 using namespace VRayForBlender;
 
 struct JpegErrorManager {
@@ -85,13 +83,13 @@ static float * jpegToPixelData(unsigned char * data, int size) {
 	return imageData;
 }
 
-void ZmqRenderImage::update(const VRayMessage & msg) {
+void ZmqExporter::ZmqRenderImage::update(const VRayMessage & msg, ZmqExporter * exp) {
 	auto img = msg.getValue<VRayBaseTypes::AttrImage>();
 
 	if (img->imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img->data.get()), img->size);
 
-		std::unique_lock<std::mutex> lock(imgMutex);
+		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
 
 		this->w = img->width;
 		this->h = img->height;
@@ -101,7 +99,7 @@ void ZmqRenderImage::update(const VRayMessage & msg) {
 		const float * imgData = reinterpret_cast<const float *>(img->data.get());
 		float * myImage = new float[img->width * img->height * 4];
 
-		std::unique_lock<std::mutex> lock(imgMutex);
+		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
 
 		memcpy(myImage, imgData, img->width * img->height * 4 * sizeof(float));
 
@@ -131,7 +129,7 @@ RenderImage ZmqExporter::get_image() {
 	RenderImage img;
 
 	if (this->m_CurrentImage.pixels) {
-		std::unique_lock<std::mutex> lock(imgMutex);
+		std::unique_lock<std::mutex> lock(m_ImgMutex);
 
 		img.w = this->m_CurrentImage.w;
 		img.h = this->m_CurrentImage.h;
@@ -146,10 +144,20 @@ void ZmqExporter::init()
 {
 	try {
 		m_Client->setCallback([this](VRayMessage & message, ZmqWrapper * client) {
-			if (message.getType() == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeImage) {
-				this->m_CurrentImage.update(message);
-				if (this->callback_on_rt_image_updated) {
-					callback_on_rt_image_updated.cb();
+			if (message.getType() == VRayMessage::Type::SingleValue) {
+				switch (message.getValueType()) {
+				case VRayBaseTypes::ValueType::ValueTypeImage:
+					this->m_CurrentImage.update(message, this);
+					if (this->callback_on_rt_image_updated) {
+						callback_on_rt_image_updated.cb();
+					}
+					break;
+				case VRayBaseTypes::ValueType::ValueTypeString:
+					if (this->on_message_update) {
+						const char * msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value.c_str();
+						this->on_message_update("", msg);
+					}
+					break;
 				}
 			}
 		});

@@ -26,16 +26,17 @@
 #include "zmq_message.hpp"
 
 namespace VRayForBlender {
-struct ZmqRenderImage:
-	public RenderImage {
-	void update(const VRayMessage &);
-};
-
 
 class ZmqExporter:
         public PluginExporter
 {
 public:
+
+	struct ZmqRenderImage:
+		public RenderImage {
+		void update(const VRayMessage &, ZmqExporter *);
+	};
+
 	ZmqExporter();
 	virtual            ~ZmqExporter();
 
@@ -56,6 +57,9 @@ private:
 	int m_ServerPort;
 	std::string m_ServerAddress;
 	ZmqClient * m_Client;
+
+	std::mutex m_ImgMutex;
+
 	ZmqRenderImage m_CurrentImage;
 	PluginManager m_PluginManager;
 };
