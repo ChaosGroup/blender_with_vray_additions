@@ -156,39 +156,39 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 				BL::NodeSocket sock = Nodes::GetSocketByAttr(node, attrName);
 				if (sock) {
 					AttrValue socketValue = exportSocket(ntree, sock, context);
-					if (socketValue) {
-						if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
-							const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
-							if (mult != 1.0f) {
-								static boost::format multFmt("N%sS%sA%sMult");
+					if (sock.is_linked()) {
+						if (socketValue.type == ValueTypePlugin) {
+							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
+								const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
+								if (mult != 1.0f) {
+									static boost::format multFmt("N%sS%sA%sMult");
 
-								// XXX: Name here could be an issue with group nodes
-								std::string multPluginName = boost::str(multFmt
-								                                        % DataExporter::GenPluginName(node, ntree, context)
-								                                        % sock.node().name()
-								                                        % sock.name());
+									// XXX: Name here could be an issue with group nodes
+									std::string multPluginName = boost::str(multFmt
+									                                        % DataExporter::GenPluginName(node, ntree, context)
+									                                        % sock.node().name()
+									                                        % sock.name());
 
-								const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
-								if (is_float_socket) {
-									PluginDesc multTex(multPluginName, "TexFloatOp");
-									multTex.add("float_a", socketValue);
-									multTex.add("float_b", mult);
-									multTex.add("mode", 2); // "product"
+									const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
+									if (is_float_socket) {
+										PluginDesc multTex(multPluginName, "TexFloatOp");
+										multTex.add("float_a", socketValue);
+										multTex.add("float_b", mult);
+										multTex.add("mode", 2); // "product"
 
-									socketValue = m_exporter->export_plugin(multTex);
-								}
-								else {
-									PluginDesc multTex(multPluginName, "TexAColorOp");
-									multTex.add("color_a", socketValue);
-									multTex.add("mult_a", mult);
-									multTex.add("mode", 0); // "result_a"
+										socketValue = m_exporter->export_plugin(multTex);
+									}
+									else {
+										PluginDesc multTex(multPluginName, "TexAColorOp");
+										multTex.add("color_a", socketValue);
+										multTex.add("mult_a", mult);
+										multTex.add("mode", 0); // "result_a"
 
-									socketValue = m_exporter->export_plugin(multTex);
+										socketValue = m_exporter->export_plugin(multTex);
+									}
 								}
 							}
 						}
-
-						pluginDesc.add(attrName, socketValue);
 					}
 					else {
 						if ((pluginType == ParamDesc::PluginTexture) &&
@@ -204,24 +204,21 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 								uvwgenDesc.pluginID = "UVWGenChannel";
 								uvwgenDesc.add("uvw_channel", int(0));
 							}
-							else {
 #if 0
-								if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
-									uvwgenType = "UVWGenProjection";
-									uvwgenAttrs["type"] = "5";
-									uvwgenAttrs["object_space"] = "1";
-								}
-								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
-									uvwgenType = "UVWGenObject";
-								}
-								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eChannel) {
-									uvwgenType = "UVWGenChannel";
-									uvwgenAttrs["uvw_channel"] = "0";
-								}
-#endif
+							else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
+								uvwgenType = "UVWGenProjection";
+								uvwgenAttrs["type"] = "5";
+								uvwgenAttrs["object_space"] = "1";
 							}
-
-							pluginDesc.add(attrName, m_exporter->export_plugin(uvwgenDesc));
+							else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
+								uvwgenType = "UVWGenObject";
+							}
+							else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eChannel) {
+								uvwgenType = "UVWGenChannel";
+								uvwgenAttrs["uvw_channel"] = "0";
+							}
+#endif
+							socketValue = m_exporter->export_plugin(uvwgenDesc);
 						}
 #if 0
 						else if (attrType == "TRANSFORM" ||
@@ -234,6 +231,8 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 						}
 #endif
 					}
+
+					pluginDesc.add(attrName, socketValue);
 				}
 			}
 			else if (attrType == ParamDesc::AttrTypeWidgetRamp) {
