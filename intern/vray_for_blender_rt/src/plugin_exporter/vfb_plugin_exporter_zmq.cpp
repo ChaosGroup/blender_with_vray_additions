@@ -154,8 +154,13 @@ void ZmqExporter::init()
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeString:
 					if (this->on_message_update) {
-						const char * msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value.c_str();
-						this->on_message_update("", msg);
+						auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
+						auto newLine = msg.find_first_of("\n\r");
+						if (newLine != std::string::npos) {
+							msg.resize(newLine);
+						}
+
+						this->on_message_update("", msg.c_str());
 					}
 					break;
 				}
