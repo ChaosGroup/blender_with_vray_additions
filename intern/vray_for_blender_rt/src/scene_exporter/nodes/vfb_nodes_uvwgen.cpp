@@ -63,6 +63,7 @@ AttrValue DataExporter::exportVRayNodeUVWGenMayaPlace2dTexture(VRayNodeExportPar
 	// Export attributes automatically from node
 	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 
+	// TODO: Check for type, may be color set is selected
 	PluginAttr *uv_set_name = pluginDesc.get("uv_set_name");
 	if (uv_set_name) {
 		uv_set_name->attrValue.valString = boost::str(VRayForBlender::Mesh::UvChanNameFmt % uv_set_name->attrValue.valString);
