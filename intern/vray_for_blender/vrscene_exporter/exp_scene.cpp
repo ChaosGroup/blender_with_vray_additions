@@ -61,6 +61,11 @@ extern "C" {
 const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 
+static int ob_on_visible_layer(BL::Object ob) {
+	return (((Object*)ob.ptr.data)->lay & ExporterSettings::gSet.m_activeLayers);
+}
+
+
 static int ob_has_dupli(BL::Object ob)
 {
 	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
@@ -538,7 +543,7 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 									// This matches the dehaviour of dupli, but for particles
 									// there may be a need to show the original object also.
 									//
-									if (IsDuplicatorRenderable(bl_duplicatedOb)) {
+									if (ob_on_visible_layer(bl_duplicatedOb)) {
 										dupliAttrs.visible = true;
 									}
 								}
