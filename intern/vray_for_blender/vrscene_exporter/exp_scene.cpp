@@ -61,27 +61,39 @@ extern "C" {
 const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 
+static int ob_has_dupli(BL::Object ob)
+{
+	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
+}
+
+
 static int IsDuplicatorRenderable(BL::Object ob)
 {
-	bool is_renderable = false;
+	bool is_renderable = true;
 
-	if (!ob.is_duplicator()) {
-		is_renderable = true;
-	}
-	else {
-		if (ob.particle_systems.length()) {
+	if (ob.is_duplicator()) {
+		if (ob_has_dupli(ob)) {
+			is_renderable = false;
+		}
+		else if (ob.particle_systems.length()) {
 			BL::Object::particle_systems_iterator psysIt;
 			for (ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
 				BL::ParticleSettings pset(psysIt->settings());
-				if (pset.use_render_emitter()) {
-					is_renderable = true;
+				if (!pset.use_render_emitter()) {
+					is_renderable = false;
 					break;
 				}
 			}
 		}
-		else if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
-		         ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
-			is_renderable = true;
+	}
+	else {
+		BL::Object parent(ob.parent());
+		while (parent) {
+			if (ob_has_dupli(parent)) {
+				is_renderable = false;
+				break;
+			}
+			parent = parent.parent();
 		}
 	}
 
@@ -416,11 +428,16 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 	int skip_export = false;
 
-	// If object has a parent duplicator then skip it
-	// Parent export will handle it
+	// If object's parent is a dupli duplicator (not particles duplicator),
+	// then skip it - parent's export will handle this object.
 	BL::Object parent(bl_ob.parent());
-	if (parent && parent.is_duplicator()) {
-		skip_export = true;
+	while (parent) {
+		// If parent has dupli then skip export
+		if (ob_has_dupli(parent)) {
+			skip_export = true;
+			break;
+		}
+		parent = parent.parent();
 	}
 
 	if (!skip_export) {
@@ -515,6 +532,15 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 								else {
 									BL::ParticleSettings bl_pset = bl_psys.settings();
 									dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+
+									// We are inserting object partices with Instancer,
+									// and instancer requires base Node to be hidden.
+									// This matches the dehaviour of dupli, but for particles
+									// there may be a need to show the original object also.
+									//
+									if (IsDuplicatorRenderable(bl_duplicatedOb)) {
+										dupliAttrs.visible = true;
+									}
 								}
 
 								MyPartSystem *mySys = m_psys.get(dupliBaseName);
