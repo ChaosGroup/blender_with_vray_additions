@@ -44,6 +44,8 @@ public:
 	virtual void        init();
 	virtual void        set_settings(const ExporterSettings &);
 
+	virtual void        export_vrscene(const std::string &filepath);
+
 	virtual void        free();
 	virtual void        sync();
 	virtual void        start();

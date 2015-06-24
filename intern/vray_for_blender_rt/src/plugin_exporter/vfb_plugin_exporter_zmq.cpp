@@ -206,6 +206,9 @@ void ZmqExporter::stop()
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Stop));
 }
 
+void ZmqExporter::export_vrscene(const std::string &filepath) {
+	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::ExportScene, filepath));
+}
 
 AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 {

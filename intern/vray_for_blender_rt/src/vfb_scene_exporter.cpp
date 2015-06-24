@@ -259,7 +259,7 @@ void SceneExporter::sync(const int &check_updated)
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
-		const std::string filepath = "/home/bdancer/Desktop/scene_app_sdk.vrscene";
+		const std::string filepath = "scene_app_sdk.vrscene";
 		m_exporter->export_vrscene(filepath);
 	}
 }
