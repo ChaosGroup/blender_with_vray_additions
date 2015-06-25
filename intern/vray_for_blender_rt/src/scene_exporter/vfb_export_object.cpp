@@ -137,7 +137,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 				PluginDesc nodeDesc(nodePluginName, "Node");
 				nodeDesc.add("geometry", geom);
 				nodeDesc.add("material", mtl);
-                nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+				nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 				nodeDesc.add("objectID", ob.pass_index());
 
 				node = m_exporter->export_plugin(nodeDesc);
