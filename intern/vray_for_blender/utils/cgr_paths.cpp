@@ -28,6 +28,7 @@
 //
 #include <Python.h>
 
+#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 

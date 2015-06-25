@@ -19,6 +19,8 @@
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
 #include "jpeglib.h"
+#include <setjmp.h>
+
 
 using namespace VRayForBlender;
 

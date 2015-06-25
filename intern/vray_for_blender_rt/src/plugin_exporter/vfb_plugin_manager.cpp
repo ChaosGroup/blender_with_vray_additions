@@ -95,7 +95,7 @@ PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
 
 	const auto & key = pluginDesc.pluginName + pluginDesc.pluginID;
 
-	auto & cacheEntry = cache.find(key);
+	auto cacheEntry = cache.find(key);
 
 	if (cacheEntry == cache.end()) {
 		cache.insert(make_pair(key, pluginDesc.pluginAttrs));
@@ -111,7 +111,7 @@ PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
 		// add input key to validate cache keys
 		validCacheKeys.insert(inputItem.first);
 
-		auto & cacheItem = cacheEntry->second.find(inputItem.first);
+		auto cacheItem = cacheEntry->second.find(inputItem.first);
 
 		// the input item is not present in cache - add it to both cache and output
 		if (cacheItem == cacheEntry->second.end()) {
@@ -129,7 +129,7 @@ PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
 
 	// remove cache entries which are not in the input
 	if (cacheEntry->second.size() != validCacheKeys.size()) {
-		for (auto & iter = cacheEntry->second.cbegin(), end = cacheEntry->second.cend(); iter != end; ++iter) {
+		for (auto iter = cacheEntry->second.cbegin(), end = cacheEntry->second.cend(); iter != end; ++iter) {
 			if (validCacheKeys.find(iter->first) == validCacheKeys.end()) {
 				cacheEntry->second.erase(iter);
 			}

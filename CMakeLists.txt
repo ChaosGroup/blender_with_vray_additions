@@ -716,10 +716,14 @@ if(WITH_VRAY_FOR_BLENDER)
 	set(ZMQ_PATH "" CACHE PATH "ZMQ lib location")
 	set(ZMQ_WRAPPER_PATH "" CACHE PATH "ZMQ wrapper location")
 
-	find_library(ZMQ_LIB
-		NAMES zmq
-		PATHS ${ZMQ_PATH}/lib
-	)
+	if(WIN32)
+		find_library(ZMQ_LIB
+			NAMES zmq
+			PATHS ${ZMQ_PATH}/lib
+		)
+	else()
+		find_library(ZMQ_LIB zmq)
+	endif()
 
 	find_library(ZMQ_WRAPPER_LIB
 		NAMES zmq_wrapper
