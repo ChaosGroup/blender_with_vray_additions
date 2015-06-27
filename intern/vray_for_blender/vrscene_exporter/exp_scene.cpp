@@ -445,6 +445,17 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 		parent = parent.parent();
 	}
 
+	PRINT_INFO(" :: is duplicator = %i",
+			   bl_ob.is_duplicator());
+	PRINT_INFO(" :: has parent = %i",
+			   bool(bl_ob.parent()));
+	if (bl_ob.parent()) {
+		PRINT_INFO(" :: has parent = %i",
+				   bool(bl_ob.parent()));
+		PRINT_INFO(" :: parent is duplicator = %i",
+				   bool(bl_ob.parent().is_duplicator()));
+	}
+
 	if (!skip_export) {
 		if(bl_ob.is_duplicator()) {
 			bool process_dupli = true;
@@ -583,6 +594,9 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			// If there is fur we are checking for "Render Emitter"
 			process_base_object = Node::DoRenderEmitter(ob);
 		}
+
+		PRINT_INFO(" :: process_base_object = %i",
+				   process_base_object);
 
 		if (!is_interrupted()) {
 			if (process_base_object) {
