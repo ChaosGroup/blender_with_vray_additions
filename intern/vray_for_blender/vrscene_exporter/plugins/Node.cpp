@@ -492,8 +492,12 @@ int VRayScene::Node::IsSmokeDomain(Object *ob)
 {
 	ModifierData *mod = (ModifierData*)ob->modifiers.first;
 	while(mod) {
-		if(mod->type == eModifierType_Smoke)
-			return 1;
+		if(mod->type == eModifierType_Smoke) {
+			SmokeModifierData *smd = (SmokeModifierData*)mod;
+			if (smd->type == MOD_SMOKE_TYPE_DOMAIN) {
+				return 1;
+			}
+		}
 		mod = mod->next;
 	}
 	return 0;
