@@ -427,6 +427,24 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 
 	PRINT_INFO("Processing object %s", ob->id.name);
 
+#if 0
+	if (RNA_struct_find_property(&bl_ob.ptr, "IsoSurf")) {
+		bool is_isosurface = false;
+
+		RNA_BEGIN(&bl_ob.ptr, itemptr, "IsoSurf") {
+			const bool active = RNA_boolean_get(&itemptr, "active");
+			if (active) {
+				is_isosurface = true;
+				break;
+			}
+		} RNA_END;
+
+		if (is_isosurface) {
+			RNA_int_set(&vrayObject, "data_updated", (CGR_UPDATED_OBJECT|CGR_UPDATED_DATA));
+		}
+	}
+#endif
+
 	int data_updated = RNA_int_get(&vrayObject, "data_updated");
 	if(data_updated)
 		PRINT_INFO("Base object %s (update: %i)", ob->id.name, data_updated);
