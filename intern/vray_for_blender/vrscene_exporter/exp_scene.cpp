@@ -65,6 +65,15 @@ static int ob_on_visible_layer(BL::Object ob) {
 	return (((Object*)ob.ptr.data)->lay & ExporterSettings::gSet.m_activeLayers);
 }
 
+static int ob_is_visible_for_render(BL::Object ob)
+{
+	return !(ob.hide_render());
+}
+
+static int ob_is_visible(BL::Object ob)
+{
+	return ob_on_visible_layer(ob) && ob_is_visible_for_render(ob);
+}
 
 static int ob_has_dupli(BL::Object ob)
 {
@@ -607,10 +616,10 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 			}
 		}
 
-		bool process_base_object = IsDuplicatorRenderable(bl_ob);
+		bool process_base_object = !ob_has_dupli(bl_ob) && ob_is_visible(bl_ob);
 		if (Node::HasHair(ob)) {
-			// If there is fur we are checking for "Render Emitter"
-			process_base_object = Node::DoRenderEmitter(ob);
+			// If there is fur we need to export base object
+			process_base_object = true;
 		}
 
 		PRINT_INFO(" :: process_base_object = %i",
