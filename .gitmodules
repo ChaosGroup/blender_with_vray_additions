@@ -14,3 +14,6 @@
 	path = scons
 	url = ../scons.git
 	ignore = all
+[submodule "intern/vray_for_blender_rt/extern/vray-zmq-wrapper"]
+	path = intern/vray_for_blender_rt/extern/vray-zmq-wrapper
+	url = https://github.com/bdancer/vray-zmq-wrapper
