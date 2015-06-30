@@ -30,6 +30,9 @@ set(INC
 	${CMAKE_SOURCE_DIR}/source/blender/windowmanager
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
 
+	extern/vray-zmq-wrapper/include
+	extern/vray-zmq-wrapper/extern/cppzmq
+
 	../vray_for_blender
 
 	.
@@ -40,7 +43,6 @@ set(INC
 	src/scene_exporter/utils
 
 	${ZMQ_PATH}/include
-	${ZMQ_WRAPPER_PATH}/include
 	${APPSDK_ROOT}/cpp/include
 )
 
