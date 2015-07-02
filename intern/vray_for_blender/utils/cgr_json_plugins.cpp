@@ -37,6 +37,10 @@
 #include "PIL_time.h"
 #include "MEM_guardedalloc.h"
 
+extern "C" {
+#include "BLI_timecode.h"
+}
+
 #include "../editors/space_file/filelist.h"
 
 
@@ -79,7 +83,7 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 		}
 	}
 
-	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
+	BLI_timecode_string_from_time_simple(timeMeasureBuf, sizeof(timeMeasureBuf), PIL_check_seconds_timer()-timeMeasure);
 	printf(" done [%s]\n", timeMeasureBuf);
 }
 

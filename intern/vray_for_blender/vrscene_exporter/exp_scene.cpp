@@ -43,6 +43,7 @@
 #include "BLI_utildefines.h"
 
 extern "C" {
+#  include "BLI_timecode.h"
 #  include "RE_engine.h"
 #  include "DNA_particle_types.h"
 #  include "DNA_modifier_types.h"
@@ -303,7 +304,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 	ExporterSettings::gSet.b_engine.update_progress(1.0f);
 
-	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
+	BLI_timecode_string_from_time_simple(timeMeasureBuf, sizeof(timeMeasureBuf), PIL_check_seconds_timer()-timeMeasure);
 
 	exportClearCaches();
 
