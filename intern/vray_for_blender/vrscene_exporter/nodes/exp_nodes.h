@@ -335,6 +335,7 @@ private:
 	static std::string      exportVRayNodeVolumeVRayToon(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeMetaImageTexture(VRayNodeExportParam);
+	static std::string      exportVRayNodeMetaStandardMaterial(VRayNodeExportParam);
 
 	static std::string      fromNodePluginID(BL::NodeSocket fromSocket);
 	static std::string      fromNodePluginType(BL::NodeSocket fromSocket);
