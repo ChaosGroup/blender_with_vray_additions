@@ -31,7 +31,7 @@ std::string VRayNodeExporter::exportVRayNodeMetaStandardMaterial(VRayNodeExportP
 	//
 	const std::string &brdfVRayMtlName = "BRDFVRayMtl@" + baseName;
 	AttributeValueMap brdfVRayMtl;
-	VRayNodeExporter::getVRayNodeAttributes(brdfVRayMtl, ntree, node, fromSocket, context);
+	VRayNodeExporter::getVRayNodeAttributes(brdfVRayMtl, ntree, node, fromSocket, context, AttributeValueMap(), "BRDFVRayMtl");
 
 	PointerRNA brdfVRayMtlPtr = RNA_pointer_get(&node.ptr, "BRDFVRayMtl");
 	if (RNA_boolean_get(&brdfVRayMtlPtr, "hilight_glossiness_lock")) {
