@@ -923,7 +923,7 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 								                                        % ntree.name()
 								                                        % sock.node().name()
 								                                        % sock.name());
-								StripString(multPluginName);
+								multPluginName = StripString(multPluginName);
 
 								const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
 								if (is_float_socket) {
