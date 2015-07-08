@@ -153,6 +153,8 @@ private:
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
 
+
+	bool                 m_ortho_camera;
 };
 
 }

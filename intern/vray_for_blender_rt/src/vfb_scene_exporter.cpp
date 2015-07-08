@@ -361,8 +361,6 @@ static float GetLensShift(BL::Object ob)
 
 void SceneExporter::sync_view(const int &check_updated)
 {
-	const float sensor_size = 35.5981627f;
-
 	if (!m_scene.camera() && !m_view3d) {
 		PRINT_ERROR("Unable to setup view!")
 	}
@@ -491,24 +489,39 @@ void SceneExporter::sync_view(const int &check_updated)
 				}
 			}
 			else {
+				BL::Object camera_obj = (m_view3d.lock_camera_and_layers()) ? m_scene.camera() : m_view3d.camera();
+				BL::Camera camera(camera_obj.data());
+
+				const auto & sensor_size = (camera.sensor_fit() == BL::Camera::sensor_fit_VERTICAL) ? camera.sensor_height() : camera.sensor_width();
+
 				viewParams.render_size.offs_x = 0;
 				viewParams.render_size.offs_y = 0;
 				viewParams.render_size.w = m_region.width();
 				viewParams.render_size.h = m_region.height();
-#if 0
-				const float aspect = float(viewParams.render_size.w) / float(viewParams.render_size.h);
-				viewParams.render_view.fov = 2.0f * atanf((0.5f * sensor_size) / m_view3d.lens() / (1.0f / aspect));
-#else
-				viewParams.render_view.fov   = sensor_size / m_view3d.lens();
-#endif
+
+				float lens = m_view3d.lens() / 2.f;
+
 				viewParams.render_view.ortho = (m_region3d.view_perspective() == BL::RegionView3D::view_perspective_ORTHO);
-				viewParams.render_view.ortho_width = m_region3d.view_distance() * sensor_size / m_view3d.lens();
+				viewParams.render_view.ortho_width = m_region3d.view_distance() * sensor_size / lens;
+
+				const ARegion *ar = (const ARegion*)m_region.ptr.data;
+				float aspect = 0.f;
+
+				if (viewParams.render_view.ortho) {
+					aspect = viewParams.render_view.ortho_width / 2.0f;
+				} else {
+					lens /= 2.f;
+					aspect = float(ar->winx) / float(ar->winy);
+				}
+
+
+				viewParams.render_view.fov = 2.0f * atanf((0.5f * sensor_size) / lens / aspect);
 
 				viewParams.render_view.use_clip_start = true;
 				viewParams.render_view.use_clip_end   = true;
 
 				viewParams.render_view.clip_start = m_view3d.clip_start();
-				viewParams.render_view.clip_end   = m_view3d.clip_end();
+				viewParams.render_view.clip_end = m_view3d.clip_end();
 
 				viewParams.render_view.tm = Math::InvertTm(m_region3d.view_matrix());
 			}
@@ -537,6 +550,13 @@ void SceneExporter::sync_view(const int &check_updated)
 			viewDesc.add("orthographicWidth", viewParams.render_view.ortho_width);
 
 			m_exporter->export_plugin(viewDesc);
+
+			if (m_ortho_camera != (bool)viewParams.render_view.ortho) {
+				m_exporter->stop();
+				m_exporter->start();
+			}
+
+			m_ortho_camera = viewParams.render_view.ortho;
 		}
 	}
 }
