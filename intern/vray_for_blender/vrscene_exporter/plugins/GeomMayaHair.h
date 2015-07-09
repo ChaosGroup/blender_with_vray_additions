@@ -60,6 +60,8 @@ public:
 	void               setLightLinker(LightLinker *lightLinker);
 	void               setSceneSet(StrSet *ptr) { m_scene_nodes = ptr; }
 
+	std::string        getNodeName() { return m_nodeName; }
+
 private:
 	void               initData();
 	void               initAttributes();

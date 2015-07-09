@@ -549,10 +549,16 @@ void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs
 	material = Node::WriteMtlRenderStats(&vrayObject, NULL, m_nodeName, material);
 
 	if(attrs.override) {
+		m_nodeName = attrs.namePrefix + m_nodeName;
+
 		std::string overrideBaseName = m_nodeName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
 
 		visible  = attrs.visible;
 		objectID = attrs.objectID;
+
+		float obmat[4][4];
+		::memcpy(obmat, attrs.tm.data, 16 * sizeof(float));
+		GetTransformHex(obmat, m_nodeTm);
 
 		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
 		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
