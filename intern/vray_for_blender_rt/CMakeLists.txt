@@ -42,7 +42,7 @@ set(INC
 	src/scene_exporter
 	src/scene_exporter/utils
 
-	${ZMQ_PATH}/include
+	${ZMQ_ROOT}/include
 	${APPSDK_ROOT}/cpp/include
 )
 
