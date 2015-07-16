@@ -1045,9 +1045,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(VRayNodeExportParam, cons
 
 std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context, const AttributeValueMap &manualAttrs)
 {
-	std::string nodeClass = node.bl_idname();
+	const std::string &nodeClass = node.bl_idname();
 
-	PRINT_INFO("Exporting \"%s\" from \"%s\"...",
+	PRINT_INFO("Exporting \"%s\" from tree \"%s\"...",
 			   node.name().c_str(), ntree.name().c_str());
 
 	if(nodeClass == "VRayNodeBlenderOutputMaterial") {
