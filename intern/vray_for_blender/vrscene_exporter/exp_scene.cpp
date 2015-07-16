@@ -56,6 +56,7 @@ extern "C" {
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 
 // Default velocity transform matrix hex
@@ -817,7 +818,46 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export object main properties
 	//
-	std::string geometry = VRayNodeExporter::exportSocket(ntree, geometrySocket, &nodeCtx);
+	std::string geometry = "NULL";
+	bool        override_for_preview = false;
+
+	// For preview rendering the material is copied into the separate scene, but our
+	// displacement is stored on the object level thus not copied. To preview displacement
+	// we'll lookup into the original scene for the object node tree
+	if (ExporterSettings::gSet.b_context &&
+	    ExporterSettings::gSet.b_engine &&
+	    ExporterSettings::gSet.b_engine.is_preview())
+	{
+		// Check if currently processed object is a preview object
+		if (boost::starts_with(bl_ob.name(), "preview_")) {
+			// Parent scene
+			BL::Scene sce(ExporterSettings::gSet.b_context.scene());
+			if (sce) {
+				BL::Object active_ob(sce.objects.active());
+				if (active_ob && ob_is_mesh(active_ob)) {
+					BL::NodeTree active_ob_ntree(VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)active_ob.ptr.data));
+					if (active_ob_ntree) {
+						BL::Node nodeOutput(VRayNodeExporter::getNodeByType(active_ob_ntree, "VRayNodeObjectOutput"));
+						if (nodeOutput) {
+							BL::NodeSocket geometrySocket(VRayNodeExporter::getSocketByName(nodeOutput, "Geometry"));
+							if (geometrySocket && geometrySocket.is_linked()) {
+								BL::Node geometryNode(VRayNodeExporter::getConnectedNode(geometrySocket, &nodeCtx));
+								if (geometryNode && (geometryNode.bl_idname() == "VRayNodeGeomDisplacedMesh")) {
+									geometry = VRayNodeExporter::exportSocket(active_ob_ntree, geometrySocket, &nodeCtx);
+									override_for_preview = true;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (!override_for_preview) {
+		geometry = VRayNodeExporter::exportSocket(ntree, geometrySocket, &nodeCtx);
+	}
+
 	if(geometry == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
 		            ob->id.name, ntree.name().c_str());

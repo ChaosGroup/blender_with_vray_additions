@@ -136,6 +136,17 @@ void ExporterSettings::init()
 	m_drAssetShare = (VRayDRAssetShare)RNA_enum_get(&vrayDR, "assetSharing");
 
 	m_hostname = boost::asio::ip::host_name();
+
+	if (b_context && b_engine && b_engine.is_preview()) {
+		BL::Scene parent_scene(b_context.scene());
+		if (parent_scene) {
+			// Override a few params from the parent scene for preview
+			PointerRNA parentVrayScene    = RNA_pointer_get(&parent_scene.ptr, "vray");
+			PointerRNA parentVrayExporter = RNA_pointer_get(&parentVrayScene, "Exporter");
+
+			m_useDisplaceSubdiv = RNA_boolean_get(&parentVrayExporter, "use_displace");
+		}
+	}
 }
 
 
