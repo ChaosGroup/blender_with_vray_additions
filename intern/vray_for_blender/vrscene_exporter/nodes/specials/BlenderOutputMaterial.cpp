@@ -41,6 +41,8 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree n
 		return mtlName;
 
 	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
+	pluginName.append("@");
+	pluginName.append(GetIDName((ID*)context->obCtx.ob));
 
 	BL::NodeSocket mtlid_gen_float = VRayNodeExporter::getSocketByName(node, "ID Generator");
 	if(mtlid_gen_float.is_linked()) {
