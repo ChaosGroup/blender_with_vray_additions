@@ -62,14 +62,14 @@ inline VRay::Transform to_vray_transform(const AttrTransform &tm)
 static void CbDumpMessage(VRay::VRayRenderer&, const char *msg, int level, void*)
 {
 	if (level <= VRay::MessageError) {
-		PRINT_PREFIX("V-Ray", "Error: %s", msg);
+		PRINT_INFO_EX("V-Ray: Error: %s", msg);
 	}
 #if 0
 	else if (level > VRay::MessageError && level <= VRay::MessageWarning) {
-		PRINT_PREFIX("V-Ray", "Warning: %s", msg);
+		PRINT_INFO_EX("V-Ray: Warning: %s", msg);
 	}
 	else if (level > VRay::MessageWarning && level <= VRay::MessageInfo) {
-		PRINT_PREFIX("V-Ray", "%s", msg);
+		PRINT_INFO_EX("V-Ray: "%s", msg);
 	}
 #endif
 }
