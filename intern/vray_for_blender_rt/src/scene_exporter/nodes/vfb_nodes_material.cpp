@@ -99,3 +99,63 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(VRayNodeExportParam)
 #endif
 	return AttrValue();
 }
+
+
+AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(VRayNodeExportParam)
+{
+	const std::string &baseName = DataExporter::GenPluginName(node, ntree, context);
+
+	// BRDFVRayMtl
+	//
+	const std::string &brdfVRayMtlName = "BRDFVRayMtl@" + baseName;
+
+	PluginDesc brdfVRayMtl(brdfVRayMtlName, "BRDFVRayMtl");
+	setAttrsFromNode(ntree, node, fromSocket, context, brdfVRayMtl, "BRDFVRayMtl", ParamDesc::PluginBRDF);
+
+	PointerRNA brdfVRayMtlPtr = RNA_pointer_get(&node.ptr, "BRDFVRayMtl");
+	if (RNA_boolean_get(&brdfVRayMtlPtr, "hilight_glossiness_lock")) {
+		brdfVRayMtl.add("hilight_glossiness", brdfVRayMtl.get("reflect_glossiness")->attrValue);
+	}
+
+	m_exporter->export_plugin(brdfVRayMtl);
+
+	// Material BRDF
+	std::string materialBrdf = brdfVRayMtlName;
+
+	// BRDFBump
+	//
+	BL::NodeSocket sockBump   = Nodes::GetSocketByAttr(node, "bump_tex_float");
+	BL::NodeSocket sockNormal = Nodes::GetSocketByAttr(node, "bump_tex_color");
+	const bool useBump = (sockBump && sockBump.is_linked()) || (sockNormal && sockNormal.is_linked());
+	if (useBump) {
+		const std::string &brdfBumpName = "BRDFBump@" + baseName;
+
+		PluginDesc brdfBump(brdfBumpName, "BRDFBump");
+		brdfBump.add("base_brdf", AttrPlugin(brdfVRayMtlName));
+
+		setAttrsFromNode(ntree, node, fromSocket, context, brdfBump, "BRDFBump", ParamDesc::PluginBRDF);
+
+		m_exporter->export_plugin(brdfBump);
+
+		materialBrdf = brdfBumpName;
+	}
+
+	// MtlSingleBRDF
+	//
+	const std::string &mtlSingleBrdfName = "MtlSingleBRDF@" + baseName;
+
+	PluginDesc mtlSingleBrdf(mtlSingleBrdfName, "MtlSingleBRDF");
+	mtlSingleBrdf.add("brdf", AttrPlugin(materialBrdf));
+
+	setAttrsFromNode(ntree, node, fromSocket, context, mtlSingleBrdf, "MtlSingleBRDF", ParamDesc::PluginMaterial);
+	m_exporter->export_plugin(mtlSingleBrdf);
+
+	// MtlMaterialID
+	//
+	PluginDesc mtlMaterialId(baseName, "MtlMaterialID");
+	mtlMaterialId.add("base_mtl", AttrPlugin(mtlSingleBrdfName));
+
+	setAttrsFromNode(ntree, node, fromSocket, context, mtlMaterialId, "MtlMaterialID", ParamDesc::PluginMaterial);
+
+	return m_exporter->export_plugin(mtlMaterialId);
+}

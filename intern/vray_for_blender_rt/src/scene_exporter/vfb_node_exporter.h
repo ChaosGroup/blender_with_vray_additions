@@ -288,6 +288,7 @@ private:
 	AttrValue         exportVRayNodeLightMesh(VRayNodeExportParam);
 	AttrValue         exportVRayNodeMatrix(VRayNodeExportParam);
 	AttrValue         exportVRayNodeMetaImageTexture(VRayNodeExportParam);
+	AttrValue         exportVRayNodeMetaStandardMaterial(VRayNodeExportParam);
 	AttrValue         exportVRayNodeMtlMulti(VRayNodeExportParam);
 	AttrValue         exportVRayNodePhxShaderSim(VRayNodeExportParam);
 	AttrValue         exportVRayNodePhxShaderSimVol(VRayNodeExportParam);

@@ -339,6 +339,9 @@ AttrValue DataExporter::exportVRayNode(VRayNodeExportParam)
 	else if (nodeClass == "VRayNodeMtlMulti") {
 		attrValue = exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
 	}
+	else if (nodeClass == "VRayNodeMetaStandardMaterial") {
+		attrValue = exportVRayNodeMetaStandardMaterial(ntree, node, fromSocket, context);
+	}
 
 	// Math
 	//
