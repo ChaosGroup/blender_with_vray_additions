@@ -124,7 +124,6 @@ void AppSdkExporter::init()
 	if (!m_vray) {
 		try {
 			VRay::RendererOptions options;
-			options.noLicense = false;
 			options.noDR = true;
 			m_vray = new VRay::VRayRenderer(options);
 		}
