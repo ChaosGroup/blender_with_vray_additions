@@ -92,9 +92,9 @@
 #define STRINGIZE(A) STRINGIZE_NX(A)
 
 #ifdef CGR_PLUGIN_NAME
-#  define _OUTPUT_PROMPT(P)         COLOR_MAGENTA STRINGIZE(P)            COLOR_DEFAULT ": "
-#  define _OUTPUT_ERROR_PROMPT(P)   COLOR_RED     STRINGIZE(P) " Error"   COLOR_DEFAULT ": "
-#  define _OUTPUT_WARNING_PROMPT(P) COLOR_YELLOW  STRINGIZE(P) " Warning" COLOR_DEFAULT ": "
+#  define _OUTPUT_PROMPT(P)         COLOR_MAGENTA STRINGIZE(P)          COLOR_DEFAULT ": "
+#  define _OUTPUT_ERROR_PROMPT(P)   COLOR_RED     STRINGIZE(P) " Error" COLOR_DEFAULT ": "
+#  define _OUTPUT_WARNING_PROMPT(P) COLOR_YELLOW  STRINGIZE(P) " Error" COLOR_DEFAULT ": "
 #  define OUTPUT_PROMPT         _OUTPUT_PROMPT(CGR_PLUGIN_NAME)
 #  define OUTPUT_ERROR_PROMPT   _OUTPUT_ERROR_PROMPT(CGR_PLUGIN_NAME)
 #  define OUTPUT_WARNING_PROMPT _OUTPUT_WARNING_PROMPT(CGR_PLUGIN_NAME)
@@ -142,12 +142,6 @@
 
 #define PRINT_WARN(...) { \
 	fprintf(stdout, OUTPUT_WARNING_PROMPT); \
-	fprintf(stdout, __VA_ARGS__); \
-	fprintf(stdout, "\n"); \
-	fflush(stdout); }
-
-#define PRINT_PREFIX(prefix, ...) { \
-	fprintf(stdout, "%s: ", prefix); \
 	fprintf(stdout, __VA_ARGS__); \
 	fprintf(stdout, "\n"); \
 	fflush(stdout); }

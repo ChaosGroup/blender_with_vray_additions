@@ -222,6 +222,8 @@ public:
 		m_propGroup = propGroup;
 	}
 
+	static std::string  GetHairName(BL::Object ob, BL::ParticleSystem psys, const NodeAttrs &attrs=NodeAttrs());
+
 	static void clearCache()  { m_exportNameCache.clear(); }
 	static void clearFrames() { m_frameCache.freeData();   }
 

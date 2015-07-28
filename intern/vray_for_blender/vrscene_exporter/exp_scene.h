@@ -81,38 +81,41 @@ struct HideFromView {
 };
 
 
-struct MyParticle {
+struct InstancerItem {
 	std::string        nodeName;
 	MHash              particleId;
 	char               transform[CGR_TRANSFORM_HEX_SIZE];
 	static const char *velocity;
 };
-typedef std::vector<MyParticle*> Particles;
+typedef std::vector<InstancerItem*> InstancerItems;
 
 
-class MyPartSystem {
+class InstancerSystem {
 public:
-	~MyPartSystem() {
+	~InstancerSystem() {
 		clear();
 	}
 
-	Particles  m_particles;
+	InstancerItems  m_instances;
 
-	void append(MyParticle *pa) {
-		m_particles.push_back(pa);
+	InstancerItem* add(const std::string &node, const MHash idx, float obmat[4][4], float dupmat[4][4]);
+
+	void append(InstancerItem *pa) {
+		m_instances.push_back(pa);
 	}
 
 	void clear() {
-		for(Particles::const_iterator paIt = m_particles.begin(); paIt != m_particles.end(); ++paIt)
+		for(InstancerItems::const_iterator paIt = m_instances.begin(); paIt != m_instances.end(); ++paIt) {
 			delete *paIt;
-		m_particles.clear();
+		}
+		m_instances.clear();
 	}
 
 	const size_t size() const {
-		return m_particles.size();
+		return m_instances.size();
 	}
 };
-typedef std::map<std::string, MyPartSystem*> MyPartSystems;
+typedef std::map<std::string, InstancerSystem*> MyPartSystems;
 
 
 class MyParticles {
@@ -121,9 +124,9 @@ public:
 		clear();
 	}
 
-	MyPartSystem* get(const std::string &name) {
+	InstancerSystem* get(const std::string &name) {
 		if(NOT(m_systems.count(name)))
-			m_systems[name] = new MyPartSystem();
+			m_systems[name] = new InstancerSystem();
 		return m_systems[name];
 	}
 
@@ -156,13 +159,13 @@ public:
 	void                    exportClearCaches();
 
 	void                    exportObjectsPre();
-	void                    exportObjectBase(Object *ob);
+	void                    exportObjectBase(BL::Object ob);
 	void                    exportObjectsPost();
 
 	int                     is_interrupted();
 
 private:
-	void                    exportObjectEx(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportNodeEx(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());

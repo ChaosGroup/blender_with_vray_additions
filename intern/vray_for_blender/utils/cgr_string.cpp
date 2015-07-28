@@ -51,41 +51,12 @@ void StripString(char *str)
 }
 
 
-std::string StripString(std::string &str)
-{
-	for (int i = 0; i < str.length(); ++i) {
-		const char &c = str[i];
-
-		// Valid characters
-		if ((c >= 'A' && c <= 'Z') ||
-		    (c >= 'a' && c <= 'z') ||
-		    (c >= '0' && c <= '9') ||
-		    (c == '|')             ||
-		    (c == '@'))
-		{
-			continue;
-		}
-
-		if(c == '+') {
-			str[i] = 'p';
-		}
-		else if(c == '-') {
-			str[i] = 'm';
-		}
-		else {
-			// Replace illigal chars with "_"
-			str[i] = '_';
-		}
-	}
-
-	return str;
-}
-
-
 std::string StripString(const std::string &str)
 {
-	std::string s(str);
-	return StripString(s);
+	static char buf[CGR_MAX_PLUGIN_NAME];
+	strncpy(buf, str.c_str(), CGR_MAX_PLUGIN_NAME);
+	StripString(buf);
+	return buf;
 }
 
 

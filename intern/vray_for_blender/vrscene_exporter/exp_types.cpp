@@ -21,6 +21,7 @@
  */
 
 #include "exp_types.h"
+#include "cgr_string.h"
 
 
 using namespace VRayScene;
@@ -199,6 +200,16 @@ int VRayExportable::write(PyObject *output, float frame)
 	}
 
 	return exitCode;
+}
+
+
+std::string VRayExportable::GetHairName(BL::Object ob, BL::ParticleSystem psys, const NodeAttrs &attrs)
+{
+	std::string name = attrs.namePrefix + "HAIR";
+	name.append(psys.name());
+	name.append(psys.settings().name());
+
+	return StripString(name);
 }
 
 

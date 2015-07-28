@@ -479,7 +479,7 @@ static PyObject* mExportObject(PyObject *self, PyObject *args)
 			b_ob.dupli_list_clear();
 		}
 
-		exporter->exportObjectBase((Object*)b_ob.ptr.data);
+		exporter->exportObjectBase(b_ob);
 	}
 
 	Py_RETURN_NONE;

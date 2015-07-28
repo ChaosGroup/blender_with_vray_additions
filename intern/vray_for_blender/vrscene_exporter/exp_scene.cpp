@@ -43,6 +43,7 @@
 #include "BLI_utildefines.h"
 
 extern "C" {
+#  include "BLI_timecode.h"
 #  include "RE_engine.h"
 #  include "DNA_particle_types.h"
 #  include "DNA_modifier_types.h"
@@ -55,33 +56,151 @@ extern "C" {
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 
 // Default velocity transform matrix hex
-const char* MyParticle::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+const char* InstancerItem::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 
-static int IsDuplicatorRenderable(BL::Object ob)
+static bool ob_is_mesh(BL::Object ob)
 {
-	bool is_renderable = false;
+	return (ob.type() == BL::Object::type_MESH    ||
+	        ob.type() == BL::Object::type_CURVE   ||
+	        ob.type() == BL::Object::type_SURFACE ||
+	        ob.type() == BL::Object::type_FONT    ||
+	        ob.type() == BL::Object::type_META);
+}
 
-	if (!ob.is_duplicator()) {
-		is_renderable = true;
-	}
-	else {
-		if (ob.particle_systems.length()) {
-			BL::Object::particle_systems_iterator psysIt;
-			for (ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
-				BL::ParticleSettings pset(psysIt->settings());
-				if (pset.use_render_emitter()) {
-					is_renderable = true;
-					break;
+static bool ob_is_light(BL::Object ob)
+{
+	return (ob.type() == BL::Object::type_LAMP);
+}
+
+static bool ob_is_mesh_light(BL::Object ob)
+{
+	bool is_mesh_light = false;
+
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)ob.ptr.data);
+	if (ntree) {
+		BL::Node nodeOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeObjectOutput");
+		if (nodeOutput) {
+			BL::NodeSocket geometrySocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
+			if (geometrySocket && geometrySocket.is_linked()) {
+				VRayNodeContext ctx;
+				BL::Node geomNode = VRayNodeExporter::getConnectedNode(geometrySocket, &ctx);
+				if (geomNode && geomNode.bl_idname() == "VRayNodeLightMesh") {
+					is_mesh_light = true;
 				}
 			}
 		}
-		else if (ob.dupli_type() == BL::Object::dupli_type_NONE ||
-		         ob.dupli_type() == BL::Object::dupli_type_FRAMES) {
-			is_renderable = true;
+	}
+
+	return is_mesh_light;
+}
+
+static bool ob_is_empty(BL::Object ob)
+{
+	return (ob.type() == BL::Object::type_EMPTY);
+}
+
+static int ob_on_visible_layer(BL::Object ob) {
+	return (((Object*)ob.ptr.data)->lay & ExporterSettings::gSet.m_activeLayers);
+}
+
+static int ob_is_visible_for_render(BL::Object ob)
+{
+	return !(ob.hide_render());
+}
+
+static int ob_is_visible(BL::Object ob)
+{
+	return ob_on_visible_layer(ob) && ob_is_visible_for_render(ob);
+}
+
+static int ob_has_dupli(BL::Object ob)
+{
+	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
+}
+
+static int ob_has_hair(BL::Object ob)
+{
+	BL::Object::modifiers_iterator mdIt;
+	for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
+		BL::Modifier mod(*mdIt);
+		if (mod.show_render() && (mod.type() == BL::Modifier::type_PARTICLE_SYSTEM)) {
+			BL::ParticleSystemModifier pmod(mod);
+			BL::ParticleSystem psys(pmod.particle_system());
+			if (psys) {
+				BL::ParticleSettings pset(psys.settings());
+				if (pset && (pset.type() == BL::ParticleSettings::type_HAIR) && (pset.render_type() == BL::ParticleSettings::render_type_PATH)) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+static int ob_is_smoke_domain(BL::Object ob)
+{
+	BL::Object::modifiers_iterator mdIt;
+	for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
+		BL::Modifier md(*mdIt);
+		if (md.type() == BL::Modifier::type_SMOKE) {
+			BL::SmokeModifier smd(md);
+			if (smd.smoke_type() == BL::SmokeModifier::smoke_type_DOMAIN) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static int ob_is_in_parents_dupli(BL::Object ob)
+{
+	BL::Object parent(ob.parent());
+	while (parent) {
+		if (ob_has_dupli(parent)) {
+			return true;
+		}
+		parent = parent.parent();
+	}
+
+	return false;
+}
+
+static int ob_is_duplicator_renderable(BL::Object ob)
+{
+	bool is_renderable = true;
+
+	// Dulpi
+	if (ob_has_dupli(ob)) {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
+	}
+
+	// Particles
+	// Particle system "Show / Hide Emitter" has priority over dupli
+	if (ob.particle_systems.length()) {
+		is_renderable = true;
+
+		BL::Object::modifiers_iterator mdIt;
+		for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
+			BL::Modifier md(*mdIt);
+			if (md.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+				BL::ParticleSystemModifier pmod(md);
+				BL::ParticleSystem psys(pmod.particle_system());
+				if (psys) {
+					BL::ParticleSettings pset(psys.settings());
+					if (pset) {
+						if (!pset.use_render_emitter()) {
+							is_renderable = false;
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -233,7 +352,11 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 			continue;
 		}
 
-		exportObjectBase(ob);
+		PointerRNA objectRNA;
+		RNA_id_pointer_create((ID*)ob, &objectRNA);
+		BL::Object bl_ob(objectRNA);
+
+		exportObjectBase(bl_ob);
 
 		expProgress += expProgStep;
 		nObjects++;
@@ -277,7 +400,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 
 	ExporterSettings::gSet.b_engine.update_progress(1.0f);
 
-	BLI_timestr(PIL_check_seconds_timer()-timeMeasure, timeMeasureBuf, sizeof(timeMeasureBuf));
+	BLI_timecode_string_from_time_simple(timeMeasureBuf, sizeof(timeMeasureBuf), PIL_check_seconds_timer()-timeMeasure);
 
 	exportClearCaches();
 
@@ -331,7 +454,7 @@ void VRsceneExporter::exportObjectsPost()
 				PRINT_INFO("Exporting sub-frame %.3f for object %s",
 				           scene.frame_current_final(), ob.name().c_str());
 
-				exportObjectEx(ob);
+				exportNodeEx(ob);
 			}
 		}
 
@@ -374,188 +497,157 @@ void VRsceneExporter::exportClearCaches()
 }
 
 
-static bool IsMeshLight(BL::Object ob)
+void VRsceneExporter::exportObjectBase(BL::Object ob)
 {
-	bool is_mesh_light = false;
-
-	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)ob.ptr.data);
-	if (ntree) {
-		BL::Node nodeOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeObjectOutput");
-		if (nodeOutput) {
-			BL::NodeSocket geometrySocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
-			if (geometrySocket && geometrySocket.is_linked()) {
-				VRayNodeContext ctx;
-				BL::Node geomNode = VRayNodeExporter::getConnectedNode(geometrySocket, &ctx);
-				if (geomNode && geomNode.bl_idname() == "VRayNodeLightMesh") {
-					is_mesh_light = true;
-				}
-			}
-		}
-	}
-
-	return is_mesh_light;
-}
-
-
-void VRsceneExporter::exportObjectBase(Object *ob)
-{
-	if(NOT(GEOM_TYPE(ob) || EMPTY_TYPE(ob) || LIGHT_TYPE(ob)))
+	if (!(ob_is_mesh(ob) || ob_is_light(ob) || ob_is_empty(ob)))
 		return;
 
-	PointerRNA objectRNA;
-	RNA_id_pointer_create((ID*)ob, &objectRNA);
-	BL::Object bl_ob(objectRNA);
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 
-	PointerRNA vrayObject = RNA_pointer_get(&bl_ob.ptr, "vray");
-
-	PRINT_INFO("Processing object %s", ob->id.name);
+	PRINT_INFO("Processing object %s", ob.name().c_str());
 
 	int data_updated = RNA_int_get(&vrayObject, "data_updated");
-	if(data_updated)
-		PRINT_INFO("Base object %s (update: %i)", ob->id.name, data_updated);
-
-	int skip_export = false;
-
-	// If object has a parent duplicator then skip it
-	// Parent export will handle it
-	BL::Object parent(bl_ob.parent());
-	if (parent && parent.is_duplicator()) {
-		skip_export = true;
+	if (data_updated) {
+		PRINT_INFO("Base object %s (update: %i)", ob.name().c_str(), data_updated);
 	}
 
-	if (!skip_export) {
-		if(bl_ob.is_duplicator()) {
+	if (!ob_is_in_parents_dupli(ob)) {
+		if (ob.is_duplicator()) {
 			bool process_dupli = true;
 
 			// If object is a dupli group holder and it's not animated -
 			// export it only for the first frame
 			//
-			if(ExporterSettings::gSet.DoUpdateCheck()) {
-				if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE) {
-					if(NOT(IsObjectUpdated((Object*)bl_ob.ptr.data) ||
-					       IsObjectDataUpdated((Object*)bl_ob.ptr.data))) {
+			if (ExporterSettings::gSet.DoUpdateCheck()) {
+				if (ob.dupli_type() != BL::Object::dupli_type_NONE) {
+					if (NOT(IsObjectUpdated((Object*)ob.ptr.data) ||
+					        IsObjectDataUpdated((Object*)ob.ptr.data))) {
 						process_dupli = false;
 					}
 				}
 			}
 
-			// If object is a duplicator, but is used in parent's dupli,
-			// then skip it (parent's dupli export will handle it)
-			BL::Object parent(bl_ob.parent());
-			if (parent && parent.is_duplicator()) {
-				process_dupli = false;
-			}
-
 			if (process_dupli) {
-				bl_ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
+				ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
 
-				int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
-				int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
+				const int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
+				const int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
 
-				const std::string &duplicatorName = GetIDName(bl_ob);
+				const std::string &duplicatorName = GetIDName(ob);
 
 				BL::Object::dupli_list_iterator b_dup;
-				for(bl_ob.dupli_list.begin(b_dup); b_dup != bl_ob.dupli_list.end(); ++b_dup) {
+				for (ob.dupli_list.begin(b_dup); b_dup != ob.dupli_list.end(); ++b_dup) {
 					if (NOT(is_interrupted())) {
-						BL::DupliObject bl_dupliOb      = *b_dup;
-						BL::Object      bl_duplicatedOb =  bl_dupliOb.object();
+						BL::DupliObject dup(*b_dup);
+						BL::Object      dop(dup.object());
 
-						if(bl_dupliOb.hide() || bl_duplicatedOb.hide_render())
-							continue;
+						const int dop_has_hair          = ob_has_hair(dop);
+						const int dop_is_dup_renderable = ob_is_duplicator_renderable(dop);
 
-						// Duplicated object could be duplicator itself
-						// Check if we need to show it
-						if(NOT(IsDuplicatorRenderable(bl_duplicatedOb)))
-							continue;
+						if (!dup.hide() && !dop.hide_render() && (dop_has_hair || dop_is_dup_renderable)) {
+							DupliObject *dupliOb = (DupliObject*)dup.ptr.data;
 
-						DupliObject *dupliOb = (DupliObject*)bl_dupliOb.ptr.data;
+							if (ob_is_mesh(dop) || ob_is_light(dop)) {
+								MHash persistendID;
+								MurmurHash3_x86_32((const void*)dup.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
 
-						if(NOT(GEOM_TYPE(dupliOb->ob) || LIGHT_TYPE(dupliOb->ob)))
-							continue;
+								const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + ob.name());
 
-						MHash persistendID;
-						MurmurHash3_x86_32((const void*)bl_dupliOb.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+								const bool is_light = ob_is_light(dop) || ob_is_mesh_light(dop);
 
-						const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + bl_ob.name());
+								NodeAttrs dupliAttrs;
+								dupliAttrs.override = true;
+								// If dupli are shown via Instancer we need to hide
+								// original object
+								dupliAttrs.visible  = NOT(useInstancer);
+								dupliAttrs.objectID = overrideObjectID;
+								dupliAttrs.dupliHolder = ob;
 
-						const bool is_light = bl_duplicatedOb.type() == BL::Object::type_LAMP || IsMeshLight(bl_duplicatedOb);
-
-						NodeAttrs dupliAttrs;
-						dupliAttrs.override = true;
-						// If dupli are shown via Instancer we need to hide
-						// original object
-						dupliAttrs.visible  = NOT(useInstancer);
-						dupliAttrs.objectID = overrideObjectID;
-						dupliAttrs.dupliHolder = bl_ob;
-
-						if (NOT(useInstancer) || is_light) {
-							dupliAttrs.namePrefix = dupliNamePrefix;
-							dupliAttrs.tm = bl_dupliOb.matrix();
-						}
-
-						if (is_light) {
-							exportObject(bl_duplicatedOb, dupliAttrs);
-						}
-						else {
-							if(NOT(useInstancer)) {
-								// If LightLinker contain duplicator,
-								// we need to exclude it's objects
-								//
-								std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
-								m_lightLinker.excludePlugin(duplicatorName, pluginName);
-
-								exportObject(bl_duplicatedOb, dupliAttrs);
-							}
-							else {
-								std::string dupliBaseName;
-
-								BL::ParticleSystem bl_psys = bl_dupliOb.particle_system();
-								if(NOT(bl_psys))
-									dupliBaseName = bl_ob.name();
-								else {
-									BL::ParticleSettings bl_pset = bl_psys.settings();
-									dupliBaseName = bl_ob.name() + bl_psys.name() + bl_pset.name();
+								if (NOT(useInstancer) || is_light) {
+									dupliAttrs.namePrefix = dupliNamePrefix;
+									dupliAttrs.tm = dup.matrix();
 								}
 
-								MyPartSystem *mySys = m_psys.get(dupliBaseName);
-								MyParticle *myPa = new MyParticle();
-								myPa->nodeName = GetIDName(&dupliOb->ob->id);
-								myPa->particleId = persistendID;
-								// Instancer use original object's transform,
-								// so apply inverse matrix here.
-								// When linking from file 'imat' is not valid,
-								// so better to always calculate inverse matrix ourselves.
-								//
-								float duplicatedTmInv[4][4];
-								copy_m4_m4(duplicatedTmInv, dupliOb->ob->obmat);
-								invert_m4(duplicatedTmInv);
-								float dupliTm[4][4];
-								mul_m4_m4m4(dupliTm, dupliOb->mat, duplicatedTmInv);
-								GetTransformHex(dupliTm, myPa->transform);
+								if (is_light) {
+									if (dop_is_dup_renderable) {
+										exportLamp(dop, dupliAttrs);
+									}
+								}
+								else {
+									if(NOT(useInstancer)) {
+										if (dop_is_dup_renderable) {
+											// If LightLinker contain duplicator,
+											// we need to exclude it's objects
+											//
+											std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
+											m_lightLinker.excludePlugin(duplicatorName, pluginName);
+											exportObject(dop, dupliAttrs);
+										}
 
-								mySys->append(myPa);
+										if (dop_has_hair) {
+											Node::WriteHair(dop, dupliAttrs);
+										}
+									}
+									else {
+										std::string dupliBaseName;
 
-								// Set original object transform
-								dupliAttrs.tm = bl_duplicatedOb.matrix_world();
-								exportObject(bl_duplicatedOb, dupliAttrs);
+										BL::ParticleSystem bl_psys = dup.particle_system();
+										if(NOT(bl_psys))
+											dupliBaseName = ob.name();
+										else {
+											BL::ParticleSettings bl_pset = bl_psys.settings();
+											dupliBaseName = ob.name() + bl_psys.name() + bl_pset.name();
+
+											// We are inserting object partices with Instancer,
+											// and instancer requires base Node to be hidden.
+											// This matches the dehaviour of dupli, but for particles
+											// there may be a need to show the original object also.
+											//
+											if (ob_on_visible_layer(dop)) {
+												dupliAttrs.visible = true;
+											}
+										}
+
+										// Set original object transform
+										dupliAttrs.tm = dop.matrix_world();
+
+										if (dop_is_dup_renderable) {
+											m_psys.get(dupliBaseName)->add(GetIDName(&dupliOb->ob->id),
+											                               persistendID,
+											                               dupliOb->ob->obmat,
+											                               dupliOb->mat);
+
+											exportObject(dop, dupliAttrs);
+										}
+
+										if (dop_has_hair) {
+											StrSet hairNodes;
+
+											Node::WriteHair(dop, dupliAttrs, &hairNodes);
+
+											for (StrSet::const_iterator hIt = hairNodes.begin(); hIt != hairNodes.end(); ++hIt) {
+												m_psys.get(dupliBaseName)->add(*hIt,
+												                               persistendID,
+												                               dupliOb->ob->obmat,
+												                               dupliOb->mat);
+											}
+										}
+									}
+								}
 							}
 						}
 					}
 				}
 
-				bl_ob.dupli_list_clear();
+				ob.dupli_list_clear();
 			}
 		}
 
-		bool process_base_object = IsDuplicatorRenderable(bl_ob);
-		if (Node::HasHair(ob)) {
-			// If there is fur we are checking for "Render Emitter"
-			process_base_object = Node::DoRenderEmitter(ob);
-		}
-
 		if (!is_interrupted()) {
-			if (process_base_object) {
-				exportObject(bl_ob);
+			Node::WriteHair(ob);
+
+			if (ob_is_duplicator_renderable(ob)) {
+				exportObject(ob);
 			}
 		}
 	}
@@ -565,40 +657,24 @@ void VRsceneExporter::exportObjectBase(Object *ob)
 }
 
 
-void VRsceneExporter::exportObjectEx(BL::Object ob, const NodeAttrs &attrs)
+void VRsceneExporter::exportNodeEx(BL::Object ob, const NodeAttrs &attrs)
 {
-	if (ob.type() == BL::Object::type_MESH    ||
-	    ob.type() == BL::Object::type_CURVE   ||
-	    ob.type() == BL::Object::type_SURFACE ||
-	    ob.type() == BL::Object::type_FONT    ||
-	    ob.type() == BL::Object::type_META)
-	{
-		Object *b_ob = (Object*)ob.ptr.data;
-		BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)b_ob);
-		if(ntree) {
-			exportNodeFromNodeTree(ntree, b_ob, attrs);
-		}
-		else {
-			exportNode(b_ob, attrs);
-		}
+	Object *b_ob = (Object*)ob.ptr.data;
+
+	BL::NodeTree ntree = VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)b_ob);
+	if(ntree) {
+		exportNodeFromNodeTree(ntree, b_ob, attrs);
 	}
-	else if (ob.type() == BL::Object::type_LAMP) {
-		exportLamp(ob, attrs);
+	else {
+		exportNode(b_ob, attrs);
 	}
 }
 
 
 void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 {
-	Object *b_ob = (Object*)ob.ptr.data;
-
-	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-
-	if (GEOM_TYPE(b_ob)) {
-		// Smoke domain will be exported from Effects
-		if (Node::IsSmokeDomain(b_ob))
-			return;
-
+	if (ob_is_mesh(ob)) {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
 		if (RNA_boolean_get(&vrayObject, "overrideWithScene")) {
@@ -608,21 +684,23 @@ void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 			exportVRayClipper(ob, attrs);
 		}
 		else {
-			const std::string idName = attrs.namePrefix + GetIDName(ob);
-			if(m_exportedObjects.count(idName))
-				return;
-			m_exportedObjects.insert(idName);
+			if (!ob_is_smoke_domain(ob)) {
+				const std::string idName = attrs.namePrefix + GetIDName(ob);
+				if (!m_exportedObjects.count(idName)) {
+					m_exportedObjects.insert(idName);
 
-			const int subframes = RNA_int_get(&vrayObject, "subframes");
-			if (subframes) {
-				m_subframeObjects[subframes].insert(ob);
+					const int subframes = RNA_int_get(&vrayObject, "subframes");
+					if (subframes) {
+						m_subframeObjects[subframes].insert(ob);
+					}
+
+					exportNodeEx(ob, attrs);
+				}
 			}
-
-			exportObjectEx(ob, attrs);
 		}
 	}
-	else if (LIGHT_TYPE(b_ob)) {
-		exportObjectEx(ob, attrs);
+	else if (ob_is_light(ob)) {
+		exportLamp(ob, attrs);
 	}
 }
 
@@ -664,14 +742,6 @@ void VRsceneExporter::exportNode(Object *ob, const NodeAttrs &attrs)
 		hideFromViewStats.camera_visibility      = !m_hideFromView.camera_visibility.count(ob);
 
 		node->setHideFromView(hideFromViewStats);
-	}
-
-	if(node->hasHair()) {
-		node->writeHair();
-		if(NOT(node->doRenderEmitter())) {
-			delete node;
-			return;
-		}
 	}
 
 	if(ExporterSettings::gSet.m_exportMeshes) {
@@ -716,15 +786,6 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	RNA_id_pointer_create((ID*)ob, &objectRNA);
 	BL::Object bl_ob(objectRNA);
 
-	// Export hair
-	//
-	Node::WriteHair(ob, attrs);
-
-	if(NOT(Node::DoRenderEmitter(ob)))
-		return;
-
-	// Export object itself
-	//
 	BL::Node nodeOutput = VRayNodeExporter::getNodeByType(ntree, "VRayNodeObjectOutput");
 	if(NOT(nodeOutput)) {
 		PRINT_ERROR("Object: %s Node tree: %s => Output node not found!",
@@ -757,7 +818,46 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 
 	// Export object main properties
 	//
-	std::string geometry = VRayNodeExporter::exportSocket(ntree, geometrySocket, &nodeCtx);
+	std::string geometry = "NULL";
+	bool        override_for_preview = false;
+
+	// For preview rendering the material is copied into the separate scene, but our
+	// displacement is stored on the object level thus not copied. To preview displacement
+	// we'll lookup into the original scene for the object node tree
+	if (ExporterSettings::gSet.b_context &&
+	    ExporterSettings::gSet.b_engine &&
+	    ExporterSettings::gSet.b_engine.is_preview())
+	{
+		// Check if currently processed object is a preview object
+		if (boost::starts_with(bl_ob.name(), "preview_")) {
+			// Parent scene
+			BL::Scene sce(ExporterSettings::gSet.b_context.scene());
+			if (sce) {
+				BL::Object active_ob(sce.objects.active());
+				if (active_ob && ob_is_mesh(active_ob)) {
+					BL::NodeTree active_ob_ntree(VRayNodeExporter::getNodeTree(ExporterSettings::gSet.b_data, (ID*)active_ob.ptr.data));
+					if (active_ob_ntree) {
+						BL::Node nodeOutput(VRayNodeExporter::getNodeByType(active_ob_ntree, "VRayNodeObjectOutput"));
+						if (nodeOutput) {
+							BL::NodeSocket geometrySocket(VRayNodeExporter::getSocketByName(nodeOutput, "Geometry"));
+							if (geometrySocket && geometrySocket.is_linked()) {
+								BL::Node geometryNode(VRayNodeExporter::getConnectedNode(geometrySocket, &nodeCtx));
+								if (geometryNode && (geometryNode.bl_idname() == "VRayNodeGeomDisplacedMesh")) {
+									geometry = VRayNodeExporter::exportSocket(active_ob_ntree, geometrySocket, &nodeCtx);
+									override_for_preview = true;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (!override_for_preview) {
+		geometry = VRayNodeExporter::exportSocket(ntree, geometrySocket, &nodeCtx);
+	}
+
 	if(geometry == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
 		            ob->id.name, ntree.name().c_str());
@@ -1172,6 +1272,31 @@ void VRsceneExporter::initDupli()
 }
 
 
+InstancerItem *InstancerSystem::add(const std::string &node, const MHash idx, float obmat[4][4], float dupmat[4][4]) {
+	InstancerItem *pa = new InstancerItem;
+	pa->nodeName = node;
+	pa->particleId = idx;
+
+	// Instancer use original object's transform,
+	// so apply inverse matrix here.
+	// When linking from file 'imat' is not valid,
+	// so better to always calculate inverse matrix ourselves.
+	//
+	float duplicatedTmInv[4][4];
+	copy_m4_m4(duplicatedTmInv, obmat);
+	invert_m4(duplicatedTmInv);
+
+	float dupliTm[4][4];
+	mul_m4_m4m4(dupliTm, dupmat, duplicatedTmInv);
+
+	GetTransformHex(dupliTm, pa->transform);
+
+	append(pa);
+
+	return pa;
+}
+
+
 void VRsceneExporter::exportDupli()
 {
 	PyObject *out = ExporterSettings::gSet.m_fileObject;
@@ -1180,18 +1305,18 @@ void VRsceneExporter::exportDupli()
 
 	for(MyPartSystems::const_iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
 		const std::string   psysName = sysIt->first;
-		const MyPartSystem *parts    = sysIt->second;
+		const InstancerSystem *parts    = sysIt->second;
 
 		PYTHON_PRINTF(out, "\nInstancer Dulpi%s {", StripString(psysName).c_str());
 		PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");
-			for(Particles::const_iterator paIt = parts->m_particles.begin(); paIt != parts->m_particles.end(); ++paIt) {
-				const MyParticle *pa = *paIt;
+			for(InstancerItems::const_iterator paIt = parts->m_instances.begin(); paIt != parts->m_instances.end(); ++paIt) {
+				const InstancerItem *pa = *paIt;
 
 				PYTHON_PRINTF(out, "List(%u,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
 
-				if(paIt != --parts->m_particles.end()) {
+				if(paIt != --parts->m_instances.end()) {
 					PYTHON_PRINT(out, ",");
 				}
 			}

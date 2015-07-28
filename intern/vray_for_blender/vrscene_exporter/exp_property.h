@@ -23,4 +23,9 @@
 #ifndef CGR_EXP_PROPERTY_H
 #define CGR_EXP_PROPERTY_H
 
+// TODO: Refactor from std::string to VRayProp*
+
+struct VRayPropBase {
+};
+
 #endif // CGR_EXP_PROPERTY_H

@@ -773,7 +773,7 @@ GPUTexture *GPU_texture_from_preview(PreviewImage *prv, int mipmap)
 	tex->refcount = 1;
 	tex->target = GL_TEXTURE_2D;
 	
-	prv->gputexture[0]= tex;
+	prv->gputexture[0] = tex;
 	
 	if (!glIsTexture(tex->bindcode)) {
 		GPU_ASSERT_NO_GL_ERRORS("Blender Texture Not Loaded");
@@ -1953,7 +1953,7 @@ GPUShader *GPU_shader_get_builtin_shader(GPUBuiltinShader shader)
 	}
 
 	if (retval == NULL)
-		printf("Unable to create a GPUShader for builtin shader: %d\n", shader);
+		printf("Unable to create a GPUShader for builtin shader: %u\n", shader);
 
 	return retval;
 }
@@ -1976,7 +1976,7 @@ GPUProgram *GPU_shader_get_builtin_program(GPUBuiltinProgram program)
 	}
 
 	if (retval == NULL)
-		printf("Unable to create a GPUProgram for builtin program: %d\n", program);
+		printf("Unable to create a GPUProgram for builtin program: %u\n", program);
 
 	return retval;
 }

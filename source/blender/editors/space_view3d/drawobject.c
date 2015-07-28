@@ -176,7 +176,6 @@ typedef struct drawDMFacesSel_userData {
 	BMesh *bm;
 
 	BMFace *efa_act;
-	const int *orig_index_mf_to_mpoly;
 	const int *orig_index_mp_to_orig;
 } drawDMFacesSel_userData;
 
@@ -2053,14 +2052,19 @@ static void drawcamera(Scene *scene, View3D *v3d, RegionView3D *rv3d, Base *base
 	float vec[4][3], asp[2], shift[2], scale[3];
 	int i;
 	float drawsize;
-	const bool is_view = (rv3d->persp == RV3D_CAMOB && ob == v3d->camera);
 	MovieClip *clip = BKE_object_movieclip_get(scene, base->object, false);
 
+	const bool is_view = (rv3d->persp == RV3D_CAMOB && ob == v3d->camera);
+	const bool is_multiview = (scene->r.scemode & R_MULTIVIEW) != 0;
 	const bool is_stereo3d = drawcamera_is_stereo3d(scene, v3d, ob);
+	const bool is_stereo3d_view = (scene->r.views_format == SCE_VIEWS_FORMAT_STEREO_3D);
 	const bool is_stereo3d_cameras = (ob == scene->camera) &&
-	                                 (scene->r.scemode & R_MULTIVIEW) &&
-	                                 (scene->r.views_format == SCE_VIEWS_FORMAT_STEREO_3D) &&
+	                                 is_multiview &&
+	                                 is_stereo3d_view &&
 	                                 (v3d->stereo3d_flag & V3D_S3D_DISPCAMERAS);
+	const bool is_selection_camera_stereo = (G.f & G_PICKSEL) &&
+	                                        is_view && is_multiview &&
+	                                        is_stereo3d_view;
 
 	/* draw data for movie clip set as active for scene */
 	if (clip) {
@@ -2087,9 +2091,17 @@ static void drawcamera(Scene *scene, View3D *v3d, RegionView3D *rv3d, Base *base
 
 	cam = ob->data;
 
-	scale[0] = 1.0f / len_v3(ob->obmat[0]);
-	scale[1] = 1.0f / len_v3(ob->obmat[1]);
-	scale[2] = 1.0f / len_v3(ob->obmat[2]);
+	/* BKE_camera_multiview_model_matrix already accounts for scale, don't do it here */
+	if (is_selection_camera_stereo) {
+		scale[0] = 1.0f;
+		scale[1] = 1.0f;
+		scale[2] = 1.0f;
+	}
+	else {
+		scale[0] = 1.0f / len_v3(ob->obmat[0]);
+		scale[1] = 1.0f / len_v3(ob->obmat[1]);
+		scale[2] = 1.0f / len_v3(ob->obmat[2]);
+	}
 
 	BKE_camera_view_frame_ex(scene, cam, cam->drawsize, is_view, scale,
 	                         asp, shift, &drawsize, vec);
@@ -2100,7 +2112,7 @@ static void drawcamera(Scene *scene, View3D *v3d, RegionView3D *rv3d, Base *base
 	/* camera frame */
 	if (!is_stereo3d_cameras) {
 		/* make sure selection uses the same matrix for camera as the one used while viewing */
-		if ((G.f & G_PICKSEL) && is_view && (scene->r.views_format == SCE_VIEWS_FORMAT_STEREO_3D)) {
+		if (is_selection_camera_stereo) {
 			float obmat[4][4];
 			bool is_left = v3d->multiview_eye == STEREO_LEFT_ID;
 
@@ -2112,8 +2124,9 @@ static void drawcamera(Scene *scene, View3D *v3d, RegionView3D *rv3d, Base *base
 			drawcamera_frame(vec, GL_LINE_LOOP);
 			glPopMatrix();
 		}
-		else
+		else {
 			drawcamera_frame(vec, GL_LINE_LOOP);
+		}
 	}
 
 	if (is_view)
@@ -3000,12 +3013,9 @@ static int draw_dm_faces_sel__compareDrawOptions(void *userData, int index, int 
 
 	unsigned char *col, *next_col;
 
-	if (!data->orig_index_mf_to_mpoly)
-		return 0;
-
-	i = DM_origindex_mface_mpoly(data->orig_index_mf_to_mpoly, data->orig_index_mp_to_orig, index);
+	i = data->orig_index_mp_to_orig ? data->orig_index_mp_to_orig[index] : index;
 	efa = (i != ORIGINDEX_NONE) ? BM_face_at_index(data->bm, i) : NULL;
-	i = DM_origindex_mface_mpoly(data->orig_index_mf_to_mpoly, data->orig_index_mp_to_orig, next_index);
+	i = data->orig_index_mp_to_orig ? data->orig_index_mp_to_orig[next_index] : next_index;
 	next_efa = (i != ORIGINDEX_NONE) ? BM_face_at_index(data->bm, i) : NULL;
 
 	if (ELEM(NULL, efa, next_efa))
@@ -3051,11 +3061,7 @@ static void draw_dm_faces_sel(BMEditMesh *em, DerivedMesh *dm, unsigned char *ba
 #endif
 	data.efa_act = efa_act;
 	/* double lookup */
-	data.orig_index_mf_to_mpoly = DM_get_tessface_data_layer(dm, CD_ORIGINDEX);
 	data.orig_index_mp_to_orig  = DM_get_poly_data_layer(dm, CD_ORIGINDEX);
-	if ((data.orig_index_mf_to_mpoly && data.orig_index_mp_to_orig) == false) {
-		data.orig_index_mf_to_mpoly = data.orig_index_mp_to_orig = NULL;
-	}
 
 	dm->drawMappedFaces(dm, draw_dm_faces_sel__setDrawOptions, NULL, draw_dm_faces_sel__compareDrawOptions, &data, 0);
 }
@@ -3564,7 +3570,12 @@ static void draw_em_measure_stats(ARegion *ar, View3D *v3d, Object *ob, BMEditMe
 				bool is_first = true;
 
 				BM_ITER_ELEM (loop, &liter, efa, BM_LOOPS_OF_FACE) {
-					if (is_face_sel || (do_moving && BM_elem_flag_test(loop->v, BM_ELEM_SELECT))) {
+					if (is_face_sel ||
+					    (do_moving &&
+					     (BM_elem_flag_test(loop->v, BM_ELEM_SELECT) ||
+					      BM_elem_flag_test(loop->prev->v, BM_ELEM_SELECT) ||
+					      BM_elem_flag_test(loop->next->v, BM_ELEM_SELECT))))
+					{
 						float angle;
 						float v2_local[3];
 
@@ -4009,7 +4020,7 @@ static void draw_mesh_fancy(Scene *scene, ARegion *ar, View3D *v3d, RegionView3D
 
 	/* Check to draw dynamic paint colors (or weights from WeightVG modifiers).
 	 * Note: Last "preview-active" modifier in stack will win! */
-	if (DM_get_tessface_data_layer(dm, CD_PREVIEW_MCOL) && modifiers_isPreview(ob))
+	if (DM_get_poly_data_layer(dm, CD_PREVIEW_MLOOPCOL) && modifiers_isPreview(ob))
 		draw_flags |= DRAW_MODIFIERS_PREVIEW;
 
 	/* Unwanted combination */
@@ -4296,8 +4307,9 @@ static bool draw_mesh_object(Scene *scene, ARegion *ar, View3D *v3d, RegionView3
 		if (obedit != ob)
 			finalDM = cageDM = editbmesh_get_derived_base(ob, em);
 		else
-			cageDM = editbmesh_get_derived_cage_and_final(scene, ob, em, &finalDM,
-			                                              scene->customdata_mask);
+			cageDM = editbmesh_get_derived_cage_and_final(
+			        scene, ob, em, scene->customdata_mask,
+			        &finalDM);
 
 		DM_update_materials(finalDM, ob);
 		if (cageDM != finalDM) {
@@ -6238,8 +6250,8 @@ static void drawvertsN(Nurb *nu, const char sel, const bool hide_handles, const 
 			if (bezt->hide == 0) {
 				if (sel == 1 && bezt == vert) {
 					UI_ThemeColor(TH_ACTIVE_VERT);
-					bglVertex3fv(bezt->vec[1]);
 
+					if (bezt->f2 & SELECT) bglVertex3fv(bezt->vec[1]);
 					if (!hide_handles) {
 						if (bezt->f1 & SELECT) bglVertex3fv(bezt->vec[0]);
 						if (bezt->f3 & SELECT) bglVertex3fv(bezt->vec[2]);
@@ -8450,7 +8462,7 @@ static void bbs_mesh_solid_EM(BMEditMesh *em, Scene *scene, View3D *v3d,
 
 	}
 	else {
-		dm->drawMappedFaces(dm, bbs_mesh_mask__setSolidDrawOptions, NULL, NULL, em->bm, 0);
+		dm->drawMappedFaces(dm, bbs_mesh_mask__setSolidDrawOptions, NULL, NULL, em->bm, DM_DRAW_SKIP_SELECT);
 	}
 }
 
@@ -8511,7 +8523,7 @@ static void bbs_mesh_solid_faces(Scene *scene, Object *ob)
 	DM_update_materials(dm, ob);
 
 	if ((me->editflag & ME_EDIT_PAINT_FACE_SEL))
-		dm->drawMappedFaces(dm, bbs_mesh_solid_hide__setDrawOpts, NULL, NULL, me, 0);
+		dm->drawMappedFaces(dm, bbs_mesh_solid_hide__setDrawOpts, NULL, NULL, me, DM_DRAW_SKIP_HIDDEN);
 	else
 		dm->drawMappedFaces(dm, bbs_mesh_solid__setDrawOpts, NULL, NULL, me, 0);
 

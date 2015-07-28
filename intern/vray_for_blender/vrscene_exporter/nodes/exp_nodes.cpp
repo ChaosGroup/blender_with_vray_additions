@@ -919,12 +919,11 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 							if (mult != 1.0f) {
 								static boost::format multFmt("NT%sN%sS%sMult");
 
-								// XXX: Name here could be an issue with group nodes
 								std::string multPluginName = boost::str(multFmt
 								                                        % ntree.name()
 								                                        % sock.node().name()
 								                                        % sock.name());
-								StripString(multPluginName);
+								multPluginName = StripString(multPluginName);
 
 								const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
 								if (is_float_socket) {
@@ -1046,9 +1045,9 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(VRayNodeExportParam, cons
 
 std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context, const AttributeValueMap &manualAttrs)
 {
-	std::string nodeClass = node.bl_idname();
+	const std::string &nodeClass = node.bl_idname();
 
-	PRINT_INFO("Exporting \"%s\" from \"%s\"...",
+	PRINT_INFO("Exporting \"%s\" from tree \"%s\"...",
 			   node.name().c_str(), ntree.name().c_str());
 
 	if(nodeClass == "VRayNodeBlenderOutputMaterial") {
@@ -1179,6 +1178,9 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 	}
 	else if(nodeClass == "VRayNodeMetaImageTexture") {
 		return VRayNodeExporter::exportVRayNodeMetaImageTexture(ntree, node, fromSocket, context);
+	}
+	else if(nodeClass == "VRayNodeMetaStandardMaterial") {
+		return VRayNodeExporter::exportVRayNodeMetaStandardMaterial(ntree, node, fromSocket, context);
 	}
 	else if(node.is_a(&RNA_ShaderNodeNormal)) {
 		return VRayNodeExporter::exportBlenderNodeNormal(ntree, node, fromSocket, context);

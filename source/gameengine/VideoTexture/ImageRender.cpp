@@ -30,7 +30,7 @@
 
 // implementation
 
-#include "PyObjectPlus.h"
+#include "EXP_PyObjectPlus.h"
 #include <structmember.h>
 #include <float.h>
 #include <math.h>
@@ -109,7 +109,7 @@ void ImageRender::setBackground (float red, float green, float blue, float alpha
 void ImageRender::setBackgroundFromScene (KX_Scene *scene)
 {
 	if (scene) {
-		const float *background_color = scene->GetWorldInfo()->getBackColor();
+		const float *background_color = scene->GetWorldInfo()->getBackColorConverted();
 		copy_v3_v3(m_background, background_color);
 		m_background[3] = 1.0f;
 	}
@@ -240,6 +240,8 @@ void ImageRender::Render()
 		float lens = m_camera->GetLens();
 		float sensor_x = m_camera->GetSensorWidth();
 		float sensor_y = m_camera->GetSensorHeight();
+		float shift_x = m_camera->GetShiftHorizontal();
+		float shift_y = m_camera->GetShiftVertical();
 		bool orthographic = !m_camera->GetCameraData()->m_perspective;
 		float nearfrust = m_camera->GetCameraNear();
 		float farfrust = m_camera->GetCameraFar();
@@ -260,6 +262,8 @@ void ImageRender::Render()
 			            m_camera->GetScale(),
 			            aspect_ratio,
 						m_camera->GetSensorFit(),
+			            shift_x,
+			            shift_y,
 			            frustrum
 			            );
 
@@ -274,6 +278,8 @@ void ImageRender::Render()
 			            sensor_x,
 			            sensor_y,
 			            RAS_SENSORFIT_AUTO,
+			            shift_x,
+			            shift_y,
 			            aspect_ratio,
 			            frustrum);
 			
@@ -297,7 +303,10 @@ void ImageRender::Render()
         // TODO: implement an explicit function in rasterizer to restore the left buffer.
         m_rasterizer->SetEye(RAS_IRasterizer::RAS_STEREO_LEFTEYE);
     }
+
 	m_scene->CalculateVisibleMeshes(m_rasterizer,m_camera);
+
+	m_engine->UpdateAnimations(m_scene);
 
 	m_scene->RenderBuckets(camtrans, m_rasterizer);
 

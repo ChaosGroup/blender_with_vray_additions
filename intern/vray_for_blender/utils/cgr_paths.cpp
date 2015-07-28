@@ -28,10 +28,6 @@
 //
 #include <Python.h>
 
-#ifndef _MSC_VER
-	#define BOOST_NO_CXX11_SCOPED_ENUMS
-#endif // MSC_VER
-
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 

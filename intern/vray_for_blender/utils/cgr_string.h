@@ -28,7 +28,6 @@
 
 void         StripString(char *str);
 std::string  StripString(const std::string &str);
-std::string  StripString(std::string &str);
 
 bool         IsStdStringDigit(const std::string &str);
 

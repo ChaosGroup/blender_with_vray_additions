@@ -89,7 +89,7 @@ void VRayScene::Node::init(const std::string &mtlOverrideName)
 
 void VRayScene::Node::freeData()
 {
-	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED "Node::freeData(" COLOR_YELLOW "%s" COLOR_RED ")" COLOR_DEFAULT, m_name.c_str());
+	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"Node::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
 
 	if(NOT(ExporterSettings::gSet.m_isAnimation)) {
 		if(m_geometry) {
@@ -492,8 +492,12 @@ int VRayScene::Node::IsSmokeDomain(Object *ob)
 {
 	ModifierData *mod = (ModifierData*)ob->modifiers.first;
 	while(mod) {
-		if(mod->type == eModifierType_Smoke)
-			return 1;
+		if(mod->type == eModifierType_Smoke) {
+			SmokeModifierData *smd = (SmokeModifierData*)mod;
+			if (smd->type == MOD_SMOKE_TYPE_DOMAIN) {
+				return 1;
+			}
+		}
 		mod = mod->next;
 	}
 	return 0;
@@ -511,8 +515,8 @@ int VRayScene::Node::HasHair(Object *ob)
 
 	BL::Object::modifiers_iterator modIt;
 	for(b_object.modifiers.begin(modIt); modIt != b_object.modifiers.end(); ++modIt) {
-		BL::Modifier mod = *modIt;
-		if(mod.type() == BL::Modifier::type_PARTICLE_SYSTEM && mod.show_render()) {
+		BL::Modifier mod(*modIt);
+		if((mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) && mod.show_render()) {
 			BL::ParticleSystemModifier pmod(mod);
 			BL::ParticleSystem psys = pmod.particle_system();
 			if (psys && IS_PSYS_HAIR(psys.settings())) {
@@ -608,18 +612,16 @@ void VRayScene::Node::writeGeometry(PyObject *output, int frame)
 }
 
 
-void VRayScene::Node::WriteHair(Object *ob, const NodeAttrs &attrs)
+void VRayScene::Node::WriteHair(BL::Object b_object, const NodeAttrs &attrs, StrSet *hairNodes)
 {
 	if(NOT(ExporterSettings::gSet.m_exportHair))
 		return;
 
+	Object *ob = (Object*)b_object.ptr.data;
+
 	if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(ob))) {
 		return;
 	}
-
-	PointerRNA objectPtr;
-	RNA_id_pointer_create((ID*)ob, &objectPtr);
-	BL::Object b_object(objectPtr);
 
 	BL::Object::modifiers_iterator modIt;
 	for(b_object.modifiers.begin(modIt); modIt != b_object.modifiers.end(); ++modIt) {
@@ -633,14 +635,19 @@ void VRayScene::Node::WriteHair(Object *ob, const NodeAttrs &attrs)
 				geomMayaHair->preInit((ParticleSystem*)psys.ptr.data);
 				geomMayaHair->setLightLinker(m_lightLinker);
 				geomMayaHair->setSceneSet(m_scene_nodes);
-				if(ExporterSettings::gSet.m_exportNodes)
+				if(ExporterSettings::gSet.m_exportNodes) {
 					geomMayaHair->writeNode(ExporterSettings::gSet.m_fileObject, ExporterSettings::gSet.m_frameCurrent, attrs);
+				}
 				if(ExporterSettings::gSet.m_exportMeshes) {
 					geomMayaHair->init();
 					toDelete = geomMayaHair->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
 				}
-				if(toDelete)
+				if (hairNodes) {
+					hairNodes->insert(geomMayaHair->getNodeName());
+				}
+				if(toDelete) {
 					delete geomMayaHair;
+				}
 			}
 		}
 	}
@@ -649,5 +656,5 @@ void VRayScene::Node::WriteHair(Object *ob, const NodeAttrs &attrs)
 
 void VRayScene::Node::writeHair(const NodeAttrs &attrs)
 {
-	Node::WriteHair(m_ob, attrs);
+	Node::WriteHair(m_bl_ob, attrs);
 }

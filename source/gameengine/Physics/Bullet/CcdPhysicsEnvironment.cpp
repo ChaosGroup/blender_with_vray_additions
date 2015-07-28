@@ -452,6 +452,7 @@ m_scalingPropagated(false)
 	SetSolverType(1);//issues with quickstep and memory allocations
 //	m_dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 	m_dynamicsWorld = new btSoftRigidDynamicsWorld(dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
+	m_dynamicsWorld->setInternalTickCallback(&CcdPhysicsEnvironment::StaticSimulationSubtickCallback, this);
 	//m_dynamicsWorld->getSolverInfo().m_linearSlop = 0.01f;
 	//m_dynamicsWorld->getSolverInfo().m_solverMode=	SOLVER_USE_WARMSTARTING +	SOLVER_USE_2_FRICTION_DIRECTIONS +	SOLVER_RANDMIZE_ORDER +	SOLVER_USE_FRICTION_WARMSTARTING;
 
@@ -464,14 +465,6 @@ void	CcdPhysicsEnvironment::AddCcdPhysicsController(CcdPhysicsController* ctrl)
 	// the controller is already added we do nothing
 	if (!m_controllers.insert(ctrl).second) {
 		return;
-	}
-
-	/* In the case of compound child controller (see also RemoveCcdPhysicsController)
-	 * we add the controller to the trigger controlers list : m_triggerControllers
-	 * if it use collision callbacks.
-	 */
-	if (ctrl->Registered()) {
-		m_triggerControllers.insert(ctrl);
 	}
 
 	btRigidBody* body = ctrl->GetRigidBody();
@@ -519,16 +512,6 @@ bool	CcdPhysicsEnvironment::RemoveCcdPhysicsController(CcdPhysicsController* ctr
 	// if the physics controller is already removed we do nothing
 	if (!m_controllers.erase(ctrl)) {
 		return false;
-	}
-
-	/* In the case of compound child controller which use collision callbacks
-	 * we remove it from the m_triggerControllers list but leave m_registerCount
-	 * to know in AddCcdPhysicsController if we have to add it in m_triggerControllers
-	 * and to avoid an useless added in RequestCollisionCallback, indeed we can't register
-	 * more than one time a controller.
-	 */
-	if (ctrl->Registered()) {
-		m_triggerControllers.erase(ctrl);
 	}
 
 	//also remove constraint
@@ -693,6 +676,22 @@ void CcdPhysicsEnvironment::DebugDrawWorld()
 {
 	if (m_dynamicsWorld->getDebugDrawer() &&  m_dynamicsWorld->getDebugDrawer()->getDebugMode() >0)
 			m_dynamicsWorld->debugDrawWorld();
+}
+
+void CcdPhysicsEnvironment::StaticSimulationSubtickCallback(btDynamicsWorld *world, btScalar timeStep)
+{
+	// Get the pointer to the CcdPhysicsEnvironment associated with this Bullet world.
+	CcdPhysicsEnvironment *this_ = static_cast<CcdPhysicsEnvironment*>(world->getWorldUserInfo());
+	this_->SimulationSubtickCallback(timeStep);
+}
+
+void CcdPhysicsEnvironment::SimulationSubtickCallback(btScalar timeStep)
+{
+	std::set<CcdPhysicsController*>::iterator it;
+
+	for (it = m_controllers.begin(); it != m_controllers.end(); it++) {
+		(*it)->SimulationTick(timeStep);
+	}
 }
 
 bool	CcdPhysicsEnvironment::ProceedDeltaTime(double curTime,float timeStep,float interval)
@@ -2199,10 +2198,7 @@ void CcdPhysicsEnvironment::AddSensor(PHY_IPhysicsController* ctrl)
 bool CcdPhysicsEnvironment::RemoveCollisionCallback(PHY_IPhysicsController* ctrl)
 {
 	CcdPhysicsController* ccdCtrl = (CcdPhysicsController*)ctrl;
-	if (!ccdCtrl->Unregister())
-		return false;
-	m_triggerControllers.erase(ccdCtrl);
-	return true;
+	return ccdCtrl->Unregister();
 }
 
 
@@ -2246,11 +2242,7 @@ void CcdPhysicsEnvironment::AddTouchCallback(int response_class, PHY_ResponseCal
 bool CcdPhysicsEnvironment::RequestCollisionCallback(PHY_IPhysicsController* ctrl)
 {
 	CcdPhysicsController* ccdCtrl = static_cast<CcdPhysicsController*>(ctrl);
-
-	if (!ccdCtrl->Register())
-		return false;
-	m_triggerControllers.insert(ccdCtrl);
-	return true;
+	return ccdCtrl->Register();
 }
 
 void	CcdPhysicsEnvironment::CallbackTriggers()
@@ -2289,16 +2281,17 @@ void	CcdPhysicsEnvironment::CallbackTriggers()
 		//m_internalOwner is set in 'addPhysicsController'
 		CcdPhysicsController* ctrl0 = static_cast<CcdPhysicsController*>(rb0->getUserPointer());
 		CcdPhysicsController* ctrl1 = static_cast<CcdPhysicsController*>(rb1->getUserPointer());
+		bool usecallback = false;
 
-		std::set<CcdPhysicsController*>::const_iterator iter = m_triggerControllers.find(ctrl0);
-		if (iter == m_triggerControllers.end())
-		{
-			iter = m_triggerControllers.find(ctrl1);
+		// Test if one of the controller is registered and use collision callback.
+		if (ctrl0->Registered())
+			usecallback = true;
+		else if (ctrl1->Registered()) {
 			colliding_ctrl0 = false;
+			usecallback = true;
 		}
 
-		if (iter != m_triggerControllers.end())
-		{
+		if (usecallback) {
 			static PHY_CollData coll_data;
 			const btManifoldPoint &cp = manifold->getContactPoint(0);
 
@@ -3118,6 +3111,8 @@ void CcdPhysicsEnvironment::ConvertObject(KX_GameObject *gameobj, RAS_MeshObject
 	ci.m_mass = isbulletdyna ? shapeprops->m_mass : 0.f;
 	ci.m_clamp_vel_min = shapeprops->m_clamp_vel_min;
 	ci.m_clamp_vel_max = shapeprops->m_clamp_vel_max;
+	ci.m_clamp_angvel_min = shapeprops->m_clamp_angvel_min;
+	ci.m_clamp_angvel_max = shapeprops->m_clamp_angvel_max;
 	ci.m_stepHeight = isbulletchar ? shapeprops->m_step_height : 0.f;
 	ci.m_jumpSpeed = isbulletchar ? shapeprops->m_jump_speed : 0.f;
 	ci.m_fallSpeed = isbulletchar ? shapeprops->m_fall_speed : 0.f;

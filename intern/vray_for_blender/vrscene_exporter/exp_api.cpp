@@ -76,8 +76,10 @@ void ExportTexVoxelData(PyObject          *output,
 	texVoxelData->init(smd);
 	texVoxelData->setInterpolation(interpolation);
 
-	if(NOT(texVoxelData->getHash()))
+	if (!texVoxelData->getHash()) {
+		delete texVoxelData;
 		return;
+	}
 
 	int toDelete = texVoxelData->write(output, ExporterSettings::gSet.m_frameCurrent);
 	if(toDelete)
@@ -156,8 +158,10 @@ void  ExportVoxelDataAsFluid(PyObject          *output,
 	texVoxelData->setInterpolation(interpolation);
 	texVoxelData->setAsFluid(true);
 
-	if(NOT(texVoxelData->getHash()))
+	if (!texVoxelData->getHash()) {
+		delete texVoxelData;
 		return;
+	}
 
 	int toDelete = texVoxelData->write(output, ExporterSettings::gSet.m_frameCurrent);
 	if(toDelete)

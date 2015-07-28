@@ -614,8 +614,9 @@ static void write_fmodifiers(WriteData *wd, ListBase *fmodifiers)
 					/* write coefficients array */
 					if (data->coefficients)
 						writedata(wd, DATA, sizeof(float)*(data->arraysize), data->coefficients);
-				}
+
 					break;
+				}
 				case FMODIFIER_TYPE_ENVELOPE:
 				{
 					FMod_Envelope *data= (FMod_Envelope *)fcm->data;
@@ -623,8 +624,9 @@ static void write_fmodifiers(WriteData *wd, ListBase *fmodifiers)
 					/* write envelope data */
 					if (data->data)
 						writestruct(wd, DATA, "FCM_EnvelopeData", data->totvert, data->data);
-				}
+
 					break;
+				}
 				case FMODIFIER_TYPE_PYTHON:
 				{
 					FMod_Python *data = (FMod_Python *)fcm->data;
@@ -632,8 +634,9 @@ static void write_fmodifiers(WriteData *wd, ListBase *fmodifiers)
 					/* Write ID Properties -- and copy this comment EXACTLY for easy finding
 					 * of library blocks that implement this.*/
 					IDP_WriteProperty(data->prop, wd);
-				}
+
 					break;
+				}
 			}
 		}
 	}
@@ -1103,7 +1106,7 @@ static void write_pointcaches(WriteData *wd, ListBase *ptcaches)
 				
 				for (i=0; i<BPHYS_TOT_DATA; i++) {
 					if (pm->data[i] && pm->data_types & (1<<i)) {
-						if (ptcache_data_struct[i][0]=='\0')
+						if (ptcache_data_struct[i][0] == '\0')
 							writedata(wd, DATA, MEM_allocN_len(pm->data[i]), pm->data[i]);
 						else
 							writestruct(wd, DATA, ptcache_data_struct[i], pm->totpoint, pm->data[i]);
@@ -1111,7 +1114,7 @@ static void write_pointcaches(WriteData *wd, ListBase *ptcaches)
 				}
 
 				for (; extra; extra=extra->next) {
-					if (ptcache_extra_struct[extra->type][0]=='\0')
+					if (ptcache_extra_struct[extra->type][0] == '\0')
 						continue;
 					writestruct(wd, DATA, "PTCacheExtra", 1, extra);
 					writestruct(wd, DATA, ptcache_extra_struct[extra->type], extra->totdata, extra->data);
@@ -1432,16 +1435,18 @@ static void write_constraints(WriteData *wd, ListBase *conlist)
 					/* Write ID Properties -- and copy this comment EXACTLY for easy finding
 					 * of library blocks that implement this.*/
 					IDP_WriteProperty(data->prop, wd);
-				}
+
 					break;
+				}
 				case CONSTRAINT_TYPE_SPLINEIK: 
 				{
 					bSplineIKConstraint *data = (bSplineIKConstraint *)con->data;
 					
 					/* write points array */
 					writedata(wd, DATA, sizeof(float)*(data->numpoints), data->points);
-				}
+
 					break;
+				}
 			}
 		}
 		
@@ -2475,6 +2480,9 @@ static void write_scenes(WriteData *wd, ListBase *scebase)
 						case SEQ_TYPE_GAUSSIAN_BLUR:
 							writestruct(wd, DATA, "GaussianBlurVars", 1, seq->effectdata);
 							break;
+						case SEQ_TYPE_TEXT:
+							writestruct(wd, DATA, "TextVars", 1, seq->effectdata);
+							break;
 						}
 					}
 
@@ -3358,6 +3366,18 @@ static void write_linestyle_color_modifiers(WriteData *wd, ListBase *modifiers)
 		case LS_MODIFIER_MATERIAL:
 			struct_name = "LineStyleColorModifier_Material";
 			break;
+		case LS_MODIFIER_TANGENT:
+			struct_name = "LineStyleColorModifier_Tangent";
+			break;
+		case LS_MODIFIER_NOISE:
+			struct_name = "LineStyleColorModifier_Noise";
+			break;
+		case LS_MODIFIER_CREASE_ANGLE:
+			struct_name = "LineStyleColorModifier_CreaseAngle";
+			break;
+		case LS_MODIFIER_CURVATURE_3D:
+			struct_name = "LineStyleColorModifier_Curvature_3D";
+			break;
 		default:
 			struct_name = "LineStyleColorModifier"; /* this should not happen */
 		}
@@ -3376,6 +3396,18 @@ static void write_linestyle_color_modifiers(WriteData *wd, ListBase *modifiers)
 			break;
 		case LS_MODIFIER_MATERIAL:
 			writestruct(wd, DATA, "ColorBand", 1, ((LineStyleColorModifier_Material *)m)->color_ramp);
+			break;
+		case LS_MODIFIER_TANGENT:
+			writestruct(wd, DATA, "ColorBand", 1, ((LineStyleColorModifier_Tangent *)m)->color_ramp);
+			break;
+		case LS_MODIFIER_NOISE:
+			writestruct(wd, DATA, "ColorBand", 1, ((LineStyleColorModifier_Noise *)m)->color_ramp);
+			break;
+		case LS_MODIFIER_CREASE_ANGLE:
+			writestruct(wd, DATA, "ColorBand", 1, ((LineStyleColorModifier_CreaseAngle *)m)->color_ramp);
+			break;
+		case LS_MODIFIER_CURVATURE_3D:
+			writestruct(wd, DATA, "ColorBand", 1, ((LineStyleColorModifier_Curvature_3D *)m)->color_ramp);
 			break;
 		}
 	}
@@ -3400,6 +3432,18 @@ static void write_linestyle_alpha_modifiers(WriteData *wd, ListBase *modifiers)
 		case LS_MODIFIER_MATERIAL:
 			struct_name = "LineStyleAlphaModifier_Material";
 			break;
+		case LS_MODIFIER_TANGENT:
+			struct_name = "LineStyleAlphaModifier_Tangent";
+			break;
+		case LS_MODIFIER_NOISE:
+			struct_name = "LineStyleAlphaModifier_Noise";
+			break;
+		case LS_MODIFIER_CREASE_ANGLE:
+			struct_name = "LineStyleAlphaModifier_CreaseAngle";
+			break;
+		case LS_MODIFIER_CURVATURE_3D:
+			struct_name = "LineStyleAlphaModifier_Curvature_3D";
+			break;
 		default:
 			struct_name = "LineStyleAlphaModifier"; /* this should not happen */
 		}
@@ -3418,6 +3462,18 @@ static void write_linestyle_alpha_modifiers(WriteData *wd, ListBase *modifiers)
 			break;
 		case LS_MODIFIER_MATERIAL:
 			write_curvemapping(wd, ((LineStyleAlphaModifier_Material *)m)->curve);
+			break;
+		case LS_MODIFIER_TANGENT:
+			write_curvemapping(wd, ((LineStyleAlphaModifier_Tangent *)m)->curve);
+			break;
+		case LS_MODIFIER_NOISE:
+			write_curvemapping(wd, ((LineStyleAlphaModifier_Noise *)m)->curve);
+			break;
+		case LS_MODIFIER_CREASE_ANGLE:
+			write_curvemapping(wd, ((LineStyleAlphaModifier_CreaseAngle *)m)->curve);
+			break;
+		case LS_MODIFIER_CURVATURE_3D:
+			write_curvemapping(wd, ((LineStyleAlphaModifier_Curvature_3D *)m)->curve);
 			break;
 		}
 	}
@@ -3445,6 +3501,18 @@ static void write_linestyle_thickness_modifiers(WriteData *wd, ListBase *modifie
 		case LS_MODIFIER_CALLIGRAPHY:
 			struct_name = "LineStyleThicknessModifier_Calligraphy";
 			break;
+		case LS_MODIFIER_TANGENT:
+			struct_name = "LineStyleThicknessModifier_Tangent";
+			break;
+		case LS_MODIFIER_NOISE:
+			struct_name = "LineStyleThicknessModifier_Noise";
+			break;
+		case LS_MODIFIER_CREASE_ANGLE:
+			struct_name = "LineStyleThicknessModifier_CreaseAngle";
+			break;
+		case LS_MODIFIER_CURVATURE_3D:
+			struct_name = "LineStyleThicknessModifier_Curvature_3D";
+			break;
 		default:
 			struct_name = "LineStyleThicknessModifier"; /* this should not happen */
 		}
@@ -3463,6 +3531,15 @@ static void write_linestyle_thickness_modifiers(WriteData *wd, ListBase *modifie
 			break;
 		case LS_MODIFIER_MATERIAL:
 			write_curvemapping(wd, ((LineStyleThicknessModifier_Material *)m)->curve);
+			break;
+		case LS_MODIFIER_TANGENT:
+			write_curvemapping(wd, ((LineStyleThicknessModifier_Tangent *)m)->curve);
+			break;
+		case LS_MODIFIER_CREASE_ANGLE:
+			write_curvemapping(wd, ((LineStyleThicknessModifier_CreaseAngle *)m)->curve);
+			break;
+		case LS_MODIFIER_CURVATURE_3D:
+			write_curvemapping(wd, ((LineStyleThicknessModifier_Curvature_3D *)m)->curve);
 			break;
 		}
 	}
@@ -3513,6 +3590,9 @@ static void write_linestyle_geometry_modifiers(WriteData *wd, ListBase *modifier
 			break;
 		case LS_MODIFIER_2D_TRANSFORM:
 			struct_name = "LineStyleGeometryModifier_2DTransform";
+			break;
+		case LS_MODIFIER_SIMPLIFICATION:
+			struct_name = "LineStyleGeometryModifier_Simplification";
 			break;
 		default:
 			struct_name = "LineStyleGeometryModifier"; /* this should not happen */

@@ -333,8 +333,6 @@ void GeomMayaHair::initData()
 	float *hair_vertices_arr  = new float[3 * vertices_total_count];
 	float *widths_arr         = new float[vertices_total_count];
 
-	invert_m4_m4(hairmat, m_ob->obmat);
-
 	if(use_child) {
 		for(p = 0; p < child_total; ++p) {
 			child_key   = child_cache[p];
@@ -349,7 +347,10 @@ void GeomMayaHair::initData()
 				copy_v3_v3(child_key_co, child_key->co);
 
 				// Remove transform by applying inverse matrix
-				mul_m4_v3(hairmat, child_key_co);
+				float obImat[4][4];
+				copy_m4_m4(obImat, m_ob->obmat);
+				invert_m4(obImat);
+				mul_m4_v3(obImat, child_key_co);
 
 				// Store coordinates
 				COPY_VECTOR(hair_vertices_arr, hair_vert_co_index, child_key_co);
@@ -361,12 +362,13 @@ void GeomMayaHair::initData()
 		}
 	}
 	else {
+		float nco[3];
+		invert_m4_m4(hairmat, m_ob->obmat);
 		for(int pa_no = 0; pa_no < totparts; pa_no++) {
 			float hair_fade_width = hair_width;
 			float hair_fade_step  = hair_width / (ren_step+1);
 
 			for(int step_no = 0; step_no <= ren_step; step_no++) {
-				float nco[3];
 				b_psys.co_hair(b_ob, pa_no, step_no, nco);
 				mul_m4_v3(hairmat, nco);
 
@@ -547,10 +549,16 @@ void GeomMayaHair::writeNode(PyObject *output, int frame, const NodeAttrs &attrs
 	material = Node::WriteMtlRenderStats(&vrayObject, NULL, m_nodeName, material);
 
 	if(attrs.override) {
+		m_nodeName = attrs.namePrefix + m_nodeName;
+
 		std::string overrideBaseName = m_nodeName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
 
 		visible  = attrs.visible;
 		objectID = attrs.objectID;
+
+		float obmat[4][4];
+		::memcpy(obmat, attrs.tm.data, 16 * sizeof(float));
+		GetTransformHex(obmat, m_nodeTm);
 
 		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
 		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);

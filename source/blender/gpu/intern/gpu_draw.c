@@ -56,6 +56,7 @@
 #include "DNA_scene_types.h"
 #include "DNA_smoke_types.h"
 #include "DNA_view3d_types.h"
+#include "DNA_particle_types.h"
 
 #include "MEM_guardedalloc.h"
 
@@ -92,12 +93,18 @@ static void gpu_mcol(unsigned int ucol)
 	glColor3ub(cp[3], cp[2], cp[1]);
 }
 
-void GPU_render_text(MTFace *tface, int mode,
-	const char *textstr, int textlen, unsigned int *col,
-	float *v1, float *v2, float *v3, float *v4, int glattrib)
+void GPU_render_text(
+        MTexPoly *mtexpoly, int mode,
+        const char *textstr, int textlen, unsigned int *col,
+        const float *v_quad[4], const float *uv_quad[4],
+        int glattrib)
 {
-	if ((mode & GEMAT_TEXT) && (textlen > 0) && tface->tpage) {
-		Image* ima = (Image *)tface->tpage;
+	if ((mode & GEMAT_TEXT) && (textlen > 0) && mtexpoly->tpage) {
+		const float *v1 = v_quad[0];
+		const float *v2 = v_quad[1];
+		const float *v3 = v_quad[2];
+		const float *v4 = v_quad[3];
+		Image *ima = (Image *)mtexpoly->tpage;
 		ImBuf *first_ibuf;
 		const size_t textlen_st = textlen;
 		size_t index;
@@ -116,7 +123,7 @@ void GPU_render_text(MTFace *tface, int mode,
 
 		
 		/* color has been set */
-		if (tface->mode & TF_OBCOL)
+		if (mtexpoly->mode & TF_OBCOL)
 			col = NULL;
 		else if (!col)
 			glColor3f(1.0f, 1.0f, 1.0f);
@@ -159,12 +166,12 @@ void GPU_render_text(MTFace *tface, int mode,
 			matrixGlyph(first_ibuf, character, & centerx, &centery,
 				&sizex, &sizey, &transx, &transy, &movex, &movey, &advance);
 
-			uv[0][0] = (tface->uv[0][0] - centerx) * sizex + transx;
-			uv[0][1] = (tface->uv[0][1] - centery) * sizey + transy;
-			uv[1][0] = (tface->uv[1][0] - centerx) * sizex + transx;
-			uv[1][1] = (tface->uv[1][1] - centery) * sizey + transy;
-			uv[2][0] = (tface->uv[2][0] - centerx) * sizex + transx;
-			uv[2][1] = (tface->uv[2][1] - centery) * sizey + transy;
+			uv[0][0] = (uv_quad[0][0] - centerx) * sizex + transx;
+			uv[0][1] = (uv_quad[0][1] - centery) * sizey + transy;
+			uv[1][0] = (uv_quad[1][0] - centerx) * sizex + transx;
+			uv[1][1] = (uv_quad[1][1] - centery) * sizey + transy;
+			uv[2][0] = (uv_quad[2][0] - centerx) * sizex + transx;
+			uv[2][1] = (uv_quad[2][1] - centery) * sizey + transy;
 			
 			glBegin(GL_POLYGON);
 			if (glattrib >= 0) glVertexAttrib2fvARB(glattrib, uv[0]);
@@ -183,8 +190,8 @@ void GPU_render_text(MTFace *tface, int mode,
 			glVertex3f(sizex * v3[0] + movex, sizey * v3[1] + movey, v3[2]);
 
 			if (v4) {
-				uv[3][0] = (tface->uv[3][0] - centerx) * sizex + transx;
-				uv[3][1] = (tface->uv[3][1] - centery) * sizey + transy;
+				uv[3][0] = (uv_quad[3][0] - centerx) * sizex + transx;
+				uv[3][1] = (uv_quad[3][1] - centery) * sizey + transy;
 
 				if (glattrib >= 0) glVertexAttrib2fvARB(glattrib, uv[3]);
 				else glTexCoord2fv(uv[3]);
@@ -249,7 +256,7 @@ static struct GPUTextureState {
 	int alphablend;
 	float anisotropic;
 	int gpu_mipmap;
-	MTFace *lasttface;
+	MTexPoly *lasttface;
 } GTS = {0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, 1, 0, 0, -1, 1.0f, 0, NULL};
 
 /* Mipmap settings */
@@ -409,15 +416,18 @@ static void gpu_set_alpha_blend(GPUBlendMode alphablend)
 	if (alphablend == GPU_BLEND_SOLID) {
 		glDisable(GL_BLEND);
 		glDisable(GL_ALPHA_TEST);
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 	else if (alphablend == GPU_BLEND_ADD) {
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
 		glDisable(GL_ALPHA_TEST);
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 	}
 	else if (ELEM(alphablend, GPU_BLEND_ALPHA, GPU_BLEND_ALPHA_SORT)) {
 		glEnable(GL_BLEND);
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 
 		/* for OpenGL render we use the alpha channel, this makes alpha blend correct */
 		if (GLEW_VERSION_1_4)
@@ -438,9 +448,15 @@ static void gpu_set_alpha_blend(GPUBlendMode alphablend)
 		}
 	}
 	else if (alphablend == GPU_BLEND_CLIP) {
-		glDisable(GL_BLEND); 
+		glDisable(GL_BLEND);
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.5f);
+	}
+	else if (alphablend == GPU_BLEND_ALPHA_TO_COVERAGE) {
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, U.glalphaclip);
+		glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 	}
 }
 
@@ -668,7 +684,7 @@ int GPU_verify_image(Image *ima, ImageUser *iuser, int tftile, bool compare, boo
 	}
 
 #ifdef WITH_DDS
-	if (ibuf->ftype & DDS)
+	if (ibuf->ftype == IMB_FTYPE_DDS)
 		GPU_create_gl_tex_compressed(bind, rect, rectw, recth, mipmap, ima, ibuf);
 	else
 #endif
@@ -890,23 +906,23 @@ static void gpu_verify_repeat(Image *ima)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
-int GPU_set_tpage(MTFace *tface, int mipmap, int alphablend)
+int GPU_set_tpage(MTexPoly *mtexpoly, int mipmap, int alphablend)
 {
 	Image *ima;
 	
 	/* check if we need to clear the state */
-	if (tface == NULL) {
+	if (mtexpoly == NULL) {
 		GPU_clear_tpage(false);
 		return 0;
 	}
 
-	ima = tface->tpage;
-	GTS.lasttface = tface;
+	ima = mtexpoly->tpage;
+	GTS.lasttface = mtexpoly;
 
 	gpu_verify_alpha_blend(alphablend);
 	gpu_verify_reflection(ima);
 
-	if (GPU_verify_image(ima, NULL, tface->tile, 1, mipmap, false)) {
+	if (GPU_verify_image(ima, NULL, mtexpoly->tile, 1, mipmap, false)) {
 		GTS.curtile = GTS.tile;
 		GTS.curima = GTS.ima;
 		GTS.curtilemode = GTS.tilemode;
@@ -1392,10 +1408,15 @@ static struct GPUMaterialState {
 	GPUMaterialFixed matbuf_fixed[FIXEDMAT];
 	int totmat;
 
+	/* set when called inside GPU_begin_object_materials / GPU_end_object_materials
+	 * otherwise calling GPU_enable_material returns zero */
+	bool is_enabled;
+
 	Material **gmatbuf;
 	Material *gmatbuf_fixed[FIXEDMAT];
 	Material *gboundmat;
 	Object *gob;
+	DupliObject *dob;
 	Scene *gscene;
 	int glay;
 	bool gscenelock;
@@ -1478,11 +1499,22 @@ static Material *gpu_active_node_material(Material *ma)
 	return ma;
 }
 
+void GPU_begin_dupli_object(DupliObject *dob)
+{
+	GMS.dob = dob;
+}
+
+void GPU_end_dupli_object(void)
+{
+	GMS.dob = NULL;
+}
+
 void GPU_begin_object_materials(View3D *v3d, RegionView3D *rv3d, Scene *scene, Object *ob, bool glsl, bool *do_alpha_after)
 {
 	Material *ma;
 	GPUMaterial *gpumat;
 	GPUBlendMode alphablend;
+	DupliObject *dob;
 	int a;
 	const bool gamma = BKE_scene_check_color_management_enabled(scene);
 	const bool new_shading_nodes = BKE_scene_use_new_shading_nodes(scene);
@@ -1495,7 +1527,11 @@ void GPU_begin_object_materials(View3D *v3d, RegionView3D *rv3d, Scene *scene, O
 #endif
 
 	/* initialize state */
+	/* DupliObject must be restored */
+	dob = GMS.dob;
 	memset(&GMS, 0, sizeof(GMS));
+	GMS.is_enabled = true;
+	GMS.dob = dob;
 	GMS.lastmatnr = -1;
 	GMS.lastretval = -1;
 	GMS.lastalphablend = GPU_BLEND_SOLID;
@@ -1603,6 +1639,36 @@ void GPU_begin_object_materials(View3D *v3d, RegionView3D *rv3d, Scene *scene, O
 	GPU_disable_material();
 }
 
+static int GPU_get_particle_info(GPUParticleInfo *pi)
+{
+	ParticleData *p;
+	DupliObject *dob = GMS.dob;
+	int ind;
+	if (dob->particle_system) {
+		if (dob->persistent_id[0] < dob->particle_system->totpart)
+			ind = dob->persistent_id[0];
+		else {
+			ind = dob->particle_system->child[dob->persistent_id[0] - dob->particle_system->totpart].parent;
+		}
+		if (ind >= 0) {
+			p = &dob->particle_system->particles[ind];
+
+			pi->scalprops[0] = ind;
+			pi->scalprops[1] = GMS.gscene->r.cfra - p->time;
+			pi->scalprops[2] = p->lifetime;
+			pi->scalprops[3] = p->size;
+
+			copy_v3_v3(pi->location, p->state.co);
+			copy_v3_v3(pi->velocity, p->state.vel);
+			copy_v3_v3(pi->angular_velocity, p->state.ave);
+			return 1;
+		}
+		else return 0;
+	}
+	else
+		return 0;
+}
+
 int GPU_enable_material(int nr, void *attribs)
 {
 	GPUVertexAttribs *gattribs = attribs;
@@ -1665,14 +1731,20 @@ int GPU_enable_material(int nr, void *attribs)
 		if (gattribs && GMS.gmatbuf[nr]) {
 			/* bind glsl material and get attributes */
 			Material *mat = GMS.gmatbuf[nr];
+			GPUParticleInfo partile_info;
+
 			float auto_bump_scale;
 
 			gpumat = GPU_material_from_blender(GMS.gscene, mat);
 			GPU_material_vertex_attributes(gpumat, gattribs);
+
+			if (GMS.dob)
+				GPU_get_particle_info(&partile_info);
+
 			GPU_material_bind(gpumat, GMS.gob->lay, GMS.glay, 1.0, !(GMS.gob->mode & OB_MODE_TEXTURE_PAINT), GMS.gviewmat, GMS.gviewinv, GMS.gviewcamtexcofac, GMS.gscenelock);
 
 			auto_bump_scale = GMS.gob->derivedFinal != NULL ? GMS.gob->derivedFinal->auto_bump_scale : 1.0f;
-			GPU_material_bind_uniforms(gpumat, GMS.gob->obmat, GMS.gob->col, auto_bump_scale);
+			GPU_material_bind_uniforms(gpumat, GMS.gob->obmat, GMS.gob->col, auto_bump_scale, &partile_info);
 			GMS.gboundmat = mat;
 
 			/* for glsl use alpha blend mode, unless it's set to solid and
@@ -1757,10 +1829,16 @@ bool GPU_material_use_matcaps_get(void)
 	return GMS.use_matcaps;
 }
 
+bool GPU_object_materials_check(void)
+{
+	return GMS.is_enabled;
+}
 
 void GPU_end_object_materials(void)
 {
 	GPU_disable_material();
+
+	GMS.is_enabled = false;
 
 	if (GMS.matbuf && GMS.matbuf != GMS.matbuf_fixed) {
 		MEM_freeN(GMS.matbuf);
