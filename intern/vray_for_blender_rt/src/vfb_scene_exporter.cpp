@@ -267,8 +267,7 @@ void SceneExporter::sync(const int &check_updated)
 
 static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, const std::string &texAttr)
 {
-
-	BL::Texture tex(BL::Texture(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttr)));
+	BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttr));
 	if (tex && (tex.is_updated() || tex.is_updated_data())) {
 		PRINT_INFO_EX("Texture %s is updated...",
 		              tex.name().c_str());
