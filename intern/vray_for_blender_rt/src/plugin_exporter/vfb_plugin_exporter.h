@@ -30,7 +30,10 @@
 #include "RNA_access.h"
 #include "RNA_blender_cpp.h"
 
+#ifdef USE_BLENDER_VRAY_APPSDK
 #include <vraysdk.hpp>
+#endif
+
 #include <map>
 #include <set>
 
@@ -45,7 +48,9 @@ enum ExpoterType {
 	ExpoterTypeFile = 0,
 	ExpoterTypeCloud,
 	ExpoterTypeZMQ,
+#ifdef USE_BLENDER_VRAY_APPSDK
 	ExpoterTypeAppSDK,
+#endif
 };
 
 

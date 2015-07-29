@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#ifdef USE_BLENDER_VRAY_APPSDK
+
 #include "vfb_plugin_exporter_appsdk.h"
 
 
@@ -441,3 +443,5 @@ VRay::Plugin AppSdkExporter::new_plugin(const PluginDesc &pluginDesc)
 #endif
 	return plug;
 }
+
+#endif // USE_BLENDER_VRAY_APPSDK

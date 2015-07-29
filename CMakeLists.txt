@@ -712,21 +712,25 @@ endif()
 if(WITH_VRAY_FOR_BLENDER)
 	add_definitions(-DWITH_VRAY_FOR_BLENDER)
 
-	string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" APPSDK_HOST_SYSTEM_NAME)
+	if(USE_BLENDER_VRAY_APPSDK)
+		string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" APPSDK_HOST_SYSTEM_NAME)
 
-	set(APPSDK_VERSION "447" CACHE STRING "V-Ray AppSDK verstion")
-	set(APPSDK_PATH "$ENV{HOME}/src/appsdk_releases" CACHE PATH "V-Ray AppSDK location")
-	set(APPSDK_ROOT "${APPSDK_PATH}/${APPSDK_VERSION}/${APPSDK_HOST_SYSTEM_NAME}" CACHE PATH "V-Ray AppSDK root" FORCE)
+		set(APPSDK_VERSION "447" CACHE STRING "V-Ray AppSDK verstion")
+		set(APPSDK_PATH "$ENV{HOME}/src/appsdk_releases" CACHE PATH "V-Ray AppSDK location")
+		set(APPSDK_ROOT "${APPSDK_PATH}/${APPSDK_VERSION}/${APPSDK_HOST_SYSTEM_NAME}" CACHE PATH "V-Ray AppSDK root" FORCE)
 
-	find_library(VRAY_APPSDK_LIB
-		NAMES VRaySDKLibrary
-		PATHS ${APPSDK_ROOT}/bin
-	)
+		find_library(VRAY_APPSDK_LIB
+			NAMES VRaySDKLibrary
+			PATHS ${APPSDK_ROOT}/bin
+		)
 
-	if(NOT VRAY_APPSDK_LIB)
-		message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${APPSDK_ROOT}/bin)")
-	else()
-		message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
+		if(NOT VRAY_APPSDK_LIB)
+			message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${APPSDK_ROOT}/bin)")
+		else()
+			message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
+		endif()
+
+		add_definitions(-DUSE_BLENDER_VRAY_APPSDK)
 	endif()
 
 	set(ZMQ_ROOT "" CACHE PATH "ZMQ lib location")

@@ -20,7 +20,9 @@
 
 #include <Python.h>
 
+#ifdef USE_BLENDER_VRAY_APPSDK
 #include <vraysdk.hpp>
+#endif
 
 #include "cgr_vray_for_blender_rt.h"
 #include "vfb_scene_exporter.h"
@@ -48,8 +50,9 @@ extern "C" {
 #  define mxMakeCurrentContext(x) (x)
 #endif
 
-
+#ifdef USE_BLENDER_VRAY_APPSDK
 static VRay::VRayInit *VRayInit = nullptr;
+#endif
 
 
 static void *pylong_as_voidptr_typesafe(PyObject *object)
@@ -77,6 +80,7 @@ static PyObject* PyExporterLoad(PyObject *self, PyObject *args)
 {
 	PRINT_INFO_EX("mExporterLoad()");
 
+#ifdef USE_BLENDER_VRAY_APPSDK
 	if (!VRayInit) {
 		try {
 			VRayInit = new VRay::VRayInit(false);
@@ -87,6 +91,7 @@ static PyObject* PyExporterLoad(PyObject *self, PyObject *args)
 			VRayInit = nullptr;
 		}
 	}
+#endif
 
 	char *jsonDirpath = NULL;
 	if (NOT(PyArg_ParseTuple(args, "s", &jsonDirpath))) {
@@ -104,10 +109,12 @@ static PyObject* PyExporterUnload(PyObject *self)
 {
 	PRINT_INFO_EX("mExporterUnload()");
 
+#ifdef USE_BLENDER_VRAY_APPSDK
 	if (VRayInit) {
 		delete VRayInit;
 		VRayInit = nullptr;
 	}
+#endif
 
 	Py_RETURN_NONE;
 }

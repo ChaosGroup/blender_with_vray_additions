@@ -25,7 +25,10 @@
 #include "vfb_rna.h"
 
 #include <boost/thread.hpp>
+
+#ifdef USE_BLENDER_VRAY_APPSDK
 #include <vraysdk.hpp>
+#endif
 
 
 namespace VRayForBlender {
