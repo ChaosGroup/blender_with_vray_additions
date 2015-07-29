@@ -451,9 +451,9 @@ function(setup_liblinks
 	endif()
 
 	if(WITH_VRAY_FOR_BLENDER)
-		target_link_libraries(${target}
-			VRaySDKLibrary
-		)
+		if(USE_BLENDER_VRAY_APPSDK)
+			target_link_libraries(${target} VRaySDKLibrary)
+		endif()
 		target_link_libraries(${target} ${ZMQ_LIB})
 	endif()
 
