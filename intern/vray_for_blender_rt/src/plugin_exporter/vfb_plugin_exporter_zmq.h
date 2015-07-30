@@ -56,6 +56,10 @@ public:
 
 	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
 private:
+	void                checkZmqClient();
+
+
+
 	int m_ServerPort;
 	std::string m_ServerAddress;
 	ZmqClient * m_Client;

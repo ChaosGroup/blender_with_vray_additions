@@ -178,7 +178,17 @@ void ZmqExporter::init()
 	}
 }
 
-void ZmqExporter::set_settings(const ExporterSettings & settings) {
+void ZmqExporter::checkZmqClient()
+{
+	if (!m_Client->good()) {
+		delete m_Client;
+		m_Client = new ZmqClient();
+		this->init();
+	}
+}
+
+void ZmqExporter::set_settings(const ExporterSettings & settings)
+{
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
 }
@@ -186,6 +196,7 @@ void ZmqExporter::set_settings(const ExporterSettings & settings) {
 
 void ZmqExporter::free()
 {
+	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
 }
 
@@ -193,7 +204,9 @@ void ZmqExporter::sync()
 {
 }
 
-void ZmqExporter::set_render_size(const int &w, const int &h) {
+void ZmqExporter::set_render_size(const int &w, const int &h)
+{
+	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Resize, w, h));
 }
 
@@ -208,12 +221,15 @@ void ZmqExporter::stop()
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Stop));
 }
 
-void ZmqExporter::export_vrscene(const std::string &filepath) {
+void ZmqExporter::export_vrscene(const std::string &filepath)
+{
+	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::ExportScene, filepath));
 }
 
 AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 {
+	checkZmqClient();
 	const auto & pluginDesc = m_PluginManager.filterPlugin(pDesc);
 
 	if (pluginDesc.pluginID.empty()) {
