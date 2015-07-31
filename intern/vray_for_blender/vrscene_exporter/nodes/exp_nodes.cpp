@@ -1118,11 +1118,25 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 		return VRayNodeExporter::exportVRayNodeMtlMulti(ntree, node, fromSocket, context);
 	}
 	else if(nodeClass == "VRayNodeOutputMaterial") {
+		std::string maName = "NULL";
 		BL::NodeSocket materialInSock = VRayNodeExporter::getSocketByName(node, "Material");
-		if(materialInSock.is_linked())
-			return VRayNodeExporter::exportLinkedSocket(ntree, materialInSock, context);
-		else
-			return "NULL";
+		if (materialInSock && materialInSock.is_linked()) {
+			BL::Node conNode = VRayNodeExporter::getConnectedNode(materialInSock, context);
+			if (conNode) {
+				maName = VRayNodeExporter::exportLinkedSocket(ntree, materialInSock, context);
+
+				// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
+				if (!(VRayNodeExporter::getPluginType(conNode) == "MATERIAL")) {
+					AttributeValueMap mtlSingleBRDF;
+					mtlSingleBRDF["brdf"] = maName;
+
+					maName = "MtlSingleBRDF@" + maName;
+
+					VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlSingleBRDF", maName, mtlSingleBRDF);
+				}
+			}
+		}
+		return maName;
 	}
 	else if(nodeClass == "VRayNodeOutputTexture") {
 		BL::NodeSocket textureInSock = VRayNodeExporter::getSocketByName(node, "Texture");
