@@ -4931,9 +4931,10 @@ static void direct_link_modifiers(FileData *fd, ListBase *lb)
 			collmd->current_xnew = NULL;
 			collmd->current_v = NULL;
 			collmd->time_x = collmd->time_xnew = -1000;
-			collmd->numverts = 0;
+			collmd->mvert_num = 0;
+			collmd->tri_num = 0;
 			collmd->bvhtree = NULL;
-			collmd->mfaces = NULL;
+			collmd->tri = NULL;
 			
 		}
 		else if (md->type == eModifierType_Surface) {
@@ -5982,6 +5983,7 @@ static void lib_link_screen(FileData *fd, Main *main)
 				sc->scene = main->scene.first;
 
 			sc->animtimer = NULL; /* saved in rare cases */
+			sc->scrubbing = false;
 			
 			for (sa = sc->areabase.first; sa; sa = sa->next) {
 				SpaceLink *sl;
@@ -6610,6 +6612,8 @@ void blo_do_versions_view3d_split_250(View3D *v3d, ListBase *regions)
 	/* this was not initialized correct always */
 	if (v3d->twtype == 0)
 		v3d->twtype = V3D_MANIP_TRANSLATE;
+	if (v3d->gridsubdiv == 0)
+		v3d->gridsubdiv = 10;
 }
 
 static bool direct_link_screen(FileData *fd, bScreen *sc)

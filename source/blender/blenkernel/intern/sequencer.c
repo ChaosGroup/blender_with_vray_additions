@@ -88,7 +88,7 @@
 #include "BKE_sound.h"
 
 #ifdef WITH_AUDASPACE
-#  include "AUD_C-API.h"
+#  include AUD_SPECIAL_H
 #endif
 
 static ImBuf *seq_render_strip_stack(const SeqRenderData *context, ListBase *seqbasep, float cfra, int chanshown);

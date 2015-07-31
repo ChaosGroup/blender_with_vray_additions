@@ -48,6 +48,7 @@ struct DMFlagMat;
 struct DerivedMesh;
 struct GSet;
 struct GPUVertPointLink;
+struct GPUDrawObject;
 struct PBVH;
 struct MVert;
 
@@ -65,11 +66,13 @@ typedef struct GPUBufferMaterial {
 	unsigned int totloops;
 	unsigned int *polys; /* array of polygons for this material */
 	unsigned int totpolys; /* total polygons in polys */
-	unsigned int counter; /* general purpose counter, initialize first! */
+	unsigned int totvisiblepolys; /* total visible polygons */
 
 	/* original material index */
 	short mat_nr;
 } GPUBufferMaterial;
+
+void GPU_buffer_material_finalize(struct GPUDrawObject *gdo, GPUBufferMaterial *matinfo, int totmat);
 
 /* meshes are split up by material since changing materials requires
  * GL state changes that can't occur in the middle of drawing an
@@ -124,6 +127,10 @@ typedef struct GPUDrawObject {
 	unsigned int loose_edge_offset;
 	unsigned int tot_loose_edge_drawn;
 	unsigned int tot_edge_drawn;
+
+	/* for subsurf, offset where drawing of interior edges starts */
+	unsigned int interior_offset;
+	unsigned int totinterior;
 } GPUDrawObject;
 
 /* currently unused */

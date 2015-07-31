@@ -58,9 +58,7 @@
 
 #ifdef WITH_QUICKTIME
 #  include "quicktime_export.h"
-#  ifdef WITH_AUDASPACE
-#    include "AUD_Space.h"
-#  endif
+#  include AUD_TYPES_H
 #endif
 
 #ifdef WITH_FFMPEG
@@ -5884,6 +5882,7 @@ static void rna_def_scene_render_data(BlenderRNA *brna)
 	prop = RNA_def_property(srna, "debug_pass_type", PROP_ENUM, PROP_NONE);
 	RNA_def_property_enum_items(prop, render_pass_debug_type_items);
 	RNA_def_property_ui_text(prop, "Debug Pass Type", "Type of the debug pass to use");
+	RNA_def_property_update(prop, NC_SCENE | ND_RENDER_OPTIONS, NULL);
 #endif
 
 	/* Nestled Data  */

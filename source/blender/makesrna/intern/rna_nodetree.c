@@ -39,7 +39,6 @@
 #include "DNA_node_types.h"
 #include "DNA_object_types.h"
 #include "DNA_particle_types.h"
-#include "DNA_scene_types.h"
 #include "DNA_text_types.h"
 #include "DNA_texture_types.h"
 
@@ -2974,7 +2973,7 @@ static PointerRNA rna_ShaderNodePointDensity_psys_get(PointerRNA *ptr)
 {
 	bNode *node = ptr->data;
 	NodeShaderTexPointDensity *shader_point_density = node->storage;
-	Object *ob = (Object*)node->id;
+	Object *ob = (Object *)node->id;
 	ParticleSystem *psys = NULL;
 	PointerRNA value;
 
@@ -2990,7 +2989,7 @@ static void rna_ShaderNodePointDensity_psys_set(PointerRNA *ptr, PointerRNA valu
 {
 	bNode *node = ptr->data;
 	NodeShaderTexPointDensity *shader_point_density = node->storage;
-	Object *ob = (Object*)node->id;
+	Object *ob = (Object *)node->id;
 
 	if (ob && value.id.data == ob) {
 		shader_point_density->particle_system = BLI_findindex(&ob->particlesystem, value.data) + 1;
@@ -3557,7 +3556,7 @@ static void def_sh_tex_environment(StructRNA *srna)
 		                       "Projection from an orthographic photo of a mirror ball"},
 		{0, NULL, 0, NULL, NULL}
 	};
-	
+
 	PropertyRNA *prop;
 
 	prop = RNA_def_property(srna, "image", PROP_POINTER, PROP_NONE);
@@ -3624,6 +3623,13 @@ static void def_sh_tex_image(StructRNA *srna)
 		{0, NULL, 0, NULL, NULL}
 	};
 
+	static EnumPropertyItem prop_image_extension[] = {
+		{SHD_IMAGE_EXTENSION_REPEAT, "REPEAT", 0, "Repeat", "Cause the image to repeat horizontally and vertically"},
+		{SHD_IMAGE_EXTENSION_EXTEND, "EXTEND", 0, "Extend", "Extend by repeating edge pixels of the image"},
+		{SHD_IMAGE_EXTENSION_CLIP, "CLIP", 0, "Clip", "Clip to image size and set exterior pixels as transparent"},
+		{0, NULL, 0, NULL, NULL}
+	};
+
 	PropertyRNA *prop;
 
 	prop = RNA_def_property(srna, "image", PROP_POINTER, PROP_NONE);
@@ -3654,6 +3660,11 @@ static void def_sh_tex_image(StructRNA *srna)
 
 	prop = RNA_def_property(srna, "projection_blend", PROP_FLOAT, PROP_FACTOR);
 	RNA_def_property_ui_text(prop, "Projection Blend", "For box projection, amount of blend to use between sides");
+	RNA_def_property_update(prop, 0, "rna_Node_update");
+
+	prop = RNA_def_property(srna, "extension", PROP_ENUM, PROP_NONE);
+	RNA_def_property_enum_items(prop, prop_image_extension);
+	RNA_def_property_ui_text(prop, "Extension", "How the image is extrapolated past its original bounds");
 	RNA_def_property_update(prop, 0, "rna_Node_update");
 
 	prop = RNA_def_property(srna, "image_user", PROP_POINTER, PROP_NONE);
@@ -3922,7 +3933,7 @@ static void def_sh_tex_pointdensity(StructRNA *srna)
 	RNA_def_property_pointer_sdna(prop, NULL, "id");
 	RNA_def_property_struct_type(prop, "Object");
 	RNA_def_property_flag(prop, PROP_EDITABLE);
-	RNA_def_property_ui_text(prop, "Object", "Object to take point data from)");
+	RNA_def_property_ui_text(prop, "Object", "Object to take point data from");
 	RNA_def_property_update(prop, NC_NODE | NA_EDITED, "rna_Node_update");
 
 	RNA_def_struct_sdna_from(srna, "NodeShaderTexPointDensity", "storage");

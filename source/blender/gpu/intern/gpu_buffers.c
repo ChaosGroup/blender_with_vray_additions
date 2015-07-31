@@ -51,6 +51,7 @@
 #include "BKE_ccg.h"
 #include "BKE_DerivedMesh.h"
 #include "BKE_paint.h"
+#include "BKE_mesh.h"
 #include "BKE_pbvh.h"
 
 #include "DNA_userdef_types.h"
@@ -113,6 +114,36 @@ static GPUBuffer *mres_glob_buffer = NULL;
 static int mres_prev_gridsize = -1;
 static GLenum mres_prev_index_type = 0;
 static unsigned mres_prev_totquad = 0;
+
+void GPU_buffer_material_finalize(GPUDrawObject *gdo, GPUBufferMaterial *matinfo, int totmat)
+{
+	int i, curmat, curelement;
+
+	/* count the number of materials used by this DerivedMesh */
+	for (i = 0; i < totmat; i++) {
+		if (matinfo[i].totelements > 0)
+			gdo->totmaterial++;
+	}
+
+	/* allocate an array of materials used by this DerivedMesh */
+	gdo->materials = MEM_mallocN(sizeof(GPUBufferMaterial) * gdo->totmaterial,
+	                             "GPUDrawObject.materials");
+
+	/* initialize the materials array */
+	for (i = 0, curmat = 0, curelement = 0; i < totmat; i++) {
+		if (matinfo[i].totelements > 0) {
+			gdo->materials[curmat] = matinfo[i];
+			gdo->materials[curmat].start = curelement;
+			gdo->materials[curmat].mat_nr = i;
+			gdo->materials[curmat].polys = MEM_mallocN(sizeof(int) * matinfo[i].totpolys, "GPUBufferMaterial.polys");
+
+			curelement += matinfo[i].totelements;
+			curmat++;
+		}
+	}
+
+	MEM_freeN(matinfo);
+}
 
 
 /* stores recently-deleted buffers so that new buffers won't have to
@@ -327,8 +358,10 @@ static GPUBuffer *gpu_buffer_alloc_intern(size_t size, bool use_VBO)
 			gpu_buffer_pool_delete_last(pool);
 			buf->pointer = MEM_mallocN(size, "GPUBuffer.pointer");
 		}
-		if (!buf->pointer)
+		if (!buf->pointer) {
+			MEM_freeN(buf);
 			return NULL;
+		}
 	}
 
 	return buf;
@@ -473,17 +506,17 @@ void GPU_drawobject_free(DerivedMesh *dm)
 
 static GPUBuffer *gpu_try_realloc(GPUBufferPool *pool, GPUBuffer *buffer, size_t size, bool use_VBOs)
 {
-	gpu_buffer_free_intern(buffer);
-	gpu_buffer_pool_delete_last(pool);
-	buffer = NULL;
-	
 	/* try freeing an entry from the pool
 	 * and reallocating the buffer */
-	if (pool->totbuf > 0) {
+	gpu_buffer_free_intern(buffer);
+
+	buffer = NULL;
+
+	while (pool->totbuf && !buffer) {
 		gpu_buffer_pool_delete_last(pool);
 		buffer = gpu_buffer_alloc_intern(size, use_VBOs);
 	}
-	
+
 	return buffer;
 }
 
@@ -497,7 +530,6 @@ static GPUBuffer *gpu_buffer_setup(DerivedMesh *dm, GPUDrawObject *object,
 	int i;
 	const GPUBufferTypeSettings *ts = &gpu_buffer_type_settings[type];
 	GLenum target = ts->gl_buffer_type;
-	int num_components = ts->num_components;
 	size_t size = gpu_buffer_size_from_type(dm, type);
 	bool use_VBOs = (GLEW_ARB_vertex_buffer_object) && !(U.gameflags & USER_DISABLE_VBO);
 	GLboolean uploaded;
@@ -515,9 +547,6 @@ static GPUBuffer *gpu_buffer_setup(DerivedMesh *dm, GPUDrawObject *object,
 	mat_orig_to_new = MEM_mallocN(sizeof(*mat_orig_to_new) * dm->totmat,
 	                              "GPU_buffer_setup.mat_orig_to_new");
 	for (i = 0; i < object->totmaterial; i++) {
-		/* for each material, the current index to copy data to */
-		object->materials[i].counter = object->materials[i].start * num_components;
-
 		/* map from original material index to new
 		 * GPUBufferMaterial index */
 		mat_orig_to_new[object->materials[i].mat_nr] = i;
@@ -538,7 +567,7 @@ static GPUBuffer *gpu_buffer_setup(DerivedMesh *dm, GPUDrawObject *object,
 
 				/* allocation still failed; fall back
 				 * to legacy mode */
-				if (!buffer) {
+				if (!(buffer && (varray = glMapBufferARB(target, GL_WRITE_ONLY_ARB)))) {
 					use_VBOs = false;
 					success = true;
 				}
@@ -611,24 +640,19 @@ static size_t gpu_buffer_size_from_type(DerivedMesh *dm, GPUBufferType type)
 {
 	switch (type) {
 		case GPU_BUFFER_VERTEX:
-			return sizeof(float) * gpu_buffer_type_settings[type].num_components * (dm->drawObject->tot_triangle_point + dm->drawObject->tot_loose_point);
+			return sizeof(float) * gpu_buffer_type_settings[type].num_components * (dm->drawObject->tot_loop_verts + dm->drawObject->tot_loose_point);
 		case GPU_BUFFER_NORMAL:
-			return sizeof(short) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_triangle_point;
+			return sizeof(short) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_loop_verts;
 		case GPU_BUFFER_COLOR:
-			return sizeof(char) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_triangle_point;
+			return sizeof(char) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_loop_verts;
 		case GPU_BUFFER_UV:
-			return sizeof(float) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_triangle_point;
+			return sizeof(float) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_loop_verts;
 		case GPU_BUFFER_UV_TEXPAINT:
-			return sizeof(float) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_triangle_point;
+			return sizeof(float) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_loop_verts;
 		case GPU_BUFFER_EDGE:
 			return sizeof(int) * gpu_buffer_type_settings[type].num_components * dm->drawObject->totedge;
 		case GPU_BUFFER_UVEDGE:
-			/* each face gets 3 points, 3 edges per triangle, and
-			 * each edge has its own, non-shared coords, so each
-			 * tri corner needs minimum of 4 floats, quads used
-			 * less so here we can over allocate and assume all
-			 * tris. */
-			return sizeof(int) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_triangle_point;
+			return sizeof(int) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_loop_verts;
 		case GPU_BUFFER_TRIANGLES:
 			return sizeof(int) * gpu_buffer_type_settings[type].num_components * dm->drawObject->tot_triangle_point;
 		default:
@@ -1252,6 +1276,10 @@ void GPU_update_mesh_pbvh_buffers(
 #undef UPDATE_VERTEX
 			}
 			else {
+				/* calculate normal for each polygon only once */
+				unsigned int mpoly_prev = UINT_MAX;
+				short no[3];
+
 				for (i = 0; i < buffers->face_indices_len; ++i) {
 					const MLoopTri *lt = &buffers->looptri[buffers->face_indices[i]];
 					const unsigned int vtri[3] = {
@@ -1259,8 +1287,6 @@ void GPU_update_mesh_pbvh_buffers(
 					    buffers->mloop[lt->tri[1]].v,
 					    buffers->mloop[lt->tri[2]].v,
 					};
-					float fno[3];
-					short no[3];
 
 					float fmask;
 
@@ -1268,16 +1294,19 @@ void GPU_update_mesh_pbvh_buffers(
 						continue;
 
 					/* Face normal and mask */
-					normal_tri_v3(fno,
-					              mvert[vtri[0]].co,
-					              mvert[vtri[1]].co,
-					              mvert[vtri[2]].co);
+					if (lt->poly != mpoly_prev) {
+						const MPoly *mp = &buffers->mpoly[lt->poly];
+						float fno[3];
+						BKE_mesh_calc_poly_normal(mp, &buffers->mloop[mp->loopstart], mvert, fno);
+						normal_float_to_short_v3(no, fno);
+						mpoly_prev = lt->poly;
+					}
+
 					if (vmask) {
 						fmask = (vmask[vtri[0]] +
 						         vmask[vtri[1]] +
 						         vmask[vtri[2]]) / 3.0f;
 					}
-					normal_float_to_short_v3(no, fno);
 
 					for (j = 0; j < 3; j++) {
 						const MVert *v = &mvert[vtri[j]];
@@ -1320,7 +1349,7 @@ GPU_PBVH_Buffers *GPU_build_mesh_pbvh_buffers(
 
 	buffers = MEM_callocN(sizeof(GPU_PBVH_Buffers), "GPU_Buffers");
 	buffers->index_type = GL_UNSIGNED_SHORT;
-	buffers->smooth = mpoly[face_indices[0]].flag & ME_SMOOTH;
+	buffers->smooth = mpoly[looptri[face_indices[0]].poly].flag & ME_SMOOTH;
 
 	buffers->show_diffuse_color = false;
 	buffers->use_matcaps = false;
@@ -2021,7 +2050,7 @@ void GPU_draw_pbvh_buffers(GPU_PBVH_Buffers *buffers, DMSetMaterial setMaterial,
 
 		GPU_buffer_unbind(buffers->vert_buf, GPU_BINDING_ARRAY);
 		if (buffers->index_buf || do_fast)
-			GPU_buffer_unbind(do_fast ? buffers->index_buf_fast : buffers->index_buf, GPU_BINDING_ARRAY);
+			GPU_buffer_unbind(do_fast ? buffers->index_buf_fast : buffers->index_buf, GPU_BINDING_INDEX);
 
 		glDisableClientState(GL_VERTEX_ARRAY);
 		if (!wireframe) {

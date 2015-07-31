@@ -161,22 +161,24 @@ option_defaults_init(
 )
 
 # customize...
-if(UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE)
 	# some of these libraries are problematic on Linux
 	# disable less important dependencies by default
-	set(_init_BUILDINFO                      OFF)
 	set(_init_CODEC_FFMPEG                   OFF)
 	set(_init_CYCLES_OSL                     OFF)
 	set(_init_IMAGE_OPENEXR                  OFF)
 	set(_init_IMAGE_REDCODE                  OFF)
 	set(_init_INPUT_NDOF                     OFF)
 	set(_init_JACK                           OFF)
-	set(_init_LIBMV_SCHUR_SPECIALIZATION     OFF)
 	set(_init_OPENCOLLADA                    OFF)
 	set(_init_OPENCOLORIO                    OFF)
 	set(_init_SDL                            OFF)
 	set(_init_FFTW3                          OFF)
-	set(_init_GAMEENGINE                     OFF)
+elseif(WIN32)
+	set(_init_JACK                           OFF)
+elseif(APPLE)
+	set(_init_INPUT_NDOF                     OFF)
+	set(_init_JACK                           OFF)
 endif()
 
 
@@ -227,6 +229,10 @@ option(WITH_COMPOSITOR         "Enable the tile based nodal compositor" ON)
 option(WITH_COMPOSITOR_WERROR  "Treat warnings as errors in compositor code" OFF)
 mark_as_advanced(WITH_COMPOSITOR_WERROR)
 
+option(WITH_OPENSUBDIV    "Enable OpenSubdiv for surface subdivision" OFF)
+option(WITH_SUBSURF_WERROR  "Treat warnings as errors in subsurf code" OFF)
+mark_as_advanced(WITH_COMPOSITOR_WERROR)
+
 # GHOST Windowing Library Options
 option(WITH_GHOST_DEBUG   "Enable debugging output for the GHOST library" OFF)
 mark_as_advanced(WITH_GHOST_DEBUG)
@@ -243,7 +249,13 @@ option(WITH_HEADLESS      "Build without graphical support (renderfarm, server m
 mark_as_advanced(WITH_HEADLESS)
 
 option(WITH_AUDASPACE    "Build with blenders audio library (only disable if you know what you're doing!)" ON)
+option(WITH_SYSTEM_AUDASPACE "Build with external audaspace library installed on the system (only enable if you know what you're doing!)" OFF)
 mark_as_advanced(WITH_AUDASPACE)
+mark_as_advanced(WITH_SYSTEM_AUDASPACE)
+
+if(NOT WITH_AUDASPACE)
+	set(WITH_SYSTEM_AUDASPACE OFF)
+endif()
 
 option(WITH_OPENMP        "Enable OpenMP (has to be supported by the compiler)" ON)
 
@@ -710,10 +722,36 @@ if(HAVE_STDBOOL_H)
 endif()
 
 if(WITH_VRAY_FOR_BLENDER)
-	# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++0x")
 	add_definitions(-DWITH_VRAY_FOR_BLENDER)
 endif()
 
+if(WITH_AUDASPACE)
+	if(WITH_SYSTEM_AUDASPACE)
+		set(AUDASPACE_DEFINITIONS
+			-DWITH_AUDASPACE
+			-DWITH_SYSTEM_AUDASPACE
+			"-DAUD_DEVICE_H=<AUD_Device.h>"
+			"-DAUD_SPECIAL_H=<AUD_Special.h>"
+			"-DAUD_SOUND_H=<AUD_Sound.h>"
+			"-DAUD_HANDLE_H=<AUD_Handle.h>"
+			"-DAUD_SEQUENCE_H=<AUD_Sequence.h>"
+			"-DAUD_TYPES_H=<AUD_Types.h>"
+			"-DAUD_PYTHON_H=<python/PyAPI.h>"
+		)
+	else()
+		set(AUDASPACE_C_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/intern/audaspace/intern")
+		set(AUDASPACE_PY_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/intern/audaspace/intern")
+		set(AUDASPACE_DEFINITIONS
+			-DWITH_AUDASPACE
+			"-DAUD_DEVICE_H=<AUD_C-API.h>"
+			"-DAUD_SPECIAL_H=<AUD_C-API.h>"
+			"-DAUD_SOUND_H=<AUD_C-API.h>"
+			"-DAUD_HANDLE_H=<AUD_C-API.h>"
+			"-DAUD_SEQUENCE_H=<AUD_C-API.h>"
+			"-DAUD_TYPES_H=<AUD_Space.h>"
+		)
+	endif()
+endif()
 
 #-----------------------------------------------------------------------------
 # Check for valid directories
@@ -816,6 +854,14 @@ if(WITH_X11)
 
 endif()
 
+
+# ----------------------------------------------------------------------------
+# Main Platform Checks
+#
+# - UNIX
+# - WIN32
+# - APPLE
+
 if(UNIX AND NOT APPLE)
 	macro(find_package_wrapper)
 		if(WITH_STATIC_LIBS)
@@ -884,6 +930,13 @@ if(UNIX AND NOT APPLE)
 	endif()
 
 	# Audio IO
+	if(WITH_SYSTEM_AUDASPACE)
+		find_package_wrapper(Audaspace)
+		if(NOT AUDASPACE_FOUND OR NOT AUDASPACE_C_FOUND)
+			message(FATAL_ERROR "Audaspace external library not found!")
+		endif()
+	endif()
+
 	if(WITH_OPENAL)
 		find_package_wrapper(OpenAL)
 		if(NOT OPENAL_FOUND)
@@ -1095,6 +1148,18 @@ if(UNIX AND NOT APPLE)
 	if(WITH_LLVM OR WITH_SDL_DYNLOAD)
 		# Fix for conflict with Mesa llvmpipe
 		set(PLATFORM_LINKFLAGS "${PLATFORM_LINKFLAGS} -Wl,--version-script='${CMAKE_SOURCE_DIR}/source/creator/blender.map'")
+	endif()
+
+	if(WITH_OPENSUBDIV)
+		find_package_wrapper(OpenSubdiv)
+
+		set(OPENSUBDIV_LIBRARIES ${OPENSUBDIV_LIBRARIES})
+		set(OPENSUBDIV_LIBPATH)  # TODO, remove and reference the absolute path everywhere
+
+		if(NOT OPENSUBDIV_FOUND)
+			set(WITH_OPENSUBDIV OFF)
+			message(STATUS "OpenSundiv not found")
+		endif()
 	endif()
 
 	# OpenSuse needs lutil, ArchLinux not, for now keep, can avoid by using --as-needed
@@ -1517,11 +1582,28 @@ elseif(WIN32)
 			)
 		endif()
 
+		if(WITH_OPENSUBDIV)
+			set(OPENSUBDIV_INCLUDE_DIR ${LIBDIR}/opensubdiv/include)
+			set(OPENSUBDIV_LIBPATH ${LIBDIR}/opensubdiv/lib)
+			set(OPENSUBDIV_LIBRARIES ${OPENSUBDIV_LIBPATH}/osdCPU.lib ${OPENSUBDIV_LIBPATH}/osdGPU.lib)
+			find_package(OpenSubdiv)
+		endif()
+
 		if(WITH_SDL)
 			set(SDL ${LIBDIR}/sdl)
 			set(SDL_INCLUDE_DIR ${SDL}/include)
 			set(SDL_LIBRARY SDL2)
 			set(SDL_LIBPATH ${SDL}/lib)
+		endif()
+
+		# Audio IO
+		if(WITH_SYSTEM_AUDASPACE)
+			set(AUDASPACE_INCLUDE_DIRS ${LIBDIR}/audaspace/include/audaspace)
+			set(AUDASPACE_LIBRARIES ${LIBDIR}/audaspace/lib/audaspace.lib)
+			set(AUDASPACE_C_INCLUDE_DIRS ${LIBDIR}/audaspace/include/audaspace)
+			set(AUDASPACE_C_LIBRARIES ${LIBDIR}/audaspace/lib/audaspace-c.lib)
+			set(AUDASPACE_PY_INCLUDE_DIRS ${LIBDIR}/audaspace/include/audaspace)
+			set(AUDASPACE_PY_LIBRARIES ${LIBDIR}/audaspace/lib/audaspace-py.lib)
 		endif()
 
 		# used in many places so include globally, like OpenGL
@@ -1841,6 +1923,17 @@ elseif(APPLE)
 		else()
 			set(WITH_OPENAL OFF)
 		endif()
+	endif()
+
+	if(WITH_OPENSUBDIV)
+		set(OPENSUBDIV ${LIBDIR}/opensubdiv)
+		set(OPENSUBDIV_LIBPATH ${OPENSUBDIV}/lib)
+		find_library(OSL_LIB_UTIL NAMES osdutil PATHS ${OPENSUBDIV_LIBPATH})
+		find_library(OSL_LIB_CPU NAMES osdCPU PATHS ${OPENSUBDIV_LIBPATH})
+		find_library(OSL_LIB_GPU NAMES osdGPU PATHS ${OPENSUBDIV_LIBPATH})
+		set(OPENSUBDIV_INCLUDE_DIR ${OPENSUBDIV}/include)
+		set(OPENSUBDIV_INCLUDE_DIRS ${OPENSUBDIV_INCLUDE_DIR})
+		list(APPEND OPENSUBDIV_LIBRARIES ${OSL_LIB_UTIL} ${OSL_LIB_CPU} ${OSL_LIB_GPU})
 	endif()
 
 	if(WITH_JACK)

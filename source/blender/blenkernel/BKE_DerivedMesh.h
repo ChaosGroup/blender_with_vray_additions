@@ -151,6 +151,7 @@ typedef enum DMDrawFlag {
 	DM_DRAW_USE_TEXPAINT_UV     = (1 << 3),
 	DM_DRAW_SKIP_HIDDEN         = (1 << 4),
 	DM_DRAW_SKIP_SELECT         = (1 << 5),
+	DM_DRAW_SELECT_USE_EDITMODE = (1 << 6)
 } DMDrawFlag;
 
 typedef enum DMForeachFlag {
@@ -612,8 +613,10 @@ void DM_ensure_tessface(DerivedMesh *dm);
 
 void DM_ensure_looptri_data(DerivedMesh *dm);
 void DM_ensure_looptri(DerivedMesh *dm);
+void DM_verttri_from_looptri(MVertTri *verttri, const MLoop *mloop, const MLoopTri *looptri, int looptri_num);
 
 void DM_update_tessface_data(DerivedMesh *dm);
+void DM_generate_tangent_tessface_data(DerivedMesh *dm, bool generate);
 
 void DM_update_materials(DerivedMesh *dm, struct Object *ob);
 struct MLoopUV *DM_paint_uvlayer_active_get(DerivedMesh *dm, int mat_nr);
@@ -795,10 +798,16 @@ BLI_INLINE int DM_origindex_mface_mpoly(
 	return (j != ORIGINDEX_NONE) ? (index_mp_to_orig ? index_mp_to_orig[j] : j) : ORIGINDEX_NONE;
 }
 
-struct MVert *DM_get_vert_array(struct DerivedMesh *dm, bool *allocated);
-struct MEdge *DM_get_edge_array(struct DerivedMesh *dm, bool *allocated);
-struct MLoop *DM_get_loop_array(struct DerivedMesh *dm, bool *allocated);
-struct MPoly *DM_get_poly_array(struct DerivedMesh *dm, bool *allocated);
-struct MFace *DM_get_tessface_array(struct DerivedMesh *dm, bool *allocated);
+struct MVert *DM_get_vert_array(struct DerivedMesh *dm, bool *r_allocated);
+struct MEdge *DM_get_edge_array(struct DerivedMesh *dm, bool *r_allocated);
+struct MLoop *DM_get_loop_array(struct DerivedMesh *dm, bool *r_allocated);
+struct MPoly *DM_get_poly_array(struct DerivedMesh *dm, bool *r_allocated);
+struct MFace *DM_get_tessface_array(struct DerivedMesh *dm, bool *r_allocated);
+const MLoopTri *DM_get_looptri_array(
+        DerivedMesh *dm,
+        const MVert *mvert,
+        const MPoly *mpoly, int mpoly_len,
+        const MLoop *mloop, int mloop_len,
+        bool *r_allocated);
 
 #endif  /* __BKE_DERIVEDMESH_H__ */
