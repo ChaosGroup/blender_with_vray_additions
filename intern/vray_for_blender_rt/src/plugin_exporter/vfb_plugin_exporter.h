@@ -43,6 +43,19 @@
 
 namespace VRayForBlender {
 
+struct ExporterTypeInfo {
+	const char *key, *name, *desc;
+};
+
+
+static const ExporterTypeInfo ExporterTypes[] = {
+	{"FILE", "V-Ray Standalone", ""},
+	{"CLOUD", "V-Ray Cloud", ""},
+	{"ZMQ", "V-Ray 0MQ Server", ""},
+#ifdef USE_BLENDER_VRAY_APPSDK
+	{"APPSDK", "V-Ray Application SDK", ""},
+#endif
+};
 
 enum ExpoterType {
 	ExpoterTypeFile = 0,
@@ -51,7 +64,11 @@ enum ExpoterType {
 #ifdef USE_BLENDER_VRAY_APPSDK
 	ExpoterTypeAppSDK,
 #endif
+	LAST_EXPORTER_TYPE,
 };
+
+static_assert(LAST_EXPORTER_TYPE == sizeof(ExporterTypes) / sizeof(ExporterTypes[0]), "Count of ExporterType && Count of ExporterTypeInfo must match!");
+
 
 
 struct ExpoterCallback {
