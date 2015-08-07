@@ -38,7 +38,7 @@ public:
 	virtual            ~NullExporter() {}
 	virtual void        init() {}
 	virtual void        free() {}
-	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc) { return AttrPlugin(); }
+	virtual AttrPlugin  export_plugin(const PluginDesc&) { return AttrPlugin(); }
 };
 
 VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type) {
@@ -53,15 +53,21 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 		case ExpoterTypeFile:
 			exporter = new VrsceneExporter();
 			break;
+#ifdef VRAY_USE_CLOUD
+		case ExpoterTypeCloud:
+			exporter = new NullExporter();
+			break;
+#endif
+#ifdef VRAY_USE_ZMQ
 		case ExpoterTypeZMQ:
 			exporter = new ZmqExporter();
 			break;
+#endif
 #ifdef USE_BLENDER_VRAY_APPSDK
 		case ExpoterTypeAppSDK:
 			exporter = new AppSdkExporter();
 			break;
 #endif
-		case ExpoterTypeCloud:
 		default:
 			exporter = new NullExporter();
 	}

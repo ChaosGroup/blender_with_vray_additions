@@ -23,6 +23,7 @@
 #include "vfb_util_defines.h"
 #include "vfb_rna.h"
 #include "vfb_plugin_attrs.h"
+#include "vfb_util_defines.h"
 
 #include "BLI_math.h"
 #include "MEM_guardedalloc.h"
@@ -43,32 +44,44 @@
 
 namespace VRayForBlender {
 
+
 struct ExporterTypeInfo {
-	const char *key, *name, *desc;
+	const char *key;
+	const char *name;
+	const char *desc;
 };
 
 
 static const ExporterTypeInfo ExporterTypes[] = {
-	{"FILE", "V-Ray Standalone", ""},
-	{"CLOUD", "V-Ray Cloud", ""},
-	{"ZMQ", "V-Ray 0MQ Server", ""},
+	{"STD",    "V-Ray Standalone", ""},
+#ifdef VRAY_USE_CLOUD
+	{"CLOUD",  "V-Ray Cloud", ""},
+#endif
+#ifdef VRAY_USE_ZMQ
+	{"ZMQ",    "V-Ray ZMQ Server", ""},
+#endif
 #ifdef USE_BLENDER_VRAY_APPSDK
 	{"APPSDK", "V-Ray Application SDK", ""},
 #endif
 };
 
+
 enum ExpoterType {
 	ExpoterTypeFile = 0,
+#ifdef VRAY_USE_CLOUD
 	ExpoterTypeCloud,
+#endif
+#ifdef VRAY_USE_ZMQ
 	ExpoterTypeZMQ,
+#endif
 #ifdef USE_BLENDER_VRAY_APPSDK
 	ExpoterTypeAppSDK,
 #endif
-	LAST_EXPORTER_TYPE,
+	ExpoterTypeLast,
 };
 
-static_assert(LAST_EXPORTER_TYPE == sizeof(ExporterTypes) / sizeof(ExporterTypes[0]), "Count of ExporterType && Count of ExporterTypeInfo must match!");
 
+static_assert(ExpoterTypeLast == ArraySize(ExporterTypes), "ExporterType / ExporterTypeInfo size must match!");
 
 
 struct ExpoterCallback {

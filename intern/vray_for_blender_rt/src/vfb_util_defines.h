@@ -22,4 +22,8 @@
 #define FreePtr(p)    if (p) { delete    p; p = nullptr; }
 #define FreePtrArr(p) if (p) { delete [] p; p = nullptr; }
 
+template <typename T, size_t N>
+char (&ArraySizeHelper(T (&array)[N]))[N];
+#define ArraySize(array) (sizeof(ArraySizeHelper(array)))
+
 #endif // CGR_UTIL_DEFINES_H
