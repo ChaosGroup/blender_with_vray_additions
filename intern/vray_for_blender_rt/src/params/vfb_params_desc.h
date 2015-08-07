@@ -139,9 +139,6 @@ struct PluginDesc {
 	std::string  pluginID;
 	MapAttrDesc  attributes;
 
-private:
-	PluginDesc(const PluginDesc&) {}
-
 };
 
 

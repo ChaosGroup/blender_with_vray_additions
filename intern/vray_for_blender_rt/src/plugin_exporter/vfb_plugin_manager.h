@@ -5,7 +5,7 @@
 #include "base_types.h"
 
 
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 
 namespace VRayForBlender {
 class PluginManager {
@@ -17,7 +17,7 @@ public:
 	void clear();
 
 private:
-	std::unordered_map<std::string, PluginAttrs> cache;
+	boost::unordered_map<std::string, PluginAttrs> cache;
 };
 } // VRayForBlender
 

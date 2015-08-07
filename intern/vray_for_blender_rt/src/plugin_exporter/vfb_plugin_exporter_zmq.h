@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#ifdef USE_BLENDER_VRAY_ZMQ
+
 #ifndef VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H
 #define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H
 
@@ -72,3 +74,4 @@ private:
 } // namespace VRayForBlender
 
 #endif // VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H
+#endif // USE_BLENDER_VRAY_ZMQ

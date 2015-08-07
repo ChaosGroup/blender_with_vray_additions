@@ -51,7 +51,11 @@ struct ExporterTypeInfo {
 static const ExporterTypeInfo ExporterTypes[] = {
 	{"FILE", "V-Ray Standalone", ""},
 	{"CLOUD", "V-Ray Cloud", ""},
+
+#ifdef USE_BLENDER_VRAY_ZMQ
 	{"ZMQ", "V-Ray 0MQ Server", ""},
+#endif
+
 #ifdef USE_BLENDER_VRAY_APPSDK
 	{"APPSDK", "V-Ray Application SDK", ""},
 #endif
@@ -60,7 +64,10 @@ static const ExporterTypeInfo ExporterTypes[] = {
 enum ExpoterType {
 	ExpoterTypeFile = 0,
 	ExpoterTypeCloud,
+#ifdef USE_BLENDER_VRAY_ZMQ
 	ExpoterTypeZMQ,
+#endif
+
 #ifdef USE_BLENDER_VRAY_APPSDK
 	ExpoterTypeAppSDK,
 #endif

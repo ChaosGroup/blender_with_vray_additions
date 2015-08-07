@@ -53,9 +53,11 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 		case ExpoterTypeFile:
 			exporter = new VrsceneExporter();
 			break;
+#ifdef USE_BLENDER_VRAY_ZMQ
 		case ExpoterTypeZMQ:
 			exporter = new ZmqExporter();
 			break;
+#endif
 #ifdef USE_BLENDER_VRAY_APPSDK
 		case ExpoterTypeAppSDK:
 			exporter = new AppSdkExporter();

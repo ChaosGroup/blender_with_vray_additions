@@ -30,9 +30,6 @@ set(INC
 	${CMAKE_SOURCE_DIR}/source/blender/windowmanager
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
 
-	extern/vray-zmq-wrapper/include
-	extern/vray-zmq-wrapper/extern/cppzmq
-
 	../vray_for_blender
 
 	.
@@ -42,12 +39,25 @@ set(INC
 	src/scene_exporter
 	src/scene_exporter/utils
 
-	${ZMQ_ROOT}/include
 	${APPSDK_ROOT}/cpp/include
+
+
+	extern/vray-zmq-wrapper/include
 )
 
-file(GLOB_RECURSE HEADERS "*.h")
-file(GLOB_RECURSE SOURCES "*.cpp")
+if(USE_BLENDER_VRAY_ZMQ)
+	list(APPEND ${INC} ${ZMQ_ROOT}/include)
+	list(APPEND ${INC} extern/vray-zmq-wrapper/extern/cppzmq)
+
+	file(GLOB_RECURSE HEADERS "*.h")
+	file(GLOB_RECURSE SOURCES "*.cpp")
+else()
+	file(GLOB_RECURSE HEADERS "src/*.h")
+	file(GLOB_RECURSE SOURCES "src/*.cpp")
+	file(GLOB HEADER_LOCAL "*.h")
+	list(APPEND ${HEADERS} ${HEADER_LOCAL})
+endif()
+
 
 if (UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++11")
