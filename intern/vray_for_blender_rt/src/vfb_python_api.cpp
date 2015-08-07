@@ -237,29 +237,22 @@ static PyObject* PyExporterDraw(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject* PyExporterGetExporterTypes(PyObject *self, PyObject *args)
+
+static PyObject* PyExporterGetExporterTypes(PyObject*, PyObject*)
 {
 	PRINT_INFO_EX("mExporterGetExporterTypes()");
 
-#ifdef USE_BLENDER_VRAY_APPSDK
-	assert(sizeof(ExporterTypes) / sizeof(ExporterTypes[0]) == 4 && "Unexpected number of ExporterTypes");
-	const char * format = "((sss)(sss)(sss)(sss))";
-#else
-	assert(sizeof(ExporterTypes) / sizeof(ExporterTypes[0]) == 3 && "Unexpected number of ExporterTypes");
-	const char * format = "((sss)(sss)(sss))";
-#endif
+	PyObject *expTypesList = PyTuple_New(ExpoterTypeLast);
 
-	PyObject * info = Py_BuildValue(format,
-	    ExporterTypes[0].key, ExporterTypes[0].name, ExporterTypes[0].desc,
-	    ExporterTypes[1].key, ExporterTypes[1].name, ExporterTypes[1].desc,
-	    ExporterTypes[2].key, ExporterTypes[2].name, ExporterTypes[2].desc
-#ifdef USE_BLENDER_VRAY_APPSDK
-	    , ExporterTypes[3].key, ExporterTypes[3].name, ExporterTypes[3].desc
-#endif
-	);
+	for (int i = 0; i < ExpoterTypeLast; ++i) {
+		const char *item_format = "(sss)";
 
+		PyObject *list_item = Py_BuildValue(item_format,
+		                                    ExporterTypes[i].key, ExporterTypes[i].name, ExporterTypes[i].desc);
+		PyTuple_SET_ITEM(expTypesList, i, list_item);
+	}
 
-	return info;
+	return expTypesList;
 }
 
 
