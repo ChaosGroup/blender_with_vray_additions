@@ -76,6 +76,10 @@ static DerivedMesh *navmesh_dm_createNavMeshForVisualization(DerivedMesh *dm);
 #include "GPU_extensions.h"
 #include "GPU_glew.h"
 
+#ifdef WITH_OPENSUBDIV
+#  include "DNA_userdef_types.h"
+#endif
+
 /* very slow! enable for testing only! */
 //#define USE_MODIFIER_VALIDATE
 
@@ -2543,7 +2547,9 @@ static bool calc_modifiers_skip_orco(const Object *ob)
 	if (last_md != NULL &&
 	    last_md->type == eModifierType_Subsurf)
 	{
-		return true;
+		SubsurfModifierData *smd = (SubsurfModifierData *)last_md;
+		/* TODO(sergey): Deduplicate this with checks from subsurf_ccg.c. */
+		return smd->use_opensubdiv && U.opensubdiv_compute_type != USER_OPENSUBDIV_COMPUTE_NONE;
 	}
 	return false;
 }
@@ -3515,18 +3521,8 @@ void DM_set_object_boundbox(Object *ob, DerivedMesh *dm)
 {
 	float min[3], max[3];
 
-#ifdef WITH_OPENSUBDIV
-	/* TODO(sergey): Currently no way to access bounding box from hi-res mesh. */
-	if (dm->type == DM_TYPE_CCGDM) {
-		copy_v3_fl3(min, -1.0f, -1.0f, -1.0f);
-		copy_v3_fl3(max, 1.0f, 1.0f, 1.0f);
-	}
-	else
-#endif
-	{
-		INIT_MINMAX(min, max);
-		dm->getMinMax(dm, min, max);
-	}
+	INIT_MINMAX(min, max);
+	dm->getMinMax(dm, min, max);
 
 	if (!ob->bb)
 		ob->bb = MEM_callocN(sizeof(BoundBox), "DM-BoundBox");

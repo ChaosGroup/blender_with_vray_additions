@@ -494,6 +494,11 @@ float KX_GameObject::GetActionFrame(short layer)
 	return GetActionManager()->GetActionFrame(layer);
 }
 
+const char *KX_GameObject::GetActionName(short layer)
+{
+	return GetActionManager()->GetActionName(layer);
+}
+
 void KX_GameObject::SetActionFrame(short layer, float frame)
 {
 	GetActionManager()->SetActionFrame(layer, frame);
@@ -1669,10 +1674,11 @@ CListValue* KX_GameObject::GetChildrenRecursive()
 KX_Scene* KX_GameObject::GetScene()
 {
 	SG_Node* node = this->GetSGNode();
-    if (node == NULL)
-        // this happens for object in non active layers, rely on static scene then
-        return KX_GetActiveScene();
-    return static_cast<KX_Scene*>(node->GetSGClientInfo());
+	if (node == NULL) {
+		// this happens for object in non active layers, rely on static scene then
+		return KX_GetActiveScene();
+	}
+	return static_cast<KX_Scene*>(node->GetSGClientInfo());
 }
 
 /* ---------------------------------------------------------------------
@@ -1957,6 +1963,7 @@ PyMethodDef KX_GameObject::Methods[] = {
 	KX_PYMETHODTABLE_KEYWORDS(KX_GameObject, playAction),
 	KX_PYMETHODTABLE(KX_GameObject, stopAction),
 	KX_PYMETHODTABLE(KX_GameObject, getActionFrame),
+	KX_PYMETHODTABLE(KX_GameObject, getActionName),
 	KX_PYMETHODTABLE(KX_GameObject, setActionFrame),
 	KX_PYMETHODTABLE(KX_GameObject, isPlayingAction),
 	
@@ -3921,7 +3928,7 @@ KX_PYMETHODDEF_DOC(KX_GameObject, stopAction,
 	"stopAction(layer=0)\n"
 	"Stop playing the action on the given layer\n")
 {
-	short layer=0;
+	short layer = 0;
 
 	if (!PyArg_ParseTuple(args, "|h:stopAction", &layer))
 		return NULL;
@@ -3937,7 +3944,7 @@ KX_PYMETHODDEF_DOC(KX_GameObject, getActionFrame,
 	"getActionFrame(layer=0)\n"
 	"Gets the current frame of the action playing in the supplied layer\n")
 {
-	short layer=0;
+	short layer = 0;
 
 	if (!PyArg_ParseTuple(args, "|h:getActionFrame", &layer))
 		return NULL;
@@ -3947,11 +3954,25 @@ KX_PYMETHODDEF_DOC(KX_GameObject, getActionFrame,
 	return PyFloat_FromDouble(GetActionFrame(layer));
 }
 
+KX_PYMETHODDEF_DOC(KX_GameObject, getActionName,
+	"getActionName(layer=0)\n"
+	"Gets the name of the current action playing in the supplied layer\n")
+{
+	short layer = 0;
+
+	if (!PyArg_ParseTuple(args, "|h:getActionName", &layer))
+		return NULL;
+
+	layer_check(layer, "getActionName");
+
+	return PyUnicode_FromString(GetActionName(layer));
+}
+
 KX_PYMETHODDEF_DOC(KX_GameObject, setActionFrame,
 	"setActionFrame(frame, layer=0)\n"
 	"Set the current frame of the action playing in the supplied layer\n")
 {
-	short layer=0;
+	short layer = 0;
 	float frame;
 
 	if (!PyArg_ParseTuple(args, "f|h:setActionFrame", &frame, &layer))
@@ -3968,7 +3989,7 @@ KX_PYMETHODDEF_DOC(KX_GameObject, isPlayingAction,
 	"isPlayingAction(layer=0)\n"
 	"Checks to see if there is an action playing in the given layer\n")
 {
-	short layer=0;
+	short layer = 0;
 
 	if (!PyArg_ParseTuple(args, "|h:isPlayingAction", &layer))
 		return NULL;
@@ -4066,11 +4087,11 @@ bool ConvertPythonToGameObject(PyObject *value, KX_GameObject **object, bool py_
 		}
 	}
 	
-	if (	PyObject_TypeCheck(value, &KX_GameObject::Type)	||
-			PyObject_TypeCheck(value, &KX_LightObject::Type)	||
-			PyObject_TypeCheck(value, &KX_Camera::Type)			||
-            PyObject_TypeCheck(value, &KX_FontObject::Type) ||
-            PyObject_TypeCheck(value, &KX_NavMeshObject::Type))
+	if (PyObject_TypeCheck(value, &KX_GameObject::Type)	||
+	    PyObject_TypeCheck(value, &KX_LightObject::Type)	||
+	    PyObject_TypeCheck(value, &KX_Camera::Type)			||
+	    PyObject_TypeCheck(value, &KX_FontObject::Type) ||
+	    PyObject_TypeCheck(value, &KX_NavMeshObject::Type))
 	{
 		*object = static_cast<KX_GameObject*>BGE_PROXY_REF(value);
 		

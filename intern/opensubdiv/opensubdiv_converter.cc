@@ -37,6 +37,21 @@
 
 #include <stack>
 
+#ifdef OPENSUBDIV_ORIENT_TOPOLOGY
+namespace {
+
+inline void reverse_face_verts(int *face_verts, int num_verts)
+{
+	int last_vert = face_verts[num_verts - 1];
+	for (int i = num_verts - 1; i > 0;  --i) {
+		face_verts[i] = face_verts[i - 1];
+	}
+	face_verts[0] = last_vert;
+}
+
+}  /* namespace */
+#endif /* OPENSUBDIV_ORIENT_TOPOLOGY */
+
 namespace OpenSubdiv {
 namespace OPENSUBDIV_VERSION {
 namespace Far {
@@ -49,22 +64,77 @@ inline int findInArray(T array, int value)
 	return (int)(std::find(array.begin(), array.end(), value) - array.begin());
 }
 
-}  /* namespace */
+#ifdef OPENSUBDIV_ORIENT_TOPOLOGY
+inline int get_loop_winding(int vert0_of_face, int vert1_of_face)
+{
+	int delta_face = vert1_of_face - vert0_of_face;
+	if (abs(delta_face) != 1) {
+		if (delta_face > 0) {
+			delta_face = -1;
+		}
+		else {
+			delta_face = 1;
+		}
+	}
+	return delta_face;
+}
 
-struct StackElem {
-	StackElem(int face_start,
-	          int edge_start,
-	          int face_vert_start,
-	          bool append_start_edge = true)
-	        : face_start(face_start),
-	          edge_start(edge_start),
-	          face_vert_start(face_vert_start),
-	          append_start_edge(append_start_edge){}
-	int face_start;
-	int edge_start;
-	int face_vert_start;
-	bool append_start_edge;
-};
+inline void reverse_face_loops(IndexArray face_verts, IndexArray face_edges)
+{
+	for (int i = 0; i < face_verts.size() / 2; ++i) {
+		int j = face_verts.size() - i - 1;
+		if (i != j) {
+			std::swap(face_verts[i], face_verts[j]);
+			std::swap(face_edges[i], face_edges[j]);
+		}
+	}
+	reverse_face_verts(&face_verts[0], face_verts.size());
+}
+
+inline void check_oriented_vert_connectivity(const int num_vert_edges,
+                                             const int num_vert_faces,
+                                             const int *vert_edges,
+                                             const int *vert_faces,
+                                             const int *dst_vert_edges,
+                                             const int *dst_vert_faces)
+{
+#  ifndef NDEBUG
+	for (int i = 0; i < num_vert_faces; ++i) {
+		bool found = false;
+		for (int j = 0; j < num_vert_faces; ++j) {
+			if (vert_faces[i] == dst_vert_faces[j]) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			assert(!"vert-faces connectivity ruined");
+		}
+	}
+	for (int i = 0; i < num_vert_edges; ++i) {
+		bool found = false;
+		for (int j = 0; j < num_vert_edges; ++j) {
+			if (vert_edges[i] == dst_vert_edges[j]) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			assert(!"vert-edges connectivity ruined");
+		}
+	}
+#  else
+	(void)num_vert_edges;
+	(void)num_vert_faces;
+	(void)vert_edges;
+	(void)vert_faces;
+	(void)dst_vert_edges;
+	(void)dst_vert_faces;
+#  endif
+}
+#endif
+
+}  /* namespace */
 
 template <>
 inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::resizeComponentTopology(
@@ -121,9 +191,73 @@ inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::assignComponentTopolog
 		IndexArray dst_edge_faces = getBaseEdgeFaces(refiner, edge);
 		conv.get_edge_faces(&conv, edge, &dst_edge_faces[0]);
 	}
+#ifdef OPENSUBDIV_ORIENT_TOPOLOGY
+	/* Make face normals consistent. */
+	bool *face_used = new bool[num_faces];
+	memset(face_used, 0, sizeof(bool) * num_faces);
+	std::stack<int> traverse_stack;
+	int face_start = 0, num_traversed_faces = 0;
+	/* Traverse all islands. */
+	while (num_traversed_faces != num_faces) {
+		/* Find first face of any untraversed islands. */
+		while (face_used[face_start]) {
+			++face_start;
+		}
+		/* Add first face to the stack. */
+		traverse_stack.push(face_start);
+		face_used[face_start] = true;
+		/* Go over whole connected component. */
+		while (!traverse_stack.empty()) {
+			int face = traverse_stack.top();
+			traverse_stack.pop();
+			IndexArray face_edges = getBaseFaceEdges(refiner, face);
+			ConstIndexArray face_verts = getBaseFaceVertices(refiner, face);
+			for (int edge_index = 0; edge_index < face_edges.size(); ++edge_index) {
+				const int edge = face_edges[edge_index];
+				ConstIndexArray edge_faces = getBaseEdgeFaces(refiner, edge);
+				if (edge_faces.size() != 2) {
+					/* Can't make consistent normals for non-manifolds. */
+					continue;
+				}
+				ConstIndexArray edge_verts = getBaseEdgeVertices(refiner, edge);
+				/* Get winding of the reference face. */
+				int vert0_of_face = findInArray(face_verts, edge_verts[0]),
+				    vert1_of_face = findInArray(face_verts, edge_verts[1]);
+				int delta_face = get_loop_winding(vert0_of_face, vert1_of_face);
+				for (int edge_face = 0; edge_face < edge_faces.size(); ++edge_face) {
+					int other_face = edge_faces[edge_face];
+					/* Never re-traverse faces, only move forward. */
+					if (face_used[other_face]) {
+						continue;
+					}
+					IndexArray other_face_verts = getBaseFaceVertices(refiner,
+					                                                  other_face);
+					int vert0_of_other_face = findInArray(other_face_verts,
+					                                      edge_verts[0]),
+					    vert1_of_other_face = findInArray(other_face_verts,
+					                                      edge_verts[1]);
+					int delta_other_face = get_loop_winding(vert0_of_other_face,
+					                                        vert1_of_other_face);
+					if (delta_face * delta_other_face > 0) {
+						IndexArray other_face_verts = getBaseFaceVertices(refiner,
+						                                                  other_face),
+						           other_face_edges = getBaseFaceEdges(refiner,
+						                                               other_face);
+						reverse_face_loops(other_face_verts,
+						                   other_face_edges);
+					}
+					traverse_stack.push(other_face);
+					face_used[other_face] = true;
+				}
+			}
+			++num_traversed_faces;
+		}
+	}
+#endif  /* OPENSUBDIV_ORIENT_TOPOLOGY */
 	/* Vertex relations */
 	const int num_verts = conv.get_num_verts(&conv);
 	for (int vert = 0; vert < num_verts; ++vert) {
+
 		/* Vert-Faces */
 		IndexArray dst_vert_faces = getBaseVertexFaces(refiner, vert);
 		int num_vert_faces = conv.get_num_vert_faces(&conv, vert);
@@ -135,56 +269,101 @@ inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::assignComponentTopolog
 		int *vert_edges = new int[num_vert_edges];
 		conv.get_vert_edges(&conv, vert, vert_edges);
 #ifdef OPENSUBDIV_ORIENT_TOPOLOGY
-		/* Order vertex edges and faces in a CCW order. */
-		/* TODO(sergey): Look into possible optimizations here. */
-		bool *face_used = new bool[num_faces];
+		/* ** Order vertex edges and faces in a CCW order. ** */
 		memset(face_used, 0, sizeof(bool) * num_faces);
-		std::stack<StackElem> stack;
+		/* Number of edges and faces added to the ordered array. */
 		int edge_count_ordered = 0, face_count_ordered = 0;
-		if (num_vert_edges == num_vert_faces) {
-			/* Manifold vertex, start with any face and perform traversal. */
-			int face_start = vert_faces[0];
-			int face_vert_start = findInArray(getBaseFaceVertices(refiner, face_start), vert);
-			int edge_start = getBaseFaceEdges(refiner, face_start)[face_vert_start];
-			stack.push(StackElem(face_start, edge_start, face_vert_start));
+		/* Add loose edges straight into the edges array. */
+		bool has_fan_connections = false;
+		for (int i = 0; i < num_vert_edges; ++i) {
+			IndexArray edge_faces = getBaseEdgeFaces(refiner, vert_edges[i]);
+			if (edge_faces.size() == 0) {
+				dst_vert_edges[edge_count_ordered++] = vert_edges[i];
+			}
+			else if (edge_faces.size() > 2) {
+				has_fan_connections = true;
+			}
 		}
-		else {
-			/* ** Non-manifold vertex. Special handle here. ** */
-			/* Add all loose edges adjacent to the vertex. */
-			for (int i = 0; i < num_vert_edges; ++i) {
-				IndexArray edge_faces = getBaseEdgeFaces(refiner, vert_edges[i]);
-				if (edge_faces.size() == 0) {
-					/* Can't really orient loose edges, just add then straight
-					 * to the vert-edges array.
-					 */
-					dst_vert_edges[edge_count_ordered++] = vert_edges[i];
-				}
-				else if (edge_faces.size() == 1) {
-					int edge_start = vert_edges[i];
-					int face_start = edge_faces[0];
-					int face_vert_start = findInArray(getBaseFaceVertices(refiner, face_start), vert);
-					if (edge_start == (getBaseFaceEdges(refiner, face_start)[face_vert_start])) {
-						stack.push(StackElem(face_start, edge_start, face_vert_start));
-						face_used[face_start] = true;
+		if (has_fan_connections) {
+			/* OpenSubdiv currently doesn't give us clues how to handle
+			 * fan face connections. and since handling such connections
+			 * complicates the loop below we simply don't do special
+			 * orientation for them.
+			 */
+			memcpy(&dst_vert_edges[0], vert_edges, sizeof(int) * num_vert_edges);
+			memcpy(&dst_vert_faces[0], vert_faces, sizeof(int) * num_vert_faces);
+			delete [] vert_edges;
+			delete [] vert_faces;
+			continue;
+		}
+		/* Perform at max numbder of vert-edges iteration and try to avoid
+		 * deadlock here for malformed mesh.
+		 */
+		for (int global_iter = 0; global_iter < num_vert_edges; ++global_iter) {
+			/* Numbr of edges and faces which are still to be ordered. */
+			int num_vert_edges_remained = num_vert_edges - edge_count_ordered,
+			    num_vert_faces_remained = num_vert_faces - face_count_ordered;
+			if (num_vert_edges_remained == 0 && num_vert_faces_remained == 0) {
+				/* All done, nothing to do anymore. */
+				break;
+			}
+			/* Face, edge and face-vertex inndex to start traversal from. */
+			int face_start = -1, edge_start = -1, face_vert_start = -1;
+			if (num_vert_edges_remained == num_vert_faces_remained) {
+				/* Vertex is eitehr complete manifold or is connected to seevral
+				 * manifold islands (hourglass-like configuration), can pick up
+				 * random edge unused and start from it.
+				 */
+				/* TODO(sergey): Start from previous edge from which traversal
+				 * began at previous iteration.
+				 */
+				for (int i = 0; i < num_vert_edges; ++i) {
+					face_start = vert_faces[i];
+					if (!face_used[face_start]) {
+						ConstIndexArray
+						    face_verts = getBaseFaceVertices(refiner, face_start),
+						    face_edges = getBaseFaceEdges(refiner, face_start);
+						face_vert_start = findInArray(face_verts, vert);
+						edge_start = face_edges[face_vert_start];
+						break;
 					}
 				}
 			}
-		}
-		while (!stack.empty()) {
-			StackElem& top = stack.top();
-			int edge_start = top.edge_start;
-			int face_start = top.face_start;
-			int face_vert_start = top.face_vert_start;
-			bool append_start_edge = top.append_start_edge;
-			stack.pop();
-			Index edge_first = edge_start;
-
-			dst_vert_faces[face_count_ordered++] = face_start;
-			if (append_start_edge) {
-				dst_vert_edges[edge_count_ordered++] = edge_start;
+			else {
+				/* Special handle of non-manifold vertex. */
+				for (int i = 0; i < num_vert_edges; ++i) {
+					bool start_found = false;
+					edge_start = vert_edges[i];
+					IndexArray edge_faces = getBaseEdgeFaces(refiner, edge_start);
+					if (edge_faces.size() == 1) {
+						face_start = edge_faces[0];
+						if (!face_used[face_start]) {
+							ConstIndexArray
+							    face_verts = getBaseFaceVertices(refiner, face_start),
+							    face_edges = getBaseFaceEdges(refiner, face_start);
+							face_vert_start = findInArray(face_verts, vert);
+							if (edge_start == face_edges[face_vert_start]) {
+								start_found = true;
+								break;
+							}
+						}
+					}
+					if (start_found) {
+						break;
+					}
+					/* Reset indices for sanity check below. */
+					face_start = edge_start = face_vert_start =  -1;
+				}
 			}
+			/* Sanity check. */
+			assert(face_start != -1 &&
+			       edge_start != -1 &&
+			       face_vert_start != -1);
+			/* Traverse faces starting from the current one. */
+			int edge_first = edge_start;
+			dst_vert_faces[face_count_ordered++] = face_start;
+			dst_vert_edges[edge_count_ordered++] = edge_start;
 			face_used[face_start] = true;
-
 			while (edge_count_ordered < num_vert_edges) {
 				IndexArray face_verts = getBaseFaceVertices(refiner, face_start);
 				IndexArray face_edges = getBaseFaceEdges(refiner, face_start);
@@ -192,24 +371,9 @@ inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::assignComponentTopolog
 				int face_edge_next = (face_edge_start > 0) ? (face_edge_start - 1) : (face_verts.size() - 1);
 				Index edge_next = face_edges[face_edge_next];
 				if (edge_next == edge_first) {
-					/* TODO(sergey): Find more generic solution so non-manifold
-					 * edges combined with some manifold adjacent geometry is
-					 * handled correct.
+					/* Multiple manifolds found, stop for now and handle rest
+					 * in the next iteration.
 					 */
-					if (num_vert_edges == num_vert_faces &&
-					    edge_count_ordered != num_vert_edges)
-					{
-						IndexArray edge_faces = getBaseEdgeFaces(refiner, edge_next);
-						for (int i = 0; i < num_vert_faces; ++i) {
-							int face_start = edge_faces[i];
-							if (!face_used[face_start]) {
-								int edge_start = edge_next;
-								int face_vert_start = findInArray(getBaseFaceVertices(refiner, face_start), vert);
-								stack.push(StackElem(face_start, edge_start, face_vert_start, false));
-								break;
-							}
-						}
-					}
 					break;
 				}
 				dst_vert_edges[edge_count_ordered++] = edge_next;
@@ -221,16 +385,6 @@ inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::assignComponentTopolog
 						break;
 					}
 					else if (edge_faces.size() != 2) {
-						for (int i = 0; i < edge_faces.size(); ++i) {
-							if (edge_faces[i] != face_start) {
-								int face_start = edge_faces[i];
-								if (!face_used[face_start]) {
-									int edge_start = edge_next;
-									int face_vert_start = findInArray(getBaseFaceVertices(refiner, face_start), vert);
-									stack.push(StackElem(face_start, edge_start, face_vert_start, false));
-								}
-							}
-						}
 						break;
 					}
 					assert(edge_faces.size() == 2);
@@ -242,45 +396,36 @@ inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::assignComponentTopolog
 				edge_start = edge_next;
 			}
 		}
-		delete [] face_used;
-
 		/* Verify ordering doesn't ruin connectivity information. */
 		assert(face_count_ordered == num_vert_faces);
 		assert(edge_count_ordered == num_vert_edges);
-#ifndef NDEBUG
-		for (int i = 0; i < num_vert_faces; ++i) {
-			bool found = false;
-			for (int j = 0; j < num_vert_faces; ++j) {
-				if (vert_faces[i] == dst_vert_faces[j]) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				assert(!"vert-faces connectivity ruined");
-			}
+		check_oriented_vert_connectivity(num_vert_edges,
+		                                 num_vert_faces,
+		                                 vert_edges,
+		                                 vert_faces,
+		                                 &dst_vert_edges[0],
+		                                 &dst_vert_faces[0]);
+		/* For the release builds we're failing mesh construction so instead
+		 * of nasty bugs the unsupported mesh will simply disappear from the
+		 * viewport.
+		 */
+		if (face_count_ordered != num_vert_faces ||
+		    edge_count_ordered != num_vert_edges)
+		{
+			delete [] vert_edges;
+			delete [] vert_faces;
+			return false;
 		}
-		for (int i = 0; i < num_vert_edges; ++i) {
-			bool found = false;
-			for (int j = 0; j < num_vert_edges; ++j) {
-				if (vert_edges[i] == dst_vert_edges[j]) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				assert(!"vert-edges connectivity ruined");
-			}
-		}
-#endif
 #else  /* OPENSUBDIV_ORIENT_TOPOLOGY */
 		memcpy(&dst_vert_edges[0], vert_edges, sizeof(int) * num_vert_edges);
 		memcpy(&dst_vert_faces[0], vert_faces, sizeof(int) * num_vert_faces);
 #endif  /* OPENSUBDIV_ORIENT_TOPOLOGY */
-
 		delete [] vert_edges;
 		delete [] vert_faces;
 	}
+#ifdef OPENSUBDIV_ORIENT_TOPOLOGY
+	delete [] face_used;
+#endif
 	populateBaseLocalIndices(refiner);
 	return true;
 };
@@ -306,21 +451,23 @@ inline bool TopologyRefinerFactory<OpenSubdiv_Converter>::assignComponentTags(
 		setBaseEdgeSharpness(refiner, edge, sharpness);
 	}
 
-#if 0
-	/* Non-manifold vertices can't be always smooth.
-	 * I.e. when there's loose edge adjacent to the vertex
-	 * opensubdiv expects vertices to be sharp. But this needs
-	 * some further investigation.
+	/* OpenSubdiv expects non-manifold vertices to be sharp but at the
+	 * time it handles correct cases when vertex is a corner of plane.
+	 * Currently mark verts which are adjacent to a loose edge as sharp,
+	 * but this decision needs some more investigation.
 	 */
 	int num_vert = conv.get_num_verts(&conv);
 	for (int vert = 0; vert < num_vert; ++vert) {
-		IndexArray vert_faces = getBaseVertexFaces(refiner, vert),
-		           vert_edges = getBaseVertexEdges(refiner, vert);
-		if (vert_faces.size() != vert_edges.size()) {
-			setBaseVertexSharpness(refiner, vert, Crease::SHARPNESS_INFINITE);
+		ConstIndexArray vert_edges = getBaseVertexEdges(refiner, vert);
+		for (int edge_index = 0; edge_index < vert_edges.size(); ++edge_index) {
+			int edge = vert_edges[edge_index];
+			ConstIndexArray edge_faces = getBaseEdgeFaces(refiner, edge);
+			if (edge_faces.size() == 0) {
+				setBaseVertexSharpness(refiner, vert, Crease::SHARPNESS_INFINITE);
+				break;
+			}
 		}
 	}
-#endif
 
 	return true;
 }
@@ -473,10 +620,28 @@ int openSubdiv_topologyRefnerCompareConverter(
 		}
 		conv_face_verts.resize(face_verts.size());
 		converter->get_face_verts(converter, face, &conv_face_verts[0]);
+		bool direct_match = true;
 		for (int i = 0; i < face_verts.size(); ++i) {
 			if (conv_face_verts[i] != face_verts[i]) {
-				return false;
+				direct_match = false;
+				break;
 			}
+		}
+		if (!direct_match) {
+			/* If face didn't match in direct direction we also test if it
+			 * matches in reversed direction. This is because conversion might
+			 * reverse loops to make normals consistent.
+			 */
+#ifdef OPENSUBDIV_ORIENT_TOPOLOGY
+			reverse_face_verts(&conv_face_verts[0], conv_face_verts.size());
+			for (int i = 0; i < face_verts.size(); ++i) {
+				if (conv_face_verts[i] != face_verts[i]) {
+					return false;
+				}
+			}
+#else
+			return false;
+#endif
 		}
 	}
 	/* Compare sharpness. */

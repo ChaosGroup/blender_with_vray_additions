@@ -767,6 +767,11 @@ Base *BKE_scene_base_find(Scene *scene, Object *ob)
 	return BLI_findptr(&scene->base, ob, offsetof(Base, object));
 }
 
+/**
+ * Sets the active scene, mainly used when running in background mode (``--scene`` command line argument).
+ * This is also called to set the scene directly, bypassing windowing code.
+ * Otherwise #ED_screen_set_scene is used when changing scenes by the user.
+ */
 void BKE_scene_set_background(Main *bmain, Scene *scene)
 {
 	Scene *sce;
@@ -1584,6 +1589,14 @@ static void scene_free_unused_opensubdiv_cache(Scene *scene)
 			if (md != NULL && md->type == eModifierType_Subsurf) {
 				SubsurfModifierData *smd = (SubsurfModifierData *) md;
 				bool object_in_editmode = object->mode == OB_MODE_EDIT;
+				if (!smd->use_opensubdiv) {
+					if (smd->mCache != NULL) {
+						ccgSubSurf_free_osd_mesh(smd->mCache);
+					}
+					if (smd->emCache != NULL) {
+						ccgSubSurf_free_osd_mesh(smd->emCache);
+					}
+				}
 				if (object_in_editmode && smd->mCache != NULL) {
 					ccgSubSurf_free(smd->mCache);
 					smd->mCache = NULL;
