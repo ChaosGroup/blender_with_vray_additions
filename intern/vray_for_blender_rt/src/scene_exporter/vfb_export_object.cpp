@@ -22,7 +22,7 @@
 #include "vfb_utils_nodes.h"
 
 
-AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
+AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {
 	AttrPlugin  node;
 
@@ -134,11 +134,19 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated)
 		if (geom && mtl && (is_updated || is_data_updated)) {
 			// No need to export Node if the object is LightMesh
 			if (!isMeshLight) {
-				PluginDesc nodeDesc(nodePluginName, "Node");
+				const std::string & exportName = override.override ? override.namePrefix + nodePluginName : nodePluginName;
+
+				PluginDesc nodeDesc(exportName, "Node");
 				nodeDesc.add("geometry", geom);
 				nodeDesc.add("material", mtl);
-				nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 				nodeDesc.add("objectID", ob.pass_index());
+				if (override.override) {
+					nodeDesc.add("visible", override.visible);
+					nodeDesc.add("transform", override.tm);
+				} else {
+					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+					nodeDesc.add("visible", ob.is_visible(m_scene));
+				}
 
 				node = m_exporter->export_plugin(nodeDesc);
 			}

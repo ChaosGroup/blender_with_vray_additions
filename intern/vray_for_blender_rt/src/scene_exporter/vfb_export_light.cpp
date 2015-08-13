@@ -25,7 +25,7 @@
 #include <boost/format.hpp>
 
 
-AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
+AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {
 	AttrValue plugin;
 
@@ -94,7 +94,10 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
 
 			if (!pluginID.empty()) {
 				PointerRNA lampPropGroup = RNA_pointer_get(&vrayLamp, pluginID.c_str());
-				PluginDesc pluginDesc(lightPluginName, pluginID);
+
+				const std::string & lampName = override.override ? override.namePrefix : lightPluginName;
+
+				PluginDesc pluginDesc(lampName, pluginID);
 
 				BL::Node     lightNode(PointerRNA_NULL);
 				BL::NodeTree ntree = Nodes::GetNodeTree(lamp);
@@ -135,8 +138,12 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated)
 						}
 					}
 				}
-
-				pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+				if (override.override) {
+					pluginDesc.add("transform", override.tm);
+				} else {
+					pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+				}
+				
 
 				if (pluginID == "LightRectangle") {
 					BL::AreaLamp areaLamp(lamp);
