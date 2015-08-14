@@ -20,7 +20,8 @@
 #define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_FILE_H
 
 #include "vfb_plugin_exporter.h"
-
+#include "vfb_plugin_manager.h"
+#include "vfb_plugin_writer.h"
 
 namespace VRayForBlender {
 
@@ -41,6 +42,9 @@ public:
 
 	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
 
+private:
+	PluginManager m_PluginManager;
+	PluginWriter  m_Writer;
 };
 
 } // namespace VRayForBlender
