@@ -88,8 +88,20 @@ PluginWriter & operator<<(PluginWriter & pp, const AttrPlugin & val) {
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrMapChannels & val) {
-	assert(false && "Not implemented AttrMapChannels");
-	return pp;
+	pp << "List(\n";
+
+	if (!val.data.empty()) {
+		auto iter = val.data.cbegin();
+		pp << "List(" << iter->first<< ",\n";
+		pp << iter->second.vertices << "," << iter->second.faces << ")";
+
+		for (; iter != val.data.cend(); ++iter) {
+			pp << ",\nList(" << iter->first << ",\n";
+			pp << iter->second.vertices << "," << iter->second.faces << ")";
+		}
+	}
+
+	return pp << ")";
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrInstancer & val) {

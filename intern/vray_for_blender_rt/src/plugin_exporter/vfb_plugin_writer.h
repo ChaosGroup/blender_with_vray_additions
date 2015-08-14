@@ -84,9 +84,9 @@ PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrSimpleType
 template <typename T>
 PluginWriter & printList(PluginWriter & pp, const VRayBaseTypes::AttrList<T> & val, const char * listName, bool newLine = false) {
 	if (!val.empty()) {
-		pp << "List" << listName << "(\n" << (*val)[0];
+		pp << "List" << listName << "(\n    " << (*val)[0];
 		for (int c = 1; c < val.getCount(); c++) {
-			pp << "," << (newLine ? "\n" : "") << (*val)[c];
+			pp << "," << (newLine ? "\n    " : "    ") << (*val)[c];
 		}
 		pp << ")";
 	}
@@ -96,6 +96,11 @@ PluginWriter & printList(PluginWriter & pp, const VRayBaseTypes::AttrList<T> & v
 template <typename T>
 PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrList<T> & val) {
 	return printList(pp, val, "", true);
+}
+
+template <> inline
+PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrList<float> & val) {
+	return printList(pp, val, "Float");
 }
 
 template <> inline
