@@ -33,7 +33,7 @@ std::string StripString(const std::string &str) {
 
 
 PluginWriter::PluginWriter(std::string fname)
-	: m_FileName(std::move(fname)), m_Buff(new char[static_buf_size]), m_File(nullptr) {
+	: m_FileName(std::move(fname)), m_Buff(4096), m_File(nullptr) {
 
 	m_File = fopen(m_FileName.c_str(), "wb");
 }

@@ -8,9 +8,6 @@
 
 namespace VRayForBlender {
 
-
-static const int static_buf_size = 4096;
-
 class PluginWriter {
 public:
 
@@ -29,10 +26,19 @@ public:
 		va_list args;
 
 		va_start(args, format);
-		int len = vsnprintf(m_Buff.get(), static_buf_size, format, args);
+		int len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
 		va_end(args);
 
-		fwrite(m_Buff.get(), 1, len, m_File);
+		if (len > m_Buff.size()) {
+			m_Buff.resize(len + 1);
+
+			va_start(args, format);
+			len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
+			va_end(args);
+		}
+
+		fwrite(m_Buff.data(), 1, len, m_File);
+
 		return *this;
 	}
 
@@ -40,7 +46,7 @@ public:
 private:
 	std::string m_FileName;
 	FILE * m_File;
-	std::unique_ptr<char[]>  m_Buff;
+	std::vector<char>  m_Buff;
 };
 
 PluginWriter & operator<<(PluginWriter & pp, const int & val);
