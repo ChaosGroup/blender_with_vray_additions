@@ -34,12 +34,18 @@ std::string StripString(const std::string &str) {
 
 PluginWriter::PluginWriter(std::string fname, ExportFormat format)
 	: m_FileName(std::move(fname)), m_Buff(4096), m_File(nullptr), m_Format(format) {
+}
 
-	m_File = fopen(m_FileName.c_str(), "wb");
+void PluginWriter::doOpen() {
+	if (!m_File) {
+		m_File = fopen(m_FileName.c_str(), "wb");
+	}
 }
 
 PluginWriter::~PluginWriter() {
-	fclose(m_File);
+	if (m_File) {
+		fclose(m_File);
+	}
 }
 
 PluginWriter & PluginWriter::write(const char * format, ...) {
@@ -57,7 +63,7 @@ PluginWriter & PluginWriter::write(const char * format, ...) {
 		va_end(args);
 	}
 
-	fwrite(m_Buff.data(), 1, len, m_File);
+	this->writeData(m_Buff.data(), len);
 
 	return *this;
 }
@@ -67,6 +73,7 @@ PluginWriter & PluginWriter::writeStr(const char * str) {
 }
 
 PluginWriter & PluginWriter::writeData(const void * data, int size) {
+	doOpen();
 	fwrite(data, 1, size, m_File);
 	return *this;
 }

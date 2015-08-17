@@ -28,6 +28,9 @@ public:
 	PluginWriter & write(const char * format, ...);
 
 	ExportFormat format() const { return m_Format; }
+private:
+
+	void doOpen();
 
 private:
 	ExportFormat m_Format;
