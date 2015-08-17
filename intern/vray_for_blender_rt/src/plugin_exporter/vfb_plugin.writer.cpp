@@ -84,7 +84,7 @@ PluginWriter & operator<<(PluginWriter & pp, const char * val) {
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const std::string & val) {
-	return pp.writeStr(val.c_str());
+	return pp.writeData(val.c_str(), val.size());
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrColor & val) {
