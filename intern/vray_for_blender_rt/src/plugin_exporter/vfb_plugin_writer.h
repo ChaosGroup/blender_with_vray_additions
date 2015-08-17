@@ -4,49 +4,36 @@
 #include <cstdio>
 #include <string>
 #include <memory>
+
 #include "vfb_plugin_attrs.h"
+#include "utils/cgr_vrscene.h"
 
 namespace VRayForBlender {
+
+enum class ExportFormat {
+	ZIP, HEX, PLAIN
+};
 
 class PluginWriter {
 public:
 
-	PluginWriter(std::string fname);
+	PluginWriter(std::string fname, ExportFormat = ExportFormat::HEX);
 	~PluginWriter();
 
 	PluginWriter(const PluginWriter &) = delete;
 	PluginWriter & operator=(const PluginWriter &) = delete;
 
-	PluginWriter & writeStr(const char * str) {
-		fwrite(str, 1, strlen(str), m_File);
-		return *this;
-	}
+	PluginWriter & writeStr(const char * str);
+	PluginWriter & writeData(const void * data, int size);
+	PluginWriter & write(const char * format, ...);
 
-	PluginWriter & write(const char * format, ...) {
-		va_list args;
-
-		va_start(args, format);
-		int len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
-		va_end(args);
-
-		if (len > m_Buff.size()) {
-			m_Buff.resize(len + 1);
-
-			va_start(args, format);
-			len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
-			va_end(args);
-		}
-
-		fwrite(m_Buff.data(), 1, len, m_File);
-
-		return *this;
-	}
-
+	ExportFormat format() const { return m_Format; }
 
 private:
+	ExportFormat m_Format;
 	std::string m_FileName;
 	FILE * m_File;
-	std::vector<char>  m_Buff;
+	std::vector<char> m_Buff;
 };
 
 PluginWriter & operator<<(PluginWriter & pp, const int & val);
@@ -81,7 +68,6 @@ PluginWriter & operator<<(PluginWriter & pp, const KVPair<std::string> & val) {
 	return pp << "  " << val.first << "=\"" << val.second << "\";\n";
 }
 
-
 template <typename T>
 PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrSimpleType<T> & val) {
 	return pp << val.m_Value;
@@ -90,11 +76,22 @@ PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrSimpleType
 template <typename T>
 PluginWriter & printList(PluginWriter & pp, const VRayBaseTypes::AttrList<T> & val, const char * listName, bool newLine = false) {
 	if (!val.empty()) {
-		pp << "List" << listName << "(\n    " << (*val)[0];
-		for (int c = 1; c < val.getCount(); c++) {
-			pp << "," << (newLine ? "\n    " : "    ") << (*val)[c];
+		pp << "List" << listName;
+		if (listName[0] == '\0' || pp.format() == ExportFormat::PLAIN) {
+			pp << "(\n    " << (*val)[0];
+			for (int c = 1; c < val.getCount(); c++) {
+				pp << "," << (newLine ? "\n    " : "    ") << (*val)[c];
+			}
+			pp << ")";
+		} else if (pp.format() == ExportFormat::ZIP) {
+			char * hexData = GetStringZip(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
+			pp << "Hex(\"" << hexData << "\")";
+			delete[] hexData;
+		} else {
+			char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
+			pp << "Hex(\"" << zipData << "\")";
+			delete[] zipData;
 		}
-		pp << ")";
 	}
 	return pp;
 }

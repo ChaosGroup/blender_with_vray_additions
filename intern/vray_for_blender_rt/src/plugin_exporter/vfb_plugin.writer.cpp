@@ -32,8 +32,8 @@ std::string StripString(const std::string &str) {
 }
 
 
-PluginWriter::PluginWriter(std::string fname)
-	: m_FileName(std::move(fname)), m_Buff(4096), m_File(nullptr) {
+PluginWriter::PluginWriter(std::string fname, ExportFormat format)
+	: m_FileName(std::move(fname)), m_Buff(4096), m_File(nullptr), m_Format(format) {
 
 	m_File = fopen(m_FileName.c_str(), "wb");
 }
@@ -42,6 +42,34 @@ PluginWriter::~PluginWriter() {
 	fclose(m_File);
 }
 
+PluginWriter & PluginWriter::write(const char * format, ...) {
+	va_list args;
+
+	va_start(args, format);
+	int len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
+	va_end(args);
+
+	if (len > m_Buff.size()) {
+		m_Buff.resize(len + 1);
+
+		va_start(args, format);
+		len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
+		va_end(args);
+	}
+
+	fwrite(m_Buff.data(), 1, len, m_File);
+
+	return *this;
+}
+
+PluginWriter & PluginWriter::writeStr(const char * str) {
+	return this->writeData(str, strlen(str));
+}
+
+PluginWriter & PluginWriter::writeData(const void * data, int size) {
+	fwrite(data, 1, size, m_File);
+	return *this;
+}
 
 PluginWriter & operator<<(PluginWriter & pp, const int & val) {
 	return pp.write("%d", val);
