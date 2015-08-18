@@ -85,7 +85,7 @@ PluginWriter & operator<<(PluginWriter & pp, const int & val) {
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const float & val) {
-	return pp.write("%.6g", val);
+	return pp.write("%g", val);
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const char * val) {
@@ -97,19 +97,19 @@ PluginWriter & operator<<(PluginWriter & pp, const std::string & val) {
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrColor & val) {
-	return pp.write("Color(%.6g, %.6g, %.6g)", val.r, val.g, val.b);
+	return pp.write("Color(%g, %g, %g)", val.r, val.g, val.b);
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrAColor & val) {
-	return pp.write("AColor(%.6g, %.6g, %.6g, %.6g)", val.color.r, val.color.g, val.color.b, val.alpha);
+	return pp.write("AColor(%g, %g, %g, %g)", val.color.r, val.color.g, val.color.b, val.alpha);
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrVector & val) {
-	return pp.write("Vector(%.6g, %.6g, %.6g)", val.x, val.y, val.z);
+	return pp.write("Vector(%g, %g, %g)", val.x, val.y, val.z);
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrVector2 & val) {
-	return pp.write("Vector2(%.6g, %.6g)", val.x, val.y);
+	return pp.write("Vector2(%g, %g)", val.x, val.y);
 }
 
 PluginWriter & operator<<(PluginWriter & pp, const AttrMatrix & val) {
