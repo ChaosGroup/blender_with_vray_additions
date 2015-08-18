@@ -8,20 +8,27 @@ using namespace VRayBaseTypes;
 
 namespace VRayForBlender {
 
-PluginWriter::PluginWriter(std::string fname, ExportFormat format):
+PluginWriter::PluginWriter(std::string fname, ExporterSettings::ExportFormat format):
 	m_FileName(std::move(fname)),
 	m_Buff(4096),
 	m_File(nullptr),
-	m_Format(format)
+	m_Format(format),
+	m_TryOpen(false)
 {
 }
 
 bool PluginWriter::doOpen()
 {
+	m_TryOpen = true;
 	if (!m_File) {
 		m_File = BLI_fopen(m_FileName.c_str(), "wb");
 	}
 	return m_File != nullptr;
+}
+
+bool PluginWriter::good() const
+{
+	return !m_TryOpen || m_File != nullptr && m_TryOpen;
 }
 
 std::string PluginWriter::getName() const

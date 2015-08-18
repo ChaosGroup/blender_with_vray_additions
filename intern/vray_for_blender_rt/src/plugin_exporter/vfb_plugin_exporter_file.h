@@ -23,7 +23,7 @@
 #include "vfb_plugin_manager.h"
 #include "vfb_plugin_writer.h"
 #include "vfb_params_json.h"
-
+#include "vfb_export_settings.h"
 
 #include <unordered_map>
 
@@ -45,13 +45,20 @@ public:
 	virtual void        stop();
 
 	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
+	virtual void        set_settings(const ExporterSettings &);
 private:
 	void setUpSplitWriters();
 	void setUpSingleWriter();
 
 private:
 	std::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>> m_Writers;
-	PluginManager m_PluginManager;
+
+	PluginManager                  m_PluginManager;
+	ExporterSettings::ExportFormat m_ExportFormat;
+
+	bool                          m_SplitFiles;
+	SettingsFiles::OutputDirType  m_FileDirType;
+	std::string                   m_FileDir;
 };
 
 } // namespace VRayForBlender

@@ -41,6 +41,11 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&vrayExporter, "default_mapping");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&vrayExporter, "data_format");
 
+	settings_files.use_separate  = RNA_boolean_get(&vrayExporter, "useSeparateFiles");
+	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&vrayExporter, "output");
+	settings_files.output_dir    = RNA_std_string_get(&vrayExporter, "output_dir");
+	settings_files.output_unique = RNA_boolean_get(&vrayExporter, "output_unique");
+
 	// Check what layers to use
 	//
 	const ActiveLayers useLayers = (ActiveLayers)RNA_enum_get(&vrayExporter, "activeLayers");

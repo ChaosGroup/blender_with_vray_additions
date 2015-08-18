@@ -7,19 +7,17 @@
 #include <set>
 
 #include "vfb_plugin_attrs.h"
+#include "vfb_export_settings.h"
+
 #include "utils/cgr_vrscene.h"
 #include "utils/cgr_string.h"
 
 namespace VRayForBlender {
 
-enum class ExportFormat {
-	ZIP, HEX, PLAIN
-};
-
 class PluginWriter {
 public:
 
-	PluginWriter(std::string fname, ExportFormat = ExportFormat::HEX);
+	PluginWriter(std::string fname, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
 	~PluginWriter();
 
 	PluginWriter(const PluginWriter &) = delete;
@@ -29,20 +27,23 @@ public:
 	PluginWriter &writeData(const void *data, int size);
 	PluginWriter &write(const char *format, ...);
 
-	ExportFormat format() const { return m_Format; }
+	ExporterSettings::ExportFormat format() const { return m_Format; }
 
 	PluginWriter &include(std::string);
 	std::string getName() const;
+	bool good() const;
+
 private:
 
 	bool doOpen();
 
 private:
 	std::set<std::string> m_Includes;
-	ExportFormat m_Format;
+	ExporterSettings::ExportFormat m_Format;
 	std::string m_FileName;
 	FILE *m_File;
 	std::vector<char> m_Buff;
+	bool m_TryOpen;
 };
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val);
@@ -87,13 +88,13 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 {
 	if (!val.empty()) {
 		pp << "List" << listName;
-		if (listName[0] == '\0' || pp.format() == ExportFormat::PLAIN) {
+		if (listName[0] == '\0' || pp.format() == ExporterSettings::ExportFormatASCII) {
 			pp << "(\n    " << (*val)[0];
 			for (int c = 1; c < val.getCount(); c++) {
 				pp << "," << (newLine ? "\n    " : "    ") << (*val)[c];
 			}
 			pp << ")";
-		} else if (pp.format() == ExportFormat::ZIP) {
+		} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
 			char * hexData = GetStringZip(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
 			pp << "Hex(\"" << hexData << "\")";
 			delete[] hexData;

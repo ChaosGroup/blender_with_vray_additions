@@ -73,6 +73,12 @@ struct SettingsAnimation {
 
 
 struct SettingsFiles {
+	enum OutputDirType {
+		OutputDirTypeUser,
+		OutputDirTypeScene,
+		OutputDirTypeTmp
+	};
+
 	SettingsFiles():
 	    use_separate(true),
 	    file_main(nullptr),
@@ -93,6 +99,10 @@ struct SettingsFiles {
 	PyObject *file_lights;
 	PyObject *file_materials;
 	PyObject *file_textures;
+
+	OutputDirType output_type;
+	std::string   output_dir;
+	bool          output_unique;
 };
 
 
