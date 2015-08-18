@@ -18,12 +18,47 @@
 
 #include "vfb_plugin_exporter_file.h"
 #include "vfb_plugin_writer.h"
+#include "vfb_params_json.h"
 
 using namespace VRayForBlender;
 
 
-VrsceneExporter::VrsceneExporter(): m_Writer("D:/vs.vrscene")
+VrsceneExporter::VrsceneExporter()
 {
+	this->setUpSplitWriters();
+}
+
+void VrsceneExporter::setUpSingleWriter()
+{
+	auto writer = std::shared_ptr<PluginWriter>(new PluginWriter("D:/vs.vrscene"));
+	for (int c = ParamDesc::PluginUnknown; c <= ParamDesc::PluginUvwgen; c++) {
+		m_Writers[static_cast<ParamDesc::PluginType>(c)] = writer;
+	}
+}
+
+void VrsceneExporter::setUpSplitWriters()
+{
+	auto writerScene = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_scene.vrscene"));
+	auto writerNodes = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_nodes.vrscene"));
+	auto writerGeometry = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_geometry.vrscene"));
+	auto writerCamera = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_camera.vrscene"));
+	auto writerLights = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_lights.vrscene"));
+	auto writerTextures = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_textures.vrscene"));
+	auto writerMaterials = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_materials.vrscene"));
+	auto writerEnvironment = std::shared_ptr<PluginWriter>(new PluginWriter("D:/scene_environment.vrscene"));
+
+	m_Writers[ParamDesc::PluginFilter] = writerScene;
+	m_Writers[ParamDesc::PluginChannel] = writerScene;
+	m_Writers[ParamDesc::PluginSettings] = writerScene;
+	m_Writers[ParamDesc::PluginObject] = writerNodes;
+	m_Writers[ParamDesc::PluginGeometry] = writerGeometry;
+	m_Writers[ParamDesc::PluginCamera] = writerCamera;
+	m_Writers[ParamDesc::PluginLight] = writerLights;
+	m_Writers[ParamDesc::PluginTexture] = writerTextures;
+	m_Writers[ParamDesc::PluginUvwgen] = writerTextures;
+	m_Writers[ParamDesc::PluginBRDF] = writerMaterials;
+	m_Writers[ParamDesc::PluginMaterial] = writerMaterials;
+	m_Writers[ParamDesc::PluginEffect] = writerEnvironment;
 }
 
 
@@ -67,16 +102,26 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 	const auto pluginDesc = m_PluginManager.filterPlugin(pDesc);
 	const std::string & name = pluginDesc.pluginName;
 
-
 	AttrPlugin plugin;
 	plugin.plugin = name;
+
+	const ParamDesc::PluginDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
+	auto writerPtr = m_Writers[pluginParamDesc.pluginType];
+	if (!writerPtr) {
+		PRINT_ERROR("No PluginWriter for type %d exproting %s with id [%s]",
+			pluginParamDesc.pluginType, name.c_str(), pluginDesc.pluginID.c_str());
+		return plugin;
+	}
+
+	PluginWriter & writer = *writerPtr;
+	m_Writers[ParamDesc::PluginSettings]->include(writer.getName());
 
 	if (pDesc.pluginAttrs.size() != pluginDesc.pluginAttrs.size()) {
 		// something is filtered out - dont export
 		return plugin;
 	}
 
-	m_Writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
+	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
@@ -89,52 +134,52 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 		case ValueTypeUnknown:
 			break;
 		case ValueTypeInt:
-			m_Writer << KVPair<int>(attr.attrName, attr.attrValue.valInt);
+			writer << KVPair<int>(attr.attrName, attr.attrValue.valInt);
 			break;
 		case ValueTypeFloat:
-			m_Writer << KVPair<float>(attr.attrName, attr.attrValue.valFloat);
+			writer << KVPair<float>(attr.attrName, attr.attrValue.valFloat);
 			break;
 		case ValueTypeString:
-			m_Writer << KVPair<std::string>(attr.attrName, attr.attrValue.valString);
+			writer << KVPair<std::string>(attr.attrName, attr.attrValue.valString);
 			break;
 		case ValueTypeColor:
-			m_Writer << KVPair<AttrColor>(attr.attrName, attr.attrValue.valColor);
+			writer << KVPair<AttrColor>(attr.attrName, attr.attrValue.valColor);
 			break;
 		case ValueTypeVector:
-			m_Writer << KVPair<AttrVector>(attr.attrName, attr.attrValue.valVector);
+			writer << KVPair<AttrVector>(attr.attrName, attr.attrValue.valVector);
 			break;
 		case ValueTypeAColor:
-			m_Writer << KVPair<AttrAColor>(attr.attrName, attr.attrValue.valAColor);
+			writer << KVPair<AttrAColor>(attr.attrName, attr.attrValue.valAColor);
 			break;
 		case ValueTypePlugin:
-			m_Writer << KVPair<AttrPlugin>(attr.attrName, attr.attrValue.valPlugin);
+			writer << KVPair<AttrPlugin>(attr.attrName, attr.attrValue.valPlugin);
 			break;
 		case ValueTypeTransform:
-			m_Writer << KVPair<AttrTransform>(attr.attrName, attr.attrValue.valTransform);
+			writer << KVPair<AttrTransform>(attr.attrName, attr.attrValue.valTransform);
 			break;
 		case ValueTypeListInt:
-			m_Writer << KVPair<AttrListInt>(attr.attrName, attr.attrValue.valListInt);
+			writer << KVPair<AttrListInt>(attr.attrName, attr.attrValue.valListInt);
 			break;
 		case ValueTypeListFloat:
-			m_Writer << KVPair<AttrListFloat>(attr.attrName, attr.attrValue.valListFloat);
+			writer << KVPair<AttrListFloat>(attr.attrName, attr.attrValue.valListFloat);
 			break;
 		case ValueTypeListVector:
-			m_Writer << KVPair<AttrListVector>(attr.attrName, attr.attrValue.valListVector);
+			writer << KVPair<AttrListVector>(attr.attrName, attr.attrValue.valListVector);
 			break;
 		case ValueTypeListColor:
-			m_Writer << KVPair<AttrListColor>(attr.attrName, attr.attrValue.valListColor);
+			writer << KVPair<AttrListColor>(attr.attrName, attr.attrValue.valListColor);
 			break;
 		case ValueTypeListPlugin:
-			m_Writer << KVPair<AttrListPlugin>(attr.attrName, attr.attrValue.valListPlugin);
+			writer << KVPair<AttrListPlugin>(attr.attrName, attr.attrValue.valListPlugin);
 			break;
 		case ValueTypeListString:
-			m_Writer << KVPair<AttrListString>(attr.attrName, attr.attrValue.valListString);
+			writer << KVPair<AttrListString>(attr.attrName, attr.attrValue.valListString);
 			break;
 		case ValueTypeMapChannels:
-			m_Writer << KVPair<AttrMapChannels>(attr.attrName, attr.attrValue.valMapChannels);
+			writer << KVPair<AttrMapChannels>(attr.attrName, attr.attrValue.valMapChannels);
 			break;
 		case ValueTypeInstancer:
-			m_Writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
+			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:
 			PRINT_INFO_EX("--- > UNIMPLEMENTED DEFAULT");
@@ -143,7 +188,7 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 		}
 	}
 
-	m_Writer << "}\n\n";
+	writer << "}\n\n";
 
 	return plugin;
 }

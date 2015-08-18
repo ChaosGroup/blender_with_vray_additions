@@ -22,6 +22,10 @@
 #include "vfb_plugin_exporter.h"
 #include "vfb_plugin_manager.h"
 #include "vfb_plugin_writer.h"
+#include "vfb_params_json.h"
+
+
+#include <unordered_map>
 
 namespace VRayForBlender {
 
@@ -41,10 +45,13 @@ public:
 	virtual void        stop();
 
 	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
+private:
+	void setUpSplitWriters();
+	void setUpSingleWriter();
 
 private:
+	std::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>> m_Writers;
 	PluginManager m_PluginManager;
-	PluginWriter  m_Writer;
 };
 
 } // namespace VRayForBlender
