@@ -1,48 +1,49 @@
 #include "vfb_plugin_writer.h"
+#include "BLI_fileops.h"
 
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
 
 using namespace VRayBaseTypes;
 
 namespace VRayForBlender {
-void StripString(char *str) {
-	int nChars = strlen(str);
-	int i = 0;
 
-	for (i = 0; i < nChars; i++) {
-		if (str[i]) {
-			if (str[i] == '+')
-				str[i] = 'p';
-			else if (str[i] == '-')
-				str[i] = 'm';
-			else if (str[i] == '|' ||
-				str[i] == '@')
-				continue;
-			else if (!((str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= 'a' && str[i] <= 'z') || (str[i] >= '0' && str[i] <= '9')))
-				str[i] = '_';
-		}
-	}
+PluginWriter::PluginWriter(std::string fname, ExportFormat format):
+	m_FileName(std::move(fname)),
+	m_Buff(4096),
+	m_File(nullptr),
+	m_Format(format)
+{
 }
 
-
-std::string StripString(const std::string &str) {
-	static char buf[CGR_MAX_PLUGIN_NAME];
-	strncpy(buf, str.c_str(), CGR_MAX_PLUGIN_NAME);
-	StripString(buf);
-	return buf;
-}
-
-
-PluginWriter::PluginWriter(std::string fname, ExportFormat format)
-	: m_FileName(std::move(fname)), m_Buff(4096), m_File(nullptr), m_Format(format) {
-}
-
-void PluginWriter::doOpen() {
+bool PluginWriter::doOpen() {
 	if (!m_File) {
-		m_File = fopen(m_FileName.c_str(), "wb");
+		m_File = BLI_fopen(m_FileName.c_str(), "wb");
 	}
+	return m_File != nullptr;
+}
+
+std::string PluginWriter::getName() const {
+	return fs::path(m_FileName).filename().string();
+}
+
+PluginWriter & PluginWriter::include(std::string name) {
+	if (name != m_FileName && !name.empty()) {
+		// dont include self
+		m_Includes.insert(std::move(name));
+	}
+	return *this;
 }
 
 PluginWriter::~PluginWriter() {
+	if (!m_Includes.empty()) {
+		*this << "\n";
+		for (const auto & inc : m_Includes) {
+			*this << "#include \"" << inc << "\"\n";
+		}
+	}
+
+
 	if (m_File) {
 		fclose(m_File);
 	}
@@ -73,8 +74,9 @@ PluginWriter & PluginWriter::writeStr(const char * str) {
 }
 
 PluginWriter & PluginWriter::writeData(const void * data, int size) {
-	doOpen();
-	fwrite(data, 1, size, m_File);
+	if (doOpen()) {
+		fwrite(data, 1, size, m_File);
+	}
 	return *this;
 }
 

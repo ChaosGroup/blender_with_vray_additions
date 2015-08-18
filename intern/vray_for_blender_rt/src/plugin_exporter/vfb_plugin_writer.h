@@ -4,9 +4,11 @@
 #include <cstdio>
 #include <string>
 #include <memory>
+#include <set>
 
 #include "vfb_plugin_attrs.h"
 #include "utils/cgr_vrscene.h"
+#include "utils/cgr_string.h"
 
 namespace VRayForBlender {
 
@@ -28,11 +30,15 @@ public:
 	PluginWriter & write(const char * format, ...);
 
 	ExportFormat format() const { return m_Format; }
+
+	PluginWriter & include(std::string);
+	std::string getName() const;
 private:
 
-	void doOpen();
+	bool doOpen();
 
 private:
+	std::set<std::string> m_Includes;
 	ExportFormat m_Format;
 	std::string m_FileName;
 	FILE * m_File;
@@ -53,9 +59,6 @@ PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrTransform 
 PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrPlugin & val);
 PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrMapChannels & val);
 PluginWriter & operator<<(PluginWriter & pp, const VRayBaseTypes::AttrInstancer & val);
-
-void         StripString(char *str);
-std::string  StripString(const std::string &str);
 
 template <typename T>
 using KVPair = std::pair<std::string, T>;
