@@ -74,6 +74,26 @@ inline VRayBaseTypes::AttrVector2 AttrVector2FromBlVector(const BlVector2 &bl_v)
 	return vector;
 }
 
+inline VRayBaseTypes::AttrTransform AttrTransformFromBlTransform(const float data[4][4]) {
+	VRayBaseTypes::AttrTransform tm;
+	tm.m.v0.x = data[0][0];
+	tm.m.v0.y = data[0][1];
+	tm.m.v0.z = data[0][2];
+
+	tm.m.v1.x = data[1][0];
+	tm.m.v1.y = data[1][1];
+	tm.m.v1.z = data[1][2];
+
+	tm.m.v2.x = data[2][0];
+	tm.m.v2.y = data[2][1];
+	tm.m.v2.z = data[2][2];
+
+	tm.offs.x = data[3][0];
+	tm.offs.y = data[3][1];
+	tm.offs.z = data[3][2];
+	return tm;
+}
+
 inline VRayBaseTypes::AttrTransform AttrTransformFromBlTransform(const BlTransform &bl_tm) {
 	VRayBaseTypes::AttrTransform tm;
 	memcpy(&tm.m.v0, &bl_tm.data[0], VectorBytesCount);

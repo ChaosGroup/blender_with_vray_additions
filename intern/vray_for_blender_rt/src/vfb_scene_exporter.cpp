@@ -768,55 +768,29 @@ void SceneExporter::sync_objects(const int &check_updated)
 								}
 								else {
 									if (dupli_use_instancer) {
-										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
-
-										
-										instancer_item.index = persistendID; 
-
-										instancer_item.tm = AttrTransformFromBlTransform(dupliOb.matrix());
-										
-
 										ObjectOverridesAttrs overrideAttrs;
-										overrideAttrs.override = !dupliOb.particle_system();
+										overrideAttrs.override = true;
+										// If dupli are shown via Instancer we need to hide
+										// original object
 										overrideAttrs.visible = false;
-
-										overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
-										overrideAttrs.tm.offs.x = dupOb.matrix_world()[12];
-										overrideAttrs.tm.offs.y = dupOb.matrix_world()[13];
-										overrideAttrs.tm.offs.z = dupOb.matrix_world()[14];
-
-										auto obmatArr = dupliOb.object().matrix_world();
-										auto dupmatArr = dupliOb.matrix();
-
-										float dupmat[4][4], obmat[4][4];
-
-										for (int c = 0; c < 4; ++c) {
-											for (int r = 0; r < 4; ++r) {
-												dupmat[c][r] = dupmatArr[c * 4 + r];
-												obmat[c][r] = obmatArr[c * 4 + r];
-											}
-										}
+										overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
 
 										float inverted[4][4];
-										copy_m4_m4(inverted, obmat);
+										copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
 										invert_m4(inverted);
 
-										float dupliMat[4][4];
-										mul_m4_m4m4(dupliMat, dupmat, inverted);
+										float tm[4][4];
+										mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
 
-										copy_m3_m4((float(*)[3])&instancer_item.tm.m, dupliMat);
+										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+										instancer_item.index = persistendID;
 
-										instancer_item.tm.offs.x = dupliMat[3][0];
-										instancer_item.tm.offs.y = dupliMat[3][1];
-										instancer_item.tm.offs.z = dupliMat[3][2];
-
-										sync_object(dupOb, check_updated, overrideAttrs);
-
-									
 										instancer_item.node = m_data_exporter.getNodeName(dupOb);
-
+										instancer_item.tm = AttrTransformFromBlTransform(tm);
 
 										dupli_instance++;
+
+										sync_object(dupOb, check_updated, overrideAttrs);
 									}
 									else {
 
