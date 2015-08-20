@@ -602,14 +602,14 @@ static inline unsigned int get_layer(BlLayers array)
 
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
-	bool skip = false;
+	bool add = false;
 	if (override.override) {
-		skip = !m_data_exporter.m_id_cache.contains(override.id);
+		add = !m_data_exporter.m_id_cache.contains(override.id);
 	} else {
-		skip = !m_data_exporter.m_id_cache.contains(ob);
+		add = !m_data_exporter.m_id_cache.contains(ob);
 	}
 
-	if (skip) {
+	if (add) {
 		if (override.override) {
 			m_data_exporter.m_id_cache.insert(override.id);
 		} else {
