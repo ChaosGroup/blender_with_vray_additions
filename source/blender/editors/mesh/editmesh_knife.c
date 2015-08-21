@@ -46,7 +46,7 @@
 #include "BLI_smallhash.h"
 #include "BLI_memarena.h"
 
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 #include "BKE_DerivedMesh.h"
 #include "BKE_context.h"
@@ -1590,7 +1590,7 @@ static void knife_find_line_hits(KnifeTool_OpData *kcd)
 	BLI_bvhtree_insert(planetree, 0, plane_cos, 4);
 	BLI_bvhtree_balance(planetree);
 
-	results = BLI_bvhtree_overlap(tree, planetree, &tot);
+	results = BLI_bvhtree_overlap(tree, planetree, &tot, NULL, NULL);
 	if (!results) {
 		BLI_bvhtree_free(planetree);
 		return;

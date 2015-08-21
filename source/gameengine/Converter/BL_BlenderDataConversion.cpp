@@ -2055,14 +2055,13 @@ void BL_ConvertBlenderObjects(struct Main* maggie,
 														converter,
 														libloading);
 
-						/* Insert object to the constraint game object list
-						 * so we can check later if there is a instance in the scene or
-						 * an instance and its actual group definition. */
-						convertedlist.insert((KX_GameObject*)gameobj->AddRef());
-
 						bool isInActiveLayer = false;
-						if (gameobj)
-						{
+						if (gameobj) {
+							/* Insert object to the constraint game object list
+							 * so we can check later if there is a instance in the scene or
+							 * an instance and its actual group definition. */
+							convertedlist.insert((KX_GameObject*)gameobj->AddRef());
+
 							/* macro calls object conversion funcs */
 							BL_CONVERTBLENDEROBJECT_SINGLE;
 
@@ -2318,7 +2317,13 @@ void BL_ConvertBlenderObjects(struct Main* maggie,
 
 			/* Store constraints of grouped and instanced objects for all layers */
 			gameobj->AddConstraint(dat);
-						
+
+			/** if it's during libload we only add constraints in the object but
+			 * doesn't create it. Constraint will be replicated later in scene->MergeScene
+			 */
+			if (libloading)
+				continue;
+
 			/* Skipped already converted constraints. 
 			 * This will happen when a group instance is made from a linked group instance
 			 * and both are on the active layer. */

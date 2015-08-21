@@ -1550,16 +1550,19 @@ static const char *gpu_shader_version(bool use_opensubdiv)
 }
 
 
-static void gpu_shader_standard_extensions(char defines[MAX_EXT_DEFINE_LENGTH])
+static void gpu_shader_standard_extensions(char defines[MAX_EXT_DEFINE_LENGTH], bool use_opensubdiv)
 {
 #ifdef WITH_OPENSUBDIV
-	strcat(defines, "#extension GL_ARB_texture_query_lod: enable\n"
-	                "#extension GL_ARB_gpu_shader5 : enable\n"
-	                "#extension GL_ARB_explicit_attrib_location : require\n");
+	if (use_opensubdiv) {
+		strcat(defines, "#extension GL_ARB_texture_query_lod: enable\n"
+		                "#extension GL_ARB_gpu_shader5 : enable\n"
+		                "#extension GL_ARB_explicit_attrib_location : require\n");
+	}
 #else
 	/* need this extension for high quality bump mapping */
 	if (GPU_bicubic_bump_support())
 		strcat(defines, "#extension GL_ARB_texture_query_lod: enable\n");
+	(void) use_opensubdiv;
 #endif
 
 	if (GPU_geometry_shader_support())
@@ -1719,7 +1722,7 @@ GPUShader *GPU_shader_create(const char *vertexcode, const char *fragcode, const
 	}
 
 	gpu_shader_standard_defines(use_opensubdiv, standard_defines);
-	gpu_shader_standard_extensions(standard_extensions);
+	gpu_shader_standard_extensions(standard_extensions, use_opensubdiv);
 
 	if (vertexcode) {
 		const char *source[5];
@@ -1932,7 +1935,7 @@ int GPU_shader_get_uniform(GPUShader *shader, const char *name)
 
 void GPU_shader_uniform_vector(GPUShader *UNUSED(shader), int location, int length, int arraysize, const float *value)
 {
-	if (location == -1)
+	if (location == -1 || value == NULL)
 		return;
 
 	GPU_ASSERT_NO_GL_ERRORS("Pre Uniform Vector");
