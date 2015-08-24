@@ -615,7 +615,6 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		} else {
 			m_data_exporter.m_id_cache.insert(ob);
 		}
-		
 
 		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 
@@ -772,8 +771,9 @@ void SceneExporter::sync_objects(const int &check_updated)
 										overrideAttrs.override = true;
 										// If dupli are shown via Instancer we need to hide
 										// original object
-										overrideAttrs.visible = false;
+										overrideAttrs.visible = ob_is_duplicator_renderable(dupOb);
 										overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+										overrideAttrs.id = reinterpret_cast<int>(dupOb.ptr.data);
 
 										float inverted[4][4];
 										copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
@@ -814,11 +814,14 @@ void SceneExporter::sync_objects(const int &check_updated)
 			}
 
 			if (!is_interrupted()) {
-				if (!ob_is_duplicator_renderable(ob)) {
+				if (ob.is_duplicator()) {
 					ObjectOverridesAttrs overAttrs;
+
 					overAttrs.override = true;
+					overAttrs.id = reinterpret_cast<int>(ob.ptr.data);
 					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-					overAttrs.visible = false;
+					overAttrs.visible = ob_is_duplicator_renderable(ob);
+
 					sync_object(ob, check_updated, overAttrs);
 				} else {
 					sync_object(ob, check_updated);
