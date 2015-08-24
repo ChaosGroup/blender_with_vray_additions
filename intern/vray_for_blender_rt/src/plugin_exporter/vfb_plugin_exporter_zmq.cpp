@@ -182,6 +182,11 @@ void ZmqExporter::init()
 
 void ZmqExporter::checkZmqClient()
 {
+	if (!m_Client->connected()) {
+		// we can't connect dont retry
+		return;
+	}
+
 	if (!m_Client->good()) {
 		delete m_Client;
 		m_Client = new ZmqClient();
