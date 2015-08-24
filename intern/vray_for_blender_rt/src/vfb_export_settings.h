@@ -103,6 +103,7 @@ struct SettingsFiles {
 	OutputDirType output_type;
 	std::string   output_dir;
 	bool          output_unique;
+	std::string   project_path;
 };
 
 

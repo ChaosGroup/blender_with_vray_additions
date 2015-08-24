@@ -38,7 +38,7 @@ std::string PluginWriter::getName() const
 
 PluginWriter &PluginWriter::include(std::string name)
 {
-	if (name != m_FileName && !name.empty()) {
+	if (name != this->getName() && !name.empty()) {
 		// dont include self
 		m_Includes.insert(std::move(name));
 	}

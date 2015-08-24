@@ -21,6 +21,9 @@
 #include "vfb_params_json.h"
 #include "vfb_export_settings.h"
 
+#include "BLI_fileops.h"
+#include "BLI_path_util.h"
+
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
@@ -77,25 +80,41 @@ void VrsceneExporter::set_settings(const ExporterSettings &settings)
 	m_SplitFiles = settings.settings_files.use_separate;
 	m_FileDirType = settings.settings_files.output_type;
 
-	const std::string fileName = "scene";
-
-	if (settings.settings_files.output_unique) {
-		// TODO get bpy.data.filepath from python
-	}
+	fs::path dir;
 
 	switch (m_FileDirType) {
 	case SettingsFiles::OutputDirTypeUser:
-		m_FileDir = (fs::path(settings.settings_files.output_dir) / fs::path(fileName)).string();
+		dir = fs::path(settings.settings_files.output_dir);
 		break;
 	case SettingsFiles::OutputDirTypeScene:
-		//TODO get bpy.data.filepath from python or get blend file path some other way
-		/* fall-through */
+		dir = fs::path(settings.settings_files.project_path);
+		break;
 	case SettingsFiles::OutputDirTypeTmp:
 		/* fall-through */
 	default:
-		m_FileDir = (fs::temp_directory_path() /  fs::path("vrayblender_" + fileName)).string();
+		// TODO vrayblender_<USER_NAME>
+		dir = fs::temp_directory_path() /  fs::path("vrayblender_");
 		break;
 	}
+
+	m_FileDir = dir.string();
+
+	char absPath[PATH_MAX];
+	strncpy(absPath, m_FileDir.c_str(), PATH_MAX);
+	BLI_path_abs(absPath, settings.settings_files.project_path.c_str());
+	m_FileDir = absPath;
+
+	if (!fs::exists(m_FileDir)) {
+		fs::create_directories(m_FileDir);
+	}
+
+	// append the file prefix to the dir
+	fs::path fileName = "scene";
+	if (settings.settings_files.output_unique && !settings.settings_files.project_path.empty()) {
+		fileName = fs::path(settings.settings_files.project_path).filename();
+	}
+
+	m_FileDir = (m_FileDir / fileName).string();
 }
 
 void VrsceneExporter::init()

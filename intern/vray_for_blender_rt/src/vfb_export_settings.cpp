@@ -45,6 +45,7 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&vrayExporter, "output");
 	settings_files.output_dir    = RNA_std_string_get(&vrayExporter, "output_dir");
 	settings_files.output_unique = RNA_boolean_get(&vrayExporter, "output_unique");
+	settings_files.project_path  = data.filepath();
 
 	// Check what layers to use
 	//
