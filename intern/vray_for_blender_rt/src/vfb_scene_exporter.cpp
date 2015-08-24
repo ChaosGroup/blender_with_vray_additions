@@ -600,10 +600,21 @@ static inline unsigned int get_layer(BlLayers array)
 }
 
 
-void SceneExporter::sync_object(BL::Object ob, const int &check_updated)
+void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
-	if (!m_data_exporter.m_id_cache.contains(ob)) {
-		m_data_exporter.m_id_cache.insert(ob);
+	bool add = false;
+	if (override) {
+		add = !m_data_exporter.m_id_cache.contains(override.id);
+	} else {
+		add = !m_data_exporter.m_id_cache.contains(ob);
+	}
+
+	if (add) {
+		if (override.override) {
+			m_data_exporter.m_id_cache.insert(override.id);
+		} else {
+			m_data_exporter.m_id_cache.insert(ob);
+		}
 
 		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 
@@ -617,16 +628,56 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated)
 			              ob.name().c_str());
 
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
-				m_data_exporter.exportObject(ob, check_updated);
+				m_data_exporter.exportObject(ob, check_updated, override);
 			}
 			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
-				m_data_exporter.exportLight(ob, check_updated);
+				m_data_exporter.exportLight(ob, check_updated, override);
 			}
 		}
 
 		// Reset update flag
 		RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 	}
+}
+
+static int ob_has_dupli(BL::Object ob) {
+	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
+}
+
+static int ob_is_duplicator_renderable(BL::Object ob) {
+	bool is_renderable = true;
+
+	// Dulpi
+	if (ob_has_dupli(ob)) {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
+	}
+
+	// Particles
+	// Particle system "Show / Hide Emitter" has priority over dupli
+	if (ob.particle_systems.length()) {
+		is_renderable = true;
+
+		BL::Object::modifiers_iterator mdIt;
+		for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
+			BL::Modifier md(*mdIt);
+			if (md.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+				BL::ParticleSystemModifier pmod(md);
+				BL::ParticleSystem psys(pmod.particle_system());
+				if (psys) {
+					BL::ParticleSettings pset(psys.settings());
+					if (pset) {
+						if (!pset.use_render_emitter()) {
+							is_renderable = false;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return is_renderable;
 }
 
 
@@ -638,8 +689,6 @@ void SceneExporter::sync_objects(const int &check_updated)
 	// TODO:
 	// [ ] Track new objects (creation / layer settings change)
 	// [ ] Track deleted objects
-
-	const int recalc_mode = 2;
 
 	// Sync objects
 	//
@@ -659,9 +708,10 @@ void SceneExporter::sync_objects(const int &check_updated)
 					const int dupli_override_id   = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
 					const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
 
-					ob.dupli_list_create(m_scene, recalc_mode);
+					ob.dupli_list_create(m_scene, EvalMode::EvalModeRender);
 
 					AttrInstancer instances;
+					instances.frameNumber = 0;
 					if (dupli_use_instancer) {
 						int num_instances = 0;
 
@@ -693,21 +743,54 @@ void SceneExporter::sync_objects(const int &check_updated)
 							const bool is_light = Blender::IsLight(dupOb);
 							const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
 
+							MHash persistendID;
+							MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+
 							if (!is_hidden && supported_type) {
 								if (is_light) {
-									// ...
+									ObjectOverridesAttrs overrideAttrs;
+									
+									overrideAttrs.override = true;
+									overrideAttrs.visible = true;
+									overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+									overrideAttrs.id = persistendID;
+
+									char namePrefix[255] = {0, };
+									namePrefix[0] = 'D';
+									snprintf(namePrefix + 1, 250, "%u", persistendID);
+									strcat(namePrefix, "@");
+									strcat(namePrefix, ob.name().c_str());
+
+									overrideAttrs.namePrefix = namePrefix;
+
+									sync_object(dupOb, check_updated, overrideAttrs);
 								}
 								else {
 									if (dupli_use_instancer) {
-										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
-										instancer_item.index = dupli_instance; // TODO: Handle "persistent_id"
-										instancer_item.tm    = AttrTransformFromBlTransform(dupliOb.matrix());
+										ObjectOverridesAttrs overrideAttrs;
+										overrideAttrs.override = true;
+										// If dupli are shown via Instancer we need to hide
+										// original object
+										overrideAttrs.visible = ob_is_duplicator_renderable(dupOb);
+										overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+										overrideAttrs.id = reinterpret_cast<int>(dupOb.ptr.data);
 
-										sync_object(dupOb, check_updated);
+										float inverted[4][4];
+										copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
+										invert_m4(inverted);
+
+										float tm[4][4];
+										mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
+
+										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+										instancer_item.index = persistendID;
 
 										instancer_item.node = m_data_exporter.getNodeName(dupOb);
+										instancer_item.tm = AttrTransformFromBlTransform(tm);
 
 										dupli_instance++;
+
+										sync_object(dupOb, check_updated, overrideAttrs);
 									}
 									else {
 
@@ -731,7 +814,18 @@ void SceneExporter::sync_objects(const int &check_updated)
 			}
 
 			if (!is_interrupted()) {
-				sync_object(ob, check_updated);
+				if (ob.is_duplicator()) {
+					ObjectOverridesAttrs overAttrs;
+
+					overAttrs.override = true;
+					overAttrs.id = reinterpret_cast<int>(ob.ptr.data);
+					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					overAttrs.visible = ob_is_duplicator_renderable(ob);
+
+					sync_object(ob, check_updated, overAttrs);
+				} else {
+					sync_object(ob, check_updated);
+				}
 			}
 		}
 	}

@@ -124,8 +124,16 @@ struct IdCache {
 		return m_data.find(id.ptr.data) != m_data.end();
 	}
 
+	int contains(int id) {
+		return m_data.find((void*)id) != m_data.end();
+	}
+
 	void insert(BL::ID id) {
 		m_data.insert(id.ptr.data);
+	}
+
+	void insert(int id) {
+		m_data.insert((void*)id);
 	}
 
 	void clear() {
@@ -189,6 +197,25 @@ struct DataDefaults {
 
 #define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context
 
+struct ObjectOverridesAttrs {
+	bool override;
+
+	int visible;
+	AttrTransform tm;
+	int id;
+	BL::Object dupliHolder;
+	std::string namePrefix;
+
+	inline operator bool() const { return this->override; }
+
+	ObjectOverridesAttrs():
+		override(false),
+		visible(true),
+		id(0),
+		dupliHolder(PointerRNA_NULL),
+		namePrefix("")
+	{}
+};
 
 class DataExporter {
 public:
@@ -248,8 +275,8 @@ public:
 
 	AttrValue         exportGeomStaticMesh(BL::Object ob);
 	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
-	AttrValue         exportObject(BL::Object ob, bool check_updated=false);
-	AttrValue         exportLight(BL::Object ob, bool check_updated=false);
+	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
+	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 
 	void              exportVRayEnvironment(NodeContext &context);
 

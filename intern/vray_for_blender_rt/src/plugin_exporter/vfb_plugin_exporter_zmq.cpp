@@ -248,8 +248,6 @@ AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
-		PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
-			name.c_str(), pluginDesc.pluginID.c_str(), attr.attrName.c_str());
 
 		if (!timeSet) {
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, attr.time));
