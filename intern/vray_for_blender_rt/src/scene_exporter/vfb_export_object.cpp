@@ -43,7 +43,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			is_data_updated = parent.is_updated_data();
 		}
 
-		BL::NodeTree ntree = Nodes::GetNodeTree(data);
+		BL::NodeTree ntree = Nodes::GetNodeTree(ob);
 		if (ntree) {
 			is_data_updated |= ntree.is_updated();
 			DataExporter::tag_ntree(ntree, false);

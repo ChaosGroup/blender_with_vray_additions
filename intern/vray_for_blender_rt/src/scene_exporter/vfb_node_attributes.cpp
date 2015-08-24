@@ -24,7 +24,11 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-
+#include "utils/cgr_paths.h"
+#include "BLI_path_util.h"
+#include "BLI_fileops.h"
+#include "BKE_main.h"
+#include "BKE_global.h"
 
 void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc)
 {
@@ -44,11 +48,14 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 			if (NOT(absFilepath.empty())) {
 				PropertySubType propSubType = RNA_property_subtype(prop);
 				if (propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
-					// BLI_path_abs(value, ID_BLEND_PATH_EX(holder));
+					char fixedPath[PATH_MAX];
+					strncpy(fixedPath, absFilepath.c_str(), PATH_MAX);
+					BLI_path_abs(fixedPath, m_data.filepath().c_str());
+					absFilepath = fixedPath;
 
 					if (propSubType == PROP_FILEPATH) {
-						// absFilepath = BlenderUtils::GetFullFilepath(value, holder);
-						// absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
+						absFilepath = BlenderUtils::GetFullFilepath(absFilepath, holder);
+						absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
 					}
 				}
 
