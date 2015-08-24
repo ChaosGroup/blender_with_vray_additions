@@ -206,8 +206,15 @@ struct ObjectOverridesAttrs {
 	BL::Object dupliHolder;
 	std::string namePrefix;
 
-	ObjectOverridesAttrs()
-		: override(false), dupliHolder(PointerRNA_NULL), id(0), visible(true), namePrefix("") {}
+	inline operator bool() const { return this->override; }
+
+	ObjectOverridesAttrs():
+		override(false),
+		visible(true),
+		id(0),
+		dupliHolder(PointerRNA_NULL),
+		namePrefix("")
+	{}
 };
 
 class DataExporter {

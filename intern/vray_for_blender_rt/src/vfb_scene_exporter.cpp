@@ -603,7 +603,7 @@ static inline unsigned int get_layer(BlLayers array)
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
 	bool add = false;
-	if (override.override) {
+	if (override) {
 		add = !m_data_exporter.m_id_cache.contains(override.id);
 	} else {
 		add = !m_data_exporter.m_id_cache.contains(ob);
