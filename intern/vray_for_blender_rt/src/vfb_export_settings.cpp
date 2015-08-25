@@ -40,6 +40,7 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 	use_subsurf_to_osd  = RNA_boolean_get(&vrayExporter, "subsurf_to_osd");
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&vrayExporter, "default_mapping");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&vrayExporter, "data_format");
+	export_meshes       = RNA_boolean_get(&vrayExporter, "auto_meshes");
 
 	settings_files.use_separate  = RNA_boolean_get(&vrayExporter, "useSeparateFiles");
 	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&vrayExporter, "output");
