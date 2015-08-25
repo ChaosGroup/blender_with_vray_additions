@@ -42,7 +42,23 @@ namespace {
 		case ValueTypeListColor:
 			return getListHash(left.valListColor) == getListHash(right.valListColor);
 		case ValueTypeInstancer:
-			return getListHash(left.valInstancer.data) == getListHash(right.valInstancer.data);
+			if (left.valInstancer.data.getCount() != right.valInstancer.data.getCount() ||
+				left.valInstancer.frameNumber != right.valInstancer.frameNumber) {
+				return false;
+			}
+			for (int c = 0; c < left.valInstancer.data.getCount(); c++) {
+				const auto &rd = (*right.valInstancer.data)[c],
+					       &ld = (*left.valInstancer.data)[c];
+
+				if (memcmp(&ld.tm, &rd.tm, sizeof(ld.tm)) != 0 ||
+					memcmp(&ld.vel, &rd.vel, sizeof(ld.vel)) != 0 ||
+					ld.index != rd.index ||
+					ld.node != rd.node)
+				{
+					return false;
+				}
+			}
+			return true;
 		case ValueTypeListPlugin:
 			if (left.valListPlugin.getCount() != right.valListPlugin.getCount()) {
 				return false;
