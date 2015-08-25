@@ -38,10 +38,17 @@ public:
 	virtual            ~NullExporter() {}
 	virtual void        init() {}
 	virtual void        free() {}
-	virtual AttrPlugin  export_plugin(const PluginDesc&) { return AttrPlugin(); }
+	virtual AttrPlugin  export_plugin_impl(const PluginDesc&) { return AttrPlugin(); }
 };
 
-VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type) {
+AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
+{
+	const auto pDesc = m_PluginManager.filterPlugin(pluginDesc);
+	return this->export_plugin_impl(pDesc);
+}
+
+VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
+{
 	return VRayForBlender::ExporterCreate(type, ExporterSettings());
 }
 

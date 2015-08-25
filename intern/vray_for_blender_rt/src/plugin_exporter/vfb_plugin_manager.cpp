@@ -1,4 +1,4 @@
-#include "vfb_plugin_manager.h"
+#include "vfb_plugin_exporter.h"
 #include "utils/cgr_hash.h"
 
 using namespace VRayForBlender;

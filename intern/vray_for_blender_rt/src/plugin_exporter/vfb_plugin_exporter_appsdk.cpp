@@ -244,7 +244,7 @@ void AppSdkExporter::reset_used()
 
 // TODO: Support exporting empty list data, could happen with "Build" modifier, for example
 //
-AttrPlugin AppSdkExporter::export_plugin(const PluginDesc &pluginDesc)
+AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 {
 	AttrPlugin plugin;
 

@@ -22,7 +22,6 @@
 #define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H
 
 #include "vfb_plugin_exporter.h"
-#include "vfb_plugin_manager.h"
 
 #include "zmq_wrapper.h"
 #include "zmq_message.hpp"
@@ -56,7 +55,7 @@ public:
 	virtual RenderImage  get_image();
 	virtual void set_render_size(const int &w, const int &h);
 
-	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
+	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:
 	void                checkZmqClient();
 
@@ -69,7 +68,6 @@ private:
 	std::mutex m_ImgMutex;
 
 	ZmqRenderImage m_CurrentImage;
-	PluginManager m_PluginManager;
 };
 } // namespace VRayForBlender
 

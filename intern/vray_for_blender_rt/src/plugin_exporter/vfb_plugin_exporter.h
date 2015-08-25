@@ -40,7 +40,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
-
+#include <boost/unordered_map.hpp>
 
 namespace VRayForBlender {
 
@@ -130,6 +130,18 @@ struct RenderImage {
 
 struct ExporterSettings;
 
+class PluginManager {
+public:
+	PluginManager();
+
+	PluginDesc filterPlugin(const PluginDesc & pluginDesc);
+
+	void clear();
+
+private:
+	boost::unordered_map<std::string, PluginAttrs> cache;
+};
+
 class PluginExporter
 {
 public:
@@ -149,7 +161,9 @@ public:
 
 	virtual void         export_vrscene(const std::string &filepath) {}
 
-	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc)=0;
+	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
+	AttrPlugin           export_plugin(const PluginDesc &pluginDesc);
+
 	virtual int          remove_plugin(const std::string &pluginName) { return 0; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }
@@ -164,6 +178,8 @@ protected:
 	ExpoterCallback      callback_on_rt_image_updated;
 	UpdateMessageCb      on_message_update;
 
+private:
+	PluginManager        m_PluginManager;
 };
 
 PluginExporter* ExporterCreate(ExpoterType type, const ExporterSettings &);

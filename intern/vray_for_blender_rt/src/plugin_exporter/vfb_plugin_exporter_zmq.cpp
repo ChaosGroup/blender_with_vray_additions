@@ -234,10 +234,9 @@ void ZmqExporter::export_vrscene(const std::string &filepath)
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::ExportScene, filepath));
 }
 
-AttrPlugin ZmqExporter::export_plugin(const PluginDesc & pDesc)
+AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 {
 	checkZmqClient();
-	const auto & pluginDesc = m_PluginManager.filterPlugin(pDesc);
 
 	if (pluginDesc.pluginID.empty()) {
 		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",

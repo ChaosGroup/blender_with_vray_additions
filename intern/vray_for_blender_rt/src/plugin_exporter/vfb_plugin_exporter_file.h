@@ -20,7 +20,6 @@
 #define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_FILE_H
 
 #include "vfb_plugin_exporter.h"
-#include "vfb_plugin_manager.h"
 #include "vfb_plugin_writer.h"
 #include "vfb_params_json.h"
 #include "vfb_export_settings.h"
@@ -44,7 +43,7 @@ public:
 	virtual void        start();
 	virtual void        stop();
 
-	virtual AttrPlugin  export_plugin(const PluginDesc &pluginDesc);
+	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 	virtual void        set_settings(const ExporterSettings &);
 private:
 	void setUpSplitWriters();
@@ -53,7 +52,6 @@ private:
 private:
 	std::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>> m_Writers;
 
-	PluginManager                  m_PluginManager;
 	ExporterSettings::ExportFormat m_ExportFormat;
 
 	bool                          m_ReexportMeshes;

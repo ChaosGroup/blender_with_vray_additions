@@ -62,7 +62,7 @@ public:
 	virtual void         start();
 	virtual void         stop();
 
-	virtual AttrPlugin   export_plugin(const PluginDesc &pluginDesc);
+	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc);
 	virtual int          remove_plugin(const std::string &pluginName);
 
 	virtual void         export_vrscene(const std::string &filepath);

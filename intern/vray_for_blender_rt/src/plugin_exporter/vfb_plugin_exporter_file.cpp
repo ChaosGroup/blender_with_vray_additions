@@ -158,18 +158,12 @@ void VrsceneExporter::stop()
 }
 
 
-AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
+AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 {
-	const auto pluginDesc = m_PluginManager.filterPlugin(pDesc);
 	const std::string & name = pluginDesc.pluginName;
 
 	AttrPlugin plugin;
 	plugin.plugin = name;
-
-	if (pDesc.pluginAttrs.size() != pluginDesc.pluginAttrs.size()) {
-		// something is filtered out - dont export
-		return plugin;
-	}
 	m_Synced = false;
 
 	const ParamDesc::PluginDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
@@ -189,7 +183,9 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 			writerPtr = m_Writers[ParamDesc::PluginSettings];
 		} else if (pluginDesc.pluginID.find("Light") != std::string::npos) {
 			writerPtr = m_Writers[ParamDesc::PluginLight];
-		} else {
+		}
+
+		if (!writerPtr) {
 			PRINT_ERROR("No PluginWriter for type %d exproting %s with id [%s]",
 				writerType, name.c_str(), pluginDesc.pluginID.c_str());
 			return plugin;
