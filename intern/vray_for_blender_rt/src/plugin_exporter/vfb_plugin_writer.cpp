@@ -28,7 +28,7 @@ bool PluginWriter::doOpen()
 
 bool PluginWriter::good() const
 {
-	return !m_TryOpen || m_File != nullptr && m_TryOpen;
+	return !m_TryOpen || m_TryOpen && m_File != nullptr && ferror(m_File) == 0;
 }
 
 std::string PluginWriter::getName() const
@@ -38,22 +38,31 @@ std::string PluginWriter::getName() const
 
 PluginWriter &PluginWriter::include(std::string name)
 {
-	if (name != this->getName() && !name.empty()) {
+	if (name != getName() && !name.empty()) {
 		// dont include self
 		m_Includes.insert(std::move(name));
 	}
 	return *this;
 }
 
-PluginWriter::~PluginWriter()
+void PluginWriter::flush()
 {
 	if (!m_Includes.empty()) {
 		*this << "\n";
 		for (const auto &inc : m_Includes) {
 			*this << "#include \"" << inc << "\"\n";
 		}
+		m_Includes.clear();
 	}
+	// check m_File ptr not this->good() since we need to flush the buffer
+	if (m_File) {
+		fflush(m_File);
+	}
+}
 
+PluginWriter::~PluginWriter()
+{
+	flush();
 	if (m_File) {
 		fclose(m_File);
 	}

@@ -30,7 +30,8 @@ namespace fs = boost::filesystem;
 using namespace VRayForBlender;
 
 
-VrsceneExporter::VrsceneExporter()
+VrsceneExporter::VrsceneExporter():
+	m_Synced(false)
 {
 
 }
@@ -80,6 +81,7 @@ void VrsceneExporter::set_settings(const ExporterSettings &settings)
 	m_SplitFiles = settings.settings_files.use_separate;
 	m_FileDirType = settings.settings_files.output_type;
 
+	m_ReexportMeshes = settings.export_meshes;
 	fs::path dir;
 
 	switch (m_FileDirType) {
@@ -129,13 +131,18 @@ void VrsceneExporter::init()
 
 void VrsceneExporter::free()
 {
-
+	m_Writers.clear();
 }
 
 
 void VrsceneExporter::sync()
 {
-
+	m_Synced = true;
+	for (auto & writer : m_Writers) {
+		if (writer.second) {
+			writer.second->flush();
+		}
+	}
 }
 
 
@@ -159,6 +166,12 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 	AttrPlugin plugin;
 	plugin.plugin = name;
 
+	if (pDesc.pluginAttrs.size() != pluginDesc.pluginAttrs.size()) {
+		// something is filtered out - dont export
+		return plugin;
+	}
+	m_Synced = false;
+
 	const ParamDesc::PluginDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
 	auto writerPtr = m_Writers[pluginParamDesc.pluginType];
 	if (!writerPtr) {
@@ -176,11 +189,8 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 	}
 
 	PluginWriter & writer = *writerPtr;
-	m_Writers[ParamDesc::PluginSettings]->include(writer.getName());
-
-	if (pDesc.pluginAttrs.size() != pluginDesc.pluginAttrs.size()) {
-		// something is filtered out - dont export
-		return plugin;
+	if (m_Writers[ParamDesc::PluginSettings]) {
+		m_Writers[ParamDesc::PluginSettings]->include(writer.getName());
 	}
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";

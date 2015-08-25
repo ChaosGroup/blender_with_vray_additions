@@ -56,6 +56,8 @@ private:
 	PluginManager                  m_PluginManager;
 	ExporterSettings::ExportFormat m_ExportFormat;
 
+	bool                          m_ReexportMeshes;
+	bool                          m_Synced;
 	bool                          m_SplitFiles;
 	SettingsFiles::OutputDirType  m_FileDirType;
 	std::string                   m_FileDir;

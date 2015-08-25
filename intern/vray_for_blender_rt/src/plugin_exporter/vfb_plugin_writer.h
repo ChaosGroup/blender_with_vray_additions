@@ -27,6 +27,8 @@ public:
 	PluginWriter &writeData(const void *data, int size);
 	PluginWriter &write(const char *format, ...);
 
+	void flush();
+
 	ExporterSettings::ExportFormat format() const { return m_Format; }
 
 	PluginWriter &include(std::string);
