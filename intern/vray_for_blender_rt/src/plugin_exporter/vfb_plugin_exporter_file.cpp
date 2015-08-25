@@ -173,7 +173,15 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 	m_Synced = false;
 
 	const ParamDesc::PluginDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
-	auto writerPtr = m_Writers[pluginParamDesc.pluginType];
+
+	auto writerType = pluginParamDesc.pluginType;
+
+	// redirect all geom plugins which are not static to nodes file
+	if (writerType == ParamDesc::PluginGeometry && pluginDesc.pluginID != "GeomStaticMesh") {
+		writerType = ParamDesc::PluginObject;
+	}
+
+	auto writerPtr = m_Writers[writerType];
 	if (!writerPtr) {
 		if (pluginDesc.pluginID == "Node" || pluginDesc.pluginID == "Instancer") {
 			writerPtr = m_Writers[ParamDesc::PluginObject];
@@ -183,7 +191,7 @@ AttrPlugin VrsceneExporter::export_plugin(const PluginDesc &pDesc)
 			writerPtr = m_Writers[ParamDesc::PluginLight];
 		} else {
 			PRINT_ERROR("No PluginWriter for type %d exproting %s with id [%s]",
-				pluginParamDesc.pluginType, name.c_str(), pluginDesc.pluginID.c_str());
+				writerType, name.c_str(), pluginDesc.pluginID.c_str());
 			return plugin;
 		}
 	}
