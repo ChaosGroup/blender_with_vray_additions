@@ -106,9 +106,7 @@ namespace {
 
 PluginManager::PluginManager() {}
 
-PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
-	auto & pluginDesc = const_cast<PluginDesc&>(pDesc);
-
+PluginDesc PluginManager::filterPlugin(const PluginDesc & pluginDesc) {
 	const auto & key = pluginDesc.pluginName + pluginDesc.pluginID;
 
 	auto cacheEntry = cache.find(key);
@@ -132,11 +130,11 @@ PluginDesc PluginManager::filterPlugin(const PluginDesc & pDesc) {
 		// the input item is not present in cache - add it to both cache and output
 		if (cacheItem == cacheEntry->second.end()) {
 			cacheEntry->second.insert(inputItem);
-			pluginDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
+			filteredDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
 			continue;
 		}
 
-		// item is both in cache and input
+		// item is both in cache and input - overwrite cache value and add to output
 		if (!compare(inputItem.second.attrValue, cacheItem->second.attrValue)) {
 			cacheItem->second = inputItem.second;
 			filteredDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
