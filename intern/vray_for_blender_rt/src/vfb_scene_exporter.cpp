@@ -64,7 +64,7 @@ static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
 
 
-SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region):
+SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region, bool is_viewport):
     m_context(context),
     m_engine(engine),
     m_data(data),
@@ -72,7 +72,8 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     m_view3d(view3d),
     m_region3d(region3d),
     m_region(region),
-    m_exporter(nullptr)
+    m_exporter(nullptr),
+	m_is_viewport(is_viewport)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -106,11 +107,29 @@ SceneExporter::~SceneExporter()
 }
 
 
-void SceneExporter::init()
+bool SceneExporter::init()
 {
 	m_settings.init(m_data, m_scene);
 
-	m_exporter = ExporterCreate(m_settings.exporter_type, m_settings);
+#ifdef USE_BLENDER_VRAY_ZMQ
+	if (m_is_viewport) {
+		m_settings.exporter_type = ExpoterType::ExpoterTypeZMQ;
+	}
+#else
+	// viewport without zmq - error
+	if (m_is_viewport) {
+		return false;
+	}
+#endif
+
+	m_exporter = ExporterCreate(m_settings.exporter_type);
+	if (!m_exporter) {
+		return false;
+	}
+
+	m_exporter->set_is_viewport(m_is_viewport);
+	m_exporter->set_settings(m_settings);
+	m_exporter->init();
 	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 
@@ -120,6 +139,8 @@ void SceneExporter::init()
 	m_data_exporter.init(m_exporter, m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);
 	m_data_exporter.init_defaults();
+
+	return true;
 }
 
 

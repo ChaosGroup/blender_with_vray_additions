@@ -104,53 +104,91 @@ namespace {
 }
 
 
-PluginManager::PluginManager() {}
+PluginManager::PluginManager()
+{}
 
-PluginDesc PluginManager::filterPlugin(const PluginDesc & pluginDesc) {
-	const auto & key = pluginDesc.pluginName + pluginDesc.pluginID;
+std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
+{
+	return pluginDesc.pluginName + pluginDesc.pluginID;
+}
 
+bool PluginManager::inCache(const PluginDesc &pluginDesc) const
+{
+	return cache.find(getKey(pluginDesc)) != cache.end();
+}
+
+std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const 
+{
+	const auto key = getKey(pluginDesc);
 	auto cacheEntry = cache.find(key);
 
+	PluginDesc res(pluginDesc.pluginName, pluginDesc.pluginID);
+
 	if (cacheEntry == cache.end()) {
-		cache.insert(make_pair(key, pluginDesc.pluginAttrs));
-		return pluginDesc;
+		return std::make_pair(true, buildDiff ? pluginDesc : res);
 	}
 
-	PluginDesc filteredDesc(pluginDesc.pluginName, pluginDesc.pluginID);
+	const auto &cacheAttributes = cacheEntry->second.pluginAttrs;
 
-	// all input keys will be stored here, any cache entry with key not here must be removed
-	std::set<std::string> validCacheKeys;
-
-	for (const auto & inputItem : pluginDesc.pluginAttrs) {
-		// add input key to validate cache keys
-		validCacheKeys.insert(inputItem.first);
-
-		auto cacheItem = cacheEntry->second.find(inputItem.first);
-
-		// the input item is not present in cache - add it to both cache and output
-		if (cacheItem == cacheEntry->second.end()) {
-			cacheEntry->second.insert(inputItem);
-			filteredDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
-			continue;
-		}
-
-		// item is both in cache and input - overwrite cache value and add to output
-		if (!compare(inputItem.second.attrValue, cacheItem->second.attrValue)) {
-			cacheItem->second = inputItem.second;
-			filteredDesc.add(inputItem.second.attrName, inputItem.second.attrValue);
-		}
+	if (cacheAttributes.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
+		return std::make_pair(true, res);
 	}
 
-	// remove cache entries which are not in the input
-	if (cacheEntry->second.size() != validCacheKeys.size()) {
-		for (auto iter = cacheEntry->second.cbegin(), end = cacheEntry->second.cend(); iter != end; ++iter) {
-			if (validCacheKeys.find(iter->first) == validCacheKeys.end()) {
-				cacheEntry->second.erase(iter);
+	for (const auto &attribute : pluginDesc.pluginAttrs) {
+		auto cAttr = cacheAttributes.find(attribute.first);
+
+		// attribute present in the cached PluginDesc?
+		if (cAttr == cacheAttributes.end()) {
+			if (buildDiff) {
+				res.add(attribute.second.attrName, attribute.second.attrValue);
+				continue;
+			} else {
+				return std::make_pair(true, res);
+			}
+		}
+
+		// attribute in cache but different value?
+		if (!compare(attribute.second.attrValue, cAttr->second.attrValue)) {
+			if (buildDiff) {
+				res.add(attribute.second.attrName, attribute.second.attrValue);
+			} else {
+				return std::make_pair(true, res);
 			}
 		}
 	}
 
-	return filteredDesc;
+	return std::make_pair(false, res);;
+}
+
+bool PluginManager::differs(const PluginDesc &pluginDesc) const
+{
+	return diffWithCache(pluginDesc, false).first;
+}
+
+PluginDesc PluginManager::differences(const PluginDesc &pluginDesc) const
+{
+	return diffWithCache(pluginDesc, true).second;
+}
+
+PluginDesc PluginManager::fromCache(const PluginDesc &search) const
+{
+	auto iter = cache.find(getKey(search));
+	if (iter != cache.cend()) {
+		return iter->second;
+	}
+	return PluginDesc(search.pluginName, search.pluginID);
+}
+
+void PluginManager::updateCache(const PluginDesc &update)
+{
+	const auto key = getKey(update);
+	auto iter = cache.find(key);
+
+	if (iter == cache.end()) {
+		cache.insert(make_pair(key, update));
+	} else {
+		iter->second.pluginAttrs = update.pluginAttrs;
+	}
 }
 
 void PluginManager::clear() {

@@ -243,20 +243,22 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			pluginDesc.pluginName.c_str());
 		return AttrPlugin();
 	}
+
 	const std::string & name = pluginDesc.pluginName;
+	AttrPlugin plugin(name);
+
+	if (pluginDesc.pluginAttrs.empty()) {
+		return plugin;
+	}
 
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
 
-	bool timeSet = false;
-	float lastTime = 0;
+	double lastTime = 0;
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
 
-		if (!timeSet) {
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, attr.time));
-			timeSet = true;
-		} else if (lastTime != attr.time) {
+		if (lastTime != attr.time) {
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, attr.time));
 			lastTime = attr.time;
 		}
@@ -318,9 +320,6 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			break;
 		}
 	}
-
-	AttrPlugin plugin;
-	plugin.plugin = name;
 
 	return plugin;
 }

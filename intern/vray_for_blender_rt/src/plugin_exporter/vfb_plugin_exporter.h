@@ -134,12 +134,22 @@ class PluginManager {
 public:
 	PluginManager();
 
-	PluginDesc filterPlugin(const PluginDesc & pluginDesc);
+	bool inCache(const PluginDesc &pluginDesc) const;
+	bool differs(const PluginDesc &pluginDesc) const;
+	PluginDesc differences(const PluginDesc &pluginDesc) const;
+
+	PluginDesc fromCache(const PluginDesc &search) const;
+	void updateCache(const PluginDesc &update);
 
 	void clear();
 
 private:
-	boost::unordered_map<std::string, PluginAttrs> cache;
+
+	std::pair<bool, PluginDesc> diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const;
+	std::string getKey(const PluginDesc &pluginDesc) const;
+
+	// id + name -> PluginDesc
+	boost::unordered_map<std::string, PluginDesc> cache;
 };
 
 class PluginExporter
@@ -147,6 +157,10 @@ class PluginExporter
 public:
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
 
+	PluginExporter():
+		is_viewport(false),
+		is_animation(false)
+	{}
 
 	virtual             ~PluginExporter()=0;
 
@@ -162,7 +176,7 @@ public:
 	virtual void         export_vrscene(const std::string &filepath) {}
 
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
-	AttrPlugin           export_plugin(const PluginDesc &pluginDesc);
+	        AttrPlugin   export_plugin(const PluginDesc &pluginDesc);
 
 	virtual int          remove_plugin(const std::string &pluginName) { return 0; }
 
@@ -173,16 +187,19 @@ public:
 	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) { callback_on_rt_image_updated = cb; }
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
+	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
+	        void         set_is_animation(bool flag) { is_animation = flag; }
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
 	UpdateMessageCb      on_message_update;
 
 private:
+	bool                 is_viewport;
+	bool                 is_animation;
 	PluginManager        m_PluginManager;
 };
 
-PluginExporter* ExporterCreate(ExpoterType type, const ExporterSettings &);
 PluginExporter* ExporterCreate(ExpoterType type);
 void            ExporterDelete(PluginExporter *exporter);
 

@@ -131,10 +131,13 @@ static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 	PyObject *pyregion   = nullptr;
 	PyObject *pyv3d      = nullptr;
 	PyObject *pyrv3d     = nullptr;
+	int       isViewport = 0;
 
-	if(!PyArg_ParseTuple(args, "OOOOOOO", &pycontext, &pyengine, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d)) {
+	if(!PyArg_ParseTuple(args, "OOOOOOO|i", &pycontext, &pyengine, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d, &isViewport)) {
 		return NULL;
 	}
+
+	PRINT_INFO_EX("exporter viewport: %s", isViewport ? "true" : "false");
 
 	// Create RNA pointers
 	PointerRNA contextPtr;
@@ -166,7 +169,7 @@ static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 	BL::RegionView3D rv3d(rv3dptr);
 
 	// Create exporter
-	VRayForBlender::SceneExporter *exporter = new VRayForBlender::SceneExporter(context, engine, data, scene, v3d, rv3d, region);
+	VRayForBlender::SceneExporter *exporter = new VRayForBlender::SceneExporter(context, engine, data, scene, v3d, rv3d, region, isViewport);
 
 	return PyLong_FromVoidPtr(exporter);
 }
@@ -190,14 +193,18 @@ static PyObject* PyExporterExport(PyObject *self, PyObject *value)
 
 	python_thread_state_save(&exporter->m_pythonThreadState);
 
-	exporter->init();
+	if (!exporter->init()) {
+		python_thread_state_restore(&exporter->m_pythonThreadState);
+		PRINT_ERROR("Exporter failed to initialize");
+		Py_RETURN_FALSE;
+	}
 
 	exporter->sync(false);
 	exporter->render_start();
 
 	python_thread_state_restore(&exporter->m_pythonThreadState);
 
-	Py_RETURN_NONE;
+	Py_RETURN_TRUE;
 }
 
 

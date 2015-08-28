@@ -112,12 +112,13 @@ public:
 	              BL::Scene           scene,
 	              BL::SpaceView3D     view3d,
 	              BL::RegionView3D    region3d,
-	              BL::Region          region);
+	              BL::Region          region,
+	              bool                is_viewport);
 
 	~SceneExporter();
 
 public:
-	void                 init();
+	bool                 init();
 	void                 free();
 
 public:
@@ -158,7 +159,7 @@ private:
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
 
-
+	bool                 m_is_viewport;
 	bool                 m_ortho_camera;
 };
 

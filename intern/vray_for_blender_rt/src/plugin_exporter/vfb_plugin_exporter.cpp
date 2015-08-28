@@ -43,16 +43,32 @@ public:
 
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 {
-	const auto pDesc = m_PluginManager.filterPlugin(pluginDesc);
-	return this->export_plugin_impl(pDesc);
+	bool inCache = m_PluginManager.inCache(pluginDesc);
+	bool isDifferent = inCache ? m_PluginManager.differs(pluginDesc) : true;
+	AttrPlugin plg(pluginDesc.pluginName);
+
+	if (is_viewport) {
+		if (inCache && isDifferent) {
+			if (is_animation) {
+				this->export_plugin_impl(m_PluginManager.fromCache(pluginDesc));
+			}
+			plg = this->export_plugin_impl(m_PluginManager.differences(pluginDesc));
+			m_PluginManager.updateCache(pluginDesc);
+		} else if (!inCache) {
+			plg = this->export_plugin_impl(pluginDesc);
+			m_PluginManager.updateCache(pluginDesc);
+		}
+	} else {
+		if (!inCache) {
+			m_PluginManager.updateCache(pluginDesc);
+			plg = this->export_plugin_impl(pluginDesc);
+		}
+	}
+
+	return plg;
 }
 
 VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
-{
-	return VRayForBlender::ExporterCreate(type, ExporterSettings());
-}
-
-VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type, const ExporterSettings & settings)
 {
 	PluginExporter *exporter = nullptr;
 
@@ -80,11 +96,6 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 #endif
 		default:
 			exporter = new NullExporter();
-	}
-
-	if (exporter) {
-		exporter->set_settings(settings);
-		exporter->init();
 	}
 
 	return exporter;
