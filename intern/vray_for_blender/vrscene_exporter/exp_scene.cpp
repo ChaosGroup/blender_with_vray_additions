@@ -1021,6 +1021,11 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 	if(lightTree) {
 		const std::string &vrayNodeType = boost::str(boost::format("VRayNode%s") % pluginID);
 
+		VRayNodeContext lightCtx;
+		lightCtx.obCtx.ob   = (Object*)ob.ptr.data;
+		lightCtx.obCtx.sce  = ExporterSettings::gSet.m_sce;
+		lightCtx.obCtx.main = ExporterSettings::gSet.m_main;
+
 		lightNode = VRayNodeExporter::getNodeByType(lightTree, vrayNodeType);
 		if(lightNode) {
 			for(StrSet::const_iterator setIt = socketAttrNames.begin(); setIt != socketAttrNames.end(); ++setIt) {
@@ -1028,7 +1033,7 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 
 				BL::NodeSocket sock = VRayNodeExporter::getSocketByAttr(lightNode, attrName);
 				if(sock) {
-					const std::string &attrValue = VRayNodeExporter::exportSocket(lightTree, sock);
+					const std::string &attrValue = VRayNodeExporter::exportSocket(lightTree, sock, &lightCtx);
 					if(attrValue != "NULL")
 						pluginAttrs[attrName] = attrValue;
 				}
