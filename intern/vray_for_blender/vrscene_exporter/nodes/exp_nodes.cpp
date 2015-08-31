@@ -33,11 +33,14 @@ StrSet           VRayNodePluginExporter::m_namesCache;
 StrSet           VRayNodeExporter::RenderChannelNames;
 
 
+static boost::format FmtSwitch("Input %i");
+
+
 static std::string GetUniqueChannelName(const std::string &baseName)
 {
-	std::string uniqueName = baseName;
+	static boost::format chanNameFormat("%s.%03i");
 
-	boost::format chanNameFormat("%s.%03i");
+	std::string uniqueName = baseName;
 
 	int uniqueSuffix = 0;
 	while (VRayNodeExporter::RenderChannelNames.count(uniqueName)) {
@@ -367,7 +370,7 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 	}
 	else if(conNode.bl_idname() == "VRayNodeDebugSwitch") {
 		const int inputIndex = RNA_enum_get(&conNode.ptr, "input_index");
-		const std::string inputSocketName = boost::str(boost::format("Input %i") % inputIndex);
+		const std::string inputSocketName = boost::str(FmtSwitch % inputIndex);
 
 		BL::NodeSocket inputSocket = VRayNodeExporter::getSocketByName(conNode, inputSocketName);
 		if(NOT(inputSocket && inputSocket.is_linked()))
@@ -749,7 +752,7 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 	}
 	else if(toNode.bl_idname() == "VRayNodeDebugSwitch") {
 		const int inputIndex = RNA_enum_get(&toNode.ptr, "input_index");
-		const std::string inputSocketName = boost::str(boost::format("Input %i") % inputIndex);
+		const std::string inputSocketName = boost::str(FmtSwitch % inputIndex);
 
 		BL::NodeSocket inputSocket = VRayNodeExporter::getSocketByName(toNode, inputSocketName);
 		if(NOT(inputSocket && inputSocket.is_linked()))
