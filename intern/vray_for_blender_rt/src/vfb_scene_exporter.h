@@ -118,7 +118,7 @@ public:
 	~SceneExporter();
 
 public:
-	bool                 init();
+	void                 init();
 	void                 free();
 
 public:

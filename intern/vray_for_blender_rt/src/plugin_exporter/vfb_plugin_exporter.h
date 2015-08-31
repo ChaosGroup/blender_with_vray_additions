@@ -84,6 +84,7 @@ enum ExpoterType {
 	ExpoterTypeAppSDK,
 #endif
 	ExpoterTypeLast,
+	ExporterTypeInvalid = ExpoterTypeLast,
 };
 
 

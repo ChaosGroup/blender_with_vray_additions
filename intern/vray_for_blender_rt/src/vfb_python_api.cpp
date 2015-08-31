@@ -193,12 +193,7 @@ static PyObject* PyExporterExport(PyObject *self, PyObject *value)
 
 	python_thread_state_save(&exporter->m_pythonThreadState);
 
-	if (!exporter->init()) {
-		python_thread_state_restore(&exporter->m_pythonThreadState);
-		PRINT_ERROR("Exporter failed to initialize");
-		Py_RETURN_FALSE;
-	}
-
+	exporter->init();
 	exporter->sync(false);
 	exporter->render_start();
 

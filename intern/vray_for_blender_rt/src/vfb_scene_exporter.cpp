@@ -107,7 +107,7 @@ SceneExporter::~SceneExporter()
 }
 
 
-bool SceneExporter::init()
+void SceneExporter::init()
 {
 	m_settings.init(m_data, m_scene);
 
@@ -118,13 +118,16 @@ bool SceneExporter::init()
 #else
 	// viewport without zmq - error
 	if (m_is_viewport) {
-		return false;
+		m_settings.exporter_type = ExpoterType::ExporterTypeInvalid;
 	}
 #endif
 
 	m_exporter = ExporterCreate(m_settings.exporter_type);
 	if (!m_exporter) {
-		return false;
+		m_exporter = ExporterCreate(ExpoterType::ExporterTypeInvalid);
+		if (!m_exporter) {
+			return;
+		}
 	}
 
 	m_exporter->set_is_viewport(m_is_viewport);
@@ -139,8 +142,6 @@ bool SceneExporter::init()
 	m_data_exporter.init(m_exporter, m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);
 	m_data_exporter.init_defaults();
-
-	return true;
 }
 
 
