@@ -23,11 +23,11 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string plugin = "NULL";
 
-	if (NOT(context->obCtx.ob)) {
+	if (NOT(context.obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
@@ -39,7 +39,7 @@ std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::No
 		}
 		else {
 			PointerRNA obPtr;
-			RNA_id_pointer_create((ID*)context->obCtx.ob, &obPtr);
+			RNA_id_pointer_create((ID*)context.obCtx.ob, &obPtr);
 			BL::Object ob(obPtr);
 
 			std::string pluginName = "MeshLight@" + GetIDName(ob);
@@ -47,7 +47,7 @@ std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::No
 			std::string transform = GetTransformHex(ob.matrix_world());
 			int         objectID  = ob.pass_index();
 
-			NodeAttrs &attrs = context->obCtx.nodeAttrs;
+			NodeAttrs &attrs = context.obCtx.nodeAttrs;
 			if (attrs.override) {
 				pluginName = attrs.namePrefix + pluginName;
 				objectID   = attrs.objectID;

@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap  attrs;
 
@@ -67,7 +67,7 @@ std::string VRayNodeExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap falloffTexAttrs;
 
@@ -102,7 +102,7 @@ std::string VRayNodeExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::N
 
 
 
-std::string VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	const std::string &pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
@@ -116,7 +116,7 @@ std::string VRayNodeExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTre
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeRenderChannelColor(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeRenderChannelColor(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap pluginAttrs;
 	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);

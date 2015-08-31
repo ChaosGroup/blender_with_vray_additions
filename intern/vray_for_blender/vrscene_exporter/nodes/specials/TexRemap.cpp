@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::Texture b_tex = VRayNodeExporter::getTextureFromIDRef(&node.ptr, "texture");
 	if(b_tex) {

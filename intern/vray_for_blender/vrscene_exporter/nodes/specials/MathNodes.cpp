@@ -24,7 +24,7 @@
 #include "BLI_math.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	float tm[4][4];
 	float itm[4][4];
@@ -77,7 +77,7 @@ std::string VRayNodeExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::No
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	float rot[3] = {0.0f, 0.0f, 0.0f};
 	float sca[3] = {0.0f, 0.0f, 0.0f};
@@ -104,7 +104,7 @@ std::string VRayNodeExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	float vector[3] = {0.0f, 0.0f, 0.0f};
 

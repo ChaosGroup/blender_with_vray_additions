@@ -34,7 +34,7 @@ std::string VRayNodeExporter::exportVRayNodeUVWGenChannel(VRayNodeExportParam)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	PointerRNA UVWGenEnvironment = RNA_pointer_get(&node.ptr, "UVWGenEnvironment");
 
@@ -47,7 +47,7 @@ std::string VRayNodeExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap  manualAttrs;
 

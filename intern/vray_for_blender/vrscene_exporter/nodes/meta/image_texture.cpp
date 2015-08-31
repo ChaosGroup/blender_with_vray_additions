@@ -87,7 +87,7 @@ std::string VRayNodeExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam
 
 			mappingAttrs["mapping_type"] = BOOST_FORMAT_STRING(EnvironmentMappingType[mapping_type]);
 
-			Object *ob = context->obCtx.ob;
+			Object *ob = context.obCtx.ob;
 			if (ob && ob->type == OB_LAMP) {
 				float ltm[4][4];
 				invert_m4_m4(ltm, ob->obmat);

@@ -86,7 +86,7 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(VRayNodeExportParam)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByName(node, "Domain");
 	if(domainSock && domainSock.is_linked()) {
@@ -130,7 +130,7 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL:
 }
 
 
-static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, VRayNodeContext *context)
+static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, VRayNodeContext &context)
 {
 	BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
@@ -198,7 +198,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
 	if(objectSock && objectSock.is_linked()) {
@@ -227,7 +227,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	if (NOT(ExporterSettings::gSet.m_exportSmoke))
 		return "NULL";
@@ -263,7 +263,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 }
 
 
-std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap pluginAttrs;
 	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
@@ -282,7 +282,7 @@ static void MatchMayaFluid(std::string &name)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	const std::string &pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
@@ -374,7 +374,7 @@ std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL:
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	StrSet gizmos;
 
@@ -396,7 +396,7 @@ std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::N
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	PointerRNA sphereFadeGizmo = RNA_pointer_get(&node.ptr, "SphereFadeGizmo");
 
@@ -425,7 +425,7 @@ std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	// TODO: exclude shaped lights
 

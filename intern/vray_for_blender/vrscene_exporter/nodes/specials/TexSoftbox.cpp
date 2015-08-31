@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexSoftbox(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexSoftbox(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	PointerRNA texSoftbox = RNA_pointer_get(&node.ptr, "TexSoftbox");
 	AttributeValueMap manualAttrs;

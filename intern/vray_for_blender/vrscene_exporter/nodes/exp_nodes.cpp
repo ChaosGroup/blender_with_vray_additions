@@ -53,13 +53,13 @@ static std::string GetUniqueChannelName(const std::string &baseName)
 }
 
 
-std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext *context)
+std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext &context)
 {
 	std::string pluginName = GetIDName(ntree) + "N" + node.name();
 
 	if(context) {
-		BL::NodeTree  parent = context->getNodeTree();
-		BL::NodeGroup group  = context->getGroupNode();
+		BL::NodeTree  parent = context.getNodeTree();
+		BL::NodeGroup group  = context.getGroupNode();
 		if(parent)
 			pluginName += GetIDName(parent);
 		if(group)
@@ -270,7 +270,7 @@ BL::NodeSocket VRayNodeExporter::getConnectedSocket(BL::NodeSocket socket)
 // NOTE: The same as VRayNodeExporter::exportLinkedSocket,
 // but returns connected node
 //
-BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeContext *context)
+BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(fromSocket);
 	// NOTE: This could happen while reconnecting nodes and material preview is active
@@ -288,7 +288,7 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 	if(conNode.is_a(&RNA_ShaderNodeGroup) || conNode.is_a(&RNA_NodeCustomGroup)) {
 		// Setting nested context
 		if(context) {
-			context->pushGroupNode(conNode.ptr);
+			context.pushGroupNode(conNode.ptr);
 		}
 
 		// Get real socket / node to export
@@ -301,7 +301,7 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 
 		// Restoring context
 		if(context) {
-			context->popGroupNode();
+			context.popGroupNode();
 		}
 	}
 	else if(conNode.is_a(&RNA_NodeGroupInput)) {
@@ -310,9 +310,9 @@ BL::Node VRayNodeExporter::getConnectedNode(BL::NodeSocket fromSocket, VRayNodeC
 			return BL::Node(PointerRNA_NULL);
 		}
 		else {
-			BL::NodeGroup groupNode  = context->getGroupNode();
+			BL::NodeGroup groupNode  = context.getGroupNode();
 			if(NOT(groupNode)) {
-				PRINT_ERROR("Socket: %s => No group node and / or tree in context!",
+				PRINT_ERROR("Socket: %s => No group node in context!",
 							fromSocket.name().c_str());
 				return BL::Node(PointerRNA_NULL);
 			}
@@ -489,7 +489,7 @@ BL::NodeSocket VRayNodeExporter::getNodeGroupSocketReal(BL::Node node, BL::NodeS
 // NOTE: The same as VRayNodeExporter::exportLinkedSocket,
 // but returns only the plugin name without any export
 //
-std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string pluginName = "NULL";
 
@@ -512,8 +512,8 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 
 		// Setting nested context
 		if(context) {
-			context->pushGroupNode(toNode.ptr);
-			context->pushParentTree(ntree);
+			context.pushGroupNode(toNode.ptr);
+			context.pushParentTree(ntree);
 		}
 
 		// Get real socket / node to export
@@ -528,8 +528,8 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 
 		// Restoring context
 		if(context) {
-			context->popParentTree();
-			context->popGroupNode();
+			context.popParentTree();
+			context.popGroupNode();
 		}
 	}
 	else if(toNode.is_a(&RNA_NodeGroupInput)) {
@@ -538,8 +538,8 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 			return "NULL";
 		}
 		else {
-			BL::NodeGroup groupNode  = context->getGroupNode();
-			BL::NodeTree  parentTree = context->getNodeTree();
+			BL::NodeGroup groupNode  = context.getGroupNode();
+			BL::NodeTree  parentTree = context.getNodeTree();
 			if(NOT(groupNode && parentTree)) {
 				PRINT_ERROR("Node tree: %s => No group node and / or tree in context!",
 							ntree.name().c_str());
@@ -583,14 +583,14 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 			}
 
 			// We are going out of group here
-			BL::NodeTree  currentTree  = context->popParentTree();
-			BL::NodeGroup currentGroup = context->popGroupNode();
+			BL::NodeTree  currentTree  = context.popParentTree();
+			BL::NodeGroup currentGroup = context.popGroupNode();
 
 			pluginName = VRayNodeExporter::getPluginName(toNode, parentTree, context);
 
 			// We could go into the group after
-			context->pushGroupNode(currentGroup);
-			context->pushParentTree(currentTree);
+			context.pushGroupNode(currentGroup);
+			context.pushParentTree(currentTree);
 		}
 	}
 	else if(toNode.is_a(&RNA_NodeReroute)) {
@@ -624,7 +624,7 @@ std::string VRayNodeExporter::getConnectedNodePluginName(BL::NodeTree ntree, BL:
 }
 
 
-std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string connectedPlugin = "NULL";
 
@@ -647,8 +647,8 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 
 		// Setting nested context
 		if(context) {
-			context->pushGroupNode(toNode.ptr);
-			context->pushParentTree(ntree);
+			context.pushGroupNode(toNode.ptr);
+			context.pushParentTree(ntree);
 		}
 
 		// Get real socket / node to export
@@ -663,8 +663,8 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 
 		// Restoring context
 		if(context) {
-			context->popParentTree();
-			context->popGroupNode();
+			context.popParentTree();
+			context.popGroupNode();
 		}
 	}
 	else if(toNode.is_a(&RNA_NodeGroupInput)) {
@@ -673,8 +673,8 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 			return "NULL";
 		}
 		else {
-			BL::NodeGroup groupNode  = context->getGroupNode();
-			BL::NodeTree  parentTree = context->getNodeTree();
+			BL::NodeGroup groupNode  = context.getGroupNode();
+			BL::NodeTree  parentTree = context.getNodeTree();
 			if(NOT(groupNode && parentTree)) {
 				PRINT_ERROR("Node tree: %s => No group node and / or tree in context!",
 							ntree.name().c_str());
@@ -722,14 +722,14 @@ std::string VRayNodeExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSoc
 				}
 
 				// We are going out of group here
-				BL::NodeTree  currentTree  = context->popParentTree();
-				BL::NodeGroup currentGroup = context->popGroupNode();
+				BL::NodeTree  currentTree  = context.popParentTree();
+				BL::NodeGroup currentGroup = context.popGroupNode();
 
 				connectedPlugin = VRayNodeExporter::exportVRayNode(parentTree, toNode, fromSocket, context);
 
 				// We could go into the group after
-				context->pushGroupNode(currentGroup);
-				context->pushParentTree(currentTree);
+				context.pushGroupNode(currentGroup);
+				context.pushParentTree(currentTree);
 			}
 		}
 	}
@@ -838,7 +838,7 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 }
 
 
-std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context)
 {
 	if(socket.is_linked())
 		return VRayNodeExporter::exportLinkedSocket(ntree, socket, context);
@@ -847,7 +847,7 @@ std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket so
 }
 
 
-std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayNodeContext *context)
+std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayNodeContext &context)
 {
 	BL::NodeSocket socket = VRayNodeExporter::getSocketByName(node, socketName);
 	return VRayNodeExporter::exportSocket(ntree, socket, context);
@@ -1043,7 +1043,7 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(VRayNodeExportParam, cons
 }
 
 
-std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context, const AttributeValueMap &manualAttrs)
+std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context, const AttributeValueMap &manualAttrs)
 {
 	const std::string &nodeClass = node.bl_idname();
 
@@ -1364,7 +1364,7 @@ std::string VRayNodeExporter::exportMaterial(BL::BlendData b_data, BL::Material 
 		BL::Node b_ma_output = VRayNodeExporter::getNodeByType(b_ma_ntree, "VRayNodeOutputMaterial");
 		if(b_ma_output) {
 			VRayNodeContext ctx;
-			maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output, PointerRNA_NULL, &ctx);
+			maName = VRayNodeExporter::exportVRayNode(b_ma_ntree, b_ma_output, PointerRNA_NULL, ctx);
 		}
 	}
 	else {

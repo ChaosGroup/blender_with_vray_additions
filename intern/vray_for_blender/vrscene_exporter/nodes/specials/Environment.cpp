@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext *context)
+void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext &context)
 {
 	BL::Scene worldScene(PointerRNA_NULL);
 

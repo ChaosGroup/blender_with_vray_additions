@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
@@ -89,7 +89,7 @@ std::string VRayNodeExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::N
 
 		BL::NodeSocket attrSock = VRayNodeExporter::getSocketByAttr(node, attrName);
 		if(attrSock) {
-			std::string socketValue = VRayNodeExporter::exportSocket(ntree, attrSock);
+			std::string socketValue = VRayNodeExporter::exportSocket(ntree, attrSock, context);
 			if(socketValue != "NULL")
 				pluginAttrs[attrName] = socketValue;
 		}

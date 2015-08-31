@@ -225,10 +225,10 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 			BL::NodeSocket materialSocket = VRayNodeExporter::getSocketByName(maOutput, "Material");
 			if(materialSocket && materialSocket.is_linked()) {
 				VRayNodeContext ctx;
-				std::string maName = VRayNodeExporter::getConnectedNodePluginName(ntree, materialSocket, &ctx);
+				std::string maName = VRayNodeExporter::getConnectedNodePluginName(ntree, materialSocket, ctx);
 
 				// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
-				BL::Node conNode = VRayNodeExporter::getConnectedNode(materialSocket, &ctx);
+				BL::Node conNode = VRayNodeExporter::getConnectedNode(materialSocket, ctx);
 				if (!(VRayNodeExporter::getPluginType(conNode) == "MATERIAL")) {
 					maName = "MtlSingleBRDF@" + maName;
 				}

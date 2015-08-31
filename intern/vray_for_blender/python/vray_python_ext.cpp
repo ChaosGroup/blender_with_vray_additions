@@ -408,7 +408,7 @@ static PyObject* mExportNode(PyObject *self, PyObject *args)
 	}
 
 	VRayNodeContext nodeCtx;
-	std::string pluginName = VRayNodeExporter::exportVRayNode(ntree, node, fromSocket, &nodeCtx);
+	std::string pluginName = VRayNodeExporter::exportVRayNode(ntree, node, fromSocket, nodeCtx);
 
 	return PyUnicode_FromString(pluginName.c_str());
 }

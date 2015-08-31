@@ -25,21 +25,21 @@
 #include "GeomStaticMesh.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string pluginName = "NULL";
 
-	if (NOT(context->obCtx.ob && context->obCtx.ob->data)) {
+	if (NOT(context.obCtx.ob && context.obCtx.ob->data)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
 		PointerRNA obRNA;
-		RNA_id_pointer_create((ID*)context->obCtx.ob, &obRNA);
+		RNA_id_pointer_create((ID*)context.obCtx.ob, &obRNA);
 		BL::Object ob(obRNA);
 
 		PointerRNA sceRNA;
-		RNA_id_pointer_create((ID*)context->obCtx.sce, &sceRNA);
+		RNA_id_pointer_create((ID*)context.obCtx.sce, &sceRNA);
 		BL::Scene sce(sceRNA);
 
 		BL::ID dataID = ob.data();
@@ -47,12 +47,12 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 			const bool could_instance = CouldInstance(sce, ob);
 
 			pluginName = GetIDName(could_instance
-			                       ? (ID*)context->obCtx.ob->data
-			                       : (ID*)context->obCtx.ob) + "@Geom";
+			                       ? (ID*)context.obCtx.ob->data
+			                       : (ID*)context.obCtx.ob) + "@Geom";
 
 			if(ExporterSettings::gSet.m_exportMeshes) {
 				if(ExporterSettings::gSet.m_isAnimation) {
-					if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context->obCtx.ob))) {
+					if(ExporterSettings::gSet.DoUpdateCheck() && NOT(IsObjectDataUpdated(context.obCtx.ob))) {
 						return pluginName;
 					}
 				}
@@ -65,7 +65,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 					pluginName = Node::sMeshCache[dataKey];
 				}
 				else {
-					VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context->obCtx.sce, context->obCtx.main, context->obCtx.ob);
+					VRayScene::GeomStaticMesh *geomStaticMesh = new VRayScene::GeomStaticMesh(context.obCtx.sce, context.obCtx.main, context.obCtx.ob);
 					geomStaticMesh->init();
 					geomStaticMesh->initName(pluginName);
 					geomStaticMesh->initAttributes(&node.ptr);
