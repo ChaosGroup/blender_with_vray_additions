@@ -163,14 +163,14 @@ public:
 
 	BL::NodeGroup getGroupNode() {
 		if(group.size())
-			return group.back();
+			return BL::NodeGroup(group.back());
 		return BL::NodeGroup(PointerRNA_NULL);
 	}
-	void pushGroupNode(BL::NodeGroup gr) {
+	void pushGroupNode(BL::Node gr) {
 		group.push_back(gr);
 	}
 	BL::NodeGroup popGroupNode() {
-		BL::NodeGroup gr = group.back();
+		BL::NodeGroup gr(group.back());
 		group.pop_back();
 		return gr;
 	}
@@ -187,7 +187,7 @@ private:
 	// to prevent plugin overriding.
 	//
 	std::vector<BL::NodeTree>  parent;
-	std::vector<BL::NodeGroup> group;
+	std::vector<BL::Node>      group;
 };
 
 
