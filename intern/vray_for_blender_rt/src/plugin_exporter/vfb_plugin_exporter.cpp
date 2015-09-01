@@ -94,6 +94,8 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 			exporter = new AppSdkExporter();
 			break;
 #endif
+		case ExporterTypeInvalid:
+			/* fall-through */
 		default:
 			exporter = new NullExporter();
 	}
