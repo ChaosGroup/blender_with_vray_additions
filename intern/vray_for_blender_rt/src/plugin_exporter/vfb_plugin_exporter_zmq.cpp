@@ -174,6 +174,7 @@ void ZmqExporter::init()
 		snprintf(portStr, 32, ":%d", this->m_ServerPort);
 
 		m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererType::RT));
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
