@@ -65,9 +65,16 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 		// TODO: memcpy((void*)(*active_layers), layer_values, 20 * sizeof(int));
 	}
 
+	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&vrayExporter, "animation_mode");
+	settings_animation.use  = settings_animation.mode != SettingsAnimation::AnimationMode::AnimationModeNone;
+	if (settings_animation.use) {
+		settings_animation.frame_start   = scene.frame_start();
+		settings_animation.frame_current = scene.frame_current();
+		settings_animation.frame_step    = scene.frame_step();
+	}
+
 	// Find if we need hide from view
-	const SettingsAnimation::AnimationMode animationMode = (SettingsAnimation::AnimationMode)RNA_enum_get(&vrayExporter, "animation_mode");
-	if (animationMode == SettingsAnimation::AnimationModeCameraLoop) {
+	if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		BL::BlendData::cameras_iterator caIt;
 		for (data.cameras.begin(caIt); caIt != data.cameras.end(); ++caIt) {
 			BL::Camera camera_data = *caIt;

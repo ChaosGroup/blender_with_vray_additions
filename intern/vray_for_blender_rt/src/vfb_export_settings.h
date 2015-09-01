@@ -22,8 +22,7 @@
 #include <Python.h>
 
 #include "vfb_rna.h"
-#include "vfb_plugin_exporter.h"
-
+#include "vfb_plugin_exporter_types.h"
 
 namespace VRayForBlender {
 
@@ -65,10 +64,11 @@ struct SettingsAnimation {
 	    use(false)
 	{}
 
-	int   use;
-	int   frame_current;
-	int   frame_start;
-	int   frame_step;
+	int           use;
+	int           frame_current;
+	int           frame_start;
+	int           frame_step;
+	AnimationMode mode;
 };
 
 

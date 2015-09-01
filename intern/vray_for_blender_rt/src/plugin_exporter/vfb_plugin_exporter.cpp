@@ -41,15 +41,32 @@ public:
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc&) { return AttrPlugin(); }
 };
 
+void PluginExporter::set_settings(const ExporterSettings &st)
+{
+	this->animation_settings = st.settings_animation;
+	if (this->animation_settings.use) {
+		this->last_rendered_frame = this->animation_settings.frame_start - 1;
+	} else {
+		this->last_rendered_frame = 0;
+	}
+}
+
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 {
 	bool inCache = m_PluginManager.inCache(pluginDesc);
 	bool isDifferent = inCache ? m_PluginManager.differs(pluginDesc) : true;
 	AttrPlugin plg(pluginDesc.pluginName);
 
+	for (const auto & item : pluginDesc.pluginAttrs) {
+		const auto frame = item.second.time;
+		if (frame != 0) {
+			assert(false);
+		}
+	}
+
 	if (is_viewport) {
 		if (inCache && isDifferent) {
-			if (is_animation) {
+			if (animation_settings.use) {
 				this->export_plugin_impl(m_PluginManager.fromCache(pluginDesc));
 			}
 			plg = this->export_plugin_impl(m_PluginManager.differences(pluginDesc));

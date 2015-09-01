@@ -58,16 +58,15 @@ public:
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:
 	void                checkZmqClient();
+	void                zmqCallback(VRayMessage & message, ZmqWrapper * client);
 
+private:
+	int                 m_ServerPort;
+	std::string         m_ServerAddress;
+	ZmqClient          *m_Client;
 
-
-	int m_ServerPort;
-	std::string m_ServerAddress;
-	ZmqClient * m_Client;
-
-	std::mutex m_ImgMutex;
-
-	ZmqRenderImage m_CurrentImage;
+	std::mutex          m_ImgMutex;
+	ZmqRenderImage      m_CurrentImage;
 };
 } // namespace VRayForBlender
 

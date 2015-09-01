@@ -115,7 +115,8 @@ void ZmqExporter::ZmqRenderImage::update(const VRayMessage & msg, ZmqExporter * 
 }
 
 
-ZmqExporter::ZmqExporter(): m_Client(new ZmqClient())
+ZmqExporter::ZmqExporter():
+	m_Client(new ZmqClient())
 {
 }
 
@@ -144,37 +145,49 @@ RenderImage ZmqExporter::get_image() {
 	return img;
 }
 
+void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper * client) {
+	const auto msgType = message.getType();
+	if (msgType == VRayMessage::Type::SingleValue) {
+		switch (message.getValueType()) {
+		case VRayBaseTypes::ValueType::ValueTypeImage:
+			this->m_CurrentImage.update(message, this);
+			if (this->callback_on_rt_image_updated) {
+				callback_on_rt_image_updated.cb();
+			}
+			break;
+		case VRayBaseTypes::ValueType::ValueTypeString:
+			if (this->on_message_update) {
+				auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
+				auto newLine = msg.find_first_of("\n\r");
+				if (newLine != std::string::npos) {
+					msg.resize(newLine);
+				}
+
+				this->on_message_update("", msg.c_str());
+			}
+			break;
+		}
+	} else if (msgType == VRayMessage::Type::ChangeRenderer) {
+		if (message.getRendererAction() == VRayMessage::RendererAction::FrameRendered) {
+			this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<int>>()->m_Value;
+		}
+	}
+}
+
 void ZmqExporter::init()
 {
 	try {
-		m_Client->setCallback([this](VRayMessage & message, ZmqWrapper * client) {
-			if (message.getType() == VRayMessage::Type::SingleValue) {
-				switch (message.getValueType()) {
-				case VRayBaseTypes::ValueType::ValueTypeImage:
-					this->m_CurrentImage.update(message, this);
-					if (this->callback_on_rt_image_updated) {
-						callback_on_rt_image_updated.cb();
-					}
-					break;
-				case VRayBaseTypes::ValueType::ValueTypeString:
-					if (this->on_message_update) {
-						auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
-						auto newLine = msg.find_first_of("\n\r");
-						if (newLine != std::string::npos) {
-							msg.resize(newLine);
-						}
+		using std::placeholders::_1;
+		using std::placeholders::_2;
 
-						this->on_message_update("", msg.c_str());
-					}
-					break;
-				}
-			}
-		});
+		m_Client->setCallback(std::bind(&ZmqExporter::zmqCallback, this, _1, _2));
+
 		char portStr[32];
 		snprintf(portStr, 32, ":%d", this->m_ServerPort);
-
 		m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererType::RT));
+
+		auto mode = this->animation_settings.use ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
+		m_Client->send(VRayMessage::createMessage(mode));
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
@@ -199,6 +212,10 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 {
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
+	this->animation_settings = settings.settings_animation;
+	if (this->animation_settings.use) {
+		this->last_rendered_frame = this->animation_settings.frame_start - 1;
+	}
 }
 
 

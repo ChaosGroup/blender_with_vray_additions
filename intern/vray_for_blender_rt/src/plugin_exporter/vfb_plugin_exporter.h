@@ -24,6 +24,7 @@
 #include "vfb_rna.h"
 #include "vfb_plugin_attrs.h"
 #include "vfb_util_defines.h"
+#include "vfb_export_settings.h"
 
 #include "BLI_math.h"
 #include "MEM_guardedalloc.h"
@@ -41,54 +42,9 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/unordered_map.hpp>
+#include "vfb_plugin_exporter_types.h"
 
 namespace VRayForBlender {
-
-
-struct ExporterTypeInfo {
-	const char *key;
-	const char *name;
-	const char *desc;
-};
-
-
-static const ExporterTypeInfo ExporterTypes[] = {
-	{"STD",    "V-Ray Standalone", ""},
-
-#ifdef USE_BLENDER_VRAY_ZMQ
-	{"ZMQ", "V-Ray ZMQ Server", ""},
-#endif
-
-#ifdef USE_BLENDER_VRAY_CLOUD
-	{"CLOUD",  "V-Ray Cloud", ""},
-#endif
-
-#ifdef USE_BLENDER_VRAY_APPSDK
-	{"APPSDK", "V-Ray Application SDK", ""},
-#endif
-};
-
-
-enum ExpoterType {
-	ExpoterTypeFile = 0,
-
-#ifdef USE_BLENDER_VRAY_ZMQ
-	ExpoterTypeZMQ,
-#endif
-
-#ifdef USE_BLENDER_VRAY_CLOUD
-	ExpoterTypeCloud,
-#endif
-
-#ifdef USE_BLENDER_VRAY_APPSDK
-	ExpoterTypeAppSDK,
-#endif
-	ExpoterTypeLast,
-	ExporterTypeInvalid = ExpoterTypeLast,
-};
-
-
-static_assert(ExpoterTypeLast == ArraySize(ExporterTypes), "ExporterType / ExporterTypeInfo size must match!");
 
 
 struct ExpoterCallback {
@@ -159,8 +115,7 @@ public:
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
 
 	PluginExporter():
-		is_viewport(false),
-		is_animation(false)
+		is_viewport(false)
 	{}
 
 	virtual             ~PluginExporter()=0;
@@ -168,7 +123,7 @@ public:
 	virtual void         init()=0;
 	virtual void         free()=0;
 
-	virtual void         set_settings(const ExporterSettings &) {}
+	virtual void         set_settings(const ExporterSettings &st);
 
 	virtual void         sync()  {}
 	virtual void         start() {}
@@ -181,6 +136,8 @@ public:
 
 	virtual int          remove_plugin(const std::string &pluginName) { return 0; }
 
+	virtual int          get_last_rendered_frame() const { return last_rendered_frame; }
+
 	virtual RenderImage  get_image() { return RenderImage(); }
 	virtual void         set_render_size(const int&, const int&) {}
 
@@ -189,15 +146,15 @@ public:
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
 	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
-	        void         set_is_animation(bool flag) { is_animation = flag; }
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
 	UpdateMessageCb      on_message_update;
+	int                  last_rendered_frame;
+	SettingsAnimation    animation_settings;
+	bool                 is_viewport;
 
 private:
-	bool                 is_viewport;
-	bool                 is_animation;
 	PluginManager        m_PluginManager;
 };
 
