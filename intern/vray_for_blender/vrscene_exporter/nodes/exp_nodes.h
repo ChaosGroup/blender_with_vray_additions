@@ -214,7 +214,7 @@ public:
 
 	static BL::NodeSocket   getOutputSocketByName(BL::Node node, const std::string &socketName);
 
-	static BL::Node         getConnectedNode(BL::NodeSocket socket, VRayNodeContext &context);
+	static BL::Node         getConnectedNode(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext &context);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeSocket socket);
 
 	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context);
@@ -251,6 +251,13 @@ public:
 	static BL::Object       getObjectByName(const std::string &name);
 
 private:
+	enum ExpMode {
+		ExpModeNode = 0,
+		ExpModePlugin,
+		ExpModePluginName,
+	};
+	static void             exportLinkedSocketEx(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext &context,
+	                                             ExpMode expMode, BL::Node &outNode, std::string &outPlugin);
 	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context);
 	static std::string      exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
 

@@ -63,7 +63,7 @@ void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext &context)
 		// Effects must be exported before environment because of 'environment_volume' attribute
 		BL::NodeSocket effectsSock = VRayNodeExporter::getSocketByName(worldOutput, "Effects");
 		if (effectsSock && effectsSock.is_linked()) {
-			BL::Node effectsNode = VRayNodeExporter::getConnectedNode(effectsSock, context);
+			BL::Node effectsNode = VRayNodeExporter::getConnectedNode(worldTree, effectsSock, context);
 			if (effectsNode) {
 				if (NOT(effectsNode.bl_idname() == "VRayNodeEffectsHolder")) {
 					PRINT_ERROR("Environment: \'Effects\' socket must be connected to \"Effects Container\" node!");
@@ -85,7 +85,7 @@ void VRayNodeExporter::exportVRayEnvironment(VRayNodeContext &context)
 
 		BL::NodeSocket envSock = VRayNodeExporter::getSocketByName(worldOutput, "Environment");
 		if (envSock && envSock.is_linked()) {
-			BL::Node envNode = VRayNodeExporter::getConnectedNode(envSock, context);
+			BL::Node envNode = VRayNodeExporter::getConnectedNode(worldTree, envSock, context);
 			if (envNode) {
 				if (NOT(envNode.bl_idname() == "VRayNodeEnvironment")) {
 					PRINT_ERROR("Environment: \'Environment\' socket must be connected to \"Environment\" node!");

@@ -88,7 +88,7 @@ static bool ob_is_mesh_light(BL::Object ob)
 			BL::NodeSocket geometrySocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
 			if (geometrySocket && geometrySocket.is_linked()) {
 				VRayNodeContext ctx;
-				BL::Node geomNode = VRayNodeExporter::getConnectedNode(geometrySocket, ctx);
+				BL::Node geomNode = VRayNodeExporter::getConnectedNode(ntree, geometrySocket, ctx);
 				if (geomNode && geomNode.bl_idname() == "VRayNodeLightMesh") {
 					is_mesh_light = true;
 				}
@@ -841,7 +841,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 						if (nodeOutput) {
 							BL::NodeSocket geometrySocket(VRayNodeExporter::getSocketByName(nodeOutput, "Geometry"));
 							if (geometrySocket && geometrySocket.is_linked()) {
-								BL::Node geometryNode(VRayNodeExporter::getConnectedNode(geometrySocket, nodeCtx));
+								BL::Node geometryNode(VRayNodeExporter::getConnectedNode(active_ob_ntree, geometrySocket, nodeCtx));
 								if (geometryNode && (geometryNode.bl_idname() == "VRayNodeGeomDisplacedMesh")) {
 									geometry = VRayNodeExporter::exportSocket(active_ob_ntree, geometrySocket, nodeCtx);
 									override_for_preview = true;
@@ -864,7 +864,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(geometrySocket, nodeCtx);
+	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, geometrySocket, nodeCtx);
 	if(geometryNode.bl_idname() == "VRayNodeLightMesh") {
 		// No need to export Node - this object is LightMesh
 		return;
@@ -1082,12 +1082,12 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 					bool useChan = RNA_boolean_get(&chanSock.ptr, "use");
 					if(useChan) {
 						VRayNodeContext chanCtx;
-						BL::Node chanNode = VRayNodeExporter::getConnectedNode(chanSock, chanCtx);
+						BL::Node chanNode = VRayNodeExporter::getConnectedNode(sceneTree, chanSock, chanCtx);
 						if(chanNode && chanNode.bl_idname() == "VRayNodeRenderChannelLightSelect") {
 							BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(chanNode, "Lights");
 							if(lightsSock) {
 								VRayNodeContext lightCtx;
-								BL::Node lightsConNode = VRayNodeExporter::getConnectedNode(lightsSock, lightCtx);
+								BL::Node lightsConNode = VRayNodeExporter::getConnectedNode(sceneTree, lightsSock, lightCtx);
 								if(lightsConNode && IS_OBJECT_SELECT_NODE(lightsConNode)) {
 									ObList lampList;
 									VRayNodeExporter::getNodeSelectObjects(lightsConNode, lampList);
