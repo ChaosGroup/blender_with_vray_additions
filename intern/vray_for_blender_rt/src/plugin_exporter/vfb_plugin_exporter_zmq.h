@@ -51,9 +51,11 @@ public:
 	virtual void        sync();
 	virtual void        start();
 	virtual void        stop();
+	virtual bool        is_running() const { return m_Started; }
 
-	virtual RenderImage  get_image();
-	virtual void set_render_size(const int &w, const int &h);
+	virtual RenderImage get_image();
+	virtual void        set_render_size(const int &w, const int &h);
+	virtual bool        is_aborted() const { return m_IsAborted; }
 
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:
@@ -67,6 +69,9 @@ private:
 
 	std::mutex          m_ImgMutex;
 	ZmqRenderImage      m_CurrentImage;
+	float               m_LastExportedFrame;
+	bool                m_IsAborted;
+	bool                m_Started;
 };
 } // namespace VRayForBlender
 

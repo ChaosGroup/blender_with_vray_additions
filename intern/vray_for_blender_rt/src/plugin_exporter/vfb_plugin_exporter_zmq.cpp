@@ -22,7 +22,7 @@
 #include "vfb_export_settings.h"
 #include "jpeglib.h"
 #include <setjmp.h>
-
+#include <limits>
 
 using namespace VRayForBlender;
 
@@ -116,7 +116,10 @@ void ZmqExporter::ZmqRenderImage::update(const VRayMessage & msg, ZmqExporter * 
 
 
 ZmqExporter::ZmqExporter():
-	m_Client(new ZmqClient())
+	m_Client(new ZmqClient()),
+	m_LastExportedFrame(std::numeric_limits<float>::min()),
+	m_IsAborted(false),
+	m_Started(false)
 {
 }
 
@@ -168,8 +171,10 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper * client) {
 			break;
 		}
 	} else if (msgType == VRayMessage::Type::ChangeRenderer) {
-		if (message.getRendererAction() == VRayMessage::RendererAction::FrameRendered) {
-			this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<int>>()->m_Value;
+		if (message.getRendererAction() == VRayMessage::RendererAction::SetRendererStatus) {
+			if (!(m_IsAborted = (message.getRendererStatus() == VRayMessage::RendererStatus::Abort))) {
+				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+			}
 		}
 	}
 }
@@ -186,7 +191,7 @@ void ZmqExporter::init()
 		snprintf(portStr, 32, ":%d", this->m_ServerPort);
 		m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
 
-		auto mode = this->animation_settings.use ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
+		auto mode = this->animation_settings.use && !this->is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
 		m_Client->send(VRayMessage::createMessage(mode));
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 	} catch (zmq::error_t &e) {
@@ -210,6 +215,8 @@ void ZmqExporter::checkZmqClient()
 
 void ZmqExporter::set_settings(const ExporterSettings & settings)
 {
+	PluginExporter::set_settings(settings);
+
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
 	this->animation_settings = settings.settings_animation;
@@ -237,12 +244,15 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 
 void ZmqExporter::start()
 {
+	checkZmqClient();
+	m_Started = true;
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Start));
 }
 
 
 void ZmqExporter::stop()
 {
+	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Stop));
 }
 
@@ -269,17 +279,20 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		return plugin;
 	}
 
+
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
+
+	assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+	if (m_LastExportedFrame != this->current_scene_frame) {
+		m_LastExportedFrame = this->current_scene_frame;
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+	}
+
 
 	double lastTime = 0;
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
-
-		if (lastTime != attr.time) {
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, attr.time));
-			lastTime = attr.time;
-		}
 
 		switch (attr.attrValue.type) {
 		case ValueTypeUnknown:
@@ -329,9 +342,12 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		case ValueTypeMapChannels:
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
-		case ValueTypeInstancer:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
+		case ValueTypeInstancer: {
+			auto inst = attr.attrValue.valInstancer;
+			inst.frameNumber = this->current_scene_frame;
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, inst));
 			break;
+		}
 		default:
 			PRINT_INFO_EX("--- > UNIMPLEMENTED DEFAULT");
 			assert(false);

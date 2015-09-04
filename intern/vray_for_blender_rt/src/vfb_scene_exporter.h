@@ -122,6 +122,7 @@ public:
 	void                 free();
 
 public:
+	void                 export();
 	void                 sync(const int &check_updated=false);
 	void                 sync_prepass();
 	void                 sync_view(const int &check_updated=false);
@@ -140,6 +141,9 @@ public:
 	void                 render_stop();
 
 	int                  is_interrupted();
+
+private:
+	void                 export_animation();
 
 public:
 	void                *m_pythonThreadState;

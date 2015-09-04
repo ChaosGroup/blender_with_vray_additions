@@ -128,6 +128,7 @@ public:
 	virtual void         sync()  {}
 	virtual void         start() {}
 	virtual void         stop()  {}
+	virtual bool         is_running() const { return true; }
 
 	virtual void         export_vrscene(const std::string &filepath) {}
 
@@ -136,7 +137,9 @@ public:
 
 	virtual int          remove_plugin(const std::string &pluginName) { return 0; }
 
-	virtual int          get_last_rendered_frame() const { return last_rendered_frame; }
+	virtual float        get_last_rendered_frame() const { return last_rendered_frame; }
+	        void         set_current_frame(float val)    { current_scene_frame = val; }
+	virtual bool         is_aborted() const { return false; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }
 	virtual void         set_render_size(const int&, const int&) {}
@@ -150,7 +153,8 @@ protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
 	UpdateMessageCb      on_message_update;
-	int                  last_rendered_frame;
+	float                last_rendered_frame;
+	float                current_scene_frame;
 	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
 

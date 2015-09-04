@@ -194,7 +194,7 @@ static PyObject* PyExporterExport(PyObject *self, PyObject *value)
 	python_thread_state_save(&exporter->m_pythonThreadState);
 
 	exporter->init();
-	exporter->sync(false);
+	exporter->export();
 	exporter->render_start();
 
 	python_thread_state_restore(&exporter->m_pythonThreadState);
