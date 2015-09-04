@@ -442,6 +442,8 @@ void SceneExporter::sync_view(const int &check_updated)
 	}
 	else {
 		ViewParams viewParams;
+
+		viewParams.render_view.tm = BL::Object(m_scene.camera()).matrix_world();
 		if (!m_view3d) {
 			PRINT_ERROR("Final frame render is not supported.")
 		}
@@ -615,19 +617,30 @@ void SceneExporter::sync_view(const int &check_updated)
 			// PRINT_WARN("View update: fov = %.3f", viewParams.render_view.fov);
 
 			PluginDesc viewDesc("renderView", "RenderView");
-			viewDesc.add("fov", viewParams.render_view.fov);
 			viewDesc.add("transform", AttrTransformFromBlTransform(viewParams.render_view.tm));
 
-			viewDesc.add("clipping",     (viewParams.render_view.use_clip_start || viewParams.render_view.use_clip_end));
-			viewDesc.add("clipping_near", viewParams.render_view.clip_start);
-			viewDesc.add("clipping_far",  viewParams.render_view.clip_end);
+			if (!m_view3d) {
+				viewDesc.add("fov", m_viewParams.render_view.fov);
+				viewDesc.add("clipping",     (m_viewParams.render_view.use_clip_start || m_viewParams.render_view.use_clip_end));
+				viewDesc.add("clipping_near", m_viewParams.render_view.clip_start);
+				viewDesc.add("clipping_far",  m_viewParams.render_view.clip_end);
 
-			viewDesc.add("orthographic", viewParams.render_view.ortho);
-			viewDesc.add("orthographicWidth", viewParams.render_view.ortho_width);
+				viewDesc.add("orthographic", m_viewParams.render_view.ortho);
+				viewDesc.add("orthographicWidth", m_viewParams.render_view.ortho_width);
+			} else {
+				viewDesc.add("fov", viewParams.render_view.fov);
+				viewDesc.add("clipping",     (viewParams.render_view.use_clip_start || viewParams.render_view.use_clip_end));
+				viewDesc.add("clipping_near", viewParams.render_view.clip_start);
+				viewDesc.add("clipping_far",  viewParams.render_view.clip_end);
+
+				viewDesc.add("orthographic", viewParams.render_view.ortho);
+				viewDesc.add("orthographicWidth", viewParams.render_view.ortho_width);
+			}
+
 
 			m_exporter->export_plugin(viewDesc);
 
-			if (m_ortho_camera != (bool)viewParams.render_view.ortho) {
+			if (m_ortho_camera != static_cast<bool>(viewParams.render_view.ortho) && m_exporter->is_running()) {
 				m_exporter->stop();
 				m_exporter->start();
 			}
