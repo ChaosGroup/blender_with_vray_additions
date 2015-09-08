@@ -1507,7 +1507,7 @@ int filelist_file_findpath(struct FileList *filelist, const char *filename)
 	}
 
 	/* XXX TODO Cache could probably use a ghash on paths too? Not really urgent though.
-     *          This is only used to find again renamed entry, annoying but looks hairy to get rid of it currently. */
+	 *          This is only used to find again renamed entry, annoying but looks hairy to get rid of it currently. */
 
 	for (fidx = 0; fidx < filelist->filelist.nbr_entries_filtered; fidx++) {
 		FileListInternEntry *entry = filelist->filelist_intern.filtered[fidx];
@@ -1842,9 +1842,14 @@ bool filelist_cache_previews_update(FileList *filelist)
 
 	while (!BLI_thread_queue_is_empty(cache->previews_done)) {
 		FileListEntryPreview *preview = BLI_thread_queue_pop(cache->previews_done);
+		FileDirEntry *entry;
 
+		/* Paranoid (should never happen currently since we consume this queue from a single thread), but... */
+		if (!preview) {
+			continue;
+		}
 		/* entry might have been removed from cache in the mean while, we do not want to cache it again here. */
-		FileDirEntry *entry = filelist_file_ex(filelist, preview->index, false);
+		entry = filelist_file_ex(filelist, preview->index, false);
 
 //		printf("%s: %d - %s - %p\n", __func__, preview->index, preview->path, preview->img);
 
@@ -2467,7 +2472,7 @@ static void filelist_readjob_do(
 			 * things would crash way before we overflow that counter!
 			 * Using an atomic operation to avoid having to lock thread...
 			 * Note that we do not really need this here currently, since there is a single listing thread, but better
-             * remain consistent about threading! */
+			 * remain consistent about threading! */
 			*((uint32_t *)entry->uuid) = atomic_add_uint32((uint32_t *)filelist->filelist_intern.curr_uuid, 1);
 
 			BLI_path_rel(dir, root);

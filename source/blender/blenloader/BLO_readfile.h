@@ -36,6 +36,7 @@
 extern "C" {
 #endif
 
+struct BlendThumbnail;
 struct bScreen;
 struct LinkNode;
 struct Main;
@@ -283,6 +284,15 @@ struct Main *BLO_load_main_from_file(const char *filepath);
 
 /* Verifies Python node types, ID PointerProperties, etc. */
 void BLO_verify_custom_data(struct Main *bmain);
+
+/**
+ * Does a very light reading of given .blend file to extract its stored thumbnail.
+ *
+ * \param filepath The path of the file to extract thumbnail from.
+ * \return The raw thumbnail
+ *         (MEM-allocated, as stored in file, use BKE_main_thumbnail_to_imbuf() to convert it to ImBuf image).
+ */
+struct BlendThumbnail *BLO_thumbnail_from_file(const char *filepath);
 
 #ifdef __cplusplus
 } 

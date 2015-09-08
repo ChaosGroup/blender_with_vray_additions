@@ -1598,7 +1598,9 @@ static void scene_free_unused_opensubdiv_cache(Scene *scene)
 			if (md != NULL && md->type == eModifierType_Subsurf) {
 				SubsurfModifierData *smd = (SubsurfModifierData *) md;
 				bool object_in_editmode = object->mode == OB_MODE_EDIT;
-				if (!smd->use_opensubdiv) {
+				if (!smd->use_opensubdiv ||
+				    DAG_get_eval_flags_for_object(scene, object) & DAG_EVAL_NEED_CPU)
+				{
 					if (smd->mCache != NULL) {
 						ccgSubSurf_free_osd_mesh(smd->mCache);
 					}
@@ -1815,6 +1817,11 @@ void BKE_scene_update_tagged(EvaluationContext *eval_ctx, Main *bmain, Scene *sc
 	else
 #endif
 	{
+#ifdef OPENSUBDIV_GL_WORKAROUND
+		if (DEG_needs_eval(scene->depsgraph)) {
+			scene_free_unused_opensubdiv_cache(scene);
+		}
+#endif
 		DEG_evaluate_on_refresh(eval_ctx, scene->depsgraph, scene);
 		/* TODO(sergey): This is to beocme a node in new depsgraph. */
 		BKE_mask_update_scene(bmain, scene);
@@ -1895,6 +1902,8 @@ void BKE_scene_update_for_newframe_ex(EvaluationContext *eval_ctx, Main *bmain, 
 	/* TODO(sergey): Pass to evaluation routines instead of storing layer in the graph? */
 	(void) do_invisible_flush;
 #endif
+
+	DAG_editors_update_pre(bmain, sce, true);
 
 	/* keep this first */
 	BLI_callback_exec(bmain, &sce->id, BLI_CB_EVT_FRAME_CHANGE_PRE);

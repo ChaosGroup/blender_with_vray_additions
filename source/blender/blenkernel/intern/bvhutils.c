@@ -60,8 +60,14 @@ float bvhtree_ray_tri_intersection(
 {
 	float dist;
 
+#ifdef USE_KDOPBVH_WATERTIGHT
+	if (isect_ray_tri_watertight_v3(ray->origin, ray->isect_precalc, v0, v1, v2, &dist, NULL))
+#else
 	if (isect_ray_tri_epsilon_v3(ray->origin, ray->direction, v0, v1, v2, &dist, NULL, FLT_EPSILON))
+#endif
+	{
 		return dist;
+	}
 
 	return FLT_MAX;
 }
@@ -532,7 +538,7 @@ BVHTree *bvhtree_from_mesh_edges(BVHTreeFromMesh *data, DerivedMesh *dm, float e
 				tree = BLI_bvhtree_new(numEdges, epsilon, tree_type, axis);
 				if (tree != NULL) {
 					for (i = 0; i < numEdges; i++) {
-						float co[4][3];
+						float co[2][3];
 						copy_v3_v3(co[0], vert[edge[i].v1].co);
 						copy_v3_v3(co[1], vert[edge[i].v2].co);
 
@@ -910,7 +916,7 @@ static BVHTree *bvhtree_from_mesh_looptri_create_tree(
 			else {
 				if (vert && looptri) {
 					for (i = 0; i < looptri_num; i++) {
-						float co[4][3];
+						float co[3][3];
 						if (mask && !BLI_BITMAP_TEST_BOOL(mask, i)) {
 							continue;
 						}

@@ -810,14 +810,18 @@ static void ApplySnapRotation(TransInfo *t, float *value)
 
 static void ApplySnapResize(TransInfo *t, float vec[3])
 {
+	float dist;
+
 	if (t->tsnap.target == SCE_SNAP_TARGET_CLOSEST) {
-		vec[0] = vec[1] = vec[2] = t->tsnap.dist;
+		dist = t->tsnap.dist;
 	}
 	else {
 		float point[3];
 		getSnapPoint(t, point);
-		vec[0] = vec[1] = vec[2] = ResizeBetween(t, t->tsnap.snapTarget, point);
+		dist = ResizeBetween(t, t->tsnap.snapTarget, point);
 	}
+
+	copy_v3_fl(vec, dist);
 }
 
 /********************** DISTANCE **************************/
@@ -884,6 +888,8 @@ static float ResizeBetween(TransInfo *t, const float p1[3], const float p2[3])
 	sub_v3_v3v3(d1, p1, t->center_global);
 	sub_v3_v3v3(d2, p2, t->center_global);
 	
+	project_v3_v3v3(d1, d1, d2);
+
 	if (t->con.applyRot != NULL && (t->con.mode & CON_APPLY)) {
 		mul_m3_v3(t->con.pmtx, d1);
 		mul_m3_v3(t->con.pmtx, d2);
@@ -996,6 +1002,7 @@ static void CalcSnapGeometry(TransInfo *t, float *UNUSED(vec))
 			BLI_freelistN(&depth_peels);
 		}
 		else {
+			zero_v3(no);  /* objects won't set this */
 			found = snapObjectsTransform(t, mval, &dist_px, loc, no, t->tsnap.modeSelect);
 		}
 		
@@ -1847,8 +1854,16 @@ static bool snapObject(Scene *scene, short snap_mode, ARegion *ar, Object *ob, f
 			do_bb = false;
 		}
 		else {
+			/* in this case we wan't the mesh from the editmesh, avoids stale data. see: T45978.
+			 * still set the 'em' to NULL, since we only want the 'dm'. */
+			em = BKE_editmesh_from_object(ob);
+			if (em) {
+				editbmesh_get_derived_cage_and_final(scene, ob, em, CD_MASK_BAREMESH, &dm);
+			}
+			else {
+				dm = mesh_get_derived_final(scene, ob, CD_MASK_BAREMESH);
+			}
 			em = NULL;
-			dm = mesh_get_derived_final(scene, ob, CD_MASK_BAREMESH);
 		}
 		
 		retval = snapDerivedMesh(snap_mode, ar, ob, dm, em, obmat, ray_start, ray_normal, ray_origin, mval, r_loc, r_no, r_dist_px, r_depth, do_bb);
@@ -1968,8 +1983,20 @@ static bool snapObjects(Scene *scene, short snap_mode, Base *base_act, View3D *v
 bool snapObjectsTransform(TransInfo *t, const float mval[2], float *r_dist_px, float r_loc[3], float r_no[3], SnapMode mode)
 {
 	float ray_dist = TRANSFORM_DIST_MAX_RAY;
-	return snapObjects(t->scene, t->scene->toolsettings->snap_mode, t->scene->basact, t->view, t->ar, t->obedit,
-	                   mval, r_dist_px, r_loc, r_no, &ray_dist, mode);
+	Object *obedit = NULL;
+	Base *base_act = NULL;
+
+	if (t->flag & T_EDIT) {
+		obedit = t->obedit;
+	}
+
+	if ((t->options & CTX_GPENCIL_STROKES) == 0) {
+		base_act = t->scene->basact;
+	}
+
+	return snapObjects(
+	        t->scene, t->scene->toolsettings->snap_mode, base_act, t->view, t->ar, obedit,
+	        mval, r_dist_px, r_loc, r_no, &ray_dist, mode);
 }
 
 bool snapObjectsContext(bContext *C, const float mval[2], float *r_dist_px, float r_loc[3], float r_no[3], SnapMode mode)
@@ -2136,8 +2163,8 @@ static bool peelDerivedMesh(
 
 			if (data.bvhdata.tree != NULL) {
 				data.ob = ob;
-				data.obmat = obmat;
-				data.timat = timat;
+				data.obmat = (const float (*)[4])obmat;
+				data.timat = (const float (*)[3])timat;
 				data.ray_start = ray_start;
 				data.looptri = looptri;
 				data.polynors = dm->getPolyDataArray(dm, CD_NORMAL);  /* can be NULL */
