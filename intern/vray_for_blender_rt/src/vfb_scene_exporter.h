@@ -122,7 +122,7 @@ public:
 	void                 free();
 
 public:
-	void                 export();
+	bool                 export();
 	void                 sync(const int &check_updated=false);
 	void                 sync_prepass();
 	void                 sync_view(const int &check_updated=false);
@@ -143,7 +143,7 @@ public:
 	int                  is_interrupted();
 
 private:
-	void                 export_animation();
+	bool                 export_animation();
 
 public:
 	void                *m_pythonThreadState;
