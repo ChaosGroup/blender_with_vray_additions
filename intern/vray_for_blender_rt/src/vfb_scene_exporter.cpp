@@ -660,7 +660,7 @@ void SceneExporter::sync_materials(const int &check_updated)
 }
 
 
-static inline unsigned int get_layer(BlLayers array)
+unsigned int SceneExporter::get_layer(BlLayers array)
 {
 	unsigned int layer = 0;
 
