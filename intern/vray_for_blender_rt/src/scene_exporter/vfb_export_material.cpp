@@ -21,6 +21,11 @@
 #include "vfb_utils_blender.h"
 
 
+void DataExporter::clearMaterialCache()
+{
+	m_exported_materials.clear();
+}
+
 AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
 {
 	AttrValue material = m_defaults.override_material
@@ -28,6 +33,11 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
 	                     : m_defaults.default_material;
 
 	if (ma) {
+		auto iter = m_exported_materials.find(ma);
+		if (iter != m_exported_materials.end()) {
+			return iter->second;
+		}
+
 		BL::NodeTree ntree = Nodes::GetNodeTree(ma);
 		if (ntree) {
 			BL::Node output = Nodes::GetNodeByType(ntree, "VRayNodeOutputMaterial");
@@ -37,9 +47,12 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
 					BL::NodeSocket materialSock = Nodes::GetInputSocketByName(output, "Material");
 					if (materialSock) {
 						NodeContext ctx;
-						material = dont_export
-						           ? exportLinkedSocket(ntree, materialSock, ctx, true)
-						           : exportVRayNode(ntree, output, materialSock, ctx);
+						//material = dont_export
+						//           ? exportLinkedSocket(ntree, materialSock, ctx, true)
+						//           : exportVRayNode(ntree, output, materialSock, ctx);
+
+						material = exportVRayNode(ntree, output, materialSock, ctx);
+						m_exported_materials.insert(std::make_pair(ma, material));
 					}
 				}
 			}

@@ -283,7 +283,7 @@ void SceneExporter::sync(const int &check_updated)
 	              check_updated);
 
 	clock_t begin = clock();
-
+	m_data_exporter.clearMaterialCache();
 	sync_prepass();
 
 	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
@@ -299,7 +299,6 @@ void SceneExporter::sync(const int &check_updated)
 	}
 
 	sync_view(check_updated);
-	sync_materials(check_updated);
 	sync_objects(check_updated);
 	sync_effects(check_updated);
 
@@ -628,33 +627,6 @@ void SceneExporter::sync_view(const int &check_updated)
 			}
 
 			m_ortho_camera = viewParams.render_view.ortho;
-		}
-	}
-}
-
-
-void SceneExporter::sync_materials(const int &check_updated)
-{
-	PRINT_INFO_EX("SceneExporter->sync_materials(%i)",
-	              check_updated);
-
-	BL::BlendData::materials_iterator maIt;
-	for (m_data.materials.begin(maIt); maIt != m_data.materials.end(); ++maIt) {
-		BL::Material ma(*maIt);
-		BL::NodeTree ntree = Nodes::GetNodeTree(ma);
-		if (!ntree) {
-			// PRINT_ERROR("");
-		}
-		else {
-			const bool is_updated = check_updated
-			                        ? (ma.is_updated() || ntree.is_updated())
-			                        : true;
-
-			if (is_updated) {
-				m_data_exporter.exportMaterial(ma);
-			}
-
-			DataExporter::tag_ntree(ntree, false);
 		}
 	}
 }

@@ -25,7 +25,7 @@
 #include "vfb_params_desc.h"
 
 #include "DNA_ID.h"
-
+#include <map>
 
 using namespace VRayForBlender;
 
@@ -280,6 +280,7 @@ public:
 
 	void              exportVRayEnvironment(NodeContext &context);
 
+	void              clearMaterialCache();
 	AttrValue         exportMtlMulti(BL::Object ob);
 	AttrValue         exportMaterial(BL::Material b_ma, bool dont_export=false);
 
@@ -362,7 +363,7 @@ private:
 public:
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
-
+	std::map<BL::Material, AttrValue> m_exported_materials;
 };
 
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H

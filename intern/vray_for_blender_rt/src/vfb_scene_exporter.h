@@ -125,7 +125,6 @@ public:
 	void                 sync(const int &check_updated=false);
 	void                 sync_prepass();
 	void                 sync_view(const int &check_updated=false);
-	void                 sync_materials(const int &check_updated=false);
 	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void                 sync_objects(const int &check_updated=false);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
