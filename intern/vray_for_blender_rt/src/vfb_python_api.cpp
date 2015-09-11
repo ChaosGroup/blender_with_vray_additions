@@ -25,7 +25,7 @@
 #endif
 
 #include "cgr_vray_for_blender_rt.h"
-#include "vfb_scene_exporter.h"
+#include "vfb_specialised_exporter.h"
 #include "vfb_params_json.h"
 
 #include "DNA_material_types.h"
@@ -168,8 +168,17 @@ static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 
 	// Create exporter
 	bool viewport = PyObject_IsTrue(isViewport);
-	VRayForBlender::SceneExporter *exporter = new VRayForBlender::SceneExporter(context, engine, data, scene, v3d, rv3d, region, viewport);
-	exporter->init();
+	VRayForBlender::SceneExporter *exporter = nullptr;
+
+	if (viewport) {
+		exporter = new VRayForBlender::InteractiveExporter(context, engine, data, scene, v3d, rv3d, region);
+	} else {
+		exporter = new VRayForBlender::ProductionExporter(context, engine, data, scene, v3d, rv3d, region);
+	}
+
+	if (exporter) {
+		exporter->init();
+	}
 
 	return PyLong_FromVoidPtr(exporter);
 }
@@ -193,7 +202,7 @@ static PyObject* PyExporterExport(PyObject *self, PyObject *value)
 
 	python_thread_state_save(&exporter->m_pythonThreadState);
 
-	bool success = exporter->export();
+	bool success = exporter->do_export();
 
 	python_thread_state_restore(&exporter->m_pythonThreadState);
 

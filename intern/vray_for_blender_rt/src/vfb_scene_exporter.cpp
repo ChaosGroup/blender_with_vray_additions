@@ -65,7 +65,7 @@ static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
 
 
-SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region, bool is_viewport):
+SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region):
     m_context(context),
     m_engine(engine),
     m_data(data),
@@ -73,8 +73,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     m_view3d(view3d),
     m_region3d(region3d),
     m_region(region),
-    m_exporter(nullptr),
-	m_is_viewport(is_viewport)
+    m_exporter(nullptr)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -99,6 +98,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderGIPlugins.insert("SettingsIrradianceMap");
 		RenderGIPlugins.insert("SettingsDMCGI");
 	}
+	m_settings.init(m_data, m_scene);
 }
 
 
@@ -110,19 +110,30 @@ SceneExporter::~SceneExporter()
 
 void SceneExporter::init()
 {
-	m_settings.init(m_data, m_scene);
-
-#ifdef USE_BLENDER_VRAY_ZMQ
-	if (m_is_viewport) {
-		m_settings.exporter_type = ExpoterType::ExpoterTypeZMQ;
+	create_exporter();
+	if (!m_exporter) {
+		PRINT_INFO_EX("Failed to create exporter!");
 	}
-#else
-	// viewport without zmq - error
-	if (m_is_viewport) {
-		m_settings.exporter_type = ExpoterType::ExporterTypeInvalid;
-	}
-#endif
+	assert(m_exporter && "Failed to create exporter!");
 
+	if (m_exporter) {
+		m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
+		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
+
+		// directly bind to the engine
+		m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
+
+		m_exporter->init();
+	}
+
+	m_data_exporter.init(m_exporter, m_settings);
+	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);
+	m_data_exporter.init_defaults();
+}
+
+
+void SceneExporter::create_exporter()
+{
 	m_exporter = ExporterCreate(m_settings.exporter_type);
 	if (!m_exporter) {
 		m_exporter = ExporterCreate(ExpoterType::ExporterTypeInvalid);
@@ -130,19 +141,6 @@ void SceneExporter::init()
 			return;
 		}
 	}
-
-	m_exporter->set_is_viewport(m_is_viewport);
-	m_exporter->set_settings(m_settings);
-	m_exporter->init();
-	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
-	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
-
-	// directly bind to the engine
-	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
-
-	m_data_exporter.init(m_exporter, m_settings);
-	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);
-	m_data_exporter.init_defaults();
 }
 
 
@@ -276,18 +274,6 @@ bool SceneExporter::export_animation()
 	}
 
 	return true;
-}
-
-
-bool SceneExporter::export()
-{
-	if (m_settings.settings_animation.use && !m_is_viewport) {
-		return export_animation();
-	} else {
-		sync(false);
-		render_start();
-		return true;
-	}
 }
 
 
@@ -767,6 +753,114 @@ static int ob_is_duplicator_renderable(BL::Object ob) {
 }
 
 
+void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
+{
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+	const int dupli_override_id   = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
+	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+
+	AttrInstancer instances;
+	instances.frameNumber = 0;
+	if (dupli_use_instancer) {
+		int num_instances = 0;
+
+		BL::Object::dupli_list_iterator dupIt;
+		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
+			BL::DupliObject dupliOb(*dupIt);
+			BL::Object      dupOb(dupliOb.object());
+
+			const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
+			const bool is_light = Blender::IsLight(dupOb);
+
+			if (!is_hidden && !is_light) {
+				num_instances++;
+			}
+		}
+
+		instances.data.resize(num_instances);
+	}
+
+	if (is_interrupted()) {
+		return;
+	}
+
+	BL::Object::dupli_list_iterator dupIt;
+	int dupli_instance = 0;
+	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
+		if (is_interrupted()) {
+			return;
+		}
+
+		BL::DupliObject dupliOb(*dupIt);
+		BL::Object      dupOb(dupliOb.object());
+
+		const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
+
+		const bool is_light = Blender::IsLight(dupOb);
+		const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
+
+		MHash persistendID;
+		MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+
+		if (!is_hidden && supported_type) {
+			if (is_light) {
+				ObjectOverridesAttrs overrideAttrs;
+
+				overrideAttrs.override = true;
+				overrideAttrs.visible = true;
+				overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+				overrideAttrs.id = persistendID;
+
+				char namePrefix[255] = {0, };
+				namePrefix[0] = 'D';
+				snprintf(namePrefix + 1, 250, "%u", persistendID);
+				strcat(namePrefix, "@");
+				strcat(namePrefix, ob.name().c_str());
+
+				overrideAttrs.namePrefix = namePrefix;
+
+				sync_object(dupOb, check_updated, overrideAttrs);
+			}
+			else if (dupli_use_instancer) {
+				ObjectOverridesAttrs overrideAttrs;
+				overrideAttrs.override = true;
+				// If dupli are shown via Instancer we need to hide
+				// original object
+				overrideAttrs.visible = ob_is_duplicator_renderable(dupOb);
+				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+				overrideAttrs.id = reinterpret_cast<int>(dupOb.ptr.data);
+
+				float inverted[4][4];
+				copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
+				invert_m4(inverted);
+
+				float tm[4][4];
+				mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
+
+				AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+				instancer_item.index = persistendID;
+
+				instancer_item.node = m_data_exporter.getNodeName(dupOb);
+				instancer_item.tm = AttrTransformFromBlTransform(tm);
+
+				dupli_instance++;
+
+				sync_object(dupOb, check_updated, overrideAttrs);
+			}
+		}
+	}
+
+	if (dupli_use_instancer) {
+		static boost::format InstancerFmt("Dupli@%s");
+
+		PluginDesc instancerDesc(boost::str(InstancerFmt % m_data_exporter.getNodeName(ob)), "Instancer");
+		instancerDesc.add("instances", instances);
+
+		m_exporter->export_plugin(instancerDesc);
+	}
+}
+
+
 void SceneExporter::sync_objects(const int &check_updated)
 {
 	PRINT_INFO_EX("SceneExporter->sync_objects(%i)",
@@ -780,139 +874,28 @@ void SceneExporter::sync_objects(const int &check_updated)
 	//
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-		if (!is_interrupted()) {
-			BL::Object ob(*obIt);
+		if (is_interrupted()) {
+			break;
+		}
 
-			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		BL::Object ob(*obIt);
 
-			if (ob.is_duplicator()) {
-				bool process_duplis = true;
-
-				// TODO: "process_duplis"
-
-				if (process_duplis) {
-					const int dupli_override_id   = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
-					const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
-
-					ob.dupli_list_create(m_scene, EvalMode::EvalModeRender);
-
-					AttrInstancer instances;
-					instances.frameNumber = 0;
-					if (dupli_use_instancer) {
-						int num_instances = 0;
-
-						BL::Object::dupli_list_iterator dupIt;
-						for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
-							BL::DupliObject dupliOb(*dupIt);
-							BL::Object      dupOb(dupliOb.object());
-
-							const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
-							const bool is_light = Blender::IsLight(dupOb);
-
-							if (!is_hidden && !is_light) {
-								num_instances++;
-							}
-						}
-
-						instances.data.resize(num_instances);
-					}
-
-					BL::Object::dupli_list_iterator dupIt;
-					int dupli_instance = 0;
-					for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
-						if (!is_interrupted()) {
-							BL::DupliObject dupliOb(*dupIt);
-							BL::Object      dupOb(dupliOb.object());
-
-							const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
-
-							const bool is_light = Blender::IsLight(dupOb);
-							const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
-
-							MHash persistendID;
-							MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
-
-							if (!is_hidden && supported_type) {
-								if (is_light) {
-									ObjectOverridesAttrs overrideAttrs;
-									
-									overrideAttrs.override = true;
-									overrideAttrs.visible = true;
-									overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
-									overrideAttrs.id = persistendID;
-
-									char namePrefix[255] = {0, };
-									namePrefix[0] = 'D';
-									snprintf(namePrefix + 1, 250, "%u", persistendID);
-									strcat(namePrefix, "@");
-									strcat(namePrefix, ob.name().c_str());
-
-									overrideAttrs.namePrefix = namePrefix;
-
-									sync_object(dupOb, check_updated, overrideAttrs);
-								}
-								else {
-									if (dupli_use_instancer) {
-										ObjectOverridesAttrs overrideAttrs;
-										overrideAttrs.override = true;
-										// If dupli are shown via Instancer we need to hide
-										// original object
-										overrideAttrs.visible = ob_is_duplicator_renderable(dupOb);
-										overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-										overrideAttrs.id = reinterpret_cast<int>(dupOb.ptr.data);
-
-										float inverted[4][4];
-										copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
-										invert_m4(inverted);
-
-										float tm[4][4];
-										mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
-
-										AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
-										instancer_item.index = persistendID;
-
-										instancer_item.node = m_data_exporter.getNodeName(dupOb);
-										instancer_item.tm = AttrTransformFromBlTransform(tm);
-
-										dupli_instance++;
-
-										sync_object(dupOb, check_updated, overrideAttrs);
-									}
-									else {
-
-									}
-								}
-							}
-						}
-					}
-
-					ob.dupli_list_clear();
-
-					if (dupli_use_instancer) {
-						static boost::format InstancerFmt("Dupli@%s");
-
-						PluginDesc instancerDesc(boost::str(InstancerFmt % m_data_exporter.getNodeName(ob)), "Instancer");
-						instancerDesc.add("instances", instances);
-
-						m_exporter->export_plugin(instancerDesc);
-					}
-				}
+		if (ob.is_duplicator()) {
+			sync_dupli(ob);
+			if (is_interrupted()) {
+				break;
 			}
 
-			if (!is_interrupted()) {
-				if (ob.is_duplicator()) {
-					ObjectOverridesAttrs overAttrs;
+			ObjectOverridesAttrs overAttrs;
 
-					overAttrs.override = true;
-					overAttrs.id = reinterpret_cast<int>(ob.ptr.data);
-					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-					overAttrs.visible = ob_is_duplicator_renderable(ob);
+			overAttrs.override = true;
+			overAttrs.id = reinterpret_cast<int>(ob.ptr.data);
+			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+			overAttrs.visible = ob_is_duplicator_renderable(ob);
 
-					sync_object(ob, check_updated, overAttrs);
-				} else {
-					sync_object(ob, check_updated);
-				}
-			}
+			sync_object(ob, check_updated, overAttrs);
+		} else {
+			sync_object(ob, check_updated);
 		}
 	}
 }

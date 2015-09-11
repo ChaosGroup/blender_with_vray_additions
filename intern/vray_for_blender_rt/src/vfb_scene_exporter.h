@@ -112,23 +112,23 @@ public:
 	              BL::Scene           scene,
 	              BL::SpaceView3D     view3d,
 	              BL::RegionView3D    region3d,
-	              BL::Region          region,
-	              bool                is_viewport);
+	              BL::Region          region);
 
-	~SceneExporter();
+	virtual ~SceneExporter();
 
 public:
-	void                 init();
+	virtual void         init();
 	void                 free();
 
 public:
-	bool                 export();
+	virtual bool         do_export() = 0;
 	void                 sync(const int &check_updated=false);
 	void                 sync_prepass();
 	void                 sync_view(const int &check_updated=false);
 	void                 sync_materials(const int &check_updated=false);
 	void                 sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void                 sync_objects(const int &check_updated=false);
+	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
 	void                 sync_effects(const int &check_updated=false);
 
 	void                 draw();
@@ -142,8 +142,9 @@ public:
 
 	int                  is_interrupted();
 
-private:
+protected:
 	bool                 export_animation();
+	virtual void         create_exporter();
 
 public:
 	void                *m_pythonThreadState;
@@ -157,13 +158,11 @@ protected:
 	BL::Region           m_region;
 	BL::Context          m_context;
 
-private:
 	PluginExporter      *m_exporter;
 	DataExporter         m_data_exporter;
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
 
-	bool                 m_is_viewport;
 	bool                 m_ortho_camera;
 };
 
