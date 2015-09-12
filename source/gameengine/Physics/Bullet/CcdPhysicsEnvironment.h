@@ -67,6 +67,9 @@ class CcdPhysicsEnvironment : public PHY_IPhysicsEnvironment
 	friend class CcdOverlapFilterCallBack;
 	btVector3 m_gravity;
 
+	// Removes the constraint and his references from the owner and the target.
+	void RemoveConstraint(btTypedConstraint *con);
+
 protected:
 	btIDebugDraw*	m_debugDrawer;
 	
@@ -87,6 +90,11 @@ protected:
 	int	m_solverType;
 	int	m_profileTimings;
 	bool m_enableSatCollisionDetection;
+
+	float m_deactivationTime;
+	float m_linearDeactivationThreshold;
+	float m_angularDeactivationThreshold;
+	float m_contactBreakingThreshold;
 
 	void	ProcessFhSprings(double curTime,float timeStep);
 
@@ -180,7 +188,7 @@ protected:
 		
 		virtual float	GetConstraintParam(int constraintId,int param);
 
-		virtual void		RemoveConstraint(int	constraintid);
+		virtual void RemoveConstraintById(int constraintid);
 
 		virtual float		getAppliedImpulse(int	constraintid);
 

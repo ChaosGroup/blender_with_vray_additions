@@ -589,6 +589,33 @@ void IDP_WriteProperty(IDProperty *prop, void *wd)
 	IDP_WriteProperty_OnlyData(prop, wd);
 }
 
+static void write_previews(WriteData *wd, PreviewImage *prv)
+{
+	/* Never write previews when doing memsave (i.e. undo/redo)! */
+	if (prv && !wd->current) {
+		short w = prv->w[1];
+		short h = prv->h[1];
+		unsigned int *rect = prv->rect[1];
+
+		/* don't write out large previews if not requested */
+		if (!(U.flag & USER_SAVE_PREVIEWS)) {
+			prv->w[1] = 0;
+			prv->h[1] = 0;
+			prv->rect[1] = NULL;
+		}
+		writestruct(wd, DATA, "PreviewImage", 1, prv);
+		if (prv->rect[0]) writedata(wd, DATA, prv->w[0] * prv->h[0] * sizeof(unsigned int), prv->rect[0]);
+		if (prv->rect[1]) writedata(wd, DATA, prv->w[1] * prv->h[1] * sizeof(unsigned int), prv->rect[1]);
+
+		/* restore preview, we still want to keep it in memory even if not saved to file */
+		if (!(U.flag & USER_SAVE_PREVIEWS) ) {
+			prv->w[1] = w;
+			prv->h[1] = h;
+			prv->rect[1] = rect;
+		}
+	}
+}
+
 static void write_fmodifiers(WriteData *wd, ListBase *fmodifiers)
 {
 	FModifier *fcm;
@@ -1705,6 +1732,9 @@ static void write_objects(WriteData *wd, ListBase *idbase)
 			writelist(wd, DATA, "LinkData", &ob->pc_ids);
 			writelist(wd, DATA, "LodLevel", &ob->lodlevels);
 		}
+
+		write_previews(wd, ob->preview);
+
 		ob= ob->id.next;
 	}
 
@@ -1913,37 +1943,20 @@ static void write_grid_paint_mask(WriteData *wd, int count, GridPaintMask *grid_
 	}
 }
 
-static void write_customdata(WriteData *wd, ID *id, int count, CustomData *data, int partial_type, int partial_count)
+static void write_customdata(
+        WriteData *wd, ID *id, int count, CustomData *data, CustomDataLayer *layers,
+        int partial_type, int partial_count)
 {
 	int i;
-
-	int nofree_buff[128];
-	int *nofree;
 
 	/* write external customdata (not for undo) */
 	if (data->external && !wd->current)
 		CustomData_external_write(data, id, CD_MASK_MESH, count, 0);
 
-	if (data->totlayer > ARRAY_SIZE(nofree_buff)) {
-		nofree = MEM_mallocN(sizeof(*nofree) * (size_t)data->totlayer, __func__);
-	}
-	else {
-		nofree = nofree_buff;
-	}
-
-	for (i = 0; i < data->totlayer; i++) {
-		nofree[i] = (data->layers[i].flag & CD_FLAG_NOFREE);
-		data->layers[i].flag &= ~CD_FLAG_NOFREE;
-	}
-
-	writestruct(wd, DATA, "CustomDataLayer", data->maxlayer, data->layers);
+	writestruct_at_address(wd, DATA, "CustomDataLayer", data->totlayer, data->layers, layers);
  
 	for (i = 0; i < data->totlayer; i++) {
-		data->layers[i].flag |= nofree[i];
-	}
-
-	for (i = 0; i < data->totlayer; i++) {
-		CustomDataLayer *layer= &data->layers[i];
+		CustomDataLayer *layer = &layers[i];
 		const char *structname;
 		int structnum, datasize;
 
@@ -1981,10 +1994,6 @@ static void write_customdata(WriteData *wd, ID *id, int count, CustomData *data,
 
 	if (data->external)
 		writestruct(wd, DATA, "CustomDataExternal", 1, data->external);
-
-	if (nofree != nofree_buff) {
-		MEM_freeN(nofree);
-	}
 }
 
 static void write_meshes(WriteData *wd, ListBase *idbase)
@@ -1998,6 +2007,12 @@ static void write_meshes(WriteData *wd, ListBase *idbase)
 
 	mesh= idbase->first;
 	while (mesh) {
+		CustomDataLayer *vlayers = NULL, vlayers_buff[CD_TEMP_CHUNK_SIZE];
+		CustomDataLayer *elayers = NULL, elayers_buff[CD_TEMP_CHUNK_SIZE];
+		CustomDataLayer *flayers = NULL, flayers_buff[CD_TEMP_CHUNK_SIZE];
+		CustomDataLayer *llayers = NULL, llayers_buff[CD_TEMP_CHUNK_SIZE];
+		CustomDataLayer *players = NULL, players_buff[CD_TEMP_CHUNK_SIZE];
+
 		if (mesh->id.us>0 || wd->current) {
 			/* write LibData */
 			if (!save_for_old_blender) {
@@ -2014,17 +2029,22 @@ static void write_meshes(WriteData *wd, ListBase *idbase)
 				memset(&mesh->fdata, 0, sizeof(mesh->fdata));
 #endif /* USE_BMESH_SAVE_WITHOUT_MFACE */
 
-				/* Bummer! We need to do the copy *before* writing mesh's struct itself,
-				 * because we eliminate NO_COPY & TEMPORARY layers here, which means
-				 * **number of layers (data.totlayer) may be smaller!**
-				 * If we do not do that, we can get crash by buffer-overflow on reading, see T44461. */
-				CustomData_copy(&old_mesh->vdata, &mesh->vdata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totvert);
-				CustomData_copy(&old_mesh->edata, &mesh->edata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totedge);
+				/**
+				 * Those calls:
+				 *   - Reduce mesh->xdata.totlayer to number of layers to write.
+				 *   - Fill xlayers with those layers to be written.
+				 * Note that mesh->xdata is from now on invalid for Blender, but this is why the whole mesh is
+				 * a temp local copy!
+				 */
+				CustomData_file_write_prepare(&mesh->vdata, &vlayers, vlayers_buff, ARRAY_SIZE(vlayers_buff));
+				CustomData_file_write_prepare(&mesh->edata, &elayers, elayers_buff, ARRAY_SIZE(elayers_buff));
 #ifndef USE_BMESH_SAVE_WITHOUT_MFACE  /* Do not copy org fdata in this case!!! */
-				CustomData_copy(&old_mesh->fdata, &mesh->fdata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totface);
+				CustomData_file_write_prepare(&mesh->fdata, &flayers, flayers_buff, ARRAY_SIZE(flayers_buff));
+#else
+				flayers = flayers_buff;
 #endif
-				CustomData_copy(&old_mesh->ldata, &mesh->ldata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totloop);
-				CustomData_copy(&old_mesh->pdata, &mesh->pdata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totpoly);
+				CustomData_file_write_prepare(&mesh->ldata, &llayers, llayers_buff, ARRAY_SIZE(llayers_buff));
+				CustomData_file_write_prepare(&mesh->pdata, &players, players_buff, ARRAY_SIZE(players_buff));
 
 				writestruct_at_address(wd, ID_ME, "Mesh", 1, old_mesh, mesh);
 
@@ -2035,20 +2055,12 @@ static void write_meshes(WriteData *wd, ListBase *idbase)
 				writedata(wd, DATA, sizeof(void *)*mesh->totcol, mesh->mat);
 				writedata(wd, DATA, sizeof(MSelect) * mesh->totselect, mesh->mselect);
 
-				write_customdata(wd, &mesh->id, mesh->totvert, &mesh->vdata, -1, 0);
-				write_customdata(wd, &mesh->id, mesh->totedge, &mesh->edata, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totvert, &mesh->vdata, vlayers, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totedge, &mesh->edata, elayers, -1, 0);
 				/* fdata is really a dummy - written so slots align */
-				write_customdata(wd, &mesh->id, mesh->totface, &mesh->fdata, -1, 0);
-				write_customdata(wd, &mesh->id, mesh->totloop, &mesh->ldata, -1, 0);
-				write_customdata(wd, &mesh->id, mesh->totpoly, &mesh->pdata, -1, 0);
-
-				CustomData_free(&mesh->vdata, mesh->totvert);
-				CustomData_free(&mesh->edata, mesh->totedge);
-#ifndef USE_BMESH_SAVE_WITHOUT_MFACE
-				CustomData_free(&mesh->fdata, mesh->totface);
-#endif
-				CustomData_free(&mesh->ldata, mesh->totloop);
-				CustomData_free(&mesh->pdata, mesh->totpoly);
+				write_customdata(wd, &mesh->id, mesh->totface, &mesh->fdata, flayers, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totloop, &mesh->ldata, llayers, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totpoly, &mesh->pdata, players, -1, 0);
 
 				/* restore pointer */
 				mesh = old_mesh;
@@ -2073,14 +2085,24 @@ static void write_meshes(WriteData *wd, ListBase *idbase)
 				mesh->edit_btmesh = NULL;
 
 				/* now fill in polys to mfaces */
+				/* XXX This breaks writing desing, by using temp allocated memory, which will likely generate
+				 *     doublons in stored 'old' addresses.
+				 *     This is very bad, but do not see easy way to avoid this, aside from generating those data
+				 *     outside of save process itself.
+				 *     Maybe we can live with this, though?
+				 */
 				mesh->totface = BKE_mesh_mpoly_to_mface(&mesh->fdata, &old_mesh->ldata, &old_mesh->pdata,
 				                                        mesh->totface, old_mesh->totloop, old_mesh->totpoly);
 
 				BKE_mesh_update_customdata_pointers(mesh, false);
 
-				/* See comment above. Note that loop/poly data are ignored here, and face ones are already handled. */
-				CustomData_copy(&old_mesh->vdata, &mesh->vdata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totvert);
-				CustomData_copy(&old_mesh->edata, &mesh->edata, CD_MASK_EVERYTHING, CD_REFERENCE, mesh->totedge);
+				CustomData_file_write_prepare(&mesh->vdata, &vlayers, vlayers_buff, ARRAY_SIZE(vlayers_buff));
+				CustomData_file_write_prepare(&mesh->edata, &elayers, elayers_buff, ARRAY_SIZE(elayers_buff));
+				CustomData_file_write_prepare(&mesh->fdata, &flayers, flayers_buff, ARRAY_SIZE(flayers_buff));
+#if 0
+				CustomData_file_write_prepare(&mesh->ldata, &llayers, llayers_buff, ARRAY_SIZE(llayers_buff));
+				CustomData_file_write_prepare(&mesh->pdata, &players, players_buff, ARRAY_SIZE(players_buff));
+#endif
 
 				writestruct_at_address(wd, ID_ME, "Mesh", 1, old_mesh, mesh);
 
@@ -2091,24 +2113,40 @@ static void write_meshes(WriteData *wd, ListBase *idbase)
 				writedata(wd, DATA, sizeof(void *)*mesh->totcol, mesh->mat);
 				/* writedata(wd, DATA, sizeof(MSelect) * mesh->totselect, mesh->mselect); */ /* pre-bmesh NULL's */
 
-				write_customdata(wd, &mesh->id, mesh->totvert, &mesh->vdata, -1, 0);
-				write_customdata(wd, &mesh->id, mesh->totedge, &mesh->edata, -1, 0);
-				write_customdata(wd, &mesh->id, mesh->totface, &mesh->fdata, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totvert, &mesh->vdata, vlayers, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totedge, &mesh->edata, elayers, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totface, &mesh->fdata, flayers, -1, 0);
 				/* harmless for older blender versioins but _not_ writing these keeps file size down */
 #if 0
-				write_customdata(wd, &mesh->id, mesh->totloop, &mesh->ldata, -1, 0);
-				write_customdata(wd, &mesh->id, mesh->totpoly, &mesh->pdata, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totloop, &mesh->ldata, llayers, -1, 0);
+				write_customdata(wd, &mesh->id, mesh->totpoly, &mesh->pdata, players, -1, 0);
 #endif
 
-				CustomData_free(&mesh->vdata, mesh->totvert);
-				CustomData_free(&mesh->edata, mesh->totedge);
 				CustomData_free(&mesh->fdata, mesh->totface);
+				flayers = NULL;
 
 				/* restore pointer */
 				mesh = old_mesh;
 #endif /* USE_BMESH_SAVE_AS_COMPAT */
 			}
 		}
+
+		if (vlayers && vlayers != vlayers_buff) {
+			MEM_freeN(vlayers);
+		}
+		if (elayers && elayers != elayers_buff) {
+			MEM_freeN(elayers);
+		}
+		if (flayers && flayers != flayers_buff) {
+			MEM_freeN(flayers);
+		}
+		if (llayers && llayers != llayers_buff) {
+			MEM_freeN(llayers);
+		}
+		if (players && players != players_buff) {
+			MEM_freeN(players);
+		}
+
 		mesh= mesh->id.next;
 	}
 }
@@ -2134,32 +2172,6 @@ static void write_lattices(WriteData *wd, ListBase *idbase)
 			
 		}
 		lt= lt->id.next;
-	}
-}
-
-static void write_previews(WriteData *wd, PreviewImage *prv)
-{
-	/* Never write previews in undo steps! */
-	if (prv && !wd->current) {
-		short w = prv->w[1];
-		short h = prv->h[1];
-		unsigned int *rect = prv->rect[1];
-		/* don't write out large previews if not requested */
-		if (!(U.flag & USER_SAVE_PREVIEWS)) {
-			prv->w[1] = 0;
-			prv->h[1] = 0;
-			prv->rect[1] = NULL;
-		}
-		writestruct(wd, DATA, "PreviewImage", 1, prv);
-		if (prv->rect[0]) writedata(wd, DATA, prv->w[0]*prv->h[0]*sizeof(unsigned int), prv->rect[0]);
-		if (prv->rect[1]) writedata(wd, DATA, prv->w[1]*prv->h[1]*sizeof(unsigned int), prv->rect[1]);
-
-		/* restore preview, we still want to keep it in memory even if not saved to file */
-		if (!(U.flag & USER_SAVE_PREVIEWS) ) {
-			prv->w[1] = w;
-			prv->h[1] = h;
-			prv->rect[1] = rect;
-		}
 	}
 }
 
@@ -2571,6 +2583,8 @@ static void write_scenes(WriteData *wd, ListBase *scebase)
 			write_pointcaches(wd, &(sce->rigidbody_world->ptcaches));
 		}
 		
+		write_previews(wd, sce->preview);
+
 		sce= sce->id.next;
 	}
 	/* flush helps the compression for undo-save */
@@ -3066,6 +3080,8 @@ static void write_groups(WriteData *wd, ListBase *idbase)
 			/* write LibData */
 			writestruct(wd, ID_GR, "Group", 1, group);
 			if (group->id.properties) IDP_WriteProperty(group->id.properties, wd);
+
+			write_previews(wd, group->preview);
 
 			go= group->gobject.first;
 			while (go) {
@@ -3679,10 +3695,11 @@ static void write_global(WriteData *wd, int fileflags, Main *mainvar)
  * second are an RGBA image (unsigned char)
  * note, this uses 'TEST' since new types will segfault on file load for older blender versions.
  */
-static void write_thumb(WriteData *wd, const int *img)
+static void write_thumb(WriteData *wd, const BlendThumbnail *thumb)
 {
-	if (img)
-		writedata(wd, TEST, (2 + img[0] * img[1]) * sizeof(int), img);
+	if (thumb) {
+		writedata(wd, TEST, BLEN_THUMB_MEMSIZE_FILE(thumb->width, thumb->height), thumb);
+	}
 }
 
 /* if MemFile * there's filesave to memory */
@@ -3690,7 +3707,7 @@ static int write_file_handle(
         Main *mainvar,
         WriteWrap *ww,
         MemFile *compare, MemFile *current,
-        int write_user_block, int write_flags, const int *thumb)
+        int write_user_block, int write_flags, const BlendThumbnail *thumb)
 {
 	BHead bhead;
 	ListBase mainlist;
@@ -3822,7 +3839,8 @@ static bool do_history(const char *name, ReportList *reports)
 }
 
 /* return: success (1) */
-int BLO_write_file(Main *mainvar, const char *filepath, int write_flags, ReportList *reports, const int *thumb)
+int BLO_write_file(
+        Main *mainvar, const char *filepath, int write_flags, ReportList *reports, const BlendThumbnail *thumb)
 {
 	char tempname[FILE_MAX+1];
 	int err, write_user_block;

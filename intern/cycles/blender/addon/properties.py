@@ -743,7 +743,7 @@ class CyclesWorldSettings(bpy.types.PropertyGroup):
                 name="Map Resolution",
                 description="Importance map size is resolution x resolution; "
                             "higher values potentially produce less noise, at the cost of memory and speed",
-                min=4, max=8096,
+                min=4, max=8192,
                 default=256,
                 )
         cls.samples = IntProperty(
@@ -911,7 +911,7 @@ class CyclesObjectBlurSettings(bpy.types.PropertyGroup):
 
         cls.use_camera_cull = BoolProperty(
                 name="Use Camera Cull",
-                description="Allow this object and it's duplicators to be culled by camera space culling",
+                description="Allow this object and its duplicators to be culled by camera space culling",
                 default=False,
                 )
 

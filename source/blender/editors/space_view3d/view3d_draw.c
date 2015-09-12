@@ -80,7 +80,7 @@
 #include "WM_api.h"
 
 #include "BLF_api.h"
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 #include "ED_armature.h"
 #include "ED_keyframing.h"
@@ -2397,7 +2397,9 @@ void ED_view3d_draw_depth(Scene *scene, ARegion *ar, View3D *v3d, bool alphaover
 	if (rv3d->rflag & RV3D_CLIPPING) {
 		ED_view3d_clipping_set(rv3d);
 	}
-	
+	/* get surface depth without bias */
+	rv3d->rflag |= RV3D_ZOFFSET_DISABLED;
+
 	v3d->zbuf = true;
 	glEnable(GL_DEPTH_TEST);
 	
@@ -2482,8 +2484,10 @@ void ED_view3d_draw_depth(Scene *scene, ARegion *ar, View3D *v3d, bool alphaover
 		glDepthMask(mask_orig);
 	}
 	
-	if (rv3d->rflag & RV3D_CLIPPING)
+	if (rv3d->rflag & RV3D_CLIPPING) {
 		ED_view3d_clipping_disable();
+	}
+	rv3d->rflag &= ~RV3D_ZOFFSET_DISABLED;
 	
 	v3d->zbuf = zbuf;
 	if (!v3d->zbuf) glDisable(GL_DEPTH_TEST);
@@ -2498,8 +2502,10 @@ typedef struct View3DShadow {
 	GPULamp *lamp;
 } View3DShadow;
 
-static void gpu_render_lamp_update(Scene *scene, View3D *v3d, Object *ob, Object *par,
-                                   float obmat[4][4], ListBase *shadows, SceneRenderLayer *srl)
+static void gpu_render_lamp_update(Scene *scene, View3D *v3d,
+                                   Object *ob, Object *par,
+                                   float obmat[4][4], unsigned int lay,
+                                   ListBase *shadows, SceneRenderLayer *srl)
 {
 	GPULamp *lamp;
 	Lamp *la = (Lamp *)ob->data;
@@ -2509,10 +2515,10 @@ static void gpu_render_lamp_update(Scene *scene, View3D *v3d, Object *ob, Object
 	lamp = GPU_lamp_from_blender(scene, ob, par);
 	
 	if (lamp) {
-		GPU_lamp_update(lamp, ob->lay, (ob->restrictflag & OB_RESTRICT_RENDER), obmat);
+		GPU_lamp_update(lamp, lay, (ob->restrictflag & OB_RESTRICT_RENDER), obmat);
 		GPU_lamp_update_colors(lamp, la->r, la->g, la->b, la->energy);
 		
-		layers = ob->lay & v3d->lay;
+		layers = lay & v3d->lay;
 		if (srl)
 			layers &= srl->lay;
 
@@ -2541,7 +2547,7 @@ static void gpu_update_lamps_shadows_world(Scene *scene, View3D *v3d)
 		ob = base->object;
 		
 		if (ob->type == OB_LAMP)
-			gpu_render_lamp_update(scene, v3d, ob, NULL, ob->obmat, &shadows, srl);
+			gpu_render_lamp_update(scene, v3d, ob, NULL, ob->obmat, ob->lay, &shadows, srl);
 		
 		if (ob->transflag & OB_DUPLI) {
 			DupliObject *dob;
@@ -2549,7 +2555,7 @@ static void gpu_update_lamps_shadows_world(Scene *scene, View3D *v3d)
 			
 			for (dob = lb->first; dob; dob = dob->next)
 				if (dob->ob->type == OB_LAMP)
-					gpu_render_lamp_update(scene, v3d, dob->ob, ob, dob->mat, &shadows, srl);
+					gpu_render_lamp_update(scene, v3d, dob->ob, ob, dob->mat, ob->lay, &shadows, srl);
 			
 			free_object_duplilist(lb);
 		}
@@ -2615,7 +2621,7 @@ CustomDataMask ED_view3d_datamask(const Scene *scene, const View3D *v3d)
 	if (ELEM(v3d->drawtype, OB_TEXTURE, OB_MATERIAL) ||
 	    ((v3d->drawtype == OB_SOLID) && (v3d->flag2 & V3D_SOLID_TEX)))
 	{
-		mask |= CD_MASK_MTFACE | CD_MASK_MCOL;
+		mask |= CD_MASK_MTEXPOLY | CD_MASK_MLOOPUV | CD_MASK_MLOOPCOL;
 
 		if (BKE_scene_use_new_shading_nodes(scene)) {
 			if (v3d->drawtype == OB_MATERIAL)
@@ -3873,7 +3879,7 @@ static void view3d_main_area_draw_info(const bContext *C, Scene *scene,
 	if ((v3d->flag2 & V3D_RENDER_OVERRIDE) == 0) {
 		wmWindowManager *wm = CTX_wm_manager(C);
 
-		if ((U.uiflag & USER_SHOW_FPS) && ED_screen_animation_playing(wm)) {
+		if ((U.uiflag & USER_SHOW_FPS) && ED_screen_animation_no_scrub(wm)) {
 			ED_scene_draw_fps(scene, &rect);
 		}
 		else if (U.uiflag & USER_SHOW_VIEWPORTNAME) {

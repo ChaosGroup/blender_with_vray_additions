@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeTexMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 

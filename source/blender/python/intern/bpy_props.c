@@ -1425,6 +1425,7 @@ static EnumPropertyItem *enum_items_from_py(PyObject *seq_fast, PyObject *def, i
 	EnumPropertyItem *items;
 	PyObject *item;
 	const Py_ssize_t seq_len = PySequence_Fast_GET_SIZE(seq_fast);
+	PyObject **seq_fast_items = PySequence_Fast_ITEMS(seq_fast);
 	Py_ssize_t totbuf = 0;
 	int i;
 	short def_used = 0;
@@ -1472,7 +1473,7 @@ static EnumPropertyItem *enum_items_from_py(PyObject *seq_fast, PyObject *def, i
 		Py_ssize_t name_str_size;
 		Py_ssize_t desc_str_size;
 
-		item = PySequence_Fast_GET_ITEM(seq_fast, i);
+		item = seq_fast_items[i];
 
 		if ((PyTuple_CheckExact(item)) &&
 		    (item_size = PyTuple_GET_SIZE(item)) &&
@@ -2073,7 +2074,7 @@ static PyObject *BPy_BoolProperty(PyObject *self, PyObject *args, PyObject *kw)
 		                               "options", "subtype", "update", "get", "set", NULL};
 		const char *id = NULL, *name = NULL, *description = "";
 		int id_len;
-		int def = 0;
+		bool def = false;
 		PropertyRNA *prop;
 		PyObject *pyopts = NULL;
 		int opts = 0;
@@ -2084,9 +2085,9 @@ static PyObject *BPy_BoolProperty(PyObject *self, PyObject *args, PyObject *kw)
 		PyObject *set_cb = NULL;
 
 		if (!PyArg_ParseTupleAndKeywords(args, kw,
-		                                 "s#|ssiO!sOOO:BoolProperty",
+		                                 "s#|ssO&O!sOOO:BoolProperty",
 		                                 (char **)kwlist, &id, &id_len,
-		                                 &name, &description, &def,
+		                                 &name, &description, PyC_ParseBool, &def,
 		                                 &PySet_Type, &pyopts, &pysubtype,
 		                                 &update_cb, &get_cb, &set_cb))
 		{

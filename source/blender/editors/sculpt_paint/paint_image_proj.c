@@ -49,7 +49,7 @@
 #include "BLI_threads.h"
 #include "BLI_utildefines.h"
 
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 
 #include "IMB_imbuf.h"
@@ -2038,16 +2038,16 @@ static void project_bucket_clip_face(
 	int inside_bucket_flag = 0;
 	int inside_face_flag = 0;
 	int flip;
-	bool colinear = false;
+	bool collinear = false;
 	
 	float bucket_bounds_ss[4][2];
 
-	/* detect pathological case where face the three vertices are almost colinear in screen space.
+	/* detect pathological case where face the three vertices are almost collinear in screen space.
 	 * mostly those will be culled but when flood filling or with smooth shading it's a possibility */
 	if (dist_squared_to_line_v2(v1coSS, v2coSS, v3coSS) < 0.5f ||
 	    dist_squared_to_line_v2(v2coSS, v3coSS, v1coSS) < 0.5f)
 	{
-		colinear = true;
+		collinear = true;
 	}
 	
 	/* get the UV space bounding box */
@@ -2077,7 +2077,7 @@ static void project_bucket_clip_face(
 		return;
 	}
 	/* handle pathological case here, no need for further intersections below since tringle area is almost zero */
-	if (colinear) {
+	if (collinear) {
 		int flag;
 		
 		(*tot) = 0;
@@ -2695,7 +2695,7 @@ static void project_paint_face_init(
 						interp_v3_v3v3(edge_verts_inset_clip[1], insetCos[fidx1], insetCos[fidx2], fac2);
 
 
-						if (pixel_bounds_uv(seam_subsection, &bounds_px, ibuf->x, ibuf->y)) {
+						if (pixel_bounds_uv((const float (*)[2])seam_subsection, &bounds_px, ibuf->x, ibuf->y)) {
 							/* bounds between the seam rect and the uvspace bucket pixels */
 
 							has_isect = 0;
@@ -3559,34 +3559,6 @@ static bool project_paint_winclip(
 }
 #endif //PROJ_DEBUG_WINCLIP
 
-/* Return true if face should be culled, false otherwise */
-static bool project_paint_backface_cull(
-        const ProjPaintState *ps, const MLoopTri *lt,
-        const ProjPaintFaceCoSS *coSS)
-{
-	if (ps->do_backfacecull) {
-		if (ps->do_mask_normal) {
-			const int lt_vtri[3] = { PS_LOOPTRI_AS_VERT_INDEX_3(ps, lt) };
-			/* Since we are interpolating the normals of faces, we want to make
-			 * sure all the verts are pointing away from the view,
-			 * not just the face */
-			if ((ps->vertFlags[lt_vtri[0]] & PROJ_VERT_CULL) &&
-			    (ps->vertFlags[lt_vtri[1]] & PROJ_VERT_CULL) &&
-			    (ps->vertFlags[lt_vtri[2]] & PROJ_VERT_CULL))
-			{
-				return true;
-			}
-		}
-		else {
-			if ((line_point_side_v2(coSS->v1, coSS->v2, coSS->v3) < 0.0f) != ps->is_flip_object) {
-				return true;
-			}
-
-		}
-	}
-
-	return false;
-}
 
 static void project_paint_build_proj_ima(
         ProjPaintState *ps, MemArena *arena,
@@ -3631,6 +3603,7 @@ static void project_paint_prepare_all_faces(
 	TexPaintSlot *slot = NULL;
 	const MLoopTri *lt;
 	int image_index = -1, tri_index;
+	int prev_poly = -1;
 
 	for (tri_index = 0, lt = ps->dm_mlooptri; tri_index < ps->dm_totlooptri; tri_index++, lt++) {
 		bool is_face_sel;
@@ -3691,8 +3664,37 @@ static void project_paint_prepare_all_faces(
 
 #endif //PROJ_DEBUG_WINCLIP
 
-				if (project_paint_backface_cull(ps, lt, &coSS)) {
-					continue;
+				/* backface culls individual triangles but mask normal will use polygon */
+				if (ps->do_backfacecull) {
+					if (ps->do_mask_normal) {
+						if (prev_poly != lt->poly) {
+							int iloop;
+							bool culled = true;
+							const MPoly *poly = ps->dm_mpoly + lt->poly;
+							int poly_loops = poly->totloop;
+							prev_poly = lt->poly;
+							for (iloop = 0; iloop < poly_loops; iloop++) {
+								if (!(ps->vertFlags[ps->dm_mloop[poly->loopstart + iloop].v] & PROJ_VERT_CULL)) {
+									culled = false;
+									break;
+								}
+							}
+
+							if (culled) {
+								/* poly loops - 2 is number of triangles for poly,
+								 * but counter gets incremented when continuing, so decrease by 3 */
+								int poly_tri = poly_loops - 3;
+								tri_index += poly_tri;
+								lt += poly_tri;
+								continue;
+							}
+						}
+					}
+					else {
+						if ((line_point_side_v2(coSS.v1, coSS.v2, coSS.v3) < 0.0f) != ps->is_flip_object) {
+							continue;
+						}
+					}
 				}
 			}
 
@@ -4472,6 +4474,7 @@ static void *do_projectpaint_thread(void *ph_v)
 								break;
 							}
 							case BRUSH_GRADIENT_RADIAL:
+							default:
 							{
 								f = len_v2(p) / line_len;
 								break;

@@ -23,7 +23,7 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
@@ -69,7 +69,7 @@ std::string VRayNodeExporter::exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::
 	pluginAttrs["brdfs"]   = BOOST_FORMAT_LIST(brdfs);
 	pluginAttrs["weights"] = BOOST_FORMAT_LIST(weights);
 
-	pluginAttrs["transparency"]  = VRayNodeExporter::exportSocket(ntree, node, "Transparency");
+	pluginAttrs["transparency"]  = VRayNodeExporter::exportSocket(ntree, node, "Transparency", context);
 	pluginAttrs["additive_mode"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&node.ptr, "additive_mode"));
 
 	VRayNodePluginExporter::exportPlugin("BRDF", "BRDFLayered", pluginName, pluginAttrs);

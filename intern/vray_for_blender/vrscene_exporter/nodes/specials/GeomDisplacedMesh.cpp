@@ -23,9 +23,9 @@
 #include "exp_nodes.h"
 
 
-std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
-	if(NOT(context->obCtx.ob)) {
+	if(NOT(context.obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";
@@ -90,9 +90,9 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
-	if(NOT(context->obCtx.ob)) {
+	if(NOT(context.obCtx.ob)) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return "NULL";

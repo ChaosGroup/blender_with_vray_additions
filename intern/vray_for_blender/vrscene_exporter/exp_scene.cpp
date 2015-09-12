@@ -88,7 +88,7 @@ static bool ob_is_mesh_light(BL::Object ob)
 			BL::NodeSocket geometrySocket = VRayNodeExporter::getSocketByName(nodeOutput, "Geometry");
 			if (geometrySocket && geometrySocket.is_linked()) {
 				VRayNodeContext ctx;
-				BL::Node geomNode = VRayNodeExporter::getConnectedNode(geometrySocket, &ctx);
+				BL::Node geomNode = VRayNodeExporter::getConnectedNode(ntree, geometrySocket, ctx);
 				if (geomNode && geomNode.bl_idname() == "VRayNodeLightMesh") {
 					is_mesh_light = true;
 				}
@@ -318,7 +318,7 @@ int VRsceneExporter::exportScene(const int &exportNodes, const int &exportGeomet
 	exportObjectsPre();
 
 	VRayNodeContext nodeCtx;
-	VRayNodeExporter::exportVRayEnvironment(&nodeCtx);
+	VRayNodeExporter::exportVRayEnvironment(nodeCtx);
 
 	// Export stuff
 	int exportInterrupt = false;
@@ -841,9 +841,9 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 						if (nodeOutput) {
 							BL::NodeSocket geometrySocket(VRayNodeExporter::getSocketByName(nodeOutput, "Geometry"));
 							if (geometrySocket && geometrySocket.is_linked()) {
-								BL::Node geometryNode(VRayNodeExporter::getConnectedNode(geometrySocket, &nodeCtx));
+								BL::Node geometryNode(VRayNodeExporter::getConnectedNode(active_ob_ntree, geometrySocket, nodeCtx));
 								if (geometryNode && (geometryNode.bl_idname() == "VRayNodeGeomDisplacedMesh")) {
-									geometry = VRayNodeExporter::exportSocket(active_ob_ntree, geometrySocket, &nodeCtx);
+									geometry = VRayNodeExporter::exportSocket(active_ob_ntree, geometrySocket, nodeCtx);
 									override_for_preview = true;
 								}
 							}
@@ -855,7 +855,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	}
 
 	if (!override_for_preview) {
-		geometry = VRayNodeExporter::exportSocket(ntree, geometrySocket, &nodeCtx);
+		geometry = VRayNodeExporter::exportSocket(ntree, geometrySocket, nodeCtx);
 	}
 
 	if(geometry == "NULL") {
@@ -864,7 +864,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(geometrySocket, &nodeCtx);
+	BL::Node geometryNode = VRayNodeExporter::getConnectedNode(ntree, geometrySocket, nodeCtx);
 	if(geometryNode.bl_idname() == "VRayNodeLightMesh") {
 		// No need to export Node - this object is LightMesh
 		return;
@@ -877,7 +877,7 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 		return;
 	}
 
-	std::string material = VRayNodeExporter::exportSocket(ntree, materialSocket, &nodeCtx);
+	std::string material = VRayNodeExporter::exportSocket(ntree, materialSocket, nodeCtx);
 	if(material == "NULL") {
 		PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
 		            ob->id.name, ntree.name().c_str());
@@ -1021,6 +1021,11 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 	if(lightTree) {
 		const std::string &vrayNodeType = boost::str(boost::format("VRayNode%s") % pluginID);
 
+		VRayNodeContext lightCtx;
+		lightCtx.obCtx.ob   = (Object*)ob.ptr.data;
+		lightCtx.obCtx.sce  = ExporterSettings::gSet.m_sce;
+		lightCtx.obCtx.main = ExporterSettings::gSet.m_main;
+
 		lightNode = VRayNodeExporter::getNodeByType(lightTree, vrayNodeType);
 		if(lightNode) {
 			for(StrSet::const_iterator setIt = socketAttrNames.begin(); setIt != socketAttrNames.end(); ++setIt) {
@@ -1028,7 +1033,7 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 
 				BL::NodeSocket sock = VRayNodeExporter::getSocketByAttr(lightNode, attrName);
 				if(sock) {
-					const std::string &attrValue = VRayNodeExporter::exportSocket(lightTree, sock);
+					const std::string &attrValue = VRayNodeExporter::exportSocket(lightTree, sock, lightCtx);
 					if(attrValue != "NULL")
 						pluginAttrs[attrName] = attrValue;
 				}
@@ -1077,19 +1082,19 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 					bool useChan = RNA_boolean_get(&chanSock.ptr, "use");
 					if(useChan) {
 						VRayNodeContext chanCtx;
-						BL::Node chanNode = VRayNodeExporter::getConnectedNode(chanSock, &chanCtx);
+						BL::Node chanNode = VRayNodeExporter::getConnectedNode(sceneTree, chanSock, chanCtx);
 						if(chanNode && chanNode.bl_idname() == "VRayNodeRenderChannelLightSelect") {
 							BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(chanNode, "Lights");
 							if(lightsSock) {
 								VRayNodeContext lightCtx;
-								BL::Node lightsConNode = VRayNodeExporter::getConnectedNode(lightsSock, &lightCtx);
+								BL::Node lightsConNode = VRayNodeExporter::getConnectedNode(sceneTree, lightsSock, lightCtx);
 								if(lightsConNode && IS_OBJECT_SELECT_NODE(lightsConNode)) {
 									ObList lampList;
 									VRayNodeExporter::getNodeSelectObjects(lightsConNode, lampList);
 
 									if(lampList.size()) {
 										const int lightSelectType = RNA_enum_get(&chanNode.ptr, "type");
-										const std::string &chanName = VRayNodeExporter::getPluginName(chanNode, sceneTree, NULL);
+										const std::string &chanName = VRayNodeExporter::getPluginName(chanNode, sceneTree, lightCtx);
 
 										ObList::const_iterator obIt;
 										for(obIt = lampList.begin(); obIt != lampList.end(); ++obIt) {

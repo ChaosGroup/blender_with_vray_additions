@@ -41,7 +41,7 @@
 #include "BLI_timecode.h"
 #include "BLI_utildefines.h"
 
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 #include "DNA_scene_types.h"
 
@@ -1927,6 +1927,14 @@ void SEQUENCER_OT_reload(struct wmOperatorType *ot)
 }
 
 /* reload operator */
+static int sequencer_refresh_all_poll(bContext *C)
+{
+	if (G.is_rendering) {
+		return 0;
+	}
+	return sequencer_edit_poll(C);
+}
+
 static int sequencer_refresh_all_exec(bContext *C, wmOperator *UNUSED(op))
 {
 	Scene *scene = CTX_data_scene(C);
@@ -1948,7 +1956,7 @@ void SEQUENCER_OT_refresh_all(struct wmOperatorType *ot)
 	
 	/* api callbacks */
 	ot->exec = sequencer_refresh_all_exec;
-	ot->poll = sequencer_edit_poll;
+	ot->poll = sequencer_refresh_all_poll;
 }
 
 static int sequencer_reassign_inputs_exec(bContext *C, wmOperator *op)
@@ -3824,7 +3832,7 @@ void SEQUENCER_OT_change_path(struct wmOperatorType *ot)
 
 	WM_operator_properties_filesel(ot, FILE_TYPE_FOLDER | FILE_TYPE_IMAGE | FILE_TYPE_MOVIE, FILE_SPECIAL, FILE_OPENFILE,
 	                               WM_FILESEL_DIRECTORY | WM_FILESEL_RELPATH | WM_FILESEL_FILEPATH | WM_FILESEL_FILES,
-	                               FILE_DEFAULTDISPLAY);
+	                               FILE_DEFAULTDISPLAY, FILE_SORT_ALPHA);
 	RNA_def_boolean(ot->srna, "use_placeholders", false, "Use Placeholders", "Use placeholders for missing frames of the strip");
 }
 
@@ -3934,5 +3942,5 @@ void SEQUENCER_OT_export_subtitles(struct wmOperatorType *ot)
 	ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
 	WM_operator_properties_filesel(ot,  FILE_TYPE_FOLDER, FILE_BLENDER, FILE_SAVE,
-	                               WM_FILESEL_FILEPATH, FILE_DEFAULTDISPLAY);
+	                               WM_FILESEL_FILEPATH, FILE_DEFAULTDISPLAY, FILE_SORT_ALPHA);
 }

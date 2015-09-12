@@ -1560,7 +1560,6 @@ static ExrHandle *imb_exr_begin_read_mem(IStream &file_stream, MultiPartInputFil
 	std::vector<MultiViewChannelName> channels;
 	GetChannelsInMultiPartFile(*data->ifile, channels);
 
-	data->multiView = new StringVector();
 	imb_exr_get_views(*data->ifile, *data->multiView);
 
 	for (size_t i = 0; i < channels.size(); i++) {
@@ -2052,6 +2051,10 @@ struct ImBuf *imb_load_openexr(const unsigned char *mem, size_t size, int flags,
 					delete membuf;
 					delete file;
 				}
+			}
+			else {
+				delete membuf;
+				delete file;
 			}
 
 			if (flags & IB_alphamode_detect)

@@ -137,6 +137,9 @@ struct SmoothView3DStore {
 	struct SmoothView3DState org;  /* original */
 
 	bool to_camera;
+
+	/* When smooth-view is enabled, store the 'rv3d->view' here,
+	 * assign back when the view motion is completed. */
 	char org_view;
 
 	double time_allowed;
@@ -180,12 +183,12 @@ void ED_view3d_smooth_view_ex(
 	/* if smoothview runs multiple times... */
 	if (rv3d->sms == NULL) {
 		view3d_smooth_view_state_backup(&sms.org, v3d, rv3d);
-		sms.org_view = rv3d->view;
 	}
 	else {
 		sms.org = rv3d->sms->org;
-		sms.org_view = rv3d->sms->org_view;
 	}
+	sms.org_view = rv3d->view;
+
 	/* sms.to_camera = false; */  /* initizlized to zero anyway */
 
 	/* note on camera locking, this is a little confusing but works ok.
@@ -785,7 +788,13 @@ bool ED_view3d_viewplane_get(
  */
 void ED_view3d_polygon_offset(const RegionView3D *rv3d, const float dist)
 {
-	float viewdist = rv3d->dist;
+	float viewdist;
+
+	if (rv3d->rflag & RV3D_ZOFFSET_DISABLED) {
+		return;
+	}
+
+	viewdist = rv3d->dist;
 
 	/* special exception for ortho camera (viewdist isnt used for perspective cameras) */
 	if (dist != 0.0f) {

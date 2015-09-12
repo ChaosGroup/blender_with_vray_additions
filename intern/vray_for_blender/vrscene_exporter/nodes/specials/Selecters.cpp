@@ -40,13 +40,13 @@ BL::Object VRayNodeExporter::getObjectByName(const std::string &name)
 }
 
 
-BL::Object VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+BL::Object VRayNodeExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	return VRayNodeExporter::getObjectByName(RNA_std_string_get(&node.ptr, "objectName"));
 }
 
 
-BL::Group VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+BL::Group VRayNodeExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	char buf[MAX_ID_NAME] = "";
 	RNA_string_get(&node.ptr, "groupName", buf);
@@ -88,14 +88,15 @@ std::string VRayNodeExporter::getObjectNameList(BL::Group group)
 
 void VRayNodeExporter::getNodeSelectObjects(BL::Node node, ObList &obList)
 {
+	VRayNodeContext ctx;
 	if(node.bl_idname() == "VRayNodeSelectObject") {
-		BL::Object ob = VRayNodeExporter::exportVRayNodeSelectObject(PointerRNA_NULL, node, PointerRNA_NULL, NULL);
+		BL::Object ob = VRayNodeExporter::exportVRayNodeSelectObject(PointerRNA_NULL, node, PointerRNA_NULL, ctx);
 		if(ob) {
 			obList.push_back(ob);
 		}
 	}
 	else if(node.bl_idname() == "VRayNodeSelectGroup") {
-		BL::Group group = VRayNodeExporter::exportVRayNodeSelectGroup(PointerRNA_NULL, node, PointerRNA_NULL, NULL);
+		BL::Group group = VRayNodeExporter::exportVRayNodeSelectGroup(PointerRNA_NULL, node, PointerRNA_NULL, ctx);
 		if(group) {
 			BL::Group::objects_iterator obIt;
 			for(group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {

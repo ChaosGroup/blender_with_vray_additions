@@ -410,6 +410,10 @@ m_ccdMode(0),
 m_solverType(-1),
 m_profileTimings(0),
 m_enableSatCollisionDetection(false),
+m_deactivationTime(2.0f),
+m_linearDeactivationThreshold(0.8f),
+m_angularDeactivationThreshold(1.0f),
+m_contactBreakingThreshold(0.02f),
 m_solver(NULL),
 m_ownPairCache(NULL),
 m_filterCallback(NULL),
@@ -472,8 +476,10 @@ void	CcdPhysicsEnvironment::AddCcdPhysicsController(CcdPhysicsController* ctrl)
 
 	//this m_userPointer is just used for triggers, see CallbackTriggers
 	obj->setUserPointer(ctrl);
-	if (body)
-		body->setGravity( m_gravity );
+	if (body) {
+		body->setGravity(m_gravity);
+		body->setSleepingThresholds(m_linearDeactivationThreshold, m_angularDeactivationThreshold);
+	}
 
 	if (body)
 	{
@@ -505,7 +511,26 @@ void	CcdPhysicsEnvironment::AddCcdPhysicsController(CcdPhysicsController* ctrl)
 	assert(obj->getBroadphaseHandle());
 }
 
-		
+void CcdPhysicsEnvironment::RemoveConstraint(btTypedConstraint *con)
+{
+	btRigidBody rbA = con->getRigidBodyA();
+	btRigidBody rbB = con->getRigidBodyB();
+	rbA.activate();
+	rbB.activate();
+	m_dynamicsWorld->removeConstraint(con);
+
+	if (rbA.getUserPointer()) {
+		((CcdPhysicsController *)rbA.getUserPointer())->removeCcdConstraintRef(con);
+	}
+
+	if (rbB.getUserPointer()) {
+		((CcdPhysicsController *)rbB.getUserPointer())->removeCcdConstraintRef(con);
+	}
+
+	/* Since we remove the constraint in the onwer and the target, we can delete it,
+	 * KX_ConstraintWrapper keep the constraint id not the pointer, so no problems. */
+	delete con;
+}
 
 bool	CcdPhysicsEnvironment::RemoveCcdPhysicsController(CcdPhysicsController* ctrl)
 {
@@ -528,11 +553,7 @@ bool	CcdPhysicsEnvironment::RemoveCcdPhysicsController(CcdPhysicsController* ctr
 		for (int i = ctrl->getNumCcdConstraintRefs() - 1; i >= 0; i--)
 		{
 			btTypedConstraint* con = ctrl->getCcdConstraintRef(i);
-			con->getRigidBodyA().activate();
-			con->getRigidBodyB().activate();
-			m_dynamicsWorld->removeConstraint(con);
-			ctrl->removeCcdConstraintRef(con);
-			//delete con; //might be kept by python KX_ConstraintWrapper
+			RemoveConstraint(con);
 		}
 		m_dynamicsWorld->removeRigidBody(ctrl->GetRigidBody());
 
@@ -547,7 +568,7 @@ bool	CcdPhysicsEnvironment::RemoveCcdPhysicsController(CcdPhysicsController* ctr
 		}
 
 		if (vehicle_constraint > 0)
-			RemoveConstraint(vehicle_constraint);
+			RemoveConstraintById(vehicle_constraint);
 	} else
 	{
 		//if a softbody
@@ -698,6 +719,10 @@ bool	CcdPhysicsEnvironment::ProceedDeltaTime(double curTime,float timeStep,float
 {
 	std::set<CcdPhysicsController*>::iterator it;
 	int i;
+
+	// Update Bullet global variables.
+	gDeactivationTime = m_deactivationTime;
+	gContactBreakingThreshold = m_contactBreakingThreshold;
 
 	for (it=m_controllers.begin(); it!=m_controllers.end(); it++)
 	{
@@ -918,21 +943,32 @@ void		CcdPhysicsEnvironment::SetNumIterations(int numIter)
 }
 void		CcdPhysicsEnvironment::SetDeactivationTime(float dTime)
 {
-	gDeactivationTime = dTime;
+	m_deactivationTime = dTime;
 }
 void		CcdPhysicsEnvironment::SetDeactivationLinearTreshold(float linTresh)
 {
-	gLinearSleepingTreshold = linTresh;
+	m_linearDeactivationThreshold = linTresh;
+
+	// Update from all controllers.
+	for (std::set<CcdPhysicsController*>::iterator it = m_controllers.begin(); it != m_controllers.end(); it++) {
+		if ((*it)->GetRigidBody())
+			(*it)->GetRigidBody()->setSleepingThresholds(m_linearDeactivationThreshold, m_angularDeactivationThreshold);
+	}
 }
 void		CcdPhysicsEnvironment::SetDeactivationAngularTreshold(float angTresh)
 {
-	gAngularSleepingTreshold = angTresh;
+	m_angularDeactivationThreshold = angTresh;
+
+	// Update from all controllers.
+	for (std::set<CcdPhysicsController*>::iterator it = m_controllers.begin(); it != m_controllers.end(); it++) {
+		if ((*it)->GetRigidBody())
+			(*it)->GetRigidBody()->setSleepingThresholds(m_linearDeactivationThreshold, m_angularDeactivationThreshold);
+	}
 }
 
 void		CcdPhysicsEnvironment::SetContactBreakingTreshold(float contactBreakingTreshold)
 {
-	gContactBreakingThreshold = contactBreakingTreshold;
-
+	m_contactBreakingThreshold = contactBreakingTreshold;
 }
 
 
@@ -1078,11 +1114,12 @@ int			CcdPhysicsEnvironment::CreateUniversalD6Constraint(
 	return 0;
 }
 
-
-
-void		CcdPhysicsEnvironment::RemoveConstraint(int	constraintId)
+void CcdPhysicsEnvironment::RemoveConstraintById(int constraintId)
 {
-	
+	// For soft body constraints
+	if (constraintId == 0)
+		return;
+
 	int i;
 	int numConstraints = m_dynamicsWorld->getNumConstraints();
 	for (i=0;i<numConstraints;i++)
@@ -1090,9 +1127,7 @@ void		CcdPhysicsEnvironment::RemoveConstraint(int	constraintId)
 		btTypedConstraint* constraint = m_dynamicsWorld->getConstraint(i);
 		if (constraint->getUserConstraintId() == constraintId)
 		{
-			constraint->getRigidBodyA().activate();
-			constraint->getRigidBodyB().activate();
-			m_dynamicsWorld->removeConstraint(constraint);
+			RemoveConstraint(constraint);
 			break;
 		}
 	}
@@ -2026,6 +2061,9 @@ CcdPhysicsEnvironment::~CcdPhysicsEnvironment()
 float	CcdPhysicsEnvironment::GetConstraintParam(int constraintId,int param)
 {
 	btTypedConstraint* typedConstraint = GetConstraintById(constraintId);
+	if (!typedConstraint)
+		return 0.0f;
+
 	switch (typedConstraint->getUserConstraintType())
 	{
 	case PHY_GENERIC_6DOF_CONSTRAINT:
@@ -2065,6 +2103,9 @@ float	CcdPhysicsEnvironment::GetConstraintParam(int constraintId,int param)
 void	CcdPhysicsEnvironment::SetConstraintParam(int constraintId,int param,float value0,float value1)
 {
 	btTypedConstraint* typedConstraint = GetConstraintById(constraintId);
+	if (!typedConstraint)
+		return;
+
 	switch (typedConstraint->getUserConstraintType())
 	{
 	case PHY_GENERIC_6DOF_CONSTRAINT:
@@ -2174,6 +2215,9 @@ void	CcdPhysicsEnvironment::SetConstraintParam(int constraintId,int param,float 
 
 btTypedConstraint*	CcdPhysicsEnvironment::GetConstraintById(int constraintId)
 {
+	// For soft body constraints
+	if (constraintId == 0)
+		return NULL;
 
 	int numConstraints = m_dynamicsWorld->getNumConstraints();
 	int i;
@@ -2954,6 +2998,10 @@ PHY_IPhysicsController* CcdPhysicsEnvironment::CreateConeController(float conera
 	
 float		CcdPhysicsEnvironment::getAppliedImpulse(int	constraintid)
 {
+	// For soft body constraints
+	if (constraintid == 0)
+		return 0.0f;
+
 	int i;
 	int numConstraints = m_dynamicsWorld->getNumConstraints();
 	for (i=0;i<numConstraints;i++)
@@ -3085,9 +3133,7 @@ void CcdPhysicsEnvironment::ConvertObject(KX_GameObject *gameobj, RAS_MeshObject
 	{
 		KX_BlenderSceneConverter *converter = (KX_BlenderSceneConverter*)KX_GetActiveEngine()->GetSceneConverter();
 		parent = converter->FindGameObject(blenderparent);
-		isbulletdyna = false;
 		isbulletsoftbody = false;
-		shapeprops->m_mass = 0.f;
 	}
 
 	if (!isbulletdyna)
@@ -3543,6 +3589,9 @@ void CcdPhysicsEnvironment::ConvertObject(KX_GameObject *gameobj, RAS_MeshObject
 			}
 		}
 	}
+
+	if (parent)
+		physicscontroller->SuspendDynamics(false);
 
 	CcdPhysicsController* parentCtrl = parent ? (CcdPhysicsController*)parent->GetPhysicsController() : 0;
 	physicscontroller->SetParentCtrl(parentCtrl);

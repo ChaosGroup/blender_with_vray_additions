@@ -720,7 +720,6 @@ typedef struct PathState {
 
 	/* random number generator state */
 	int rng_offset;    		/* dimension offset */
-	int rng_offset_bsdf;  	/* dimension offset for picking bsdf */
 	int sample;        		/* path sample number */
 	int num_samples;		/* total number of times this path will be sampled */
 
@@ -778,7 +777,7 @@ typedef struct KernelCamera {
 
 	/* motion blur */
 	float shuttertime;
-	int have_motion;
+	int have_motion, have_perspective_motion;
 
 	/* clipping */
 	float nearclip;
@@ -796,7 +795,6 @@ typedef struct KernelCamera {
 	float inv_aperture_ratio;
 
 	int is_inside_volume;
-	int pad2;
 
 	/* more matrices */
 	Transform screentoworld;
@@ -810,6 +808,11 @@ typedef struct KernelCamera {
 	Transform worldtocamera;
 
 	MotionTransform motion;
+
+	/* Denotes changes in the projective matrix, namely in rastertocamera.
+	 * Used for camera zoom motion blur,
+	 */
+	PerspectiveMotionTransform perspective_motion;
 } KernelCamera;
 
 typedef struct KernelFilm {
@@ -1033,7 +1036,7 @@ enum QueueNumber {
 	                                            * contribution for AO are enqueued here.
 	                                            */
 	QUEUE_SHADOW_RAY_CAST_DL_RAYS = 3,         /* All rays for which a shadow ray should be cast to determine radiance
-	                                            * contributuin for direct lighting are enqueued here.
+	                                            * contributing for direct lighting are enqueued here.
 	                                            */
 };
 

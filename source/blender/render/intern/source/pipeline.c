@@ -55,7 +55,7 @@
 #include "BLI_rand.h"
 #include "BLI_callbacks.h"
 
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 #include "BKE_animsys.h"  /* <------ should this be here?, needed for sequencer update */
 #include "BKE_camera.h"
@@ -1270,8 +1270,11 @@ static void main_render_result_new(Render *re)
 
 	BLI_rw_mutex_unlock(&re->resultmutex);
 
-	if (re->result->do_exr_tile)
-		render_result_exr_file_begin(re);
+	if (re->result) {
+		if (re->result->do_exr_tile) {
+			render_result_exr_file_begin(re);
+		}
+	}
 }
 
 static void threaded_tile_processor(Render *re)

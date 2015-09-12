@@ -46,7 +46,7 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(VRayNodeExportParam)
 {
 	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByName(node, "Domain");
 	if(domainSock && domainSock.is_linked()) {
-		BL::Node domainNode = VRayNodeExporter::getConnectedNode(domainSock, context);
+		BL::Node domainNode = VRayNodeExporter::getConnectedNode(ntree, domainSock, context);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
 				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
@@ -86,11 +86,11 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(VRayNodeExportParam)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByName(node, "Domain");
 	if(domainSock && domainSock.is_linked()) {
-		BL::Node domainNode = VRayNodeExporter::getConnectedNode(domainSock, context);
+		BL::Node domainNode = VRayNodeExporter::getConnectedNode(ntree, domainSock, context);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
 				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
@@ -130,7 +130,7 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL:
 }
 
 
-static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, VRayNodeContext *context)
+static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, VRayNodeContext &context)
 {
 	BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
@@ -139,7 +139,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 	std::string attr_lights;
 	BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(node, "Lights");
 	if (lightsSock && lightsSock.is_linked()) {
-		BL::Node lightsSelector = VRayNodeExporter::getConnectedNode(lightsSock, context);
+		BL::Node lightsSelector = VRayNodeExporter::getConnectedNode(ntree, lightsSock, context);
 		if (lightsSelector) {
 			ObList lights;
 			VRayNodeExporter::getNodeSelectObjects(lightsSelector, lights);
@@ -198,11 +198,11 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::NodeSocket objectSock = VRayNodeExporter::getSocketByName(node, "Object");
 	if(objectSock && objectSock.is_linked()) {
-		BL::Node domainNode = VRayNodeExporter::getConnectedNode(objectSock, context);
+		BL::Node domainNode = VRayNodeExporter::getConnectedNode(ntree, objectSock, context);
 		if(domainNode) {
 			StrSet domains;
 
@@ -227,7 +227,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	if (NOT(ExporterSettings::gSet.m_exportSmoke))
 		return "NULL";
@@ -238,7 +238,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 	if (gizmosSock.is_linked()) {
 		std::string gizmos = "";
 
-		BL::Node conNode = VRayNodeExporter::getConnectedNode(gizmosSock, context);
+		BL::Node conNode = VRayNodeExporter::getConnectedNode(ntree, gizmosSock, context);
 		if (NOT(conNode.bl_idname() == "VRayNodeEnvFogMeshGizmo")) {
 			PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node");
 		}
@@ -263,7 +263,7 @@ std::string VRayNodeExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, B
 }
 
 
-std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap pluginAttrs;
 	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
@@ -282,7 +282,7 @@ static void MatchMayaFluid(std::string &name)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	const std::string &pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
@@ -291,7 +291,7 @@ std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL:
 	BL::Object     domainOb(PointerRNA_NULL);
 	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByAttr(node, "cache");
 	if(domainSock && domainSock.is_linked()) {
-		BL::Node domainNode = VRayNodeExporter::getConnectedNode(domainSock, context);
+		BL::Node domainNode = VRayNodeExporter::getConnectedNode(ntree, domainSock, context);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
 				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
@@ -374,7 +374,7 @@ std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL:
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	StrSet gizmos;
 
@@ -382,7 +382,7 @@ std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::N
 	for (node.inputs.begin(inIt); inIt != node.inputs.end(); ++inIt) {
 		BL::NodeSocket inSock = *inIt;
 		if (inSock && inSock.is_linked()) {
-			BL::Node connNode = VRayNodeExporter::getConnectedNode(inSock, context);
+			BL::Node connNode = VRayNodeExporter::getConnectedNode(ntree, inSock, context);
 			if (connNode && connNode.bl_idname() == "VRayNodeSphereFadeGizmo") {
 				gizmos.insert(VRayNodeExporter::exportLinkedSocket(ntree, inSock, context));
 			}
@@ -396,7 +396,7 @@ std::string VRayNodeExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::N
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	PointerRNA sphereFadeGizmo = RNA_pointer_get(&node.ptr, "SphereFadeGizmo");
 
@@ -425,7 +425,7 @@ std::string VRayNodeExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, 
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	// TODO: exclude shaped lights
 
@@ -440,7 +440,7 @@ std::string VRayNodeExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, B
 
 	BL::NodeSocket excludeSock = VRayNodeExporter::getSocketByAttr(node, "excludeList");
 	if (excludeSock && excludeSock.is_linked()) {
-		BL::Node obSelector = VRayNodeExporter::getConnectedNode(excludeSock, context);
+		BL::Node obSelector = VRayNodeExporter::getConnectedNode(ntree, excludeSock, context);
 		if (obSelector) {
 			ObList excludeObjects;
 			VRayNodeExporter::getNodeSelectObjects(obSelector, excludeObjects);

@@ -234,14 +234,18 @@ void BKE_mesh_normals_loop_split(
 
 void BKE_mesh_normals_loop_custom_set(
         const struct MVert *mverts, const int numVerts, struct MEdge *medges, const int numEdges,
-        struct MLoop *mloops, float (*custom_loopnors)[3], const int numLoops,
+        struct MLoop *mloops, float (*r_custom_loopnors)[3], const int numLoops,
         struct MPoly *mpolys, const float (*polynors)[3], const int numPolys,
         short (*r_clnors_data)[2]);
 void BKE_mesh_normals_loop_custom_from_vertices_set(
-        const struct MVert *mverts, float (*custom_vertnors)[3], const int numVerts,
+        const struct MVert *mverts, float (*r_custom_vertnors)[3], const int numVerts,
         struct MEdge *medges, const int numEdges, struct MLoop *mloops, const int numLoops,
         struct MPoly *mpolys, const float (*polynors)[3], const int numPolys,
         short (*r_clnors_data)[2]);
+
+void BKE_mesh_normals_loop_to_vertex(
+        const int numVerts, const struct MLoop *mloops, const int numLoops,
+        const float (*clnors)[3], float (*r_vert_clnors)[3]);
 
 void BKE_mesh_calc_poly_normal(
         const struct MPoly *mpoly, const struct MLoop *loopstart,
@@ -287,6 +291,8 @@ void BKE_mesh_loops_to_mface_corners(
 void BKE_mesh_loops_to_tessdata(
         struct CustomData *fdata, struct CustomData *ldata, struct CustomData *pdata, struct MFace *mface,
         int *polyindices, unsigned int (*loopindices)[4], const int num_faces);
+void BKE_mesh_tangent_loops_to_tessdata(struct CustomData *fdata, struct CustomData *ldata, struct MFace *mface,
+                                        int *polyindices, unsigned int (*loopindices)[4], const int num_faces);
 int BKE_mesh_recalc_tessellation(
         struct CustomData *fdata, struct CustomData *ldata, struct CustomData *pdata,
         struct MVert *mvert,

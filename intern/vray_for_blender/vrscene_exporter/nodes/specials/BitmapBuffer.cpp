@@ -94,7 +94,7 @@ void VRayNodeExporter::exportBitmapBuffer(VRayNodeExportParam, AttributeValueMap
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	AttributeValueMap bitmapAttrs;
 	exportBitmapBuffer(ntree, node, fromSocket, context, bitmapAttrs);

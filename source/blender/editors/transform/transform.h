@@ -235,6 +235,10 @@ typedef struct SlideOrigData {
 	/* array size of 'layer_math_map_num'
 	 * maps TransDataVertSlideVert.cd_group index to absolute CustomData layer index */
 	int *layer_math_map;
+
+	/* array of slide vert data especially for mirror verts */
+	TransDataGenericSlideVert *sv_mirror;
+	int totsv_mirror;
 } SlideOrigData;
 
 typedef struct EdgeSlideData {
@@ -723,7 +727,7 @@ bool createSpaceNormalTangent(float mat[3][3], const float normal[3], const floa
 
 struct TransformOrientation *addMatrixSpace(struct bContext *C, float mat[3][3],
                                             const char *name, const bool overwrite);
-bool applyTransformOrientation(const struct bContext *C, float mat[3][3], char r_name[64]);
+bool applyTransformOrientation(const struct bContext *C, float mat[3][3], char r_name[64], int index);
 
 #define ORIENTATION_NONE	0
 #define ORIENTATION_NORMAL	1
@@ -731,7 +735,8 @@ bool applyTransformOrientation(const struct bContext *C, float mat[3][3], char r
 #define ORIENTATION_EDGE	3
 #define ORIENTATION_FACE	4
 
-int getTransformOrientation(const struct bContext *C, float normal[3], float plane[3], const bool activeOnly);
+int getTransformOrientation_ex(const struct bContext *C, float normal[3], float plane[3], const short around);
+int getTransformOrientation(const struct bContext *C, float normal[3], float plane[3]);
 
 void freeEdgeSlideTempFaces(EdgeSlideData *sld);
 void freeEdgeSlideVerts(TransInfo *t);

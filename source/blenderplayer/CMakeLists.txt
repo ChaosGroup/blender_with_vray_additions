@@ -150,6 +150,7 @@ endif()
 		bf_dna
 		ge_videotex
 		bf_blenfont
+		bf_blentranslation
 		bf_intern_audaspace
 		blenkernel_blc
 		bf_bmesh
@@ -209,6 +210,10 @@ endif()
 
 	if(WITH_INTERNATIONAL)
 		list(APPEND BLENDER_SORTED_LIBS bf_intern_locale)
+	endif()
+
+	if(WITH_OPENSUBDIV)
+		list(APPEND BLENDER_SORTED_LIBS bf_intern_opensubdiv)
 	endif()
 
 	foreach(SORTLIB ${BLENDER_SORTED_LIBS})

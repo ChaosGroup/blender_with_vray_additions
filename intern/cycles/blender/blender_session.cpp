@@ -122,7 +122,12 @@ void BlenderSession::create_session()
 		if(session_pause == false) {
 			/* full data sync */
 			sync->sync_view(b_v3d, b_rv3d, width, height);
-			sync->sync_data(b_v3d, b_engine.camera_override(), &python_thread_state);
+			sync->sync_data(b_render,
+			                b_v3d,
+			                b_engine.camera_override(),
+			                width, height,
+			                &python_thread_state,
+			                b_rlay_name.c_str());
 		}
 	}
 	else {
@@ -442,10 +447,6 @@ void BlenderSession::render()
 		/* add passes */
 		vector<Pass> passes;
 		Pass::add(PASS_COMBINED, passes);
-#ifdef WITH_CYCLES_DEBUG
-		Pass::add(PASS_BVH_TRAVERSAL_STEPS, passes);
-		/* Pass::add(PASS_RAY_BOUNCES, passes); */
-#endif
 
 		if(session_params.device.advanced_shading) {
 
@@ -477,7 +478,12 @@ void BlenderSession::render()
 
 			/* update scene */
 			sync->sync_camera(b_render, b_engine.camera_override(), width, height);
-			sync->sync_data(b_v3d, b_engine.camera_override(), &python_thread_state, b_rlay_name.c_str());
+			sync->sync_data(b_render,
+			                b_v3d,
+			                b_engine.camera_override(),
+			                width, height,
+			                &python_thread_state,
+			                b_rlay_name.c_str());
 
 			/* update number of samples per layer */
 			int samples = sync->get_layer_samples();
@@ -570,7 +576,12 @@ void BlenderSession::bake(BL::Object b_object, const string& pass_type, const in
 
 	/* update scene */
 	sync->sync_camera(b_render, b_engine.camera_override(), width, height);
-	sync->sync_data(b_v3d, b_engine.camera_override(), &python_thread_state);
+	sync->sync_data(b_render,
+	                b_v3d,
+	                b_engine.camera_override(),
+	                width, height,
+	                &python_thread_state,
+	                b_rlay_name.c_str());
 
 	/* get buffer parameters */
 	SessionParams session_params = BlenderSync::get_session_params(b_engine, b_userpref, b_scene, background);
@@ -712,7 +723,12 @@ void BlenderSession::synchronize()
 	}
 
 	/* data and camera synchronize */
-	sync->sync_data(b_v3d, b_engine.camera_override(), &python_thread_state);
+	sync->sync_data(b_render,
+	                b_v3d,
+	                b_engine.camera_override(),
+	                width, height,
+	                &python_thread_state,
+	                b_rlay_name.c_str());
 
 	if(b_rv3d)
 		sync->sync_view(b_v3d, b_rv3d, width, height);

@@ -167,12 +167,19 @@ if(WITH_BUILDINFO)
 	# include the output directory, where the buildinfo.h file is generated
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+
+	# XXX, "_buildinfo.h" is used twice here,
+	# because we rely on that file being detected as missing
+	# every build so that the real header "buildinfo.h" is updated.
+	#
+	# Keep this until we find a better way to resolve!
+
 	# a custom target that is always built
 	add_custom_target(buildinfo ALL
-		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/buildinfo.h)
+		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/_buildinfo.h)
 
 	# creates buildinfo.h using cmake script
-	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildinfo.h
+	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_buildinfo.h
 		COMMAND ${CMAKE_COMMAND}
 		-DSOURCE_DIR=${CMAKE_SOURCE_DIR}
 		-P ${CMAKE_SOURCE_DIR}/build_files/cmake/buildinfo.cmake)
@@ -671,9 +678,13 @@ elseif(WIN32)
 			)
 
 			if(WITH_PYTHON_INSTALL_NUMPY)
+				add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages
+					COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages)
+
 				add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
 					COMMAND ${CMAKE_COMMAND} -E tar xzvf "${LIBDIR}/release/python${_PYTHON_VERSION_NO_DOTS}_numpy_1.9.tar.gz"
 					DEPENDS ${LIBDIR}/release/python${_PYTHON_VERSION_NO_DOTS}_numpy_1.9.tar.gz
+						${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages
 					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages)
 				add_custom_target(python_numpy ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy)
 				install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
@@ -784,6 +795,16 @@ elseif(WIN32)
 	if(WITH_SDL)
 		install(
 			FILES ${LIBDIR}/sdl/lib/SDL2.dll
+			DESTINATION "."
+		)
+	endif()
+	
+	if(WITH_SYSTEM_AUDASPACE)
+		install(
+			FILES
+				${LIBDIR}/audaspace/lib/audaspace.dll
+				${LIBDIR}/audaspace/lib/audaspace-c.dll
+				${LIBDIR}/audaspace/lib/audaspace-py.dll
 			DESTINATION "."
 		)
 	endif()

@@ -155,7 +155,9 @@ GHOST_TSuccess GHOST_ContextGLX::initializeDrawingContext()
 #endif
 
 	/* needed so 'GLXEW_ARB_create_context' is valid */
+	mxIgnoreNoVersion(1);
 	initContextGLXEW();
+	mxIgnoreNoVersion(0);
 
 	if (GLXEW_ARB_create_context) {
 		int profileBitCore   = m_contextProfileMask & GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
@@ -401,6 +403,8 @@ int GHOST_X11_GL_GetAttributes(
 	attribs[i++] = 0;
 
 	GHOST_ASSERT(i <= attribs_max, "attribute size too small");
+
+	(void)attribs_max;
 
 	return i;
 }

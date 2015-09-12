@@ -584,6 +584,10 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_IObject* node, class CVal
 		newctrl->SetNewClientInfo(newobj->getClientInfo());
 		newobj->SetPhysicsController(newctrl, newobj->IsDynamic());
 		newctrl->PostProcessReplica(motionstate, parentctrl);
+
+		// Child objects must be static
+		if (parent)
+			newctrl->SuspendDynamics();
 	}
 
 	return newobj;
@@ -2015,8 +2019,12 @@ static void MergeScene_GameObject(KX_GameObject* gameobj, KX_Scene *to, KX_Scene
 	to->GetLogicManager()->RegisterGameObjectName(gameobj->GetName(), gameobj);
 	to->GetLogicManager()->RegisterGameObj(gameobj->GetBlenderObject(), gameobj);
 
-	for (int i=0; i<gameobj->GetMeshCount(); ++i)
-		to->GetLogicManager()->RegisterGameMeshName(gameobj->GetMesh(i)->GetName(), gameobj->GetBlenderObject());
+	for (int i = 0; i < gameobj->GetMeshCount(); ++i) {
+		RAS_MeshObject *meshobj = gameobj->GetMesh(i);
+		// Register the mesh object by name and blender object.
+		to->GetLogicManager()->RegisterGameMeshName(meshobj->GetName(), gameobj->GetBlenderObject());
+		to->GetLogicManager()->RegisterMeshName(meshobj->GetName(), meshobj);
+	}
 }
 
 bool KX_Scene::MergeScene(KX_Scene *other)
@@ -2060,6 +2068,28 @@ bool KX_Scene::MergeScene(KX_Scene *other)
 		MergeScene_GameObject(gameobj, this, other);
 	}
 
+	if (env) {
+		env->MergeEnvironment(env_other);
+		CListValue *otherObjects = other->GetObjectList();
+
+		// List of all physics objects to merge (needed by ReplicateConstraints).
+		std::vector<KX_GameObject *> physicsObjects;
+		for (unsigned int i = 0; i < otherObjects->GetCount(); ++i) {
+			KX_GameObject *gameobj = (KX_GameObject *)otherObjects->GetValue(i);
+			if (gameobj->GetPhysicsController()) {
+				physicsObjects.push_back(gameobj);
+			}
+		}
+
+		for (unsigned int i = 0; i < physicsObjects.size(); ++i) {
+			KX_GameObject *gameobj = physicsObjects[i];
+			// Replicate all constraints in the right physics environment.
+			gameobj->GetPhysicsController()->ReplicateConstraints(gameobj, physicsObjects);
+			gameobj->ClearConstraints();
+		}
+	}
+
+
 	GetTempObjectList()->MergeList(other->GetTempObjectList());
 	other->GetTempObjectList()->ReleaseAndRemoveAll();
 
@@ -2074,9 +2104,6 @@ bool KX_Scene::MergeScene(KX_Scene *other)
 
 	GetLightList()->MergeList(other->GetLightList());
 	other->GetLightList()->ReleaseAndRemoveAll();
-
-	if (env)
-		env->MergeEnvironment(env_other);
 
 	/* move materials across, assume they both use the same scene-converters
 	 * Do this after lights are merged so materials can use the lights in shaders

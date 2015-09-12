@@ -37,7 +37,7 @@
 #include "BLI_dlrbTree.h"
 #include "BLI_utildefines.h"
 
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 #include "DNA_armature_types.h"
 #include "DNA_lattice_types.h"
@@ -2356,6 +2356,9 @@ static void SCREEN_OT_marker_jump(wmOperatorType *ot)
 static bool screen_set_is_ok(bScreen *screen, bScreen *screen_prev)
 {
 	return ((screen->winid == 0) &&
+	        /* in typical useage these should have a nonzero winid
+	         * (all temp screens should be used, or closed & freed). */
+	        (screen->temp == false) &&
 	        (screen->state == SCREENNORMAL) &&
 	        (screen != screen_prev) &&
 	        (screen->id.name[2] != '.' || !(U.uiflag & USER_HIDE_DOT)));
@@ -2373,8 +2376,9 @@ static int screen_set_exec(bContext *C, wmOperator *op)
 	int delta = RNA_int_get(op->ptr, "delta");
 	
 	/* temp screens are for userpref or render display */
-	if (screen->temp)
+	if (screen->temp || (sa && sa->full && sa->full->temp)) {
 		return OPERATOR_CANCELLED;
+	}
 	
 	if (delta == 1) {
 		while (tot--) {
@@ -3626,6 +3630,19 @@ bScreen *ED_screen_animation_playing(const wmWindowManager *wm)
 	wmWindow *win;
 
 	for (win = wm->windows.first; win; win = win->next) {
+		if (win->screen->animtimer || win->screen->scrubbing) {
+			return win->screen;
+		}
+	}
+
+	return NULL;
+}
+
+bScreen *ED_screen_animation_no_scrub(const wmWindowManager *wm)
+{
+	wmWindow *win;
+
+	for (win = wm->windows.first; win; win = win->next) {
 		if (win->screen->animtimer) {
 			return win->screen;
 		}
@@ -3633,6 +3650,7 @@ bScreen *ED_screen_animation_playing(const wmWindowManager *wm)
 
 	return NULL;
 }
+
 
 /* toggle operator */
 int ED_screen_animation_play(bContext *C, int sync, int mode)
@@ -3972,7 +3990,9 @@ static int scene_delete_exec(bContext *C, wmOperator *UNUSED(op))
 {
 	Scene *scene = CTX_data_scene(C);
 
-	ED_screen_delete_scene(C, scene);
+	if (ED_screen_delete_scene(C, scene) == false) {
+		return OPERATOR_CANCELLED;
+	}
 
 	if (G.debug & G_DEBUG)
 		printf("scene delete %p\n", scene);

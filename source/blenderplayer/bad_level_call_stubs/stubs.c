@@ -255,9 +255,9 @@ int multitex_nodes(struct Tex *tex, float texvec[3], float dxt[3], float dyt[3],
 
 struct Material *RE_init_sample_material(struct Material *orig_mat, struct Scene *scene) RET_NULL
 void RE_free_sample_material(struct Material *mat) RET_NONE
-void RE_sample_material_color(struct Material *mat, float color[3], float *alpha, const float volume_co[3], const float surface_co[3],
-                              int face_index, short hit_quad, struct DerivedMesh *orcoDm, struct Object *ob) RET_NONE
-
+void RE_sample_material_color(
+        struct Material *mat, float color[3], float *alpha, const float volume_co[3], const float surface_co[3],
+        int tri_index, struct DerivedMesh *orcoDm, struct Object *ob) RET_NONE
 /* nodes */
 struct Render *RE_GetRender(const char *name) RET_NULL
 struct Object *RE_GetCamera(struct Render *re) RET_NULL
@@ -353,9 +353,9 @@ struct ListBase *get_constraint_lb(struct Object *ob, struct bConstraint *con, s
 bool ED_space_image_show_uvedit(struct SpaceImage *sima, struct Object *obedit) RET_ZERO
 bool ED_space_image_show_render(struct SpaceImage *sima) RET_ZERO
 bool ED_space_image_show_paint(struct SpaceImage *sima) RET_ZERO
-void ED_space_image_paint_update(struct wmWindowManager *wm, struct ToolSettings *settings) RET_NONE
+void ED_space_image_paint_update(struct wmWindowManager *wm, struct Scene *scene) RET_NONE
 void ED_space_image_set(struct SpaceImage *sima, struct Scene *scene, struct Object *obedit, struct Image *ima) RET_NONE
-void ED_space_image_uv_sculpt_update(struct wmWindowManager *wm, struct ToolSettings *settings) RET_NONE
+void ED_space_image_uv_sculpt_update(struct wmWindowManager *wm, struct Scene *scene) RET_NONE
 void ED_space_image_scopes_update(const struct bContext *C, struct SpaceImage *sima, struct ImBuf *ibuf, bool use_view_settings) RET_NONE
 
 void ED_uvedit_get_aspect(struct Scene *scene, struct Object *ob, struct BMesh *em, float *aspx, float *aspy) RET_NONE
@@ -404,7 +404,6 @@ int	WM_keymap_map_type_get(struct wmKeyMapItem *kmi) RET_ZERO
 
 
 /* rna editors */
-struct EditMesh;
 
 struct FCurve *verify_fcurve(struct bAction *act, const char group[], struct PointerRNA *ptr, const char rna_path[], const int array_index, short add) RET_NULL
 int insert_vert_fcurve(struct FCurve *fcu, float x, float y, short flag) RET_ZERO

@@ -198,6 +198,7 @@ ImageTextureNode::ImageTextureNode()
 	color_space = ustring("Color");
 	projection = ustring("Flat");
 	interpolation = INTERPOLATION_LINEAR;
+	extension = EXTENSION_REPEAT;
 	projection_blend = 0.0f;
 	animated = false;
 
@@ -208,8 +209,12 @@ ImageTextureNode::ImageTextureNode()
 
 ImageTextureNode::~ImageTextureNode()
 {
-	if(image_manager)
-		image_manager->remove_image(filename, builtin_data, interpolation);
+	if(image_manager) {
+		image_manager->remove_image(filename,
+		                            builtin_data,
+		                            interpolation,
+		                            extension);
+	}
 }
 
 ShaderNode *ImageTextureNode::clone() const
@@ -246,9 +251,15 @@ void ImageTextureNode::compile(SVMCompiler& compiler)
 	image_manager = compiler.image_manager;
 	if(is_float == -1) {
 		bool is_float_bool;
-		slot = image_manager->add_image(filename, builtin_data,
-		                                animated, 0, is_float_bool, is_linear,
-		                                interpolation, use_alpha);
+		slot = image_manager->add_image(filename,
+		                                builtin_data,
+		                                animated,
+		                                0,
+		                                is_float_bool,
+		                                is_linear,
+		                                interpolation,
+		                                extension,
+		                                use_alpha);
 		is_float = (int)is_float_bool;
 	}
 
@@ -318,9 +329,15 @@ void ImageTextureNode::compile(OSLCompiler& compiler)
 		}
 		else {
 			bool is_float_bool;
-			slot = image_manager->add_image(filename, builtin_data,
-			                                animated, 0, is_float_bool, is_linear,
-			                                interpolation, use_alpha);
+			slot = image_manager->add_image(filename,
+			                                builtin_data,
+			                                animated,
+			                                0,
+			                                is_float_bool,
+			                                is_linear,
+			                                interpolation,
+			                                extension,
+			                                use_alpha);
 			is_float = (int)is_float_bool;
 		}
 	}
@@ -361,6 +378,20 @@ void ImageTextureNode::compile(OSLCompiler& compiler)
 			compiler.parameter("interpolation", "linear");
 			break;
 	}
+
+	switch(extension) {
+		case EXTENSION_EXTEND:
+			compiler.parameter("wrap", "clamp");
+			break;
+		case EXTENSION_CLIP:
+			compiler.parameter("wrap", "black");
+			break;
+		case EXTENSION_REPEAT:
+		default:
+			compiler.parameter("wrap", "periodic");
+			break;
+	}
+
 	compiler.add(this, "node_image_texture");
 }
 
@@ -400,8 +431,12 @@ EnvironmentTextureNode::EnvironmentTextureNode()
 
 EnvironmentTextureNode::~EnvironmentTextureNode()
 {
-	if(image_manager)
-		image_manager->remove_image(filename, builtin_data, INTERPOLATION_LINEAR);
+	if(image_manager) {
+		image_manager->remove_image(filename,
+		                            builtin_data,
+		                            INTERPOLATION_LINEAR,
+		                            EXTENSION_REPEAT);
+	}
 }
 
 ShaderNode *EnvironmentTextureNode::clone() const
@@ -436,9 +471,15 @@ void EnvironmentTextureNode::compile(SVMCompiler& compiler)
 	image_manager = compiler.image_manager;
 	if(slot == -1) {
 		bool is_float_bool;
-		slot = image_manager->add_image(filename, builtin_data,
-		                                animated, 0, is_float_bool, is_linear,
-		                                INTERPOLATION_LINEAR, use_alpha);
+		slot = image_manager->add_image(filename,
+		                                builtin_data,
+		                                animated,
+		                                0,
+		                                is_float_bool,
+		                                is_linear,
+		                                INTERPOLATION_LINEAR,
+		                                EXTENSION_REPEAT,
+		                                use_alpha);
 		is_float = (int)is_float_bool;
 	}
 
@@ -499,9 +540,15 @@ void EnvironmentTextureNode::compile(OSLCompiler& compiler)
 		}
 		else {
 			bool is_float_bool;
-			slot = image_manager->add_image(filename, builtin_data,
-			                                animated, 0, is_float_bool, is_linear,
-			                                INTERPOLATION_LINEAR, use_alpha);
+			slot = image_manager->add_image(filename,
+			                                builtin_data,
+			                                animated,
+			                                0,
+			                                is_float_bool,
+			                                is_linear,
+			                                INTERPOLATION_LINEAR,
+			                                EXTENSION_REPEAT,
+			                                use_alpha);
 			is_float = (int)is_float_bool;
 		}
 	}
@@ -1330,8 +1377,12 @@ PointDensityTextureNode::PointDensityTextureNode()
 
 PointDensityTextureNode::~PointDensityTextureNode()
 {
-	if(image_manager)
-		image_manager->remove_image(filename, builtin_data, interpolation);
+	if(image_manager) {
+		image_manager->remove_image(filename,
+		                            builtin_data,
+		                            interpolation,
+		                            EXTENSION_REPEAT);
+	}
 }
 
 ShaderNode *PointDensityTextureNode::clone() const
@@ -1374,6 +1425,7 @@ void PointDensityTextureNode::compile(SVMCompiler& compiler)
 			                                false, 0,
 			                                is_float, is_linear,
 			                                interpolation,
+			                                EXTENSION_REPEAT,
 			                                true);
 		}
 
@@ -1406,7 +1458,6 @@ void PointDensityTextureNode::compile(SVMCompiler& compiler)
 
 void PointDensityTextureNode::compile(OSLCompiler& compiler)
 {
-	ShaderInput *vector_in = input("Vector");
 	ShaderOutput *density_out = output("Density");
 	ShaderOutput *color_out = output("Color");
 
@@ -1422,6 +1473,7 @@ void PointDensityTextureNode::compile(OSLCompiler& compiler)
 			                                false, 0,
 			                                is_float, is_linear,
 			                                interpolation,
+			                                EXTENSION_REPEAT,
 			                                true);
 		}
 

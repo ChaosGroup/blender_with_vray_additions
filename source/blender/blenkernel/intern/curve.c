@@ -2626,7 +2626,7 @@ void BKE_curve_bevelList_make(Object *ob, ListBase *nurbs, bool for_render)
 	BevPoint *bevp, *bevp2, *bevp1 = NULL, *bevp0;
 	const float treshold = 0.00001f;
 	float min, inp;
-	float *seglen;
+	float *seglen = NULL;
 	struct BevelSort *sortdata, *sd, *sd1;
 	int a, b, nr, poly, resolu = 0, len = 0, segcount;
 	int *segbevcount;
@@ -3116,8 +3116,8 @@ static void calchandleNurb_intern(BezTriple *bezt, BezTriple *prev, BezTriple *n
                                   bool is_fcurve, bool skip_align)
 {
 	/* defines to avoid confusion */
-#define p2_h1 (p2 - 3)
-#define p2_h2 (p2 + 3)
+#define p2_h1 ((p2) - 3)
+#define p2_h2 ((p2) + 3)
 
 	float *p1, *p2, *p3, pt[3];
 	float dvec_a[3], dvec_b[3];

@@ -21,6 +21,7 @@
  */
 
 #include "exp_nodes.h"
+#include "BLI_math.h"
 
 
 std::string VRayNodeExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam)
@@ -85,6 +86,20 @@ std::string VRayNodeExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam
 			const int mapping_type = RNA_enum_get(&UVWGenEnvironment, "mapping_type");
 
 			mappingAttrs["mapping_type"] = BOOST_FORMAT_STRING(EnvironmentMappingType[mapping_type]);
+
+			Object *ob = context.obCtx.ob;
+			if (ob && ob->type == OB_LAMP) {
+				float ltm[4][4];
+				invert_m4_m4(ltm, ob->obmat);
+
+				static char matbuf[1024];
+				sprintf(matbuf, "Matrix(Vector(%g,%g,%g),Vector(%g,%g,%g),Vector(%g,%g,%g))",
+				        ltm[0][0], ltm[0][1], ltm[0][2],
+				        ltm[1][0], ltm[1][1], ltm[1][2],
+				        ltm[2][0], ltm[2][1], ltm[2][2]);
+
+				mappingAttrs["uvw_matrix"] = matbuf;
+			}
 		}
 
 		if (mappingPlugin.empty()) {

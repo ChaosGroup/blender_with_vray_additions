@@ -57,7 +57,7 @@
 #include "BLI_rand.h"
 #include "BLI_utildefines.h"
 
-#include "BLF_translation.h"
+#include "BLT_translation.h"
 
 #include "RNA_access.h"
 
@@ -758,7 +758,14 @@ static void recalcData_objects(TransInfo *t)
 			}
 			if ((t->options & CTX_NO_MIRROR) == 0 && (t->flag & T_MIRROR))
 				editbmesh_apply_to_mirror(t);
-				
+
+			if (t->mode == TFM_EDGE_SLIDE) {
+				projectEdgeSlideData(t, false);
+			}
+			else if (t->mode == TFM_VERT_SLIDE) {
+				projectVertSlideData(t, false);
+			}
+
 			DAG_id_tag_update(t->obedit->data, 0);  /* sets recalc flags */
 			
 			EDBM_mesh_normals_update(em);
@@ -1200,18 +1207,7 @@ void initTransInfo(bContext *C, TransInfo *t, wmOperator *op, const wmEvent *eve
 			t->around = V3D_CURSOR;
 		}
 
-		if (op && ((prop = RNA_struct_find_property(op->ptr, "constraint_orientation")) &&
-		           RNA_property_is_set(op->ptr, prop)))
-		{
-			t->current_orientation = RNA_property_enum_get(op->ptr, prop);
-
-			if (t->current_orientation >= V3D_MANIP_CUSTOM + BIF_countTransformOrientation(C)) {
-				t->current_orientation = V3D_MANIP_GLOBAL;
-			}
-		}
-		else {
-			t->current_orientation = v3d->twmode;
-		}
+		t->current_orientation = v3d->twmode;
 
 		/* exceptional case */
 		if (t->around == V3D_LOCAL) {
@@ -1297,6 +1293,16 @@ void initTransInfo(bContext *C, TransInfo *t, wmOperator *op, const wmEvent *eve
 			t->view = NULL;
 		}
 		t->around = V3D_CENTER;
+	}
+
+	if (op && ((prop = RNA_struct_find_property(op->ptr, "constraint_orientation")) &&
+	           RNA_property_is_set(op->ptr, prop)))
+	{
+		t->current_orientation = RNA_property_enum_get(op->ptr, prop);
+
+		if (t->current_orientation >= V3D_MANIP_CUSTOM + BIF_countTransformOrientation(C)) {
+			t->current_orientation = V3D_MANIP_GLOBAL;
+		}
 	}
 	
 	if (op && ((prop = RNA_struct_find_property(op->ptr, "release_confirm")) &&

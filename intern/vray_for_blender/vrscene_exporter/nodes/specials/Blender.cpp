@@ -114,7 +114,7 @@ void VRayNodeExporter::getNodeVectorCurveData(BL::NodeTree ntree, BL::Node node,
 }
 
 
-std::string VRayNodeExporter::exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context)
+std::string VRayNodeExporter::exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context)
 {
 	BL::NodeSocket socket = VRayNodeExporter::getOutputSocketByName(node, "Normal");
 

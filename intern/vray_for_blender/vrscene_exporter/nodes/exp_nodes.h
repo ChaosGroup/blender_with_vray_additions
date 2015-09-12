@@ -163,19 +163,23 @@ public:
 
 	BL::NodeGroup getGroupNode() {
 		if(group.size())
-			return group.back();
+			return BL::NodeGroup(group.back());
 		return BL::NodeGroup(PointerRNA_NULL);
 	}
-	void pushGroupNode(BL::NodeGroup gr) {
+	void pushGroupNode(BL::Node gr) {
 		group.push_back(gr);
 	}
 	BL::NodeGroup popGroupNode() {
-		BL::NodeGroup gr = group.back();
+		BL::NodeGroup gr(group.back());
 		group.pop_back();
 		return gr;
 	}
 
 	VRayObjectContext  obCtx;
+
+	operator bool() const {
+		return true;
+	}
 
 private:
 	// If we are exporting group node we have to treat
@@ -183,11 +187,11 @@ private:
 	// to prevent plugin overriding.
 	//
 	std::vector<BL::NodeTree>  parent;
-	std::vector<BL::NodeGroup> group;
+	std::vector<BL::Node>      group;
 };
 
 
-#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext *context
+#define VRayNodeExportParam  BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context
 
 
 class VRayNodeExporter {
@@ -197,7 +201,7 @@ public:
 
 	static std::string      getValueFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName);
 
-	static std::string      getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext *context);
+	static std::string      getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext &context);
 	static std::string      getPluginType(BL::Node node);
 	static std::string      getPluginID(BL::Node node);
 	
@@ -210,10 +214,10 @@ public:
 
 	static BL::NodeSocket   getOutputSocketByName(BL::Node node, const std::string &socketName);
 
-	static BL::Node         getConnectedNode(BL::NodeSocket socket, VRayNodeContext *context);
+	static BL::Node         getConnectedNode(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext &context);
 	static BL::NodeSocket   getConnectedSocket(BL::NodeSocket socket);
 
-	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
+	static std::string      getConnectedNodePluginName(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context);
 
 	static void             getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 												  VRayNodeExportParam,
@@ -229,11 +233,11 @@ public:
 													 const std::string &customID="",
 													 const std::string &customType="");
 
-	static void             exportVRayEnvironment(VRayNodeContext *context);
+	static void             exportVRayEnvironment(VRayNodeContext &context);
 	static std::string      exportMtlMulti(BL::BlendData bl_data, BL::Object bl_ob);
 
-	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context=NULL);
-	static std::string      exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayNodeContext *context=NULL);
+	static std::string      exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context);
+	static std::string      exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, VRayNodeContext &context);
 
 	static std::string      exportMaterial(BL::BlendData b_data, BL::Material b_ma);
 
@@ -247,38 +251,45 @@ public:
 	static BL::Object       getObjectByName(const std::string &name);
 
 private:
-	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext *context);
+	enum ExpMode {
+		ExpModeNode = 0,
+		ExpModePlugin,
+		ExpModePluginName,
+	};
+	static void             exportLinkedSocketEx(BL::NodeTree ntree, BL::NodeSocket fromSocket, VRayNodeContext &context,
+	                                             ExpMode expMode, BL::Node &outNode, std::string &outPlugin);
+	static std::string      exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context);
 	static std::string      exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
 
 	static std::string      exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-																VRayNodeContext *context);
+																VRayNodeContext &context);
 	static std::string      exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-																VRayNodeContext *context);
+																VRayNodeContext &context);
 
 	static std::string      exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													VRayNodeContext *context);
+													VRayNodeContext &context);
 	static std::string      exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-															VRayNodeContext *context);
+															VRayNodeContext &context);
 	static std::string      exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-																 VRayNodeContext *context);
+																 VRayNodeContext &context);
 
 	static BL::Object       exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-													   VRayNodeContext *context);
+													   VRayNodeContext &context);
 	static BL::Group        exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													  VRayNodeContext *context);
+													  VRayNodeContext &context);
 
 	static std::string      exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-													  VRayNodeContext *context);
+													  VRayNodeContext &context);
 	static std::string      exportVRayNodeBRDFVRayMtl(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													 VRayNodeContext *context);
+													 VRayNodeContext &context);
 	static std::string      exportVRayNodeTexMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													 VRayNodeContext *context);
+													 VRayNodeContext &context);
 	static std::string      exportVRayNodeTexGradRamp(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-													  VRayNodeContext *context);
+													  VRayNodeContext &context);
 	static std::string      exportVRayNodeTexRemap(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-												   VRayNodeContext *context);
+												   VRayNodeContext &context);
 	static std::string      exportVRayNodeTexSoftbox(VRayNodeExportParam);
 
 	static void             exportRampAttribute(VRayNodeExportParam,
@@ -290,40 +301,40 @@ private:
 
 	static void             exportBitmapBuffer(VRayNodeExportParam, AttributeValueMap &attrs);
 	static std::string      exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-											           VRayNodeContext *context);
+											           VRayNodeContext &context);
 	static std::string      exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													   VRayNodeContext *context);
+													   VRayNodeContext &context);
 	static std::string      exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-												 VRayNodeContext *context);
+												 VRayNodeContext &context);
 	static std::string      exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													 VRayNodeContext *context);
+													 VRayNodeContext &context);
 	static std::string      exportVRayNodeTexEdges(VRayNodeExportParam);
 	static std::string      exportVRayNodeTexMayaFluid(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-												   VRayNodeContext *context);
+												   VRayNodeContext &context);
 
 	static std::string      exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-													VRayNodeContext *context);
+													VRayNodeContext &context);
 	static std::string      exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-												 VRayNodeContext *context);
+												 VRayNodeContext &context);
 	static std::string      exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, 
-												 VRayNodeContext *context);
+												 VRayNodeContext &context);
 
 	static std::string      exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-													VRayNodeContext *context);
+													VRayNodeContext &context);
 	static std::string      exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-												          VRayNodeContext *context);
+												          VRayNodeContext &context);
 	static std::string      exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-														 VRayNodeContext *context);
+														 VRayNodeContext &context);
 	static std::string      exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-															VRayNodeContext *context);
+															VRayNodeContext &context);
 	static std::string      exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-																   VRayNodeContext *context);
+																   VRayNodeContext &context);
 	static std::string      exportVRayNodeUVWGenChannel(VRayNodeExportParam);
 
 	static std::string      exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket,
-																   VRayNodeContext *context);
+																   VRayNodeContext &context);
 
 	static std::string      exportVRayNodeRenderChannelColor(VRayNodeExportParam);
 

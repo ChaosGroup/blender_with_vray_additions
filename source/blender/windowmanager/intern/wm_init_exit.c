@@ -107,7 +107,7 @@
 
 #include "UI_interface.h"
 #include "BLF_api.h"
-#include "BLF_translation.h"
+#include "BLT_lang.h"
 
 #include "GPU_buffers.h"
 #include "GPU_draw.h"
@@ -116,6 +116,10 @@
 #include "BKE_depsgraph.h"
 #include "BKE_sound.h"
 #include "COM_compositor.h"
+
+#ifdef WITH_OPENSUBDIV
+#  include "opensubdiv_capi.h"
+#endif
 
 static void wm_init_reports(bContext *C)
 {
@@ -155,7 +159,9 @@ void WM_init(bContext *C, int argc, const char **argv)
 	BKE_library_callback_free_editor_id_reference_set(WM_main_remove_editor_id_reference);   /* library.c */
 	BKE_blender_callback_test_break_set(wm_window_testbreak); /* blender.c */
 	BKE_spacedata_callback_id_unref_set(ED_spacedata_id_unref); /* screen.c */
-	DAG_editors_update_cb(ED_render_id_flush_update, ED_render_scene_update); /* depsgraph.c */
+	DAG_editors_update_cb(ED_render_id_flush_update,
+	                      ED_render_scene_update,
+	                      ED_render_scene_update_pre); /* depsgraph.c */
 	
 	ED_spacetypes_init();   /* editors/space_api/spacetype.c */
 	
@@ -163,7 +169,7 @@ void WM_init(bContext *C, int argc, const char **argv)
 	ED_node_init_butfuncs();
 	
 	BLF_init(11, U.dpi); /* Please update source/gamengine/GamePlayer/GPG_ghost.cpp if you change this */
-	BLF_lang_init();
+	BLT_lang_init();
 
 	/* Enforce loading the UI for the initial homefile */
 	G.fileflags &= ~G_FILE_NO_UI;
@@ -172,7 +178,7 @@ void WM_init(bContext *C, int argc, const char **argv)
 	wm_homefile_read(C, NULL, G.factory_startup, NULL);
 	
 
-	BLF_lang_set(NULL);
+	BLT_lang_set(NULL);
 
 	if (!G.background) {
 		/* sets 3D mouse deadzone */
@@ -225,10 +231,8 @@ void WM_init(bContext *C, int argc, const char **argv)
 	ED_render_clear_mtex_copybuf();
 
 	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		
-	ED_preview_init_dbase();
-	
-	wm_read_history();
+
+	wm_history_file_read();
 
 	/* allow a path of "", this is what happens when making a new file */
 #if 0
@@ -426,7 +430,7 @@ void WM_exit_ext(bContext *C, const bool do_python)
 				/* save the undo state as quit.blend */
 				char filename[FILE_MAX];
 				bool has_edited;
-				int fileflags = G.fileflags & ~(G_FILE_COMPRESS | G_FILE_AUTOPLAY | G_FILE_LOCK | G_FILE_SIGN | G_FILE_HISTORY);
+				int fileflags = G.fileflags & ~(G_FILE_COMPRESS | G_FILE_AUTOPLAY | G_FILE_HISTORY);
 
 				BLI_make_file_string("/", filename, BKE_tempdir_base(), BLENDER_QUIT_FILE);
 
@@ -501,7 +505,7 @@ void WM_exit_ext(bContext *C, const bool do_python)
 #ifdef WITH_INTERNATIONAL
 	BLF_free_unifont();
 	BLF_free_unifont_mono();
-	BLF_lang_free();
+	BLT_lang_free();
 #endif
 	
 	ANIM_keyingset_infos_exit();
@@ -523,6 +527,10 @@ void WM_exit_ext(bContext *C, const bool do_python)
 	}
 #else
 	(void)do_python;
+#endif
+
+#ifdef WITH_OPENSUBDIV
+	openSubdiv_cleanup();
 #endif
 
 	if (!G.background) {

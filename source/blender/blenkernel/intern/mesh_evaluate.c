@@ -1338,12 +1338,14 @@ void BKE_mesh_normals_loop_split(
  * Compute internal representation of given custom normals (as an array of float[2]).
  * It also makes sure the mesh matches those custom normals, by setting sharp edges flag as needed to get a
  * same custom lnor for all loops sharing a same smooth fan.
- * If use_vertices if true, custom_loopnors is assumed to be per-vertex, not per-loop
+ * If use_vertices if true, r_custom_loopnors is assumed to be per-vertex, not per-loop
  * (this allows to set whole vert's normals at once, useful in some cases).
+ * r_custom_loopnors is expected to have normalized normals, or zero ones, in which case they will be replaced
+ * by default loop/vertex normal.
  */
 static void mesh_normals_loop_custom_set(
         const MVert *mverts, const int numVerts, MEdge *medges, const int numEdges,
-        MLoop *mloops, float (*custom_loopnors)[3], const int numLoops,
+        MLoop *mloops, float (*r_custom_loopnors)[3], const int numLoops,
         MPoly *mpolys, const float (*polynors)[3], const int numPolys,
         short (*r_clnors_data)[2], const bool use_vertices)
 {
@@ -1368,6 +1370,22 @@ static void mesh_normals_loop_custom_set(
 	BKE_mesh_normals_loop_split(mverts, numVerts, medges, numEdges, mloops, lnors, numLoops,
 	                            mpolys, polynors, numPolys, use_split_normals, split_angle,
 	                            &lnors_spacearr, NULL, loop_to_poly);
+
+	/* Set all given zero vectors to their default value. */
+	if (use_vertices) {
+		for (i = 0; i < numVerts; i++) {
+			if (is_zero_v3(r_custom_loopnors[i])) {
+				normal_short_to_float_v3(r_custom_loopnors[i], mverts[i].no);
+			}
+		}
+	}
+	else {
+		for (i = 0; i < numLoops; i++) {
+			if (is_zero_v3(r_custom_loopnors[i])) {
+				copy_v3_v3(r_custom_loopnors[i], lnors[i]);
+			}
+		}
+	}
 
 	/* Now, check each current smooth fan (one lnor space per smooth fan!), and if all its matching custom lnors
 	 * are not (enough) equal, add sharp edges as needed.
@@ -1406,11 +1424,7 @@ static void mesh_normals_loop_custom_set(
 					const int lidx = GET_INT_FROM_POINTER(loops->link);
 					MLoop *ml = &mloops[lidx];
 					const int nidx = lidx;
-					float *nor = custom_loopnors[nidx];
-
-					if (is_zero_v3(nor)) {
-						nor = lnors[nidx];
-					}
+					float *nor = r_custom_loopnors[nidx];
 
 					if (!org_nor) {
 						org_nor = nor;
@@ -1432,7 +1446,26 @@ static void mesh_normals_loop_custom_set(
 					loops = loops->next;
 					BLI_BITMAP_ENABLE(done_loops, lidx);
 				}
-				BLI_BITMAP_ENABLE(done_loops, i);  /* For single loops, where lnors_spacearr.lspacearr[i]->loops is NULL. */
+
+				/* We also have to check between last and first loops, otherwise we may miss some sharp edges here!
+				 * This is just a simplified version of above while loop.
+				 * See T45984. */
+				loops = lnors_spacearr.lspacearr[i]->loops;
+				if (loops && org_nor) {
+					const int lidx = GET_INT_FROM_POINTER(loops->link);
+					MLoop *ml = &mloops[lidx];
+					const int nidx = lidx;
+					float *nor = r_custom_loopnors[nidx];
+
+					if (dot_v3v3(org_nor, nor) < LNOR_SPACE_TRIGO_THRESHOLD) {
+						const MPoly *mp = &mpolys[loop_to_poly[lidx]];
+						const MLoop *mlp = &mloops[(lidx == mp->loopstart) ? mp->loopstart + mp->totloop - 1 : lidx - 1];
+						medges[(prev_ml->e == mlp->e) ? prev_ml->e : ml->e].flag |= ME_SHARP;
+					}
+				}
+
+				/* For single loops, where lnors_spacearr.lspacearr[i]->loops is NULL. */
+				BLI_BITMAP_ENABLE(done_loops, i);
 			}
 		}
 
@@ -1469,11 +1502,7 @@ static void mesh_normals_loop_custom_set(
 				while (loops) {
 					const int lidx = GET_INT_FROM_POINTER(loops->link);
 					const int nidx = use_vertices ? (int)mloops[lidx].v : lidx;
-					float *nor = custom_loopnors[nidx];
-
-					if (is_zero_v3(nor)) {
-						nor = lnors[nidx];
-					}
+					float *nor = r_custom_loopnors[nidx];
 
 					nbr_nors++;
 					add_v3_v3(avg_nor, nor);
@@ -1493,7 +1522,7 @@ static void mesh_normals_loop_custom_set(
 			}
 			else {
 				const int nidx = use_vertices ? (int)mloops[i].v : i;
-				float *nor = custom_loopnors[nidx];
+				float *nor = r_custom_loopnors[nidx];
 
 				BKE_lnor_space_custom_normal_to_data(lnors_spacearr.lspacearr[i], nor, r_clnors_data[i]);
 				BLI_BITMAP_DISABLE(done_loops, i);
@@ -1509,23 +1538,55 @@ static void mesh_normals_loop_custom_set(
 
 void BKE_mesh_normals_loop_custom_set(
         const MVert *mverts, const int numVerts, MEdge *medges, const int numEdges,
-        MLoop *mloops, float (*custom_loopnors)[3], const int numLoops,
+        MLoop *mloops, float (*r_custom_loopnors)[3], const int numLoops,
         MPoly *mpolys, const float (*polynors)[3], const int numPolys,
         short (*r_clnors_data)[2])
 {
-	mesh_normals_loop_custom_set(mverts, numVerts, medges, numEdges, mloops, custom_loopnors, numLoops,
+	mesh_normals_loop_custom_set(mverts, numVerts, medges, numEdges, mloops, r_custom_loopnors, numLoops,
 	                             mpolys, polynors, numPolys, r_clnors_data, false);
 }
 
 void BKE_mesh_normals_loop_custom_from_vertices_set(
-        const MVert *mverts, float (*custom_vertnors)[3], const int numVerts,
+        const MVert *mverts, float (*r_custom_vertnors)[3], const int numVerts,
         MEdge *medges, const int numEdges, MLoop *mloops, const int numLoops,
         MPoly *mpolys, const float (*polynors)[3], const int numPolys,
         short (*r_clnors_data)[2])
 {
-	mesh_normals_loop_custom_set(mverts, numVerts, medges, numEdges, mloops, custom_vertnors, numLoops,
+	mesh_normals_loop_custom_set(mverts, numVerts, medges, numEdges, mloops, r_custom_vertnors, numLoops,
 	                             mpolys, polynors, numPolys, r_clnors_data, true);
 }
+
+/**
+ * Computes average per-vertex normals from given custom loop normals.
+ *
+ * @param clnors The computed custom loop normals.
+ * @param r_vert_clnors The (already allocated) array wher to store averaged per-vertex normals.
+ */
+void BKE_mesh_normals_loop_to_vertex(
+        const int numVerts, const MLoop *mloops, const int numLoops,
+        const float (*clnors)[3], float (*r_vert_clnors)[3])
+{
+	const MLoop *ml;
+	int i;
+
+	int *vert_loops_nbr = MEM_callocN(sizeof(*vert_loops_nbr) * (size_t)numVerts, __func__);
+
+	copy_vn_fl((float *)r_vert_clnors, 3 * numVerts, 0.0f);
+
+	for (i = 0, ml = mloops; i < numLoops; i++, ml++) {
+		const unsigned int v = ml->v;
+
+		add_v3_v3(r_vert_clnors[v], clnors[i]);
+		vert_loops_nbr[v]++;
+	}
+
+	for (i = 0; i < numVerts; i++) {
+		mul_v3_fl(r_vert_clnors[i], 1.0f / (float)vert_loops_nbr[i]);
+	}
+
+	MEM_freeN(vert_loops_nbr);
+}
+
 
 #undef LNOR_SPACE_TRIGO_THRESHOLD
 
@@ -2121,8 +2182,7 @@ void BKE_mesh_calc_volume(
 			totvol += vol;
 		}
 		if (r_center) {
-			/* averaging factor 1/4 is applied in the end */
-			madd_v3_v3fl(r_center, center, vol);  /* XXX could extract this */
+			/* averaging factor 1/3 is applied in the end */
 			madd_v3_v3fl(r_center, v1->co, vol);
 			madd_v3_v3fl(r_center, v2->co, vol);
 			madd_v3_v3fl(r_center, v3->co, vol);
@@ -2137,11 +2197,11 @@ void BKE_mesh_calc_volume(
 		*r_volume = fabsf(totvol);
 	}
 	if (r_center) {
-		/* Note: Factor 1/4 is applied once for all vertices here.
+		/* Note: Factor 1/3 is applied once for all vertices here.
 		 * This also automatically negates the vector if totvol is negative.
 		 */
 		if (totvol != 0.0f)
-			mul_v3_fl(r_center, 0.25f / totvol);
+			mul_v3_fl(r_center, (1.0f / 3.0f) / totvol);
 	}
 }
 
@@ -2243,6 +2303,7 @@ void BKE_mesh_loops_to_tessdata(CustomData *fdata, CustomData *ldata, CustomData
 	const bool hasPCol = CustomData_has_layer(ldata, CD_PREVIEW_MLOOPCOL);
 	const bool hasOrigSpace = CustomData_has_layer(ldata, CD_ORIGSPACE_MLOOP);
 	const bool hasLoopNormal = CustomData_has_layer(ldata, CD_NORMAL);
+	const bool hasLoopTangent = CustomData_has_layer(ldata, CD_TANGENT);
 	int findex, i, j;
 	const int *pidx;
 	unsigned int (*lidx)[4];
@@ -2304,6 +2365,51 @@ void BKE_mesh_loops_to_tessdata(CustomData *fdata, CustomData *ldata, CustomData
 		for (findex = 0, lidx = loopindices; findex < num_faces; lidx++, findex++, fnors++) {
 			for (j = (mface ? mface[findex].v4 : (*lidx)[3]) ? 4 : 3; j--;) {
 				normal_float_to_short_v3((*fnors)[j], lnors[(*lidx)[j]]);
+			}
+		}
+	}
+
+	if (hasLoopTangent) {
+		/* need to do for all uv maps at some point */
+		float (*ftangents)[4] = CustomData_get_layer(fdata, CD_TANGENT);
+		float (*ltangents)[4] = CustomData_get_layer(ldata, CD_TANGENT);
+
+		for (findex = 0, pidx = polyindices, lidx = loopindices;
+		     findex < num_faces;
+		     pidx++, lidx++, findex++)
+		{
+			int nverts = (mface ? mface[findex].v4 : (*lidx)[3]) ? 4 : 3;
+			for (j = nverts; j--;) {
+				copy_v4_v4(ftangents[findex * 4 + j], ltangents[(*lidx)[j]]);
+			}
+		}
+	}
+}
+
+void BKE_mesh_tangent_loops_to_tessdata(CustomData *fdata, CustomData *ldata, MFace *mface,
+                                        int *polyindices, unsigned int (*loopindices)[4], const int num_faces)
+{
+	/* Note: performances are sub-optimal when we get a NULL mface, we could be ~25% quicker with dedicated code...
+	 *       Issue is, unless having two different functions with nearly the same code, there's not much ways to solve
+	 *       this. Better imho to live with it for now. :/ --mont29
+	 */
+	const bool hasLoopTangent = CustomData_has_layer(ldata, CD_TANGENT);
+	int findex, j;
+	const int *pidx;
+	unsigned int (*lidx)[4];
+
+	if (hasLoopTangent) {
+		/* need to do for all uv maps at some point */
+		float (*ftangents)[4] = CustomData_get_layer(fdata, CD_TANGENT);
+		float (*ltangents)[4] = CustomData_get_layer(ldata, CD_TANGENT);
+
+		for (findex = 0, pidx = polyindices, lidx = loopindices;
+		     findex < num_faces;
+		     pidx++, lidx++, findex++)
+		{
+			int nverts = (mface ? mface[findex].v4 : (*lidx)[3]) ? 4 : 3;
+			for (j = nverts; j--;) {
+				copy_v4_v4(ftangents[findex * 4 + j], ltangents[(*lidx)[j]]);
 			}
 		}
 	}

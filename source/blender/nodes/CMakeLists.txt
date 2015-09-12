@@ -29,9 +29,9 @@ set(INC
 	intern
 	shader
 	texture
-	../blenfont
 	../blenkernel
 	../blenlib
+	../blentranslation
 	../gpu
 	../imbuf
 	../makesdna
@@ -286,6 +286,10 @@ add_definitions(${GL_DEFINITIONS})
 
 if(WITH_FREESTYLE)
 	add_definitions(-DWITH_FREESTYLE)
+endif()
+
+if(WITH_CYCLES AND WITH_CYCLES_DEBUG)
+	add_definitions(-DWITH_CYCLES_DEBUG)
 endif()
 
 blender_add_lib(bf_nodes "${SRC}" "${INC}" "${INC_SYS}")
