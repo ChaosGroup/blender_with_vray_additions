@@ -151,68 +151,63 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				node = m_exporter->export_plugin(nodeDesc);
 			}
 		}
-
-		// However, even mesh lights could contain particles or smth
-		//
-		BL::Object::modifiers_iterator modIt;
-		for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
-			BL::Modifier mod(*modIt);
-			if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-				BL::ParticleSystemModifier psm(mod);
-				BL::ParticleSystem psys = psm.particle_system();
-				if (psys) {
-					BL::ParticleSettings pset(psys.settings());
-					if (pset && (pset.type() == BL::ParticleSettings::type_HAIR) && (pset.render_type() == BL::ParticleSettings::render_type_PATH)) {
-						const int hair_is_updated = check_updated
-						                            ? (is_updated || pset.is_updated())
-						                            : true;
-
-						const int hair_is_data_updated = check_updated
-						                                 ? (is_data_updated || pset.is_updated())
-						                                 : true;
-
-						const std::string hairNodeName = "Node@" + getHairName(ob, psys, pset);
-
-						// Put hair node to the object dependent plugines
-						// (will be used to remove plugin when object is removed)
-						m_id_track.insert(ob, hairNodeName);
-
-						AttrValue hair_geom;
-						if (!(hair_is_data_updated) || !(m_settings.export_meshes)) {
-							hair_geom = AttrPlugin(getHairName(ob, psys, pset));
-						}
-						else {
-							hair_geom = exportGeomMayaHair(ob, psys, psm);;
-						}
-
-						AttrValue hair_mtl;
-						const int hair_mtl_index = pset.material() - 1;
-						if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
-							BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
-							if (hair_material) {
-								hair_mtl = exportMaterial(hair_material, true);
-							}
-						}
-						if (!hair_mtl) {
-							hair_mtl = m_defaults.override_material
-							           ? m_defaults.override_material.valPlugin
-							           : m_defaults.default_material.valPlugin;
-						}
-
-						if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated)) {
-							PluginDesc hairNodeDesc(hairNodeName, "Node");
-							hairNodeDesc.add("geometry", hair_geom);
-							hairNodeDesc.add("material", hair_mtl);
-							hairNodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-							hairNodeDesc.add("objectID", ob.pass_index());
-
-							m_exporter->export_plugin(hairNodeDesc);
-						}
-					}
-				}
-			}
-		}
 	}
 
 	return node;
+}
+
+
+void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated)
+{
+	bool is_updated      = check_updated ? ob.is_updated()      : true;
+	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+	BL::ParticleSettings pset(psys.settings());
+	if (pset && (pset.type() == BL::ParticleSettings::type_HAIR) && (pset.render_type() == BL::ParticleSettings::render_type_PATH)) {
+		const int hair_is_updated = check_updated
+						            ? (is_updated || pset.is_updated())
+						            : true;
+
+		const int hair_is_data_updated = check_updated
+						                 ? (is_data_updated || pset.is_updated())
+						                 : true;
+
+		const std::string hairNodeName = "Node@" + getHairName(ob, psys, pset);
+
+		// Put hair node to the object dependent plugines
+		// (will be used to remove plugin when object is removed)
+		m_id_track.insert(ob, hairNodeName);
+
+		AttrValue hair_geom;
+		if (!(hair_is_data_updated) || !(m_settings.export_meshes)) {
+			hair_geom = AttrPlugin(getHairName(ob, psys, pset));
+		}
+		else {
+			hair_geom = exportGeomMayaHair(ob, psys, psm);;
+		}
+
+		AttrValue hair_mtl;
+		const int hair_mtl_index = pset.material() - 1;
+		if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
+			BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
+			if (hair_material) {
+				hair_mtl = exportMaterial(hair_material, true);
+			}
+		}
+		if (!hair_mtl) {
+			hair_mtl = m_defaults.override_material
+						? m_defaults.override_material.valPlugin
+						: m_defaults.default_material.valPlugin;
+		}
+
+		if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated)) {
+			PluginDesc hairNodeDesc(hairNodeName, "Node");
+			hairNodeDesc.add("geometry", hair_geom);
+			hairNodeDesc.add("material", hair_mtl);
+			hairNodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+			hairNodeDesc.add("objectID", ob.pass_index());
+
+			m_exporter->export_plugin(hairNodeDesc);
+		}
+	}
 }

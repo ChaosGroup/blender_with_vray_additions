@@ -28,6 +28,38 @@ void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	ob.dupli_list_clear();
 }
 
+void InteractiveExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override)
+{
+	bool add = false;
+	if (override) {
+		add = !m_data_exporter.m_id_cache.contains(override.id);
+	} else {
+		add = !m_data_exporter.m_id_cache.contains(ob);
+	}
+
+	if (add) {
+		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
+		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
+
+		if (!is_hidden) {
+			BL::Object::modifiers_iterator modIt;
+			SceneExporter::sync_object(ob, check_updated, override);
+
+			for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
+				BL::Modifier mod(*modIt);
+				if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+					BL::ParticleSystemModifier psm(mod);
+					BL::ParticleSystem psys = psm.particle_system();
+					if (psys) {
+						m_data_exporter.exportHair(ob, psm, psys, check_updated);
+					}
+				}
+			}
+
+		}
+	}
+}
+
 
 bool ProductionExporter::do_export()
 {
@@ -66,24 +98,12 @@ void ProductionExporter::sync_object(BL::Object ob, const int &check_updated, co
 	}
 
 	if (add) {
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
 		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
 
 		if (!is_hidden) {
 
 			BL::Object::modifiers_iterator modIt;
-			for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
-				BL::Modifier mod(*modIt);
-				if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-					BL::ParticleSystemModifier psm(mod);
-					BL::ParticleSystem psys = psm.particle_system();
-					if (psys) {
-						psys.set_resolution(m_scene, ob, EvalModeRender);
-					}
-				}
-			}
-
 			SceneExporter::sync_object(ob, check_updated, override);
 
 			for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
@@ -92,6 +112,8 @@ void ProductionExporter::sync_object(BL::Object ob, const int &check_updated, co
 					BL::ParticleSystemModifier psm(mod);
 					BL::ParticleSystem psys = psm.particle_system();
 					if (psys) {
+						psys.set_resolution(m_scene, ob, EvalModeRender);
+						m_data_exporter.exportHair(ob, psm, psys, check_updated);
 						psys.set_resolution(m_scene, ob, EvalModePreview);
 					}
 				}
