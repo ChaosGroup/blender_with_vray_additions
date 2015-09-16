@@ -504,10 +504,9 @@ void VRayNodeExporter::exportLinkedSocketEx(BL::NodeTree ntree, BL::NodeSocket f
 				if (toNode.internal_links.length()) {
 					BL::NodeSocket rerouteInSock = toNode.internal_links[0].from_socket();
 					if (rerouteInSock) {
-						BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(rerouteInSock);
-						if (conSock) {
-							VRayNodeExporter::exportLinkedSocketEx(ntree, conSock, context, expMode, outNode, outPlugin);
-						}
+						// NOTE: We using "rerouteInSock", because "exportLinkedSocketEx"
+						// accepts fromSocket and get the connected socket itself
+						VRayNodeExporter::exportLinkedSocketEx(ntree, rerouteInSock, context, expMode, outNode, outPlugin);
 					}
 				}
 			}
