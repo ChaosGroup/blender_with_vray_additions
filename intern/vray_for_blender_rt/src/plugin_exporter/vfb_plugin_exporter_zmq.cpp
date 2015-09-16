@@ -282,10 +282,12 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
 
-	assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
-	if (m_LastExportedFrame != this->current_scene_frame) {
-		m_LastExportedFrame = this->current_scene_frame;
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+	if (animation_settings.use && !is_viewport) {
+		assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+		if (m_LastExportedFrame != this->current_scene_frame) {
+			m_LastExportedFrame = this->current_scene_frame;
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+		}
 	}
 
 
@@ -342,12 +344,15 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		case ValueTypeMapChannels:
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
-		case ValueTypeInstancer: {
-			auto inst = attr.attrValue.valInstancer;
-			inst.frameNumber = this->current_scene_frame;
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, inst));
+		case ValueTypeInstancer:
+			if (attr.attrValue.valInstancer.frameNumber != this->current_scene_frame) {
+				auto inst = attr.attrValue.valInstancer;
+				inst.frameNumber = this->current_scene_frame;
+				m_Client->send(VRayMessage::createMessage(name, attr.attrName, inst));
+			} else {
+				m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
+			}
 			break;
-		}
 		default:
 			PRINT_INFO_EX("--- > UNIMPLEMENTED DEFAULT");
 			assert(false);

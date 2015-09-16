@@ -732,7 +732,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
 
 	AttrInstancer instances;
-	instances.frameNumber = 0;
+	instances.frameNumber = m_scene.frame_current();
 	if (dupli_use_instancer) {
 		int num_instances = 0;
 
