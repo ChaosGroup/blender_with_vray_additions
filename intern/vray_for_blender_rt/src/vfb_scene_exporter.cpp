@@ -646,42 +646,20 @@ unsigned int SceneExporter::get_layer(BlLayers array)
 
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
-	bool add = false;
-	if (override) {
-		add = !m_data_exporter.m_id_cache.contains(override.id);
-	} else {
-		add = !m_data_exporter.m_id_cache.contains(ob);
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+
+	PRINT_INFO_EX("Syncing: %s...",
+			        ob.name().c_str());
+
+	if (ob.data() && ob.type() == BL::Object::type_MESH) {
+		m_data_exporter.exportObject(ob, check_updated, override);
+	}
+	else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
+		m_data_exporter.exportLight(ob, check_updated, override);
 	}
 
-	if (add) {
-		if (override.override) {
-			m_data_exporter.m_id_cache.insert(override.id);
-		} else {
-			m_data_exporter.m_id_cache.insert(ob);
-		}
-
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-
-		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
-		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
-
-		// const int data_updated = RNA_int_get(&vrayObject, "data_updated");
-
-		if ((!is_hidden)) {
-			PRINT_INFO_EX("Syncing: %s...",
-			              ob.name().c_str());
-
-			if (ob.data() && ob.type() == BL::Object::type_MESH) {
-				m_data_exporter.exportObject(ob, check_updated, override);
-			}
-			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
-				m_data_exporter.exportLight(ob, check_updated, override);
-			}
-		}
-
-		// Reset update flag
-		RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
-	}
+	// Reset update flag
+	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 }
 
 static int ob_has_dupli(BL::Object ob) {
