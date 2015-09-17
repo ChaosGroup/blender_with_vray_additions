@@ -498,6 +498,21 @@ void GeomMayaHair::initName(const std::string &name)
 		BLI_strncpy(nameBuf, m_psys->part->id.name, MAX_ID_NAME);
 		StripString(nameBuf);
 		m_name.append(nameBuf);
+
+		PointerRNA obRNA;
+		RNA_id_pointer_create((ID*)m_ob, &obRNA);
+		BL::Object b_ob(obRNA);
+
+		PointerRNA sceRNA;
+		RNA_id_pointer_create((ID*)m_sce, &sceRNA);
+		BL::Scene b_scene(sceRNA);
+
+		const bool could_instance = CouldInstance(b_scene, b_ob);
+
+		m_name.append("@");
+		m_name.append(GetIDName(could_instance
+		                        ? (ID*)m_ob->data
+		                        : (ID*)m_ob));
 	}
 
 	m_nodeName = "Node" + m_name;
