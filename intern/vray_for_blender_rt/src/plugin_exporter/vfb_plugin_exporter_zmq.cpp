@@ -272,6 +272,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		return AttrPlugin();
 	}
 
+	const bool checkAnimation = animation_settings.use && !is_viewport;
 	const std::string & name = pluginDesc.pluginName;
 	AttrPlugin plugin(name);
 
@@ -282,7 +283,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
 
-	if (animation_settings.use && !is_viewport) {
+	if (checkAnimation) {
 		assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
 		if (m_LastExportedFrame != this->current_scene_frame) {
 			m_LastExportedFrame = this->current_scene_frame;
@@ -345,7 +346,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
 		case ValueTypeInstancer:
-			if (attr.attrValue.valInstancer.frameNumber != this->current_scene_frame) {
+			if (checkAnimation && attr.attrValue.valInstancer.frameNumber != this->current_scene_frame) {
 				auto inst = attr.attrValue.valInstancer;
 				inst.frameNumber = this->current_scene_frame;
 				m_Client->send(VRayMessage::createMessage(name, attr.attrName, inst));
