@@ -38,7 +38,7 @@ void InteractiveExporter::sync_object(BL::Object ob, const int &check_updated, c
 	}
 
 	if (add) {
-		if (override.override) {
+		if (override) {
 			m_data_exporter.m_id_cache.insert(override.id);
 		} else {
 			m_data_exporter.m_id_cache.insert(ob);
@@ -47,7 +47,7 @@ void InteractiveExporter::sync_object(BL::Object ob, const int &check_updated, c
 		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
 		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
 
-		if (!is_hidden) {
+		if (!is_hidden || override) {
 			BL::Object::modifiers_iterator modIt;
 			SceneExporter::sync_object(ob, check_updated, override);
 
@@ -104,7 +104,7 @@ void ProductionExporter::sync_object(BL::Object ob, const int &check_updated, co
 	}
 
 	if (add) {
-		if (override.override) {
+		if (override) {
 			m_data_exporter.m_id_cache.insert(override.id);
 		} else {
 			m_data_exporter.m_id_cache.insert(ob);
@@ -113,7 +113,7 @@ void ProductionExporter::sync_object(BL::Object ob, const int &check_updated, co
 		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
 		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
 
-		if (!is_hidden) {
+		if (!is_hidden || override) {
 			BL::Object::modifiers_iterator modIt;
 			SceneExporter::sync_object(ob, check_updated, override);
 
