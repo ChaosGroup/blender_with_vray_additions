@@ -721,8 +721,9 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 			const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
 			const bool is_light = Blender::IsLight(dupOb);
+			const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
 
-			if (!is_hidden && !is_light) {
+			if (!is_hidden && !is_light && supported_type) {
 				num_instances++;
 			}
 		}
