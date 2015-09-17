@@ -276,11 +276,6 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	const std::string & name = pluginDesc.pluginName;
 	AttrPlugin plugin(name);
 
-	if (pluginDesc.pluginAttrs.empty()) {
-		return plugin;
-	}
-
-
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
 
 	if (checkAnimation) {
