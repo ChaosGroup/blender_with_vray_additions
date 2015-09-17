@@ -23,7 +23,12 @@
 void DataExporter::exportVRayEnvironment(NodeContext &context)
 {
 	BL::Scene worldScene(PointerRNA_NULL);
+
 	if (m_engine && m_engine.is_preview()) {
+		if (!m_context) {
+			PRINT_WARN("Invalid context!");
+			return;
+		}
 		worldScene = m_context.scene();
 	}
 	else {
