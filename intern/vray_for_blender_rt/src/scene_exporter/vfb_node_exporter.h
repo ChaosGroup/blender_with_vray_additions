@@ -226,6 +226,8 @@ public:
 		UserAttributeString,
 	};
 
+	typedef std::map<BL::Material, AttrValue> MaterialCache;
+
 	// Generate unique plugin name from node
 	static std::string            GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context);
 
@@ -359,12 +361,12 @@ private:
 	DataDefaults      m_defaults;
 
 	EvalMode          m_evalMode;
+	MaterialCache     m_exported_materials;
 
 	// XXX: Add accessors
 public:
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
-	std::map<BL::Material, AttrValue> m_exported_materials;
 };
 
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H
