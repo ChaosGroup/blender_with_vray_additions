@@ -95,7 +95,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 			if (!pluginID.empty()) {
 				PointerRNA lampPropGroup = RNA_pointer_get(&vrayLamp, pluginID.c_str());
 
-				const std::string & lampName = override.override ? override.namePrefix : lightPluginName;
+				const std::string & lampName = override ? override.namePrefix : lightPluginName;
 
 				PluginDesc pluginDesc(lampName, pluginID);
 
@@ -138,12 +138,12 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 						}
 					}
 				}
-				if (override.override) {
+				if (override) {
 					pluginDesc.add("transform", override.tm);
 				} else {
 					pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 				}
-				
+
 
 				if (pluginID == "LightRectangle") {
 					BL::AreaLamp areaLamp(lamp);

@@ -134,13 +134,13 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		if (geom && mtl && (is_updated || is_data_updated)) {
 			// No need to export Node if the object is LightMesh
 			if (!isMeshLight) {
-				const std::string & exportName = override.override ? override.namePrefix + nodePluginName : nodePluginName;
+				const std::string & exportName = override ? override.namePrefix + nodePluginName : nodePluginName;
 
 				PluginDesc nodeDesc(exportName, "Node");
 				nodeDesc.add("geometry", geom);
 				nodeDesc.add("material", mtl);
 				nodeDesc.add("objectID", ob.pass_index());
-				if (override.override) {
+				if (override) {
 					nodeDesc.add("visible", override.visible);
 					nodeDesc.add("transform", override.tm);
 				} else {
