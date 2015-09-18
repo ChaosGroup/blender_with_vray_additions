@@ -51,6 +51,7 @@
 #include "BLI_task.h"
 
 #include "BKE_customdata.h"
+#include "BKE_global.h"
 #include "BKE_mesh.h"
 #include "BKE_multires.h"
 #include "BKE_report.h"
@@ -883,7 +884,9 @@ static void split_loop_nor_fan_do(LoopSplitTaskDataCommon *common_data, LoopSpli
 					clnors_avg[0] /= clnors_nbr;
 					clnors_avg[1] /= clnors_nbr;
 					/* Fix/update all clnors of this fan with computed average value. */
-					printf("Invalid clnors in this fan!\n");
+					if (G.debug & G_DEBUG) {
+						printf("Invalid clnors in this fan!\n");
+					}
 					while ((clnor = BLI_SMALLSTACK_POP(clnors))) {
 						//print_v2("org clnor", clnor);
 						clnor[0] = (short)clnors_avg[0];
@@ -1402,7 +1405,9 @@ static void mesh_normals_loop_custom_set(
 				 * Maybe we should set those loops' edges as sharp?
 				 */
 				BLI_BITMAP_ENABLE(done_loops, i);
-				printf("WARNING! Getting invalid NULL loop space for loop %d!\n", i);
+				if (G.debug & G_DEBUG) {
+					printf("WARNING! Getting invalid NULL loop space for loop %d!\n", i);
+				}
 				continue;
 			}
 
@@ -1483,7 +1488,9 @@ static void mesh_normals_loop_custom_set(
 	for (i = 0; i < numLoops; i++) {
 		if (!lnors_spacearr.lspacearr[i]) {
 			BLI_BITMAP_DISABLE(done_loops, i);
-			printf("WARNING! Still getting invalid NULL loop space in second loop for loop %d!\n", i);
+			if (G.debug & G_DEBUG) {
+				printf("WARNING! Still getting invalid NULL loop space in second loop for loop %d!\n", i);
+			}
 			continue;
 		}
 
@@ -1560,7 +1567,7 @@ void BKE_mesh_normals_loop_custom_from_vertices_set(
  * Computes average per-vertex normals from given custom loop normals.
  *
  * @param clnors The computed custom loop normals.
- * @param r_vert_clnors The (already allocated) array wher to store averaged per-vertex normals.
+ * @param r_vert_clnors The (already allocated) array where to store averaged per-vertex normals.
  */
 void BKE_mesh_normals_loop_to_vertex(
         const int numVerts, const MLoop *mloops, const int numLoops,
@@ -3240,7 +3247,7 @@ void BKE_mesh_flush_hidden_from_polys_ex(MVert *mvert,
 			j = mp->totloop;
 			for (ml = &mloop[mp->loopstart]; j--; ml++) {
 				mvert[ml->v].flag &= (char)~ME_HIDE;
-				medge[ml->e].flag &= (char)~ME_HIDE;
+				medge[ml->e].flag &= (short)~ME_HIDE;
 			}
 		}
 	}

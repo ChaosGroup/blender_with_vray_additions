@@ -981,7 +981,7 @@ static void CalcSnapGeometry(TransInfo *t, float *UNUSED(vec))
 						break;
 					}
 					
-					new_dist = len_v3v3(last_p, vec);
+					new_dist = len_squared_v3v3(last_p, vec);
 					
 					if (new_dist < max_dist) {
 						copy_v3_v3(p, vec);
@@ -1527,8 +1527,17 @@ static bool snapDerivedMesh(short snap_mode, ARegion *ar, Object *ob, DerivedMes
 
 		if (do_bb) {
 			BoundBox *bb = BKE_object_boundbox_get(ob);
-			if (!BKE_boundbox_ray_hit_check(bb, ray_start_local, ray_normal_local, &len_diff)) {
-				return retval;
+
+			if (bb) {
+				BoundBox bb_temp;
+
+				/* We cannot aford a bbox with some null dimension, which may happen in some cases...
+				 * Threshold is rather high, but seems to be needed to get good behavior, see T46099. */
+				bb = BKE_boundbox_ensure_minimum_dimensions(bb, &bb_temp, 1e-1f);
+
+				if (!BKE_boundbox_ray_hit_check(bb, ray_start_local, ray_normal_local, &len_diff)) {
+					return retval;
+				}
 			}
 		}
 		else if (do_ray_start_correction) {
@@ -1854,7 +1863,7 @@ static bool snapObject(Scene *scene, short snap_mode, ARegion *ar, Object *ob, f
 			do_bb = false;
 		}
 		else {
-			/* in this case we wan't the mesh from the editmesh, avoids stale data. see: T45978.
+			/* in this case we want the mesh from the editmesh, avoids stale data. see: T45978.
 			 * still set the 'em' to NULL, since we only want the 'dm'. */
 			em = BKE_editmesh_from_object(ob);
 			if (em) {
@@ -2151,8 +2160,17 @@ static bool peelDerivedMesh(
 		 * test against boundbox first
 		 * */
 		if (looptri_num > 16) {
-			struct BoundBox *bb = BKE_object_boundbox_get(ob);
-			test = BKE_boundbox_ray_hit_check(bb, ray_start_local, ray_normal_local, NULL);
+			BoundBox *bb = BKE_object_boundbox_get(ob);
+
+			if (bb) {
+				BoundBox bb_temp;
+
+				/* We cannot aford a bbox with some null dimension, which may happen in some cases...
+				 * Threshold is rather high, but seems to be needed to get good behavior, see T46099. */
+				bb = BKE_boundbox_ensure_minimum_dimensions(bb, &bb_temp, 1e-1f);
+
+				test = BKE_boundbox_ray_hit_check(bb, ray_start_local, ray_normal_local, NULL);
+			}
 		}
 		
 		if (test == true) {

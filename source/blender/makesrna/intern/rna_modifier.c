@@ -1964,7 +1964,7 @@ static void rna_def_modifier_edgesplit(BlenderRNA *brna)
 
 	prop = RNA_def_property(srna, "split_angle", PROP_FLOAT, PROP_ANGLE);
 	RNA_def_property_range(prop, 0.0f, DEG2RADF(180.0f));
-	RNA_def_property_ui_range(prop, 0.0f, DEG2RADF(180.0f), 100, 2);
+	RNA_def_property_ui_range(prop, 0.0f, DEG2RADF(180.0f), 10, 2);
 	RNA_def_property_ui_text(prop, "Split Angle", "Angle above which to split edges");
 	RNA_def_property_update(prop, 0, "rna_Modifier_update");
 
@@ -3051,7 +3051,7 @@ static void rna_def_modifier_simpledeform(BlenderRNA *brna)
 
 	prop = RNA_def_property(srna, "factor", PROP_FLOAT, PROP_NONE);
 	RNA_def_property_range(prop, -FLT_MAX, FLT_MAX);
-	RNA_def_property_ui_range(prop, -10, 10, 1, 3);
+	RNA_def_property_ui_range(prop, -10.0, 10.0, 1.0, 3);
 	RNA_def_property_ui_text(prop, "Factor", "Amount to deform object");
 	RNA_def_property_update(prop, 0, "rna_Modifier_update");
 
@@ -3059,7 +3059,7 @@ static void rna_def_modifier_simpledeform(BlenderRNA *brna)
 	RNA_def_property_float_sdna(prop, NULL, "factor");
 	RNA_def_property_range(prop, -FLT_MAX, FLT_MAX);
 	RNA_def_property_float_default(prop, DEG2RADF(45.0f));
-	RNA_def_property_ui_range(prop, -M_PI, M_PI, DEG2RAD(1), 3);
+	RNA_def_property_ui_range(prop, DEG2RAD(-360.0), DEG2RAD(360.0), 10.0, 3);
 	RNA_def_property_ui_text(prop, "Angle", "Angle of deformation");
 	RNA_def_property_update(prop, 0, "rna_Modifier_update");
 
