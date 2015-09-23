@@ -154,7 +154,11 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrTransform &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrPlugin &val)
 {
-	return pp << StripString(val.plugin);
+	pp << StripString(val.plugin);
+	if (!val.output.empty()) {
+		pp << "::" << StripString(val.output);
+	}
+	return pp;
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrMapChannels &val)
@@ -163,11 +167,12 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrMapChannels &val)
 
 	if (!val.data.empty()) {
 		auto iter = val.data.cbegin();
-		pp << "List(" << iter->first << ",\n";
+		int index = 0;
+		pp << "List(" << index++ << ",\n";
 		pp << iter->second.vertices << "," << iter->second.faces << ")";
 
 		for (; iter != val.data.cend(); ++iter) {
-			pp << ",\nList(" << iter->first << ",\n";
+			pp << ",\nList(" << index++ << ",\n";
 			pp << iter->second.vertices << "," << iter->second.faces << ")";
 		}
 	}

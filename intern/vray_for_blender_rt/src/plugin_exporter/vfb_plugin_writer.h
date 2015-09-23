@@ -95,7 +95,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 			for (int c = 1; c < val.getCount(); c++) {
 				pp << "," << (newLine ? "\n    " : "    ") << (*val)[c];
 			}
-			pp << ")";
+			pp << "  \n)";
 		} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
 			char * hexData = GetStringZip(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
 			pp << "Hex(\"" << hexData << "\")";
@@ -105,6 +105,20 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 			pp << "Hex(\"" << zipData << "\")";
 			delete[] zipData;
 		}
+	}
+	return pp;
+}
+
+template <> inline
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
+{
+	if (!val.empty()) {
+		pp << "ListString" << listName;
+		pp << "(\n    \"" << StripString((*val)[0]) << "\"";
+		for (int c = 1; c < val.getCount(); c++) {
+			pp << "," << (newLine ? "\n    " : "    ") << "\"" << StripString((*val)[c]) << "\"";
+		}
+		pp << "  \n)";
 	}
 	return pp;
 }
