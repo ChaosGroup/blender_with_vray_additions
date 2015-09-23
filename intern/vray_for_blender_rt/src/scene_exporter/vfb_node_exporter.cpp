@@ -104,6 +104,7 @@ void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
 {
 	m_exporter = exporter;
 	m_settings = settings;
+	m_evalMode = exporter->get_is_viewport() ? EvalModePreview : EvalModeRender;
 }
 
 
@@ -505,7 +506,7 @@ std::string DataExporter::getMeshName(BL::Object ob)
 {
 	static boost::format meshNameFormat("Geom@%s");
 
-	BL::ID data_id = ob.is_modified(m_scene, EvalModeRender)
+	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
 	                 ? ob
 	                 : ob.data();
 
@@ -516,7 +517,12 @@ std::string DataExporter::getMeshName(BL::Object ob)
 std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset)
 {
 	static boost::format hairNameFormat("Hair@%s|%s|%s");
-	return boost::str(hairNameFormat % ob.name() % psys.name() % pset.name());
+
+	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
+	                ? ob
+	                : ob.data();
+
+	return boost::str(hairNameFormat % data_id.name() % psys.name() % pset.name());
 }
 
 

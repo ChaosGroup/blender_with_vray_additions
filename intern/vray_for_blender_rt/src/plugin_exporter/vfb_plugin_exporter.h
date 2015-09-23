@@ -149,6 +149,7 @@ public:
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
 	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
+	        bool         get_is_viewport() const { return is_viewport; }
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
