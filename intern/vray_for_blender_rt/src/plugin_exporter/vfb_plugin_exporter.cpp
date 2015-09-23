@@ -58,7 +58,7 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 	bool isDifferent = inCache ? m_PluginManager.differs(pluginDesc) : true;
 	AttrPlugin plg(pluginDesc.pluginName);
 
-	if (is_viewport) {
+	if (is_viewport || !animation_settings.use) {
 		if (!inCache) {
 			plg = this->export_plugin_impl(pluginDesc);
 			m_PluginManager.updateCache(pluginDesc);
@@ -66,7 +66,7 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 			plg = this->export_plugin_impl(m_PluginManager.differences(pluginDesc));
 			m_PluginManager.updateCache(pluginDesc);
 		}
-	} else if (animation_settings.use) {
+	} else {
 		if (inCache && isDifferent) {
 			this->export_plugin_impl(m_PluginManager.fromCache(pluginDesc));
 			plg = this->export_plugin_impl(m_PluginManager.differences(pluginDesc));
@@ -75,7 +75,6 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 			plg = this->export_plugin_impl(pluginDesc);
 			m_PluginManager.updateCache(pluginDesc);
 		}
-
 	}
 
 	return plg;
