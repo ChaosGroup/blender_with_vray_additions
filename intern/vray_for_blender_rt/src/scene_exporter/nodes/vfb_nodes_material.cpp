@@ -18,6 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
+#include <boost/format.hpp>
 
 
 AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(VRayNodeExportParam)
@@ -58,46 +59,41 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(VRayNodeExportParam)
 
 AttrValue DataExporter::exportVRayNodeMtlMulti(VRayNodeExportParam)
 {
-#if 0
-	std::string pluginName = NodeExporter::getPluginName(node, ntree, context);
-
-	AttrListPlugin mtls_list;
-	AttrListInt    ids_list;
-
-	BL::NodeSocket mtlid_gen_sock  = NodeExporter::GetSocketByAttr(node, "mtlid_gen");
-	BL::NodeSocket mtlid_gen_float_sock = NodeExporter::GetSocketByAttr(node, "mtlid_gen_float");
+	AttrListPlugin mtls_list(0);
+	AttrListInt    ids_list(0);
 
 	for(int i = 1; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
 		const std::string &mtlSockName = boost::str(boost::format("Material %i") % i);
 
-		BL::NodeSocket mtlSock = NodeExporter::getSocketByName(node, mtlSockName);
-		if(NOT(mtlSock))
+		BL::NodeSocket mtlSock = Nodes::GetInputSocketByName(node, mtlSockName);
+		if (!mtlSock || !mtlSock.is_linked()) {
 			continue;
+		}
 
-		if(NOT(mtlSock.is_linked()))
-			continue;
+		AttrValue material = exportLinkedSocket(ntree, mtlSock, context);
+		int materialID = RNA_int_get(&mtlSock.ptr, "value");
 
-		AttrPlugin material   = NodeExporter::exportLinkedSocket(ntree, mtlSock, context);
-		int        materialID = BOOST_FORMAT_INT(RNA_int_get(&mtlSock.ptr, "value"));
-
-		mtls_list.push_back(material);
-		ids_list.push_back(materialID);
+		mtls_list.append(material.valPlugin);
+		ids_list.append(materialID);
 	}
 
-	PluginDesc pluginAttrs;
-	pluginAttrs["mtls_list"] = BOOST_FORMAT_LIST(mtls_list);
-	pluginAttrs["ids_list"]  = BOOST_FORMAT_LIST_INT(ids_list);
+	const std::string & pluginName = GenPluginName(node, ntree, context);
+
+	PluginDesc mtlMultiDesc(pluginName, "MtlMulti", "Mtl@");
+	mtlMultiDesc.add("mtls_list", mtls_list);
+	mtlMultiDesc.add("ids_list", ids_list);
+	mtlMultiDesc.add("wrap_id", RNA_boolean_get(&node.ptr, "wrap_id"));
+
+	BL::NodeSocket mtlid_gen_sock  = Nodes::GetSocketByAttr(node, "mtlid_gen");
+	BL::NodeSocket mtlid_gen_float_sock = Nodes::GetSocketByAttr(node, "mtlid_gen_float");
+
 	if(mtlid_gen_sock.is_linked()) {
-		pluginAttrs["mtlid_gen"] = NodeExporter::exportLinkedSocket(ntree, mtlid_gen_sock, context);
+		mtlMultiDesc.add("mtlid_gen", exportLinkedSocket(ntree, mtlid_gen_sock, context));
+	} else if(mtlid_gen_float_sock.is_linked()) {
+		mtlMultiDesc.add("mtlid_gen_float", exportLinkedSocket(ntree, mtlid_gen_float_sock, context));
 	}
-	else if(mtlid_gen_float_sock.is_linked()) {
-		pluginAttrs["mtlid_gen_float"] = NodeExporter::exportLinkedSocket(ntree, mtlid_gen_float_sock, context);
-	}
-	pluginAttrs["wrap_id"] = BOOST_FORMAT_INT(RNA_boolean_get(&node.ptr, "wrap_id"));
 
-	VRayNodePluginExporter::exportPlugin("MATERIAL", "MtlMulti", pluginName, pluginAttrs);
-#endif
-	return AttrValue();
+	return m_exporter->export_plugin(mtlMultiDesc);
 }
 
 
