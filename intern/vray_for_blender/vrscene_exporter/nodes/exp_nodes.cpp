@@ -933,7 +933,8 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 				maName = VRayNodeExporter::exportLinkedSocket(ntree, materialInSock, context);
 
 				// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
-				if (!(VRayNodeExporter::getPluginType(conNode) == "MATERIAL")) {
+				const std::string &nodePluginType = VRayNodeExporter::getPluginType(conNode);
+				if (!nodePluginType.empty() && nodePluginType != "MATERIAL") {
 					AttributeValueMap mtlSingleBRDF;
 					mtlSingleBRDF["brdf"] = maName;
 
