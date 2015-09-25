@@ -33,7 +33,7 @@ std::string VRayNodeExporter::exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Nod
 	BL::NodeSocket mtlid_gen_sock  = VRayNodeExporter::getSocketByAttr(node, "mtlid_gen");
 	BL::NodeSocket mtlid_gen_float_sock = VRayNodeExporter::getSocketByAttr(node, "mtlid_gen_float");
 
-	for(int i = 1; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
+	for(int i = 0; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
 		std::string mtlSockName = boost::str(boost::format("Material %i") % i);
 
 		BL::NodeSocket mtlSock = VRayNodeExporter::getSocketByName(node, mtlSockName);
