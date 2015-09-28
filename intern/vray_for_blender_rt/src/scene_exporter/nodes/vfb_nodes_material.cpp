@@ -78,7 +78,7 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(VRayNodeExportParam)
 	AttrListPlugin mtls_list(0);
 	AttrListInt    ids_list(0);
 
-	for(int i = 0; i < CGR_MAX_LAYERED_BRDFS; ++i) {
+	for(int i = 0; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
 		const std::string &mtlSockName = boost::str(boost::format("Material %i") % i);
 
 		BL::NodeSocket mtlSock = Nodes::GetInputSocketByName(node, mtlSockName);
