@@ -16,36 +16,34 @@
  * limitations under the License.
  */
 #include "vfb_node_exporter.h"
+#include "vfb_utils_nodes.h"
 
-
-AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeLightMesh(VRayNodeExportParam)
 {
 	AttrValue attrValue;
 
-#if 0
-	if(NOT(context.object_context.ob)) {
+	auto ob = context.object_context.object;
+
+	if(!ob) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
-		return "NULL";
+		return attrValue;
 	}
 
-	BL::NodeSocket geomSock = NodeExporter::getSocketByName(node, "Geometry");
-	if(NOT(geomSock.is_linked())) {
+	BL::NodeSocket geomSock = Nodes::GetInputSocketByName(node, "Geometry");
+	if(!geomSock.is_linked()) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Geometry socket is not linked!",
 					ntree.name().c_str(), node.name().c_str());
 
-		return "NULL";
+		return attrValue;
 	}
 
-	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(context.object_context.ob->obmat, transform);
+	const auto pluginName = "MeshLight@" + GenPluginName(node, ntree, context);
+	PluginDesc pluginDesc(pluginName, "LightMesh");
+	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 
-	PluginDesc manualAttrs;
-	manualAttrs["geometry"]  = NodeExporter::exportLinkedSocket(ntree, geomSock, context);
-	manualAttrs["transform"] = BOOST_FORMAT_TM(transform);
+	pluginDesc.add("geometry", exportLinkedSocket(ntree, geomSock, context));
+	pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 
-	return NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, manualAttrs);
-#endif
-
-	return attrValue;
+	return m_exporter->export_plugin(pluginDesc);
 }
