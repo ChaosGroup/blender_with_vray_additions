@@ -18,42 +18,58 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_blender.h"
+
 #include <boost/format.hpp>
 
 
 AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(VRayNodeExportParam)
 {
 	AttrPlugin output_material;
-#if 0
-	if (!context.object_context.object) {
+	auto ob = context.object_context.object;
+
+	if (!ob) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
+		return output_material;
 	}
-	else {
-		PluginDesc pluginDesc;
+	const auto plName = this->GenPluginName(node, ntree, context);
 
-		std::string mtlName = Node::GetNodeMtlMulti(context.object_context.ob, context.object_context.mtlOverrideName, pluginDesc);
+	const int mtlCount = Blender::GetMaterialCount(ob);
 
-		// NOTE: Function could return only one material in 'mtlName'
-		if(pluginDesc.find("mtls_list") == pluginDesc.end())
-			return mtlName;
+	if (mtlCount > 1) {
+		AttrListPlugin mtls_list(mtlCount);
+		AttrListInt    ids_list(mtlCount);
 
-		std::string pluginName = NodeExporter::GenPluginName(node, ntree, context);
+		int maIdx   = 0;
+		int slotIdx = 0; // For cases with empty slots
+
+		BL::Object::material_slots_iterator slotIt;
+		for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
+			BL::Material ma((*slotIt).material());
+			if (ma) {
+				(*ids_list)[maIdx]  = slotIdx;
+				(*mtls_list)[maIdx] = exportMaterial(ma);
+				maIdx++;
+			}
+		}
+
+		PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
+		mtlMultiDesc.add("mtls_list", mtls_list);
+		mtlMultiDesc.add("ids_list", ids_list);
+		mtlMultiDesc.add("wrap_id", RNA_boolean_get(&node.ptr, "wrap_id"));
 
 		BL::NodeSocket mtlid_gen_float = Nodes::GetInputSocketByName(node, "ID Generator");
 		if(mtlid_gen_float.is_linked()) {
-			pluginDesc.add("mtlid_gen_float", NodeExporter::exportLinkedSocket(ntree, mtlid_gen_float, context));
+			mtlMultiDesc.add("mtlid_gen_float", exportLinkedSocket(ntree, mtlid_gen_float, context));
 
 			// NOTE: if 'ids_list' presents in the plugin description 'mtlid_gen_*' won't work
-			pluginDesc.del("ids_list");
+			mtlMultiDesc.del("ids_list");
 		}
-
-		pluginDesc["wrap_id"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&node.ptr, "wrap_id"));
-
-		output_material = m_exporter->export_plugin(pluginDesc);
+		return m_exporter->export_plugin(mtlMultiDesc);
+	} else {
+		return exportMtlMulti(ob);
 	}
-#endif
-	return output_material;
 }
 
 
