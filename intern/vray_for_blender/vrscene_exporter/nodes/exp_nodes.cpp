@@ -504,10 +504,9 @@ void VRayNodeExporter::exportLinkedSocketEx(BL::NodeTree ntree, BL::NodeSocket f
 				if (toNode.internal_links.length()) {
 					BL::NodeSocket rerouteInSock = toNode.internal_links[0].from_socket();
 					if (rerouteInSock) {
-						BL::NodeSocket conSock = VRayNodeExporter::getConnectedSocket(rerouteInSock);
-						if (conSock) {
-							VRayNodeExporter::exportLinkedSocketEx(ntree, conSock, context, expMode, outNode, outPlugin);
-						}
+						// NOTE: We using "rerouteInSock", because "exportLinkedSocketEx"
+						// accepts fromSocket and get the connected socket itself
+						VRayNodeExporter::exportLinkedSocketEx(ntree, rerouteInSock, context, expMode, outNode, outPlugin);
 					}
 				}
 			}
@@ -934,7 +933,8 @@ std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, 
 				maName = VRayNodeExporter::exportLinkedSocket(ntree, materialInSock, context);
 
 				// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
-				if (!(VRayNodeExporter::getPluginType(conNode) == "MATERIAL")) {
+				const std::string &nodePluginType = VRayNodeExporter::getPluginType(conNode);
+				if (!nodePluginType.empty() && nodePluginType != "MATERIAL") {
 					AttributeValueMap mtlSingleBRDF;
 					mtlSingleBRDF["brdf"] = maName;
 

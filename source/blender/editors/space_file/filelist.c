@@ -250,6 +250,7 @@ typedef struct FileListEntryCache {
 	GHash *uuids;
 
 	/* Previews handling. */
+	TaskScheduler *previews_scheduler;
 	TaskPool *previews_pool;
 	ThreadQueue *previews_todo;
 	ThreadQueue *previews_done;
@@ -1100,10 +1101,11 @@ static void filelist_cache_previewf(TaskPool *pool, void *taskdata, int UNUSED(t
 static void filelist_cache_preview_ensure_running(FileListEntryCache *cache)
 {
 	if (!cache->previews_pool) {
-		TaskScheduler *scheduler = BLI_task_scheduler_get();
+		TaskScheduler *scheduler;
 		TaskPool *pool;
-		int num_tasks = max_ii(2, BLI_system_thread_count() / 2);
+		int num_tasks = max_ii(1, (BLI_system_thread_count() / 2) + 1);
 
+		scheduler = cache->previews_scheduler = BLI_task_scheduler_create(num_tasks + 1);
 		pool = cache->previews_pool = BLI_task_pool_create(scheduler, NULL);
 		cache->previews_todo = BLI_thread_queue_init();
 		cache->previews_done = BLI_thread_queue_init();
@@ -1150,6 +1152,8 @@ static void filelist_cache_previews_free(FileListEntryCache *cache, const bool s
 		BLI_thread_queue_free(cache->previews_done);
 		BLI_thread_queue_free(cache->previews_todo);
 		BLI_task_pool_free(cache->previews_pool);
+		BLI_task_scheduler_free(cache->previews_scheduler);
+		cache->previews_scheduler = NULL;
 		cache->previews_pool = NULL;
 		cache->previews_todo = NULL;
 		cache->previews_done = NULL;
@@ -2162,11 +2166,10 @@ static unsigned int groupname_to_filter_id(const char *group)
 	return BKE_idcode_to_idfilter(id_code);
 }
 
-/*
- * From here, we are in 'Job Context', i.e. have to be careful about sharing stuff between bacground working thread
+/**
+ * From here, we are in 'Job Context', i.e. have to be careful about sharing stuff between background working thread
  * and main one (used by UI among other things).
  */
-
 typedef struct TodoDir {
 	int level;
 	char *dir;
@@ -2191,14 +2194,14 @@ static int filelist_readjob_list_dir(
 
 			entry = MEM_callocN(sizeof(*entry), __func__);
 			entry->relpath = MEM_dupallocN(files[i].relname);
-			if (S_ISDIR(files[i].s.st_mode)) {
-				entry->typeflag |= FILE_TYPE_DIR;
-			}
 			entry->st = files[i].s;
 
 			/* Set file type. */
-			/* If we are considering .blend files as libs, promote them to directory status! */
-			if (do_lib && BLO_has_bfile_extension(entry->relpath)) {
+			if (S_ISDIR(files[i].s.st_mode)) {
+				entry->typeflag = FILE_TYPE_DIR;
+			}
+			else if (do_lib && BLO_has_bfile_extension(entry->relpath)) {
+				/* If we are considering .blend files as libs, promote them to directory status. */
 				char name[FILE_MAX];
 
 				entry->typeflag = FILE_TYPE_BLENDER;

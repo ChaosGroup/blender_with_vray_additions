@@ -1562,8 +1562,8 @@ bool ED_screen_set(bContext *C, bScreen *sc)
 		}
 
 		/* Always do visible update since it's possible new screen will
-		 * have different layers visible in 3D viewpots. This is possible
-		 * because of view3d.lock_camera_and_layers option.
+		 * have different layers visible in 3D view-ports.
+		 * This is possible because of view3d.lock_camera_and_layers option.
 		 */
 		DAG_on_visible_update(bmain, false);
 	}
@@ -1791,6 +1791,8 @@ ScrArea *ED_screen_full_newspace(bContext *C, ScrArea *sa, int type)
  */
 void ED_screen_full_prevspace(bContext *C, ScrArea *sa, const bool was_prev_temp)
 {
+	BLI_assert(sa->full);
+
 	if (sa->flag & AREA_FLAG_STACKED_FULLSCREEN) {
 		/* stacked fullscreen -> only go back to previous screen and don't toggle out of fullscreen */
 		ED_area_prevspace(C, sa);
