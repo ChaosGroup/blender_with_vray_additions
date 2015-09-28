@@ -33,7 +33,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(VRayNodeExportParam)
 					ntree.name().c_str(), node.name().c_str());
 		return output_material;
 	}
-	const auto plName = this->GenPluginName(node, ntree, context);
+	const auto plName = GenPluginName(node, ntree, context);
 
 	const int mtlCount = Blender::GetMaterialCount(ob);
 
