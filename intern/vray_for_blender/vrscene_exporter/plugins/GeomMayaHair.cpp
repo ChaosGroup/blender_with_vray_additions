@@ -241,7 +241,7 @@ void GeomMayaHair::initData()
 	PointerRNA obRNA;
 	PointerRNA sceRNA;
 
-	RNA_id_pointer_create((ID*)psmd,  &psmdRNA);
+	RNA_pointer_create((ID*)psmd, &RNA_Modifier, psmd, &psmdRNA);
 	RNA_id_pointer_create((ID*)m_sce, &sceRNA);
 	RNA_id_pointer_create((ID*)m_ob,  &obRNA);
 
