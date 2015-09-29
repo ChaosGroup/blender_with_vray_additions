@@ -779,7 +779,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				// original object
 				overrideAttrs.visible = ob_is_duplicator_renderable(dupOb);
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-				overrideAttrs.id = reinterpret_cast<int>(dupOb.ptr.data);
+				overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
 
 				float inverted[4][4];
 				copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
@@ -840,7 +840,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 			ObjectOverridesAttrs overAttrs;
 
 			overAttrs.override = true;
-			overAttrs.id = reinterpret_cast<int>(ob.ptr.data);
+			overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
 			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			overAttrs.visible = ob_is_duplicator_renderable(ob);
 
