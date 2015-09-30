@@ -25,7 +25,7 @@ public:
 
 	void flush();
 
-	ExporterSettings::ExportFormat format() const { return m_Format; }
+	ExporterSettings::ExportFormat format() const { return m_format; }
 
 	PluginWriter &include(std::string);
 	std::string getName() const;
@@ -35,12 +35,12 @@ private:
 	bool doOpen();
 
 private:
-	std::string m_FileName;
-	FILE *m_File;
-	std::vector<char> m_Buff;
-	ExporterSettings::ExportFormat m_Format;
-	bool m_TryOpen;
-	std::set<std::string> m_Includes;
+	std::string m_fileName;
+	FILE *m_file;
+	std::vector<char> m_buff;
+	ExporterSettings::ExportFormat m_format;
+	bool m_tryOpen;
+	std::set<std::string> m_includeList;
 
 private:
 	PluginWriter(const PluginWriter&) = delete;

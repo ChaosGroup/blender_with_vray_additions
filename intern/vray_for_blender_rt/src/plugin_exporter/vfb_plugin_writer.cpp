@@ -9,62 +9,62 @@ using namespace VRayBaseTypes;
 namespace VRayForBlender {
 
 PluginWriter::PluginWriter(std::string fname, ExporterSettings::ExportFormat format)
-    : m_FileName(std::move(fname))
-    , m_File(nullptr)
-    , m_Buff(4096)
-    , m_Format(format)
-    , m_TryOpen(false)
+    : m_fileName(std::move(fname))
+    , m_file(nullptr)
+    , m_buff(4096)
+    , m_format(format)
+    , m_tryOpen(false)
 {
 }
 
 bool PluginWriter::doOpen()
 {
-	m_TryOpen = true;
-	if (!m_File) {
-		m_File = BLI_fopen(m_FileName.c_str(), "wb");
+	m_tryOpen = true;
+	if (!m_file) {
+		m_file = BLI_fopen(m_fileName.c_str(), "wb");
 	}
-	return m_File != nullptr;
+	return m_file != nullptr;
 }
 
 bool PluginWriter::good() const
 {
-	return !m_TryOpen || (m_TryOpen && (m_File != nullptr) && (ferror(m_File) == 0));
+	return !m_tryOpen || (m_tryOpen && (m_file != nullptr) && (ferror(m_file) == 0));
 }
 
 std::string PluginWriter::getName() const
 {
-	return fs::path(m_FileName).filename().string();
+	return fs::path(m_fileName).filename().string();
 }
 
 PluginWriter &PluginWriter::include(std::string name)
 {
 	if (name != getName() && !name.empty()) {
 		// dont include self
-		m_Includes.insert(std::move(name));
+		m_includeList.insert(std::move(name));
 	}
 	return *this;
 }
 
 void PluginWriter::flush()
 {
-	if (!m_Includes.empty()) {
+	if (!m_includeList.empty()) {
 		*this << "\n";
-		for (const auto &inc : m_Includes) {
+		for (const auto &inc : m_includeList) {
 			*this << "#include \"" << inc << "\"\n";
 		}
-		m_Includes.clear();
+		m_includeList.clear();
 	}
 	// check m_File ptr not this->good() since we need to flush the buffer
-	if (m_File) {
-		fflush(m_File);
+	if (m_file) {
+		fflush(m_file);
 	}
 }
 
 PluginWriter::~PluginWriter()
 {
 	flush();
-	if (m_File) {
-		fclose(m_File);
+	if (m_file) {
+		fclose(m_file);
 	}
 }
 
@@ -73,18 +73,18 @@ PluginWriter &PluginWriter::write(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	int len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
+	int len = vsnprintf(m_buff.data(), m_buff.size(), format, args);
 	va_end(args);
 
-	if (len > m_Buff.size()) {
-		m_Buff.resize(len + 1);
+	if (len > m_buff.size()) {
+		m_buff.resize(len + 1);
 
 		va_start(args, format);
-		len = vsnprintf(m_Buff.data(), m_Buff.size(), format, args);
+		len = vsnprintf(m_buff.data(), m_buff.size(), format, args);
 		va_end(args);
 	}
 
-	this->writeData(m_Buff.data(), len);
+	this->writeData(m_buff.data(), len);
 
 	return *this;
 }
@@ -97,7 +97,7 @@ PluginWriter &PluginWriter::writeStr(const char *str)
 PluginWriter &PluginWriter::writeData(const void *data, int size)
 {
 	if (doOpen()) {
-		fwrite(data, 1, size, m_File);
+		fwrite(data, 1, size, m_file);
 	}
 	return *this;
 }
