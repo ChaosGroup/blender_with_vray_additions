@@ -259,7 +259,8 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = Nodes::GetInputSocketByName(node, "Material");
 		if (!materialInSock.is_linked()) {
-			PRINT_ERROR("");
+			PRINT_ERROR("Node tree: %s => Node name: %s => Material socket is not linked!",
+			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
 			attrValue = exportLinkedSocket(ntree, materialInSock, context);
