@@ -76,7 +76,7 @@ static void python_thread_state_restore(void **python_thread_state)
 }
 
 
-static PyObject* PyExporterLoad(PyObject *self, PyObject *args)
+static PyObject* PyExporterLoad(PyObject*, PyObject *args)
 {
 	PRINT_INFO_EX("mExporterLoad()");
 
@@ -105,7 +105,7 @@ static PyObject* PyExporterLoad(PyObject *self, PyObject *args)
 }
 
 
-static PyObject* PyExporterUnload(PyObject *self)
+static PyObject* PyExporterUnload(PyObject*)
 {
 	PRINT_INFO_EX("mExporterUnload()");
 
@@ -120,7 +120,7 @@ static PyObject* PyExporterUnload(PyObject *self)
 }
 
 
-static PyObject* PyExporterInit(PyObject *self, PyObject *args)
+static PyObject* PyExporterInit(PyObject*, PyObject *args)
 {
 	PRINT_INFO_EX("mExporterInit()");
 
@@ -184,7 +184,7 @@ static PyObject* PyExporterInit(PyObject *self, PyObject *args)
 }
 
 
-static PyObject* PyExporterFree(PyObject *self, PyObject *value)
+static PyObject* PyExporterFree(PyObject*, PyObject *value)
 {
 	PRINT_INFO_EX("mExporterFree()");
 
@@ -194,7 +194,7 @@ static PyObject* PyExporterFree(PyObject *self, PyObject *value)
 }
 
 
-static PyObject* PyExporterExport(PyObject *self, PyObject *value)
+static PyObject* PyExporterExport(PyObject*, PyObject *value)
 {
 	PRINT_INFO_EX("mExporterExport()");
 
@@ -214,7 +214,7 @@ static PyObject* PyExporterExport(PyObject *self, PyObject *value)
 }
 
 
-static PyObject* PyExporterUpdate(PyObject *self, PyObject *value)
+static PyObject* PyExporterUpdate(PyObject*, PyObject *value)
 {
 	PRINT_INFO_EX("mExporterUpdate()");
 
@@ -230,7 +230,7 @@ static PyObject* PyExporterUpdate(PyObject *self, PyObject *value)
 }
 
 
-static PyObject* PyExporterDraw(PyObject *self, PyObject *args)
+static PyObject* PyExporterDraw(PyObject*, PyObject *args)
 {
 	// PRINT_INFO_EX("mExporterDraw()");
 
