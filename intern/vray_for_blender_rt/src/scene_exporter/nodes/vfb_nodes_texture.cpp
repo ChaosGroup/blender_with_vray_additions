@@ -23,7 +23,7 @@
 #include "vfb_utils_mesh.h"
 
 
-int DataExporter::fillBitmapAttributes(VRayNodeExportParam, PluginDesc &pluginDesc)
+int DataExporter::fillBitmapAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc)
 {
 	BL::Texture texture(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, "texture"));
 	if (texture) {
@@ -94,7 +94,7 @@ int DataExporter::fillBitmapAttributes(VRayNodeExportParam, PluginDesc &pluginDe
 }
 
 
-AttrValue DataExporter::exportVRayNodeBitmapBuffer(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	AttrValue plugin;
 
@@ -115,7 +115,7 @@ AttrValue DataExporter::exportVRayNodeBitmapBuffer(VRayNodeExportParam)
 }
 
 
-void DataExporter::fillRampAttributes(VRayNodeExportParam,
+void DataExporter::fillRampAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context,
                                       PluginDesc &pluginDesc,
                                       const std::string &texAttrName, const std::string &colAttrName, const std::string &posAttrName, const std::string &typesAttrName)
 {
@@ -172,7 +172,7 @@ void DataExporter::fillRampAttributes(VRayNodeExportParam,
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexEdges(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeTexEdges(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 	                      "TexEdges");
@@ -185,7 +185,7 @@ AttrValue DataExporter::exportVRayNodeTexEdges(VRayNodeExportParam)
 }
 
 
-AttrValue DataExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	AttrValue plugin;
 
@@ -279,7 +279,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(VRayNodeExportParam)
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexMulti(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
@@ -314,7 +314,7 @@ AttrValue DataExporter::exportVRayNodeTexMulti(VRayNodeExportParam)
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexLayered(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
@@ -366,7 +366,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(VRayNodeExportParam)
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexSky(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 #if 0
 	PluginDesc  attrs;
@@ -413,7 +413,7 @@ AttrValue DataExporter::exportVRayNodeTexSky(VRayNodeExportParam)
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexFalloff(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 #if 0
 	PluginDesc falloffTexAttrs;
@@ -450,7 +450,7 @@ AttrValue DataExporter::exportVRayNodeTexFalloff(VRayNodeExportParam)
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 	                      "TexMeshVertexColorChannel");

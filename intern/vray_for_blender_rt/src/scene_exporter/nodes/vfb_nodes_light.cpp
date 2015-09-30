@@ -18,7 +18,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 
-AttrValue DataExporter::exportVRayNodeLightMesh(VRayNodeExportParam)
+AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
 {
 	AttrValue attrValue;
 

@@ -135,7 +135,7 @@ void DataExporter::setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA 
 }
 
 
-void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType)
+void DataExporter::setAttrsFromNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType)
 {
 	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
 	PointerRNA                   propGroup       = RNA_pointer_get(&node.ptr, pluginID.c_str());
@@ -286,7 +286,7 @@ void DataExporter::setAttrsFromNode(VRayNodeExportParam, PluginDesc &pluginDesc,
 }
 
 
-void DataExporter::setAttrsFromNodeAuto(VRayNodeExportParam, PluginDesc &pluginDesc)
+void DataExporter::setAttrsFromNodeAuto(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc)
 {
 	const ParamDesc::PluginType &pluginType = DataExporter::GetNodePluginType(node);
 	const std::string           &pluginID   = DataExporter::GetNodePluginID(node);
