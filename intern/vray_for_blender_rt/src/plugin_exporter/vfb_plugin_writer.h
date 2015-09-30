@@ -16,12 +16,8 @@ namespace VRayForBlender {
 
 class PluginWriter {
 public:
-
 	PluginWriter(std::string fname, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
 	~PluginWriter();
-
-	PluginWriter(const PluginWriter &) = delete;
-	PluginWriter &operator=(const PluginWriter &) = delete;
 
 	PluginWriter &writeStr(const char *str);
 	PluginWriter &writeData(const void *data, int size);
@@ -36,16 +32,19 @@ public:
 	bool good() const;
 
 private:
-
 	bool doOpen();
 
 private:
-	std::set<std::string> m_Includes;
-	ExporterSettings::ExportFormat m_Format;
 	std::string m_FileName;
 	FILE *m_File;
 	std::vector<char> m_Buff;
+	ExporterSettings::ExportFormat m_Format;
 	bool m_TryOpen;
+	std::set<std::string> m_Includes;
+
+private:
+	PluginWriter(const PluginWriter&) = delete;
+	PluginWriter &operator=(const PluginWriter&) = delete;
 };
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val);
