@@ -228,7 +228,7 @@ AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const st
 }
 
 
-AttrValue DataExporter::exportVRayNodeAuto(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc)
+AttrValue DataExporter::exportVRayNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc)
 {
 	// Export attributes automatically from node
 	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
@@ -237,7 +237,7 @@ AttrValue DataExporter::exportVRayNodeAuto(BL::NodeTree ntree, BL::Node node, BL
 }
 
 
-AttrValue DataExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	AttrValue attrValue;
 

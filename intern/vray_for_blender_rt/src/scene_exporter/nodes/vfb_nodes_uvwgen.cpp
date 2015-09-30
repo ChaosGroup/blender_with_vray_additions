@@ -22,7 +22,7 @@
 #include "vfb_utils_mesh.h"
 
 
-AttrValue DataExporter::exportVRayNodeUVWGenChannel(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeUVWGenChannel(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 	                      "UVWGenChannel");
@@ -34,7 +34,7 @@ AttrValue DataExporter::exportVRayNodeUVWGenChannel(BL::NodeTree ntree, BL::Node
 }
 
 
-AttrValue DataExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	PointerRNA UVWGenEnvironment = RNA_pointer_get(&node.ptr, "UVWGenEnvironment");
 
@@ -49,7 +49,7 @@ AttrValue DataExporter::exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::
 }
 
 
-AttrValue DataExporter::exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 	                      "UVWGenMayaPlace2dTexture");

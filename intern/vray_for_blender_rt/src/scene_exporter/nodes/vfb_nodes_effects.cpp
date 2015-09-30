@@ -36,7 +36,7 @@ static BL::SmokeModifier GetSmokeModifier(BL::Object ob)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByName(node, "Domain");
 	if(domainSock && domainSock.is_linked()) {
@@ -80,7 +80,7 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree ntree, BL:
 }
 
 
-std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByName(node, "Domain");
 	if(domainSock && domainSock.is_linked()) {
@@ -184,7 +184,7 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 #endif
 
 
-AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	AttrListPlugin domains;
 
@@ -208,7 +208,7 @@ AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::No
 }
 
 
-AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	AttrValue plugin;
 
@@ -253,7 +253,7 @@ AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Nod
 
 
 #if 0
-std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+std::string VRayNodeExporter::exportVRayNodePhxShaderSimVol(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	PluginDesc pluginAttrs;
 	VRayNodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
@@ -272,7 +272,7 @@ static void MatchMayaFluid(std::string &name)
 }
 
 
-std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	const std::string &pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
 
@@ -365,7 +365,7 @@ std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL:
 #endif
 
 
-AttrValue DataExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	AttrValue plugin;
 
@@ -396,7 +396,7 @@ AttrValue DataExporter::exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::No
 }
 
 
-AttrValue DataExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeSphereFade(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	AttrListPlugin gizmos;
 
@@ -422,7 +422,7 @@ AttrValue DataExporter::exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node no
 }
 
 
-AttrValue DataExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 	                      "VolumeVRayToon");

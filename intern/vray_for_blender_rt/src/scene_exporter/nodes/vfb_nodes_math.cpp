@@ -24,7 +24,7 @@
 using namespace VRayForBlender;
 
 
-AttrValue DataExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeTransform(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	float tm[4][4];
 
@@ -74,7 +74,7 @@ AttrValue DataExporter::exportVRayNodeTransform(BL::NodeTree ntree, BL::Node nod
 }
 
 
-AttrValue DataExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeMatrix(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext&)
 {
 	float rot[3] = {0.0f, 0.0f, 0.0f};
 	float sca[3] = {0.0f, 0.0f, 0.0f};
@@ -107,7 +107,7 @@ AttrValue DataExporter::exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, 
 }
 
 
-AttrValue DataExporter::exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeVector(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext&)
 {
 	float vector[3] = {0.0f, 0.0f, 0.0f};
 	RNA_float_get_array(&node.ptr, "vector", vector);

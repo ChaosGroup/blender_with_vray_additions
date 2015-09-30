@@ -22,13 +22,13 @@
 using namespace VRayForBlender;
 
 
-BL::Object DataExporter::exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+BL::Object DataExporter::exportVRayNodeSelectObject(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext&)
 {
 	return Blender::GetObjectByName(m_data, RNA_std_string_get(&node.ptr, "objectName"));
 }
 
 
-BL::Group DataExporter::exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+BL::Group DataExporter::exportVRayNodeSelectGroup(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext&)
 {
 	BL::Group group(PointerRNA_NULL);
 
@@ -70,16 +70,19 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 
 void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 {
+	static BL::NodeTree   ntree(PointerRNA_NULL);
+	static BL::NodeSocket fromSocket(PointerRNA_NULL);
+
 	if (node.bl_idname() == "VRayNodeSelectObject") {
 		NodeContext ctx;
-		BL::Object ob = exportVRayNodeSelectObject(PointerRNA_NULL, node, PointerRNA_NULL, ctx);
+		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, ctx);
 		if (ob) {
 			obList.push_back(ob);
 		}
 	}
 	else if (node.bl_idname() == "VRayNodeSelectGroup") {
 		NodeContext ctx;
-		BL::Group group = exportVRayNodeSelectGroup(PointerRNA_NULL, node, PointerRNA_NULL, ctx);
+		BL::Group group = exportVRayNodeSelectGroup(ntree, node, fromSocket, ctx);
 		if (group) {
 			BL::Group::objects_iterator obIt;
 			for (group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {

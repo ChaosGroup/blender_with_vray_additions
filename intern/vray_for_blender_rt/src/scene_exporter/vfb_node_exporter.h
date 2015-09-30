@@ -242,13 +242,13 @@ public:
 	std::string                   getLightName(BL::Object ob);
 
 	void                          fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
-	void                          fillRampAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context,
+	void                          fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
 	                                                 PluginDesc &attrs,
 	                                                 const std::string &texAttrName,
 	                                                 const std::string &colAttrName,
 	                                                 const std::string &posAttrName,
 	                                                 const std::string &typesAttrName="");
-	int                           fillBitmapAttributes(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &attrs);
+	int                           fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &attrs);
 
 public:
 	DataExporter():
@@ -266,8 +266,8 @@ public:
 	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context);
 	void              init_defaults();
 
-	void              setAttrsFromNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
-	void              setAttrsFromNodeAuto(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc);
+	void              setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
+	void              setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
 	void              setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc);
 	void              setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID);
 
@@ -289,8 +289,8 @@ public:
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
 
-	AttrValue         exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeAuto(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context, PluginDesc &pluginDesc);
+	AttrValue         exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
 
 	AttrValue         exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context, bool dont_export=false);
 	AttrValue         exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
@@ -302,45 +302,45 @@ public:
 	static void       tag_ntree(BL::NodeTree ntree, bool updated=true);
 
 private:
-	BL::Object        exportVRayNodeSelectObject(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	BL::Group         exportVRayNodeSelectGroup(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
+	BL::Object        exportVRayNodeSelectObject(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	BL::Group         exportVRayNodeSelectGroup(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
-	AttrValue         exportVRayNodeBitmapBuffer(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeBlenderOutputMaterial(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeBRDFLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeBRDFVRayMtl(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeEnvFogMeshGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeEnvironmentFog(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeLightMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeMatrix(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeMetaImageTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeMetaStandardMaterial(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeMtlMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodePhxShaderSim(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodePhxShaderSimVol(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeRenderChannelColor(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeSphereFade(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeSphereFadeGizmo(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexEdges(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexFalloff(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexLayered(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexMayaFluid(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexMulti(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexSky(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexVoxelData(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeTransform(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeUVWGenChannel(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeUVWGenEnvironment(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeVector(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeVolumeVRayToon(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeBitmapBuffer(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeBRDFVRayMtl(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeMatrix(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodePhxShaderSim(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodePhxShaderSimVol(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeRenderChannelColor(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeSphereFade(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeSphereFadeGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexEdges(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexFalloff(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexMayaFluid(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexSky(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeTransform(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeUVWGenChannel(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeUVWGenEnvironment(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeUVWGenMayaPlace2dTexture(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeVector(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeVolumeVRayToon(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
-	AttrValue         exportBlenderNodeNormal(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context);
+	AttrValue         exportBlenderNodeNormal(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
 private:
 	BL::NodeSocket    getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket);

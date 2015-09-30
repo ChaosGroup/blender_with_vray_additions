@@ -21,7 +21,7 @@
 #include "vfb_utils_mesh.h"
 
 
-AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	AttrValue attrValue;
 
@@ -91,7 +91,7 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree, BL::
 }
 
 
-AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	AttrValue attrValue;
 
@@ -137,7 +137,7 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree ntree,
 }
 
 
-AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	AttrValue  attrValue;
 	BL::Object ob(context.object_context.object);

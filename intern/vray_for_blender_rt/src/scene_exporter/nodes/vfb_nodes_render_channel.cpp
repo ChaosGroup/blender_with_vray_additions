@@ -19,7 +19,7 @@
 #include "vfb_node_exporter.h"
 
 
-AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 #if 0
 	const std::string &pluginName = NodeExporter::GetPluginName(node, ntree, context);
@@ -36,7 +36,7 @@ AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree ntre
 }
 
 
-AttrValue DataExporter::exportVRayNodeRenderChannelColor(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeRenderChannelColor(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 #if 0
 	PluginDesc pluginAttrs;

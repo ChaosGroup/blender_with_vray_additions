@@ -372,10 +372,10 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 				BlFace faceVerts = faceIt->vertices_raw();
 
 				// Normals
-				float n0[3];
-				float n1[3];
-				float n2[3];
-				float n3[3];
+				float n0[3] = {0.0f, 0.0f, 0.0f};
+				float n1[3] = {0.0f, 0.0f, 0.0f};
+				float n2[3] = {0.0f, 0.0f, 0.0f};
+				float n3[3] = {0.0f, 0.0f, 0.0f};
 
 				if (useAutoSmooth) {
 					const BL::Array<float, 12> &autoNo = faceIt->split_normals();
