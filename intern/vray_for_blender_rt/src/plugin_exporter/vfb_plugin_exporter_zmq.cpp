@@ -148,7 +148,7 @@ RenderImage ZmqExporter::get_image() {
 	return img;
 }
 
-void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper * client) {
+void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue) {
 		switch (message.getValueType()) {
