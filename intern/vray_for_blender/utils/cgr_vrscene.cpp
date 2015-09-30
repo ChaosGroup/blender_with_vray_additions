@@ -101,7 +101,7 @@ static void int2hex(u_int32_t i, char *hex)
 }
 
 
-static void getStringHex(const u_int8_t *buf, unsigned nBytes, char *pstr)
+void getStringHex(const u_int8_t *buf, unsigned nBytes, char *pstr)
 {
     for(unsigned i = 0; i < nBytes; ++i) {
         char val0 = int2hexValue((buf[i]>>4)&0xF);
