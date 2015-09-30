@@ -107,8 +107,6 @@ void TexVoxelData::init(SmokeModifierData *smd)
 
 	initUvTransform();
 	initSmoke();
-
-	initHash();
 }
 
 
