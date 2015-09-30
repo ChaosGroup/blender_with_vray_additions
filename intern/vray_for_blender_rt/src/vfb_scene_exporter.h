@@ -165,13 +165,13 @@ public:
 	void                *m_pythonThreadState;
 
 protected:
+	BL::Context          m_context;
 	BL::RenderEngine     m_engine;
 	BL::BlendData        m_data;
 	BL::Scene            m_scene;
 	BL::SpaceView3D      m_view3d;
 	BL::RegionView3D     m_region3d;
 	BL::Region           m_region;
-	BL::Context          m_context;
 
 	PluginExporter      *m_exporter;
 	DataExporter         m_data_exporter;
