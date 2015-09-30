@@ -171,10 +171,10 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 		};
 
 		AttrListInt faces;
-		std::copy(facesData.begin(), facesData.end(), std::back_inserter(faces));
+		std::copy(facesData.begin(), facesData.end(), std::back_inserter(*faces.getData()));
 
 		AttrListVector vertices;
-		std::copy(verticesData.begin(), verticesData.end(), std::back_inserter(vertices));
+		std::copy(verticesData.begin(), verticesData.end(), std::back_inserter(*vertices.getData()));
 
 		smokeDomain.add("vertices", vertices);
 		smokeDomain.add("faces", faces);
