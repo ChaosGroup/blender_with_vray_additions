@@ -71,7 +71,7 @@ std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeC
 
 ParamDesc::PluginType DataExporter::GetNodePluginType(BL::Node node)
 {
-	ParamDesc::PluginType pluginType;
+	ParamDesc::PluginType pluginType = ParamDesc::PluginUnknown;
 
 	if (RNA_struct_find_property(&node.ptr, "vray_type")) {
 		pluginType = ParamDesc::GetPluginTypeFromString(RNA_std_string_get(&node.ptr, "vray_type"));
