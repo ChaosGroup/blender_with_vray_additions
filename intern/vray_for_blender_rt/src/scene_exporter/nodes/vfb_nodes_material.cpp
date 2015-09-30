@@ -23,7 +23,7 @@
 #include <boost/format.hpp>
 
 
-AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	AttrPlugin output_material;
 	auto ob = context.object_context.object;
@@ -73,7 +73,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree,
 }
 
 
-AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	AttrListPlugin mtls_list(0);
 	AttrListInt    ids_list(0);

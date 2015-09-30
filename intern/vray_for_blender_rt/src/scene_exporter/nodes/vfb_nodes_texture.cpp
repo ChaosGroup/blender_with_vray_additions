@@ -115,7 +115,7 @@ AttrValue DataExporter::exportVRayNodeBitmapBuffer(BL::NodeTree &ntree, BL::Node
 }
 
 
-void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
+void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &, NodeContext &context,
                                       PluginDesc &pluginDesc,
                                       const std::string &texAttrName, const std::string &colAttrName, const std::string &posAttrName, const std::string &typesAttrName)
 {

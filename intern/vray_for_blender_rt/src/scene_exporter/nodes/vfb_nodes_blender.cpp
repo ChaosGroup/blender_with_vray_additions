@@ -111,7 +111,7 @@ void DataExporter::fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, At
 }
 
 
-AttrValue DataExporter::exportBlenderNodeNormal(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportBlenderNodeNormal(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext&)
 {
 	BL::NodeSocket socket = Nodes::GetOutputSocketByName(node, "Normal");
 
