@@ -50,15 +50,9 @@ public:
 	TexVoxelData(Object *ob): m_ob(ob)
 	{
 		m_smd = NULL;
-
-		m_dens  = NULL;
-		m_flame = NULL;
-		m_fuel  = NULL;
-
 		p_interpolation = 0;
 	}
 
-	void               initHash();
 	void               initName(const std::string &name);
 	AttrValue          export_plugins(PluginExporter *exporter);
 
