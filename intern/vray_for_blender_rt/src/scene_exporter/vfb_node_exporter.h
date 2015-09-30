@@ -325,6 +325,7 @@ private:
 	AttrValue         exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeSphereFade(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeSphereFadeGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context);
 	AttrValue         exportVRayNodeTexEdges(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeTexFalloff(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);

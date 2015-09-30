@@ -19,9 +19,11 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
+#include "vfb_export_texvoxel.h"
+#include "vfb_utils_mesh.h"
 
+#include <algorithm>
 
-#if 0
 
 static BL::SmokeModifier GetSmokeModifier(BL::Object ob)
 {
@@ -35,6 +37,7 @@ static BL::SmokeModifier GetSmokeModifier(BL::Object ob)
 	return PointerRNA_NULL;
 }
 
+#if 0
 
 std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
@@ -78,20 +81,21 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree &ntree, BL
 
 	return "NULL";
 }
+#endif
 
-
-std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
-	BL::NodeSocket domainSock = VRayNodeExporter::getSocketByName(node, "Domain");
+	AttrValue voxel;
+	BL::NodeSocket domainSock = Nodes::GetInputSocketByName(node, "Domain");
 	if(domainSock && domainSock.is_linked()) {
-		BL::Node domainNode = VRayNodeExporter::getConnectedNode(domainSock, context);
+		BL::Node domainNode = Nodes::GetConnectedNode(domainSock);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
 				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
 			}
 			else {
-				BL::Object domainOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, domainNode, domainSock, context);
-				if(domainOb && VRayNodeExporter::isObjectVisible(domainOb)) {
+				BL::Object domainOb = exportVRayNodeSelectObject(ntree, domainNode, domainSock, context);
+				if(domainOb && isObjectVisible(domainOb)) {
 					BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
 					// This is a smoke simulation and we need to export smoke data
@@ -101,87 +105,121 @@ std::string VRayNodeExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL
 					else {
 						PointerRNA texVoxelData = RNA_pointer_get(&node.ptr, "TexVoxelData");
 
-						std::string pluginName    = VRayNodeExporter::getPluginName(node, ntree, context);
+						std::string pluginName    = GenPluginName(node, ntree, context);
 						int         interpolation = RNA_enum_get(&texVoxelData, "interpolation");
 
-						if (ExporterSettings::gSet.m_exportSmoke) {
-							ExportTexVoxelData(ExporterSettings::gSet.m_fileGeom,
-											   ExporterSettings::gSet.m_sce,
-											   (Object*)domainOb.ptr.data,
-											   (SmokeModifierData*)smokeMod.ptr.data,
-											   pluginName.c_str(),
-											   interpolation);
-						}
+						if (m_settings.export_fluids) {
+							TexVoxelData texVoxelData((Object*)domainOb.ptr.data);
+							texVoxelData.initName(pluginName);
+							texVoxelData.init((SmokeModifierData*)smokeMod.ptr.data);
+							texVoxelData.setInterpolation(interpolation);
 
-						return pluginName;
+							return texVoxelData.export_plugins(m_exporter);
+						}
 					}
 				}
 			}
 		}
 	}
 
-	return "NULL";
+	return voxel;
 }
 
 
-static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context)
 {
 	BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
-	std::string pluginName = VRayNodeExporter::getPluginName(node, ntree, context);
+	std::string pluginName = GenPluginName(node, ntree, context);
+	AttrValue smoke;
 
-	// This is a smoke simulation
-	if(smokeMod) {
-		std::string lightsList;
-		BL::NodeSocket lightsSock = VRayNodeExporter::getSocketByName(node, "Lights");
-		if(lightsSock && lightsSock.is_linked()) {
-			BL::Node lightsNode = VRayNodeExporter::getConnectedNode(lightsSock, context);
-			if(lightsNode) {
-				if(lightsNode.bl_idname() == "VRayNodeSelectObject" || lightsNode.bl_idname() == "VRayNodeSelectGroup") {
-					lightsList = VRayNodeExporter::exportVRayNode(ntree, lightsNode, lightsSock, context);
+	AttrValue lightsList;
+	bool hasLights = false;
+	BL::NodeSocket lightsSock = Nodes::GetInputSocketByName(node, "Lights");
+	if(lightsSock && lightsSock.is_linked()) {
+		BL::Node lightsNode = Nodes::GetConnectedNode(lightsSock);
+		if(lightsNode) {
+			if(lightsNode.bl_idname() == "VRayNodeSelectObject" || lightsNode.bl_idname() == "VRayNodeSelectGroup") {
+				hasLights = true;
+				lightsList = exportVRayNode(ntree, lightsNode, lightsSock, context);
 
-					// NOTE: Attribute expects list even only one object is selected
-					if(lightsNode.bl_idname() == "VRayNodeSelectObject") {
-						lightsList = "List(" + lightsList + ")";
-					}
+				// NOTE: Attribute expects list even only one object is selected
+				if(lightsNode.bl_idname() == "VRayNodeSelectObject") {
+					AttrListPlugin list(1);
+					(*list)[0] = lightsList;
+					lightsList = list;
 				}
 			}
 		}
+	}
 
-		ExportSmokeDomain(ExporterSettings::gSet.m_fileGeom,
-						  ExporterSettings::gSet.m_sce,
-						  (Object*)domainOb.ptr.data,
-						  (SmokeModifierData*)smokeMod.ptr.data,
-						  pluginName.c_str(),
-						  lightsList.c_str());
+	// This is a smoke simulation
+	if(smokeMod) {
+		PluginDesc smokeDomain("Geom" + pluginName, "GeomStaticMesh");
+
+		// box 2x2x2 with 0,0,0 for center
+		static const auto facesData = {2, 0, 1, 2, 1, 3, 3, 7, 6, 3, 6, 2, 7, 5, 4, 7, 4, 6, 0, 4, 5, 0, 5, 1, 0, 2, 6, 0, 6, 4, 5, 7, 3, 5, 3, 1};
+		static const auto verticesData = {
+			AttrVector(-1, -1, -1),
+			AttrVector(-1, -1, 1),
+			AttrVector(-1, 1, -1),
+			AttrVector(-1, 1, 1),
+			AttrVector(1, -1, -1),
+			AttrVector(1, -1, 1),
+			AttrVector(1, 1, -1),
+			AttrVector(1, 1, 1)
+		};
+
+		AttrListInt faces;
+		std::copy(facesData.begin(), facesData.end(), std::back_inserter(faces));
+
+		AttrListVector vertices;
+		std::copy(verticesData.begin(), verticesData.end(), std::back_inserter(vertices));
+
+		smokeDomain.add("vertices", vertices);
+		smokeDomain.add("faces", faces);
+
+		m_exporter->export_plugin(smokeDomain);
+
 	}
 	// This is just a container - export as mesh
 	else {
 		std::string geomPluginName = pluginName + "@Domain";
 
-		ExportGeomStaticMesh(ExporterSettings::gSet.m_fileGeom,
-							 ExporterSettings::gSet.m_sce,
-							 (Object*)domainOb.ptr.data,
-							 ExporterSettings::gSet.m_main,
-							 geomPluginName.c_str(),
-							 NULL);
+		PluginDesc geomDesc(geomPluginName, "GeomStaticMesh");
 
-		char transform[CGR_TRANSFORM_HEX_SIZE];
-		GetTransformHex(((Object*)domainOb.ptr.data)->obmat, transform);
+		VRayForBlender::Mesh::ExportOptions options;
+		options.merge_channel_vertices = false;
+		options.mode = m_evalMode;
 
-		PluginDesc pluginAttrs;
-		pluginAttrs["geometry"]  = geomPluginName;
-		pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
+		int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, domainOb, options, geomDesc);
+		if (err) {
+			return smoke;
+		}
 
-		VRayNodePluginExporter::exportPlugin("EFFECT", "EnvFogMeshGizmo", pluginName, pluginAttrs);
+		AttrValue geom = m_exporter->export_plugin(geomDesc);
+
+		PluginDesc fogMesh(pluginName, "EnvFogMeshGizmo");
+
+		PointerRNA EnvFogMeshGizmo = RNA_pointer_get(&node.ptr, "EnvFogMeshGizmo");
+
+		fogMesh.add("geometry", geom);
+		fogMesh.add("transform", AttrTransformFromBlTransform(((Object*)domainOb.ptr.data)->obmat));
+		fogMesh.add("fade_out_radius", RNA_float_get(&EnvFogMeshGizmo, "fade_out_radius"));
+
+		if (hasLights) {
+			fogMesh.add("lights", lightsList);
+		}
+
+		smoke = m_exporter->export_plugin(fogMesh);
 	}
 
 	// Exclude object from Node creation
-	ExporterSettings::gSet.m_exporter->addSkipObject(domainOb.ptr.data);
+	//ExporterSettings::gSet.m_exporter->addSkipObject(domainOb.ptr.data);
 
-	return pluginName;
+	return smoke;
 }
-#endif
+
 
 
 AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext &context)
