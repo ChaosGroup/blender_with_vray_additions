@@ -156,13 +156,12 @@ struct PluginDesc {
 		return nullptr;
 	}
 
-
-	void add(const PluginAttr &attr, const float &time = 0.0f) {
+	void add(const PluginAttr &attr) {
 		pluginAttrs[attr.attrName] = attr;
 	}
 
-	void add(const std::string &attrName, const AttrValue &attrValue, const float &time = 0.0f) {
-		add(PluginAttr(attrName, attrValue), time);
+	void add(const std::string &attrName, const AttrValue &attrValue, const float &time=0.0f) {
+		add(PluginAttr(attrName, attrValue, time));
 	}
 
 	void del(const std::string &attrName) {
