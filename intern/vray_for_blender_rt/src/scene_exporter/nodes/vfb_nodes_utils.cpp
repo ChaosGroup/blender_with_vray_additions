@@ -53,7 +53,7 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 	AttrListPlugin pluginList;
 
 	if (!group) {
-		PRINT_ERROR("");
+		PRINT_ERROR("Not a valid Group node!");
 	}
 	else {
 		BL::Group::objects_iterator obIt;
