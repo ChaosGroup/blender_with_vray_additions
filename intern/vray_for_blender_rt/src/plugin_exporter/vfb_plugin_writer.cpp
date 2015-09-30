@@ -28,7 +28,7 @@ bool PluginWriter::doOpen()
 
 bool PluginWriter::good() const
 {
-	return !m_TryOpen || m_TryOpen && m_File != nullptr && ferror(m_File) == 0;
+	return !m_TryOpen || (m_TryOpen && (m_File != nullptr) && (ferror(m_File) == 0));
 }
 
 std::string PluginWriter::getName() const
