@@ -8,6 +8,29 @@ using namespace VRayBaseTypes;
 
 namespace VRayForBlender {
 
+struct TraceTransformHex {
+	TraceTransformHex(AttrTransform tm) {
+		m[0][0] = tm.m.v0.x;
+		m[0][1] = tm.m.v0.y;
+		m[0][2] = tm.m.v0.z;
+
+		m[1][0] = tm.m.v1.x;
+		m[1][1] = tm.m.v1.y;
+		m[1][2] = tm.m.v1.z;
+
+		m[2][0] = tm.m.v2.x;
+		m[2][1] = tm.m.v2.y;
+		m[2][2] = tm.m.v2.z;
+
+		v[0] = tm.offs.x;
+		v[1] = tm.offs.y;
+		v[2] = tm.offs.z;
+	}
+
+	float  m[3][3];
+	double v[3];
+};
+
 PluginWriter::PluginWriter(std::string fname, ExporterSettings::ExportFormat format)
     : m_fileName(std::move(fname))
     , m_file(nullptr)
@@ -149,7 +172,19 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrMatrix &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrTransform &val)
 {
-	return pp << "Transform(" << val.m << "," << val.offs << ")";
+	if (pp.format() == ExporterSettings::ExportFormatASCII) {
+		pp << "Transform(" << val.m << "," << val.offs << ")";
+	}
+	else {
+		static char tmBuf[CGR_TRANSFORM_HEX_SIZE];
+		TraceTransformHex tm(val);
+
+		const u_int8_t *tm8 = (const u_int8_t*)&tm;
+		getStringHex(tm8, sizeof(TraceTransformHex), tmBuf);
+
+		pp << "TransformHex(\"" << tmBuf << "\")";
+	}
+	return pp;
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrPlugin &val)
