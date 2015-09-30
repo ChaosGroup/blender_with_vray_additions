@@ -19,11 +19,22 @@
 #ifndef CGR_UTIL_DEFINES_H
 #define CGR_UTIL_DEFINES_H
 
-#define FreePtr(p)    if (p) { delete    p; p = nullptr; }
-#define FreePtrArr(p) if (p) { delete [] p; p = nullptr; }
+template<typename T>
+inline void FreePtr(T *&p) {
+	delete p;
+	p = NULL;
+}
+
+template<typename T>
+inline void FreePtrArr(T *&p) {
+	delete [] p;
+	p = NULL;
+}
 
 template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
 #define ArraySize(array) (sizeof(ArraySizeHelper(array)))
+
+#define MemberEq(member) (member == other.member)
 
 #endif // CGR_UTIL_DEFINES_H
