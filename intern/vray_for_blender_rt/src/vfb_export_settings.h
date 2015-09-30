@@ -121,7 +121,7 @@ struct ExporterSettings {
 	};
 
 	enum WorkMode {
-		WorkModeRender,
+		WorkModeRender = 0,
 		WorkModeRenderAndExport,
 		WorkModeExportOnly,
 	};
