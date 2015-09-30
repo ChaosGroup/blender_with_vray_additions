@@ -125,7 +125,7 @@ struct IdCache {
 	}
 
 	int contains(int id) {
-		return m_data.find((void*)id) != m_data.end();
+		return m_data.find((void*)(intptr_t)id) != m_data.end();
 	}
 
 	void insert(BL::ID id) {
@@ -133,7 +133,7 @@ struct IdCache {
 	}
 
 	void insert(int id) {
-		m_data.insert((void*)id);
+		m_data.insert((void*)(intptr_t)id);
 	}
 
 	void clear() {
