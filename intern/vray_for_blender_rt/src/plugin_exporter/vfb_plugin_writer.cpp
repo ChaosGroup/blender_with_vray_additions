@@ -8,12 +8,12 @@ using namespace VRayBaseTypes;
 
 namespace VRayForBlender {
 
-PluginWriter::PluginWriter(std::string fname, ExporterSettings::ExportFormat format):
-	m_FileName(std::move(fname)),
-	m_Buff(4096),
-	m_File(nullptr),
-	m_Format(format),
-	m_TryOpen(false)
+PluginWriter::PluginWriter(std::string fname, ExporterSettings::ExportFormat format)
+    : m_FileName(std::move(fname))
+    , m_File(nullptr)
+    , m_Buff(4096)
+    , m_Format(format)
+    , m_TryOpen(false)
 {
 }
 
