@@ -23,7 +23,6 @@
 #include "vfb_export_texvoxel.h"
 #include "BLI_math.h"
 #include "smoke_API.h"
-#include "DNA_object_types.h"
 
 #define CGR_USE_SMOKE_DATA_DEBUG  0
 

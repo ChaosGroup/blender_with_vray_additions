@@ -28,7 +28,9 @@
 #include "vfb_typedefs.h"
 #include "vfb_params_desc.h"
 
+#include "DNA_object_types.h"
 #include "DNA_ID.h"
+
 #include <map>
 #include <memory>
 
@@ -45,7 +47,7 @@ namespace VRayForBlender {
 
 class TexVoxelData {
 public:
-	TexVoxelData(Scene *scene, Main *main, Object *ob): m_ob(ob)
+	TexVoxelData(Object *ob): m_ob(ob)
 	{
 		m_smd = NULL;
 
