@@ -60,6 +60,21 @@ struct ViewParams {
 		    clip_end(1.0f)
 		{}
 
+		bool operator == (const RenderView &other) const {
+			return (MemberEq(fov) &&
+			        MemberEq(ortho) &&
+			        MemberEq(ortho_width) &&
+			        MemberEq(use_clip_start) &&
+			        MemberEq(clip_start) &&
+			        MemberEq(use_clip_end) &&
+			        MemberEq(clip_end) &&
+			        (memcmp(tm.data, other.tm.data, sizeof(BlTransform)) == 0));
+		}
+
+		bool operator != (const RenderView &other) const {
+			return !(*this == other);
+		}
+
 		float        fov;
 		BlTransform  tm;
 
@@ -73,7 +88,7 @@ struct ViewParams {
 	} render_view;
 
 	int params_changed(const ViewParams &other) {
-		const bool differs = (memcmp(&render_view, &other.render_view, sizeof(RenderView)) != 0);
+		const bool differs = (render_view != other.render_view);
 		if (differs) {
 			render_view = other.render_view;
 		}
