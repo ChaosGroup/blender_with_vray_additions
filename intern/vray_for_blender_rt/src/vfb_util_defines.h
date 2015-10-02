@@ -22,13 +22,13 @@
 template<typename T>
 inline void FreePtr(T *&p) {
 	delete p;
-	p = NULL;
+	p = nullptr;
 }
 
 template<typename T>
 inline void FreePtrArr(T *&p) {
 	delete [] p;
-	p = NULL;
+	p = nullptr;
 }
 
 template <typename T, size_t N>
@@ -36,5 +36,6 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 #define ArraySize(array) (sizeof(ArraySizeHelper(array)))
 
 #define MemberEq(member) (member == other.member)
+#define MemberNotEq(member) (!(member == other.member))
 
 #endif // CGR_UTIL_DEFINES_H

@@ -35,6 +35,11 @@ void DataExporter::exportVRayEnvironment(NodeContext &context)
 		worldScene = m_scene;
 	}
 
+	if (!worldScene) {
+		PRINT_WARN("Invalid world context!");
+		return;
+	}
+
 	BL::World world = worldScene.world();
 	if (!world) {
 		PRINT_WARN("Scene doesn't contain a \"World\" datablock!");

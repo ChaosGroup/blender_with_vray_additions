@@ -73,6 +73,8 @@ public:
 	virtual void         set_callback_on_image_ready(ExpoterCallback cb);
 	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb);
 
+	virtual void         set_camera_plugin(const std::string &pluginName) override;
+
 private:
 	void                 reset_used();
 

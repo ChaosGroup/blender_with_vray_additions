@@ -28,39 +28,9 @@
 #include "vfb_specialised_exporter.h"
 #include "vfb_params_json.h"
 
-#include "DNA_material_types.h"
-#include "BLI_math.h"
-#include "BKE_context.h"
-#include "WM_api.h"
-#include "WM_types.h"
-
-extern "C" {
-#  include "BKE_idprop.h"
-#  include "mathutils/mathutils.h"
-}
-
-/* OpenGL header includes, used everywhere we use OpenGL, to deal with
- * platform differences in one central place. */
-
-#ifdef WITH_GLEW_MX
-#  include "glew-mx.h"
-#else
-#  include <GL/glew.h>
-#  define mxCreateContext() glewInit()
-#  define mxMakeCurrentContext(x) (x)
-#endif
-
 #ifdef USE_BLENDER_VRAY_APPSDK
 static VRay::VRayInit *VRayInit = nullptr;
 #endif
-
-
-static void *pylong_as_voidptr_typesafe(PyObject *object)
-{
-	if(object == Py_None)
-		return NULL;
-	return PyLong_AsVoidPtr(object);
-}
 
 
 static void python_thread_state_save(void **python_thread_state)
@@ -76,9 +46,21 @@ static void python_thread_state_restore(void **python_thread_state)
 }
 
 
-static PyObject* PyExporterLoad(PyObject*, PyObject *args)
+static VRayForBlender::SceneExporter *vfb_cast_exporter(PyObject *value)
 {
-	PRINT_INFO_EX("mExporterLoad()");
+	VRayForBlender::SceneExporter *exporter = nullptr;
+
+	if (value != Py_None) {
+		exporter = reinterpret_cast<VRayForBlender::SceneExporter*>(PyLong_AsVoidPtr(value));
+	}
+
+	return exporter;
+}
+
+
+static PyObject* vfb_load(PyObject*, PyObject *args)
+{
+	PRINT_INFO_EX("vfb_load()");
 
 #ifdef USE_BLENDER_VRAY_APPSDK
 	if (!VRayInit) {
@@ -94,7 +76,7 @@ static PyObject* PyExporterLoad(PyObject*, PyObject *args)
 #endif
 
 	char *jsonDirpath = NULL;
-	if (NOT(PyArg_ParseTuple(args, "s", &jsonDirpath))) {
+	if (!PyArg_ParseTuple(args, "s", &jsonDirpath)) {
 		PRINT_ERROR("PyArg_ParseTuple");
 	}
 	else {
@@ -105,78 +87,58 @@ static PyObject* PyExporterLoad(PyObject*, PyObject *args)
 }
 
 
-static PyObject* PyExporterUnload(PyObject*)
+static PyObject* vfb_unload(PyObject*)
 {
-	PRINT_INFO_EX("mExporterUnload()");
+	PRINT_INFO_EX("vfb_unload()");
 
 #ifdef USE_BLENDER_VRAY_APPSDK
-	if (VRayInit) {
-		delete VRayInit;
-		VRayInit = nullptr;
-	}
+	FreePtr(VRayInit);
 #endif
 
 	Py_RETURN_NONE;
 }
 
 
-static PyObject* PyExporterInit(PyObject*, PyObject *args)
+static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 {
-	PRINT_INFO_EX("mExporterInit()");
+	PRINT_INFO_EX("vfb_init()");
 
-	PyObject *pycontext  = nullptr;
-	PyObject *pyengine   = nullptr;
-	PyObject *pydata     = nullptr;
-	PyObject *pyscene    = nullptr;
-	PyObject *pyregion   = nullptr;
-	PyObject *pyv3d      = nullptr;
-	PyObject *pyrv3d     = nullptr;
-	PyObject *isViewport = nullptr;
-
-	if(!PyArg_ParseTuple(args, "OOOOOOOO", &pycontext, &pyengine, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d, &isViewport)) {
-		return NULL;
-	}
-
-	// Create RNA pointers
-	PointerRNA contextPtr;
-	RNA_pointer_create(NULL, &RNA_Context, (void*)PyLong_AsVoidPtr(pyengine), &contextPtr);
-	BL::Context context(contextPtr);
-
-	PointerRNA engineptr;
-	RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(pyengine), &engineptr);
-	BL::RenderEngine engine(engineptr);
-
-	PointerRNA dataptr;
-	RNA_main_pointer_create((Main*)PyLong_AsVoidPtr(pydata), &dataptr);
-	BL::BlendData data(dataptr);
-
-	PointerRNA sceneptr;
-	RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyscene), &sceneptr);
-	BL::Scene scene(sceneptr);
-
-	PointerRNA regionptr;
-	RNA_pointer_create(NULL, &RNA_Region, pylong_as_voidptr_typesafe(pyregion), &regionptr);
-	BL::Region region(regionptr);
-
-	PointerRNA v3dptr;
-	RNA_pointer_create(NULL, &RNA_SpaceView3D, pylong_as_voidptr_typesafe(pyv3d), &v3dptr);
-	BL::SpaceView3D v3d(v3dptr);
-
-	PointerRNA rv3dptr;
-	RNA_pointer_create(NULL, &RNA_RegionView3D, pylong_as_voidptr_typesafe(pyrv3d), &rv3dptr);
-	BL::RegionView3D rv3d(rv3dptr);
-
-	// Create exporter
-	bool viewport = PyObject_IsTrue(isViewport);
 	VRayForBlender::SceneExporter *exporter = nullptr;
 
-	if (viewport) {
-		exporter = new VRayForBlender::InteractiveExporter(context, engine, data, scene, v3d, rv3d, region);
-	} else {
-		exporter = new VRayForBlender::ProductionExporter(context, engine, data, scene, v3d, rv3d, region);
-	}
+	PyObject *pyContext = nullptr;
+	PyObject *pyEngine = nullptr;
+	PyObject *pyData = nullptr;
+	PyObject *pyScene = nullptr;
 
-	if (exporter) {
+	static char *kwlist[] = {
+	    /* 0 */_C("context"),
+	    /* 1 */_C("engine"),
+	    /* 2 */_C("data"),
+	    /* 3 */_C("scene"),
+	    NULL
+	};
+
+	//                                 012345678911
+	//                                           01
+	static const char kwlistTypes[] = "OOOO";
+
+	if (PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
+	                                /* 0 */ &pyContext,
+	                                /* 1 */ &pyEngine,
+	                                /* 2 */ &pyData,
+	                                /* 3 */ &pyScene))
+	{
+		PointerRNA contextPtr;
+		PointerRNA enginePtr;
+		PointerRNA dataPtr;
+		PointerRNA scenePtr;
+
+		RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyContext), &contextPtr);
+		RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(pyEngine), &enginePtr);
+		RNA_main_pointer_create((Main*)PyLong_AsVoidPtr(pyData), &dataPtr);
+		RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyScene), &scenePtr);
+
+		exporter = new VRayForBlender::ProductionExporter(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
 		exporter->init();
 	}
 
@@ -184,66 +146,104 @@ static PyObject* PyExporterInit(PyObject*, PyObject *args)
 }
 
 
-static PyObject* PyExporterFree(PyObject*, PyObject *value)
+static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 {
-	PRINT_INFO_EX("mExporterFree()");
+	PRINT_INFO_EX("vfb_init_rt()");
 
-	delete (VRayForBlender::SceneExporter*)PyLong_AsVoidPtr(value);
+	VRayForBlender::SceneExporter *exporter = nullptr;
+
+	PyObject *pyContext = nullptr;
+	PyObject *pyEngine = nullptr;
+	PyObject *pyData = nullptr;
+	PyObject *pyScene = nullptr;
+
+	static char *kwlist[] = {
+	    /* 0 */_C("context"),
+	    /* 1 */_C("engine"),
+	    /* 2 */_C("data"),
+	    /* 3 */_C("scene"),
+	    NULL
+	};
+
+	//                                 012345678911
+	//                                           01
+	static const char kwlistTypes[] = "OOOO";
+
+	if (PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
+	                                /* 0 */ &pyContext,
+	                                /* 1 */ &pyEngine,
+	                                /* 2 */ &pyData,
+	                                /* 3 */ &pyScene))
+	{
+		PointerRNA contextPtr;
+		PointerRNA enginePtr;
+		PointerRNA dataPtr;
+		PointerRNA scenePtr;
+
+		RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyContext), &contextPtr);
+		RNA_pointer_create(NULL, &RNA_RenderEngine, (void*)PyLong_AsVoidPtr(pyEngine), &enginePtr);
+		RNA_main_pointer_create((Main*)PyLong_AsVoidPtr(pyData), &dataPtr);
+		RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyScene), &scenePtr);
+
+		exporter = new VRayForBlender::InteractiveExporter(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
+		exporter->init();
+		exporter->do_export();
+	}
+
+	return PyLong_FromVoidPtr(exporter);
+}
+
+
+
+static PyObject* vfb_free(PyObject*, PyObject *value)
+{
+	PRINT_INFO_EX("vfb_free()");
+
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		FreePtr(exporter);
+	}
 
 	Py_RETURN_NONE;
 }
 
 
-static PyObject* PyExporterExport(PyObject*, PyObject *value)
+static PyObject* vfb_update(PyObject*, PyObject *value)
 {
-	PRINT_INFO_EX("mExporterExport()");
+	PRINT_INFO_EX("vfb_update()");
 
-	VRayForBlender::SceneExporter *exporter = (VRayForBlender::SceneExporter*)PyLong_AsVoidPtr(value);
-
-	python_thread_state_save(&exporter->m_pythonThreadState);
-
-	bool success = exporter->do_export();
-
-	python_thread_state_restore(&exporter->m_pythonThreadState);
-
-	if (success) {
-		Py_RETURN_TRUE;
-	} else {
-		Py_RETURN_FALSE;
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		python_thread_state_save(&exporter->m_pythonThreadState);
+		exporter->do_export();
+		python_thread_state_restore(&exporter->m_pythonThreadState);
 	}
-}
-
-
-static PyObject* PyExporterUpdate(PyObject*, PyObject *value)
-{
-	PRINT_INFO_EX("mExporterUpdate()");
-
-	VRayForBlender::SceneExporter *exporter = (VRayForBlender::SceneExporter*)PyLong_AsVoidPtr(value);
-
-	python_thread_state_save(&exporter->m_pythonThreadState);
-
-	exporter->sync(true);
-
-	python_thread_state_restore(&exporter->m_pythonThreadState);
 
 	Py_RETURN_NONE;
 }
 
 
-static PyObject* PyExporterDraw(PyObject*, PyObject *args)
+static PyObject* vfb_view_update(PyObject*, PyObject *value)
 {
-	// PRINT_INFO_EX("mExporterDraw()");
+	PRINT_INFO_EX("vfb_view_update()");
 
-	PyObject *pysession = nullptr;
-	PyObject *pyv3d     = nullptr;
-	PyObject *pyrv3d    = nullptr;
-
-	if (!PyArg_ParseTuple(args, "OOO", &pysession, &pyv3d, &pyrv3d)) {
-		return NULL;
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		python_thread_state_save(&exporter->m_pythonThreadState);
+		exporter->sync(true);
+		python_thread_state_restore(&exporter->m_pythonThreadState);
 	}
 
-	if (pylong_as_voidptr_typesafe(pyrv3d)) {
-		VRayForBlender::SceneExporter *exporter = (VRayForBlender::SceneExporter*)PyLong_AsVoidPtr(pysession);
+	Py_RETURN_NONE;
+}
+
+
+static PyObject* vfb_view_draw(PyObject*, PyObject *value)
+{
+	// PRINT_INFO_EX("vfb_view_draw()");
+
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
 		exporter->draw();
 	}
 
@@ -251,18 +251,35 @@ static PyObject* PyExporterDraw(PyObject*, PyObject *args)
 }
 
 
-static PyObject* PyExporterGetExporterTypes(PyObject*, PyObject*)
+static PyObject* vfb_render(PyObject*, PyObject *value)
 {
-	PRINT_INFO_EX("mExporterGetExporterTypes()");
+	PRINT_INFO_EX("vfb_render()");
 
-	PyObject *expTypesList = PyTuple_New(ExpoterTypeLast);
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		exporter->render_start();
+	}
 
-	for (int i = 0; i < ExpoterTypeLast; ++i) {
-		const char *item_format = "(sss)";
+	Py_RETURN_NONE;
+}
 
-		PyObject *list_item = Py_BuildValue(item_format,
-		                                    ExporterTypes[i].key, ExporterTypes[i].name, ExporterTypes[i].desc);
-		PyTuple_SET_ITEM(expTypesList, i, list_item);
+
+static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
+{
+	PRINT_INFO_EX("vfb_get_exporter_types()");
+
+	static PyObject *expTypesList = NULL;
+
+	if (!expTypesList) {
+		expTypesList = PyTuple_New(ExpoterTypeLast);
+
+		for (int i = 0; i < ExpoterTypeLast; ++i) {
+			static const char *item_format = "(sss)";
+
+			PyObject *list_item = Py_BuildValue(item_format,
+												ExporterTypes[i].key, ExporterTypes[i].name, ExporterTypes[i].desc);
+			PyTuple_SET_ITEM(expTypesList, i, list_item);
+		}
 	}
 
 	return expTypesList;
@@ -270,17 +287,19 @@ static PyObject* PyExporterGetExporterTypes(PyObject*, PyObject*)
 
 
 static PyMethodDef methods[] = {
-    {"load",   PyExporterLoad,    METH_VARARGS,  ""},
-    {"unload", (PyCFunction)PyExporterUnload,  METH_NOARGS,  ""},
+    { "load",                vfb_load,   METH_VARARGS, ""},
+    { "unload", (PyCFunction)vfb_unload, METH_NOARGS,  ""},
 
-    {"init",    PyExporterInit,    METH_VARARGS,  ""},
-    {"free",    PyExporterFree,    METH_O,        ""},
+    { "init",    (PyCFunction)vfb_init,    METH_VARARGS|METH_KEYWORDS, ""},
+    { "init_rt", (PyCFunction)vfb_init_rt, METH_VARARGS|METH_KEYWORDS, ""},
+    { "free",                 vfb_free,    METH_O, ""},
 
-    {"export",  PyExporterExport,  METH_O,        ""},
-    {"update",  PyExporterUpdate,  METH_O,        ""},
-    {"draw",    PyExporterDraw,    METH_VARARGS,  ""},
+    { "update",      vfb_update,      METH_O, "" },
+    { "render",      vfb_render,      METH_O, "" },
+    { "view_update", vfb_view_update, METH_O, "" },
+    { "view_draw",   vfb_view_draw,   METH_O, "" },
 
-    {"getExporterTypes", PyExporterGetExporterTypes, METH_NOARGS, ""},
+    { "getExporterTypes", vfb_get_exporter_types, METH_NOARGS, "" },
 
     {NULL, NULL, 0, NULL},
 };
@@ -288,8 +307,8 @@ static PyMethodDef methods[] = {
 
 static struct PyModuleDef module = {
 	PyModuleDef_HEAD_INIT,
-	"_vray_for_blender_rt",
-	"V-Ray For Blender Realtime Exporter",
+	"_vray_for_blender",
+	"V-Ray For Blender Translator Module",
 	-1,
 	methods,
 	NULL, NULL, NULL, NULL

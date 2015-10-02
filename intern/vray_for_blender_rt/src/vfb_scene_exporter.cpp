@@ -25,12 +25,8 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
 
-#include "BLI_rect.h"
-#include "DNA_view3d_types.h"
-#include "DNA_scene_types.h"
-#include "DNA_screen_types.h"
+#include "DNA_ID.h"
 #include "DNA_object_types.h"
-#include "BKE_camera.h"
 
 extern "C" {
 #include "BKE_idprop.h"
@@ -65,15 +61,15 @@ static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
 
 
-SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region):
-    m_context(context),
-    m_engine(engine),
-    m_data(data),
-    m_scene(scene),
-    m_view3d(view3d),
-    m_region3d(region3d),
-    m_region(region),
-    m_exporter(nullptr)
+SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region)
+    : m_context(context)
+    , m_engine(engine)
+    , m_data(data)
+    , m_scene(scene)
+    , m_view3d(view3d)
+    , m_region3d(region3d)
+    , m_region(region)
+    , m_exporter(nullptr)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -117,13 +113,13 @@ void SceneExporter::init()
 	assert(m_exporter && "Failed to create exporter!");
 
 	if (m_exporter) {
+		m_exporter->init();
+
 		m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
 
 		// directly bind to the engine
 		m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
-
-		m_exporter->init();
 	}
 
 	m_data_exporter.init(m_exporter, m_settings);
@@ -153,7 +149,7 @@ void SceneExporter::free()
 
 void SceneExporter::resize(int w, int h)
 {
-	PRINT_INFO_EX("SceneExporter->resize(%i, %i)",
+	PRINT_INFO_EX("SceneExporter::resize(%i, %i)",
 	              w, h);
 
 	m_exporter->set_render_size(w, h);
@@ -174,7 +170,7 @@ void SceneExporter::draw()
 
 	glPushMatrix();
 
-	glTranslatef(m_viewParams.render_size.offs_x, m_viewParams.render_size.offs_y, 0.0f);
+	glTranslatef(m_viewParams.renderSize.offs_x, m_viewParams.renderSize.offs_y, 0.0f);
 
 	if (transparent) {
 		glEnable(GL_BLEND);
@@ -183,7 +179,6 @@ void SceneExporter::draw()
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 
-#if 1
 	GLuint texid;
 	glGenTextures(1, &texid);
 	glBindTexture(GL_TEXTURE_2D, texid);
@@ -200,11 +195,11 @@ void SceneExporter::draw()
 	glTexCoord2f(0.0f, 1.0f);
 	glVertex2f(0.0f, 0.0f);
 	glTexCoord2f(1.0f, 1.0f);
-	glVertex2f((float)m_viewParams.render_size.w, 0.0f);
+	glVertex2f((float)m_viewParams.renderSize.w, 0.0f);
 	glTexCoord2f(1.0f, 0.0f);
-	glVertex2f((float)m_viewParams.render_size.w, (float)m_viewParams.render_size.h);
+	glVertex2f((float)m_viewParams.renderSize.w, (float)m_viewParams.renderSize.h);
 	glTexCoord2f(0.0f, 0.0f);
-	glVertex2f(0.0f, (float)m_viewParams.render_size.h);
+	glVertex2f(0.0f, (float)m_viewParams.renderSize.h);
 	glEnd();
 
 	glPopMatrix();
@@ -212,13 +207,6 @@ void SceneExporter::draw()
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDisable(GL_TEXTURE_2D);
 	glDeleteTextures(1, &texid);
-#else
-	/* fallback for old graphics cards that don't support GLSL, half float,
-	 * and non-power-of-two textures */
-	glRasterPos2f(0.0f, 0.0f);
-	glDrawPixels(m_viewParams.render_size.w, m_viewParams.render_size.h, GL_RGBA, GL_FLOAT, image.pixels);
-	glRasterPos2f(0.0f, 0.0f);
-#endif
 
 	if (transparent) {
 		glDisable(GL_BLEND);
@@ -279,7 +267,7 @@ bool SceneExporter::export_animation()
 
 void SceneExporter::sync(const int &check_updated)
 {
-	PRINT_INFO_EX("SceneExporter->sync(%i)",
+	PRINT_INFO_EX("SceneExporter::sync(%i)",
 	              check_updated);
 
 	clock_t begin = clock();
@@ -373,265 +361,6 @@ void SceneExporter::sync_prepass()
 }
 
 
-static float GetLensShift(BL::Object ob)
-{
-	float shift = 0.0f;
-
-	BL::Constraint constraint(PointerRNA_NULL);
-	if (ob.constraints.length()) {
-		BL::Object::constraints_iterator cIt;
-		for (ob.constraints.begin(cIt); cIt != ob.constraints.end(); ++cIt) {
-			BL::Constraint cn(*cIt);
-
-			if ((cn.type() == BL::Constraint::type_TRACK_TO)     ||
-			    (cn.type() == BL::Constraint::type_DAMPED_TRACK) ||
-			    (cn.type() == BL::Constraint::type_LOCKED_TRACK)) {
-				constraint = cn;
-				break;
-			}
-		}
-	}
-
-	if (constraint) {
-		BL::ConstraintTarget ct(constraint);
-		BL::Object target(ct.target());
-		if (target) {
-			const float z_shift = ob.matrix_world().data[14] - target.matrix_world().data[14];
-			const float l = Blender::GetDistanceObOb(ob, target);
-			shift = -1.0f * z_shift / l;
-		}
-	}
-	else {
-		const float rx  = ob.rotation_euler().data[0];
-		const float lsx = rx - M_PI_2;
-		if (fabs(lsx) > 0.0001f) {
-			shift = tanf(lsx);
-		}
-		if (fabs(shift) > M_PI) {
-			shift = 0.0f;
-		}
-	}
-
-	return shift;
-}
-
-
-void SceneExporter::sync_view(const int &check_updated)
-{
-	if (!m_scene.camera() && !m_view3d) {
-		PRINT_ERROR("Unable to setup view!")
-	}
-	else {
-		ViewParams viewParams;
-
-		viewParams.render_view.tm = BL::Object(m_scene.camera()).matrix_world();
-		if (!m_view3d) {
-			PRINT_ERROR("Final frame render is not supported.")
-		}
-		else {
-			if(m_region3d.view_perspective() == BL::RegionView3D::view_perspective_CAMERA) {
-				BL::Object camera = m_view3d.lock_camera_and_layers()
-				                    ? m_scene.camera()
-				                    : m_view3d.camera();
-
-				if (!camera) {
-					PRINT_ERROR("Camera is not found!")
-				}
-				else {
-					rctf view_border;
-
-					// NOTE: Taken from source/blender/editors/space_view3d/view3d_draw.c:
-					// static void view3d_camera_border(...) {...}
-					//
-					bool no_zoom = false;
-					bool no_shift = false;
-
-					Scene *scene = (Scene *)m_scene.ptr.data;
-					const ARegion *ar = (const ARegion*)m_region.ptr.data;
-					const View3D *v3d = (const View3D *)m_view3d.ptr.data;
-					const RegionView3D *rv3d = (const RegionView3D *)m_region3d.ptr.data;
-
-					CameraParams params;
-					rctf rect_view, rect_camera;
-
-					/* get viewport viewplane */
-					BKE_camera_params_init(&params);
-					BKE_camera_params_from_view3d(&params, v3d, rv3d);
-					if (no_zoom)
-						params.zoom = 1.0f;
-					BKE_camera_params_compute_viewplane(&params, ar->winx, ar->winy, 1.0f, 1.0f);
-					rect_view = params.viewplane;
-
-					/* get camera viewplane */
-					BKE_camera_params_init(&params);
-					/* fallback for non camera objects */
-					params.clipsta = v3d->near;
-					params.clipend = v3d->far;
-					BKE_camera_params_from_object(&params, v3d->camera);
-					if (no_shift) {
-						params.shiftx = 0.0f;
-						params.shifty = 0.0f;
-					}
-					BKE_camera_params_compute_viewplane(&params, scene->r.xsch, scene->r.ysch, scene->r.xasp, scene->r.yasp);
-					rect_camera = params.viewplane;
-
-					/* get camera border within viewport */
-					view_border.xmin = ((rect_camera.xmin - rect_view.xmin) / BLI_rctf_size_x(&rect_view)) * ar->winx;
-					view_border.xmax = ((rect_camera.xmax - rect_view.xmin) / BLI_rctf_size_x(&rect_view)) * ar->winx;
-					view_border.ymin = ((rect_camera.ymin - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
-					view_border.ymax = ((rect_camera.ymax - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
-
-					viewParams.render_size.offs_x = view_border.xmin;
-					viewParams.render_size.offs_y = view_border.ymin;
-					// NOTE: +2 to match camera border
-					viewParams.render_size.w = view_border.xmax - view_border.xmin + 2;
-					viewParams.render_size.h = view_border.ymax - view_border.ymin + 2;
-
-					const float aspect = float(viewParams.render_size.w) / float(viewParams.render_size.h);
-
-					BL::Object camera(m_scene.camera());
-					BL::Camera camera_data(camera.data());
-
-					PointerRNA vrayCamera = RNA_pointer_get(&camera_data.ptr, "vray");
-
-					PointerRNA renderView = RNA_pointer_get(&vrayCamera, "RenderView");
-
-					viewParams.render_view.fov = RNA_boolean_get(&vrayCamera, "override_fov")
-					                             ? RNA_float_get(&vrayCamera, "fov")
-					                             : camera_data.angle();
-
-					viewParams.render_view.ortho = (camera_data.type() == BL::Camera::type_ORTHO);
-					viewParams.render_view.ortho_width = camera_data.ortho_scale();
-
-					if (aspect < 1.0f) {
-						viewParams.render_view.fov = 2.0f * atanf(tanf(viewParams.render_view.fov / 2.0f) * aspect);
-						viewParams.render_view.ortho_width *= aspect;
-					}
-
-					viewParams.render_view.use_clip_start = RNA_boolean_get(&renderView, "clip_near");
-					viewParams.render_view.use_clip_end   = RNA_boolean_get(&renderView, "clip_far");
-
-					viewParams.render_view.clip_start = camera_data.clip_start();
-					viewParams.render_view.clip_end   = camera_data.clip_end();
-
-					viewParams.render_view.tm  = camera.matrix_world();
-
-					PointerRNA physicalCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
-					if (RNA_boolean_get(&physicalCamera, "use")) {
-						float horizontal_offset = -camera_data.shift_x();
-						float vertical_offset   = -camera_data.shift_y();
-						if (aspect < 1.0f) {
-							const float offset_fix = 1.0 / aspect;
-							horizontal_offset *= offset_fix;
-							vertical_offset   *= offset_fix;
-						}
-
-						const float lens_shift = RNA_boolean_get(&physicalCamera, "auto_lens_shift")
-						                         ? GetLensShift(camera)
-						                         : RNA_float_get(&physicalCamera, "lens_shift");
-
-						float focus_distance = Blender::GetCameraDofDistance(camera);
-						if (focus_distance < 0.001f) {
-							focus_distance = 5.0f;
-						}
-
-						PluginDesc physCamDesc("cameraPhysical", "CameraPhysical");
-						physCamDesc.add("fov", viewParams.render_view.fov);
-						physCamDesc.add("horizontal_offset", horizontal_offset);
-						physCamDesc.add("vertical_offset",   vertical_offset);
-						physCamDesc.add("lens_shift",        lens_shift);
-						physCamDesc.add("focus_distance",    focus_distance);
-
-						m_data_exporter.setAttrsFromPropGroupAuto(physCamDesc, &physicalCamera, "CameraPhysical");
-						m_exporter->export_plugin(physCamDesc);
-					}
-				}
-			}
-			else {
-				BL::Object camera_obj = (m_view3d.lock_camera_and_layers()) ? m_scene.camera() : m_view3d.camera();
-				BL::Camera camera(camera_obj.data());
-
-				const auto & sensor_size = (camera.sensor_fit() == BL::Camera::sensor_fit_VERTICAL) ? camera.sensor_height() : camera.sensor_width();
-
-				viewParams.render_size.offs_x = 0;
-				viewParams.render_size.offs_y = 0;
-				viewParams.render_size.w = m_region.width();
-				viewParams.render_size.h = m_region.height();
-
-				float lens = m_view3d.lens() / 2.f;
-
-				viewParams.render_view.ortho = (m_region3d.view_perspective() == BL::RegionView3D::view_perspective_ORTHO);
-				viewParams.render_view.ortho_width = m_region3d.view_distance() * sensor_size / lens;
-
-				const ARegion *ar = (const ARegion*)m_region.ptr.data;
-				float aspect = 0.f;
-
-				if (viewParams.render_view.ortho) {
-					aspect = viewParams.render_view.ortho_width / 2.0f;
-				} else {
-					lens /= 2.f;
-					aspect = float(ar->winx) / float(ar->winy);
-				}
-
-
-				viewParams.render_view.fov = 2.0f * atanf((0.5f * sensor_size) / lens / aspect);
-
-				viewParams.render_view.use_clip_start = true;
-				viewParams.render_view.use_clip_end   = true;
-
-				viewParams.render_view.clip_start = m_view3d.clip_start();
-				viewParams.render_view.clip_end = m_view3d.clip_end();
-
-				viewParams.render_view.tm = Math::InvertTm(m_region3d.view_matrix());
-			}
-		}
-
-		if (m_viewParams.size_changed(viewParams)) {
-			// PRINT_WARN("View resize: %i x %i", viewParams.render_size.w, viewParams.render_size.h);
-			resize(m_viewParams.render_size.w, m_viewParams.render_size.h);
-		}
-		if (m_viewParams.pos_changed(viewParams)) {
-			// PRINT_WARN("Pos change: %i x %i", viewParams.render_size.offs_x, viewParams.render_size.offs_y);
-			tag_redraw();
-		}
-		if (m_viewParams.params_changed(viewParams)) {
-			// PRINT_WARN("View update: fov = %.3f", viewParams.render_view.fov);
-
-			PluginDesc viewDesc("renderView", "RenderView");
-			viewDesc.add("transform", AttrTransformFromBlTransform(viewParams.render_view.tm));
-
-			if (!m_view3d) {
-				viewDesc.add("fov", m_viewParams.render_view.fov);
-				viewDesc.add("clipping",     (m_viewParams.render_view.use_clip_start || m_viewParams.render_view.use_clip_end));
-				viewDesc.add("clipping_near", m_viewParams.render_view.clip_start);
-				viewDesc.add("clipping_far",  m_viewParams.render_view.clip_end);
-
-				viewDesc.add("orthographic", m_viewParams.render_view.ortho);
-				viewDesc.add("orthographicWidth", m_viewParams.render_view.ortho_width);
-			} else {
-				viewDesc.add("fov", viewParams.render_view.fov);
-				viewDesc.add("clipping",     (viewParams.render_view.use_clip_start || viewParams.render_view.use_clip_end));
-				viewDesc.add("clipping_near", viewParams.render_view.clip_start);
-				viewDesc.add("clipping_far",  viewParams.render_view.clip_end);
-
-				viewDesc.add("orthographic", viewParams.render_view.ortho);
-				viewDesc.add("orthographicWidth", viewParams.render_view.ortho_width);
-			}
-
-
-			m_exporter->export_plugin(viewDesc);
-
-			if (m_ortho_camera != static_cast<bool>(viewParams.render_view.ortho) && m_exporter->is_running()) {
-				m_exporter->stop();
-				m_exporter->start();
-			}
-
-			m_ortho_camera = viewParams.render_view.ortho;
-		}
-	}
-}
-
-
 unsigned int SceneExporter::get_layer(BlLayers array)
 {
 	unsigned int layer = 0;
@@ -647,10 +376,12 @@ unsigned int SceneExporter::get_layer(BlLayers array)
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-
-	PRINT_INFO_EX("Syncing: %s...",
-			        ob.name().c_str());
-
+#if 0
+	const int data_updated = RNA_int_get(&vrayObject, "data_updated");
+	PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing \"%s\"...",
+				  ob.is_updated(), ob.is_updated_data(), data_updated, check_updated,
+	              ob.name().c_str());
+#endif
 	if (ob.data() && ob.type() == BL::Object::type_MESH) {
 		m_data_exporter.exportObject(ob, check_updated, override);
 	}
@@ -814,7 +545,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 void SceneExporter::sync_objects(const int &check_updated)
 {
-	PRINT_INFO_EX("SceneExporter->sync_objects(%i)",
+	PRINT_INFO_EX("SceneExporter::sync_objects(%i)",
 	              check_updated);
 
 	// TODO:
@@ -832,7 +563,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 		BL::Object ob(*obIt);
 
 		if (ob.is_duplicator()) {
-			sync_dupli(ob);
+			sync_dupli(ob, check_updated);
 			if (is_interrupted()) {
 				break;
 			}
