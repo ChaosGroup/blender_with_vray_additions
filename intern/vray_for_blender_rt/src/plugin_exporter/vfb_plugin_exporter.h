@@ -98,7 +98,7 @@ public:
 	PluginDesc fromCache(const PluginDesc &search) const;
 	void updateCache(const PluginDesc &update);
 	void remove(const PluginDesc &pluginDesc);
-	void remove(const std::string &pluginName, const std::string &pluginID);
+	void remove(const std::string &pluginName);
 
 	void clear();
 
@@ -154,6 +154,7 @@ public:
 
 	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
 	        bool         get_is_viewport() const { return is_viewport; }
+
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
@@ -163,8 +164,8 @@ protected:
 	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
 
-private:
-	PluginManager        m_PluginManager;
+	PluginManager        m_pluginManager;
+
 };
 
 PluginExporter* ExporterCreate(ExpoterType type);

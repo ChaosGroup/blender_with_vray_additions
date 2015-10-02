@@ -54,26 +54,26 @@ void PluginExporter::set_settings(const ExporterSettings &st)
 
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 {
-	bool inCache = m_PluginManager.inCache(pluginDesc);
-	bool isDifferent = inCache ? m_PluginManager.differs(pluginDesc) : true;
+	bool inCache = m_pluginManager.inCache(pluginDesc);
+	bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;
 	AttrPlugin plg(pluginDesc.pluginName);
 
 	if (is_viewport || !animation_settings.use) {
 		if (!inCache) {
 			plg = this->export_plugin_impl(pluginDesc);
-			m_PluginManager.updateCache(pluginDesc);
+			m_pluginManager.updateCache(pluginDesc);
 		} else if (inCache && isDifferent) {
-			plg = this->export_plugin_impl(m_PluginManager.differences(pluginDesc));
-			m_PluginManager.updateCache(pluginDesc);
+			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+			m_pluginManager.updateCache(pluginDesc);
 		}
 	} else {
 		if (inCache && isDifferent) {
-			this->export_plugin_impl(m_PluginManager.fromCache(pluginDesc));
-			plg = this->export_plugin_impl(m_PluginManager.differences(pluginDesc));
-			m_PluginManager.updateCache(pluginDesc);
+			this->export_plugin_impl(m_pluginManager.fromCache(pluginDesc));
+			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+			m_pluginManager.updateCache(pluginDesc);
 		} else if (!inCache) {
 			plg = this->export_plugin_impl(pluginDesc);
-			m_PluginManager.updateCache(pluginDesc);
+			m_pluginManager.updateCache(pluginDesc);
 		}
 	}
 
