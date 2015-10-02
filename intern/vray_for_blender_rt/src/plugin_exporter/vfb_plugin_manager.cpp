@@ -109,7 +109,7 @@ PluginManager::PluginManager()
 
 std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
 {
-	return pluginDesc.pluginName + pluginDesc.pluginID;
+	return pluginDesc.pluginName;
 }
 
 bool PluginManager::inCache(const PluginDesc &pluginDesc) const
@@ -117,9 +117,9 @@ bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 	return cache.find(getKey(pluginDesc)) != cache.end();
 }
 
-void PluginManager::remove(const std::string &pluginName, const std::string &pluginID)
+void PluginManager::remove(const std::string &pluginName)
 {
-	remove(PluginDesc(pluginName, pluginID));
+	cache.erase(pluginName);
 }
 
 void PluginManager::remove(const PluginDesc &pluginDesc)
