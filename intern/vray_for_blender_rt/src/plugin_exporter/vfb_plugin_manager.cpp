@@ -117,6 +117,11 @@ bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 	return cache.find(getKey(pluginDesc)) != cache.end();
 }
 
+void PluginManager::remove(const std::string &pluginName, const std::string &pluginID)
+{
+	remove(PluginDesc(pluginName, pluginID));
+}
+
 void PluginManager::remove(const PluginDesc &pluginDesc)
 {
 	cache.erase(getKey(pluginDesc));
