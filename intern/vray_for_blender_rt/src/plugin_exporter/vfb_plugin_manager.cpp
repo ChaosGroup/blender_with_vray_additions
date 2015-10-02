@@ -117,6 +117,11 @@ bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 	return cache.find(getKey(pluginDesc)) != cache.end();
 }
 
+void PluginManager::remove(const PluginDesc &pluginDesc)
+{
+	cache.erase(getKey(pluginDesc));
+}
+
 std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const 
 {
 	const auto key = getKey(pluginDesc);

@@ -97,6 +97,7 @@ public:
 
 	PluginDesc fromCache(const PluginDesc &search) const;
 	void updateCache(const PluginDesc &update);
+	void remove(const PluginDesc &pluginDesc);
 
 	void clear();
 
