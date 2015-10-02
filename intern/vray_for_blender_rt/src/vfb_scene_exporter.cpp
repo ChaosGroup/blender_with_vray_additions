@@ -665,7 +665,13 @@ void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updat
 			BL::ParticleSystemModifier psm(mod);
 			BL::ParticleSystem psys = psm.particle_system();
 			if (psys) {
-				m_data_exporter.exportHair(ob, psm, psys, check_updated);
+				BL::ParticleSettings pset(psys.settings());
+				if (pset &&
+				    pset.type() == BL::ParticleSettings::type_HAIR &&
+				    pset.render_type() == BL::ParticleSettings::render_type_PATH) {
+
+					m_data_exporter.exportHair(ob, psm, psys, check_updated);
+				}
 			}
 		}
 	}
