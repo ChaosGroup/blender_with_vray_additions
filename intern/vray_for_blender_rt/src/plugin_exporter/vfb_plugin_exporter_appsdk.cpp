@@ -19,7 +19,7 @@
 #ifdef USE_BLENDER_VRAY_APPSDK
 
 #include "vfb_plugin_exporter_appsdk.h"
-
+#include "BLI_threads.h"
 
 #define CGR_DEBUG_APPSDK_VALUES  0
 
@@ -71,7 +71,7 @@ static void CbDumpMessage(VRay::VRayRenderer&, const char *msg, int level, void*
 		PRINT_INFO_EX("V-Ray: Warning: %s", msg);
 	}
 	else if (level > VRay::MessageWarning && level <= VRay::MessageInfo) {
-		PRINT_INFO_EX("V-Ray: "%s", msg);
+		PRINT_INFO_EX("V-Ray: %s", msg);
 	}
 #endif
 }
@@ -127,6 +127,8 @@ void AppSdkExporter::init()
 		try {
 			VRay::RendererOptions options;
 			options.noDR = true;
+			options.numThreads = BLI_system_thread_count() - 1;
+
 			m_vray = new VRay::VRayRenderer(options);
 		}
 		catch (std::exception &e) {
@@ -263,7 +265,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 			for (const auto &pIt : pluginDesc.pluginAttrs) {
 				const PluginAttr &p = pIt.second;
-#if 1
+#if 0
 				PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
 				              pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str(), p.attrName.c_str());
 #endif
@@ -344,7 +346,6 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 						VRay::ValueList map_channel;
 						map_channel.push_back(VRay::Value(i++));
 
-						// XXX: Craaaazy...
 						VRay::IntList faces;
 						faces.resize(map_channel_data.faces.getCount());
 						memcpy(&faces[0], *map_channel_data.faces, map_channel_data.faces.getBytesCount());
@@ -361,26 +362,24 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 					plug.setValue(p.attrName, VRay::Value(map_channels));
 				}
-#if 0
 				else if (p.attrValue.type == ValueTypeInstancer) {
 					VRay::ValueList instancer;
+					instancer.push_back(VRay::Value(p.attrValue.valInstancer.frameNumber));
 
 					for (int i = 0; i < p.attrValue.valInstancer.data.getCount(); ++i) {
 						const AttrInstancer::Item &item = (*p.attrValue.valInstancer.data)[i];
 
-						// XXX: Also pretty crazy...
 						VRay::ValueList instance;
 						instance.push_back(VRay::Value(item.index));
 						instance.push_back(VRay::Value(to_vray_transform(item.tm)));
 						instance.push_back(VRay::Value(to_vray_transform(item.vel)));
-						instance.push_back(VRay::Value(item.node));
+						instance.push_back(VRay::Value(m_vray->getPlugin(item.node.plugin)));
 
 						instancer.push_back(VRay::Value(instance));
 					}
 
 					plug.setValue(p.attrName, VRay::Value(instancer));
 				}
-#endif
 			}
 		}
 	}
