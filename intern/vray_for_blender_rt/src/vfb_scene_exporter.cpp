@@ -656,23 +656,60 @@ unsigned int SceneExporter::get_layer(BlLayers array)
 	return layer;
 }
 
+void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override)
+{
+	BL::Object::modifiers_iterator modIt;
+	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
+		BL::Modifier mod(*modIt);
+		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+			BL::ParticleSystemModifier psm(mod);
+			BL::ParticleSystem psys = psm.particle_system();
+			if (psys) {
+				m_data_exporter.exportHair(ob, psm, psys, check_updated);
+			}
+		}
+	}
+}
 
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
-	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-
-	PRINT_INFO_EX("Syncing: %s...",
-			        ob.name().c_str());
-
-	if (ob.data() && ob.type() == BL::Object::type_MESH) {
-		m_data_exporter.exportObject(ob, check_updated, override);
-	}
-	else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
-		m_data_exporter.exportLight(ob, check_updated, override);
+	bool add = false;
+	if (override) {
+		add = !m_data_exporter.m_id_cache.contains(override.id) && !m_data_exporter.m_id_cache.contains(ob);
+	} else {
+		add = !m_data_exporter.m_id_cache.contains(ob);
 	}
 
-	// Reset update flag
-	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
+	if (add) {
+		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
+		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
+
+		if (!is_hidden || override) {
+			if (override) {
+				m_data_exporter.m_id_cache.insert(override.id);
+				m_data_exporter.m_id_cache.insert(ob);
+			} else {
+				m_data_exporter.m_id_cache.insert(ob);
+			}
+
+			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+
+			PRINT_INFO_EX("Syncing: %s...",
+							ob.name().c_str());
+
+			if (ob.data() && ob.type() == BL::Object::type_MESH) {
+				m_data_exporter.exportObject(ob, check_updated, override);
+			}
+			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
+				m_data_exporter.exportLight(ob, check_updated, override);
+			}
+
+			// Reset update flag
+			RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
+
+			sync_object_modiefiers(ob, check_updated, override);
+		}
+	}
 }
 
 static int ob_has_dupli(BL::Object ob) {

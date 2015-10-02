@@ -19,7 +19,6 @@ public:
 
 	virtual bool         do_export();
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated = false);
-	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	virtual void         create_exporter();
 };
 
@@ -37,7 +36,7 @@ public:
 
 	virtual bool         do_export();
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated = false);
-	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
+	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override);
 	virtual void         create_exporter();
 };
 
