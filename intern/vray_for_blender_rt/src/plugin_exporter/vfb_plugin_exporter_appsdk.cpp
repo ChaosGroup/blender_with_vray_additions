@@ -243,6 +243,12 @@ void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 		PRINT_WARN("Setting camera plugin to: %s",
 				   plugin.getName().c_str());
 		m_vray->setCamera(plugin);
+
+		VRay::Error err = m_vray->getLastError();
+		if (err != VRay::SUCCESS) {
+			PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
+						plugin.getName().c_str(), err.toString().c_str());
+		}
 	}
 }
 
@@ -398,9 +404,12 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	return plugin;
 }
 
+
 int AppSdkExporter::remove_plugin(const std::string &pluginName)
 {
 	bool res = false;
+
+	m_pluginManager.remove(pluginName);
 
 	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
 	if (plugin) {
