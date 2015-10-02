@@ -282,6 +282,7 @@ public:
 
 	AttrPlugin        exportRenderView(const ViewParams &viewParams);
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
+	AttrPlugin        exportCameraDefault(ViewParams &viewParams);
 
 	void              exportVRayEnvironment(NodeContext &context);
 

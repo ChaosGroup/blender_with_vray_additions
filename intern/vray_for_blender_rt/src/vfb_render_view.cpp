@@ -94,6 +94,15 @@ AttrPlugin DataExporter::exportRenderView(const ViewParams &viewParams)
 }
 
 
+AttrPlugin DataExporter::exportCameraDefault(ViewParams &viewParams)
+{
+	PluginDesc defCamDesc(ViewParams::defaultCameraPluginName, "CameraDefault");
+	defCamDesc.add("orthographic", viewParams.renderView.ortho);
+
+	return m_exporter->export_plugin(defCamDesc);
+}
+
+
 AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
 {
 	AttrPlugin plugin;
@@ -149,8 +158,6 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 			PRINT_ERROR("View camera is not found!")
 		}
 		else {
-			viewParams.cameraObject = cameraObject;
-
 			rctf view_border;
 
 			// NOTE: Taken from source/blender/editors/space_view3d/view3d_draw.c:
@@ -228,18 +235,18 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 			viewParams.renderView.clip_start = cameraData.clip_start();
 			viewParams.renderView.clip_end   = cameraData.clip_end();
 
-			viewParams.renderView.tm  = cameraObject.matrix_world();
+			viewParams.renderView.tm = cameraObject.matrix_world();
+
+			viewParams.cameraObject = cameraObject;
 		}
 	}
 	else {
-		// No physical camera for non camera views
-		viewParams.usePhysicalCamera = false;
-
 		// XXX: Check if it's possible to use only m_view3d.camera()
 		//
 		BL::Object cameraObject = m_view3d.lock_camera_and_layers()
 		                          ? m_scene.camera()
 		                          : m_view3d.camera();
+
 		BL::Camera cameraData(cameraObject.data());
 
 		const float sensor_size = (cameraData.sensor_fit() == BL::Camera::sensor_fit_VERTICAL)
@@ -268,13 +275,23 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 
 		viewParams.renderView.fov = 2.0f * atanf((0.5f * sensor_size) / lens / aspect);
 
-		viewParams.renderView.use_clip_start = true;
-		viewParams.renderView.use_clip_end   = true;
-
-		viewParams.renderView.clip_start = m_view3d.clip_start();
-		viewParams.renderView.clip_end = m_view3d.clip_end();
+		if (viewParams.renderView.ortho) {
+			viewParams.renderView.use_clip_start = false;
+			viewParams.renderView.use_clip_end   = false;
+		}
+		else {
+			viewParams.renderView.use_clip_start = true;
+			viewParams.renderView.use_clip_end   = true;
+			viewParams.renderView.clip_start = m_view3d.clip_start();
+			viewParams.renderView.clip_end = m_view3d.clip_end();
+		}
 
 		viewParams.renderView.tm = Math::InvertTm(m_region3d.view_matrix());
+
+		// No physical camera for non camera views
+		viewParams.usePhysicalCamera = false;
+
+		viewParams.cameraObject = cameraObject;
 	}
 }
 
@@ -283,12 +300,14 @@ int SceneExporter::is_physical_view(BL::Object &cameraObject)
 {
 	int is_physical = false;
 
-	BL::Camera cameraData(cameraObject.data());
-	if (cameraData) {
-		PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
-		PointerRNA physicalCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
+	if (cameraObject) {
+		BL::Camera cameraData(cameraObject.data());
+		if (cameraData) {
+			PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+			PointerRNA physicalCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
 
-		is_physical = RNA_boolean_get(&physicalCamera, "use");
+			is_physical = RNA_boolean_get(&physicalCamera, "use");
+		}
 	}
 
 	return is_physical;
@@ -327,22 +346,23 @@ void SceneExporter::sync_view(int)
 
 	viewParams.usePhysicalCamera = is_physical_view(viewParams.cameraObject);
 
-	const bool needReset = m_viewParams.needReset(viewParams);
-
-	if (needReset) {
-		m_exporter->remove_plugin(ViewParams::renderViewPluginName);
-		m_exporter->remove_plugin(ViewParams::defaultCameraPluginName);
-		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
-	}
-
 	if (m_viewParams.changedSize(viewParams)) {
-		resize(m_viewParams.renderSize.w, m_viewParams.renderSize.h);
+		resize(viewParams.renderSize.w, viewParams.renderSize.h);
 	}
 
 	if (m_viewParams.changedViewPosition(viewParams)) {
 		tag_redraw();
 	}
 
+	const bool needReset = m_viewParams.needReset(viewParams);
+	if (needReset) {
+		m_exporter->stop();
+		m_exporter->remove_plugin(ViewParams::renderViewPluginName);
+		m_exporter->remove_plugin(ViewParams::defaultCameraPluginName);
+		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
+	}
+
+	AttrPlugin renView;
 	AttrPlugin physCam;
 	AttrPlugin defCam;
 
@@ -350,24 +370,24 @@ void SceneExporter::sync_view(int)
 		physCam = m_data_exporter.exportCameraPhysical(viewParams);
 	}
 	else {
-		PluginDesc defCamDesc(ViewParams::defaultCameraPluginName, "CameraDefault");
-		defCamDesc.add("orthographic", viewParams.renderView.ortho);
-
-		defCam = m_exporter->export_plugin(defCamDesc);
+		defCam = m_data_exporter.exportCameraDefault(viewParams);
 	}
 
-	// If settings were toggled set view plugin
-	if (m_viewParams.usePhysicalCamera != viewParams.usePhysicalCamera) {
-		if (physCam && viewParams.usePhysicalCamera) {
+	if (needReset || m_viewParams.changedParams(viewParams)) {
+		renView = m_data_exporter.exportRenderView(viewParams);
+	}
+
+	if (needReset) {
+#if 0
+		if (physCam) {
 			m_exporter->set_camera_plugin(physCam.plugin);
 		}
 		else if (defCam) {
 			m_exporter->set_camera_plugin(defCam.plugin);
 		}
-	}
-
-	if (needReset || m_viewParams.changedParams(viewParams)) {
-		m_data_exporter.exportRenderView(viewParams);
+#else
+		m_exporter->start();
+#endif
 	}
 
 	// Store new params
