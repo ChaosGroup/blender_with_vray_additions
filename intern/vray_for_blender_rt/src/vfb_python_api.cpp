@@ -132,8 +132,9 @@ static PyObject* PyExporterInit(PyObject*, PyObject *args)
 	PyObject *pyv3d      = nullptr;
 	PyObject *pyrv3d     = nullptr;
 	PyObject *isViewport = nullptr;
+	PyObject *openFile   = nullptr;
 
-	if(!PyArg_ParseTuple(args, "OOOOOOOO", &pycontext, &pyengine, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d, &isViewport)) {
+	if(!PyArg_ParseTuple(args, "OOOOOOOOO", &pycontext, &pyengine, &pydata, &pyscene, &pyregion, &pyv3d, &pyrv3d, &isViewport, &openFile)) {
 		return NULL;
 	}
 
@@ -177,6 +178,7 @@ static PyObject* PyExporterInit(PyObject*, PyObject *args)
 	}
 
 	if (exporter) {
+		exporter->set_open_file(openFile);
 		exporter->init();
 	}
 

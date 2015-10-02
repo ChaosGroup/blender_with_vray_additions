@@ -31,27 +31,23 @@ struct TraceTransformHex {
 	double v[3];
 };
 
-PluginWriter::PluginWriter(std::string fname, ExporterSettings::ExportFormat format)
-    : m_fileName(std::move(fname))
-    , m_file(nullptr)
-    , m_buff(4096)
+PluginWriter::PluginWriter(std::string fileName, PyObject *pyFile, ExporterSettings::ExportFormat format)
+    : m_fileName(fileName)
+    , m_file(pyFile)
     , m_format(format)
-    , m_tryOpen(false)
 {
 }
 
-bool PluginWriter::doOpen()
+PluginWriter::~PluginWriter()
 {
-	m_tryOpen = true;
-	if (!m_file) {
-		m_file = BLI_fopen(m_fileName.c_str(), "wb");
+	if (good()) {
+		PyObject_CallMethod(m_file, _C("close"), _C(""));
 	}
-	return m_file != nullptr;
 }
 
 bool PluginWriter::good() const
 {
-	return !m_tryOpen || (m_tryOpen && (m_file != nullptr) && (ferror(m_file) == 0));
+	return m_file != nullptr;
 }
 
 std::string PluginWriter::getName() const
@@ -77,62 +73,34 @@ void PluginWriter::flush()
 		}
 		m_includeList.clear();
 	}
-	// check m_File ptr not this->good() since we need to flush the buffer
-	if (m_file) {
-		fflush(m_file);
-	}
 }
 
-PluginWriter::~PluginWriter()
-{
-	flush();
-	if (m_file) {
-		fclose(m_file);
-	}
-}
+#define PyPrintf(pp, ...)                                         \
+	if (!pp.good()) {                                             \
+		return pp;                                                \
+	}                                                             \
+	char buf[2048];                                               \
+	sprintf(buf, __VA_ARGS__);                                    \
+	PyObject_CallMethod(pp.getFile(), _C("write"), _C("s"), buf); \
+	return pp;                                                    \
 
-PluginWriter &PluginWriter::write(const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	int len = vsnprintf(m_buff.data(), m_buff.size(), format, args);
-	va_end(args);
-
-	if (len > m_buff.size()) {
-		m_buff.resize(len + 1);
-
-		va_start(args, format);
-		len = vsnprintf(m_buff.data(), m_buff.size(), format, args);
-		va_end(args);
-	}
-
-	this->writeData(m_buff.data(), len);
-
-	return *this;
-}
 
 PluginWriter &PluginWriter::writeStr(const char *str)
 {
-	return this->writeData(str, strlen(str));
-}
-
-PluginWriter &PluginWriter::writeData(const void *data, int size)
-{
-	if (doOpen()) {
-		fwrite(data, 1, size, m_file);
+	if (good()) {
+		PyObject_CallMethod(m_file, _C("write"), _C("s"), str);
 	}
 	return *this;
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val)
 {
-	return pp.write("%d", val);
+	PyPrintf(pp, "%d", val);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const float &val)
 {
-	return pp.write("%g", val);
+	PyPrintf(pp, "%g", val);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const char *val)
@@ -142,27 +110,27 @@ PluginWriter &operator<<(PluginWriter &pp, const char *val)
 
 PluginWriter &operator<<(PluginWriter &pp, const std::string &val)
 {
-	return pp.writeData(val.c_str(), val.size());
+	return pp.writeStr(val.c_str());
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrColor &val)
 {
-	return pp.write("Color(%g, %g, %g)", val.r, val.g, val.b);
+	PyPrintf(pp, "Color(%g, %g, %g)", val.r, val.g, val.b);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrAColor &val)
 {
-	return pp.write("AColor(%g, %g, %g, %g)", val.color.r, val.color.g, val.color.b, val.alpha);
+	PyPrintf(pp, "AColor(%g, %g, %g, %g)", val.color.r, val.color.g, val.color.b, val.alpha);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrVector &val)
 {
-	return pp.write("Vector(%g, %g, %g)", val.x, val.y, val.z);
+	PyPrintf(pp, "Vector(%g, %g, %g)", val.x, val.y, val.z);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrVector2 &val)
 {
-	return pp.write("Vector2(%g, %g)", val.x, val.y);
+	PyPrintf(pp, "Vector2(%g, %g)", val.x, val.y);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrMatrix &val)

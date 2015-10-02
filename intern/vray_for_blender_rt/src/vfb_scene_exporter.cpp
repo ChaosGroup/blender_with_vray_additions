@@ -73,7 +73,8 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     m_view3d(view3d),
     m_region3d(region3d),
     m_region(region),
-    m_exporter(nullptr)
+    m_exporter(nullptr),
+    m_open_file_wrapper(nullptr)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -123,6 +124,7 @@ void SceneExporter::init()
 		// directly bind to the engine
 		m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
+		m_exporter->set_python_open_file(boost::bind(&SceneExporter::python_open_file, this, _1));
 		m_exporter->init();
 	}
 
@@ -238,6 +240,17 @@ void SceneExporter::render_start()
 	}
 }
 
+PyObject *SceneExporter::python_open_file(const std::string fname)
+{
+	if (!m_open_file_wrapper || !PyCallable_Check(m_open_file_wrapper)) {
+		return nullptr;
+	}
+
+	PyObject *arglist = Py_BuildValue("s", fname.c_str());
+	PyObject *file = PyObject_CallObject(m_open_file_wrapper, arglist);
+	Py_DecRef(arglist);
+	return file;
+}
 
 bool SceneExporter::export_animation()
 {

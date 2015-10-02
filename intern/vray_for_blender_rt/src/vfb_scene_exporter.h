@@ -151,6 +151,9 @@ public:
 	void                 tag_redraw();
 	void                 tag_ntree(BL::NodeTree ntree, bool updated=true);
 
+	void                 set_open_file(PyObject *obj) { m_open_file_wrapper = obj; }
+	PyObject            *python_open_file(const std::string fname);
+
 	void                 render_start();
 	void                 render_stop();
 
@@ -177,6 +180,8 @@ protected:
 	DataExporter         m_data_exporter;
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
+
+	PyObject            *m_open_file_wrapper;
 
 	bool                 m_ortho_camera;
 };

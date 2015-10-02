@@ -38,7 +38,10 @@ VrsceneExporter::VrsceneExporter():
 
 void VrsceneExporter::setUpSingleWriter()
 {
-	auto writer = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + ".vrscene", m_ExportFormat));
+	const auto name = m_FileDir + ".vrscene";
+	auto file = python_open_file(name);
+
+	auto writer = std::shared_ptr<PluginWriter>(new PluginWriter(name, file, m_ExportFormat));
 	for (int c = ParamDesc::PluginUnknown; c <= ParamDesc::PluginUvwgen; c++) {
 		m_Writers[static_cast<ParamDesc::PluginType>(c)] = writer;
 	}
@@ -46,14 +49,22 @@ void VrsceneExporter::setUpSingleWriter()
 
 void VrsceneExporter::setUpSplitWriters()
 {
-	auto writerScene = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_scene.vrscene", m_ExportFormat));
-	auto writerNodes = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_nodes.vrscene", m_ExportFormat));
-	auto writerGeometry = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_geometry.vrscene", m_ExportFormat));
-	auto writerCamera = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_camera.vrscene", m_ExportFormat));
-	auto writerLights = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_lights.vrscene", m_ExportFormat));
-	auto writerTextures = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_textures.vrscene", m_ExportFormat));
-	auto writerMaterials = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_materials.vrscene", m_ExportFormat));
-	auto writerEnvironment = std::shared_ptr<PluginWriter>(new PluginWriter(m_FileDir + "_environment.vrscene", m_ExportFormat));
+	const auto writerSceneName = m_FileDir + "_scene.vrscene";
+	auto writerScene = std::shared_ptr<PluginWriter>(new PluginWriter(writerSceneName, python_open_file(writerSceneName), m_ExportFormat));
+	const auto writerNodesName = m_FileDir + "_nodes.vrscene";
+	auto writerNodes = std::shared_ptr<PluginWriter>(new PluginWriter(writerNodesName, python_open_file(writerNodesName), m_ExportFormat));
+	const auto writerGeometryName = m_FileDir + "_geometry.vrscene";
+	auto writerGeometry = std::shared_ptr<PluginWriter>(new PluginWriter(writerGeometryName, python_open_file(writerGeometryName), m_ExportFormat));
+	const auto writerCameraName = m_FileDir + "_camera.vrscene";
+	auto writerCamera = std::shared_ptr<PluginWriter>(new PluginWriter(writerCameraName, python_open_file(writerCameraName), m_ExportFormat));
+	const auto writerLightsName = m_FileDir + "_lights.vrscene";
+	auto writerLights = std::shared_ptr<PluginWriter>(new PluginWriter(writerLightsName, python_open_file(writerLightsName), m_ExportFormat));
+	const auto writerTexturesName = m_FileDir + "_textures.vrscene";
+	auto writerTextures = std::shared_ptr<PluginWriter>(new PluginWriter(writerTexturesName, python_open_file(writerTexturesName), m_ExportFormat));
+	const auto writerMaterialsName = m_FileDir + "_materials.vrscene";
+	auto writerMaterials = std::shared_ptr<PluginWriter>(new PluginWriter(writerMaterialsName, python_open_file(writerMaterialsName), m_ExportFormat));
+	const auto writerEnvironmentName = m_FileDir + "_environment.vrscene";
+	auto writerEnvironment = std::shared_ptr<PluginWriter>(new PluginWriter(writerEnvironmentName, python_open_file(writerEnvironmentName), m_ExportFormat));
 
 	m_Writers[ParamDesc::PluginFilter] = writerScene;
 	m_Writers[ParamDesc::PluginChannel] = writerScene;
