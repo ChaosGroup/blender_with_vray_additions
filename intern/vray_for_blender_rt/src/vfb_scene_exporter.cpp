@@ -845,7 +845,13 @@ void SceneExporter::sync_objects(const int &check_updated)
 		BL::Object ob(*obIt);
 
 		if (ob.is_duplicator()) {
-			sync_dupli(ob);
+
+			const bool is_updated = check_updated ? ob.is_updated() : true;
+
+			if (is_updated) {
+				sync_dupli(ob);
+			}
+
 			if (is_interrupted()) {
 				break;
 			}
