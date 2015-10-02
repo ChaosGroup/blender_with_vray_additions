@@ -758,6 +758,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::DupliObject dupliOb(*dupIt);
 		BL::Object      dupOb(dupliOb.object());
 
+		const bool visible_on_layer = get_layer(dupOb.layers()) & m_scene.active_layer();
+
 		const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
 
 		const bool is_light = Blender::IsLight(dupOb);
@@ -790,7 +792,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				overrideAttrs.override = true;
 				// If dupli are shown via Instancer we need to hide
 				// original object
-				overrideAttrs.visible = ob_is_duplicator_renderable(dupOb);
+				overrideAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(dupOb);
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
 				overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
 
@@ -847,6 +849,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 		if (ob.is_duplicator()) {
 
 			const bool is_updated = check_updated ? ob.is_updated() : true;
+			const bool visible_on_layer = get_layer(ob.layers()) & m_scene.active_layer();
 
 			if (is_updated) {
 				sync_dupli(ob);
@@ -861,7 +864,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 			overAttrs.override = true;
 			overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
 			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-			overAttrs.visible = ob_is_duplicator_renderable(ob);
+			overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
 
 			sync_object(ob, check_updated, overAttrs);
 		} else {
