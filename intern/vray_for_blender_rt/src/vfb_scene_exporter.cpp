@@ -286,6 +286,10 @@ void SceneExporter::sync(const int &check_updated)
 		m_exporter->export_plugin(pluginDesc);
 	}
 
+	if (check_updated) {
+		sync_materials();
+	}
+
 	sync_view(check_updated);
 	sync_objects(check_updated);
 	sync_effects(check_updated);
@@ -587,6 +591,23 @@ void SceneExporter::sync_effects(const int &check_updated)
 {
 	NodeContext ctx;
 	m_data_exporter.exportVRayEnvironment(ctx);
+}
+
+
+void SceneExporter::sync_materials()
+{
+	BL::BlendData::materials_iterator maIt;
+
+	for (m_data.materials.begin(maIt); maIt != m_data.materials.end(); ++maIt) {
+		BL::Material ma(*maIt);
+		BL::NodeTree ntree(Nodes::GetNodeTree(ma));
+		if (ntree) {
+			const bool updated = ma.is_updated() || ma.is_updated_data() || ntree.is_updated();
+			if (updated) {
+				m_data_exporter.exportMaterial(ma);
+			}
+		}
+	}
 }
 
 

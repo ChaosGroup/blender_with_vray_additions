@@ -56,13 +56,14 @@ public:
 
 	void                 get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject);
 	void                 get_view_from_viewport(ViewParams &viewParams);
-	int                  is_physical_view(BL::Object &cameraObject);
 	void                 sync_view(int check_updated=false);
 
 	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void                 sync_objects(const int &check_updated=false);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
 	void                 sync_effects(const int &check_updated=false);
+
+	void                 sync_materials();
 
 	void                 draw();
 	void                 resize(int w, int h);
@@ -96,6 +97,13 @@ protected:
 	DataExporter         m_data_exporter;
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
+
+private:
+	int                  is_physical_view(BL::Object &cameraObject);
+	int                  is_physical_updated(ViewParams &viewParams);
+
+private:
+	boost::mutex         m_viewLock;
 };
 
 }
