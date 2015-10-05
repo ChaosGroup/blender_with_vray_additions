@@ -112,15 +112,12 @@ void SceneExporter::init()
 	}
 	assert(m_exporter && "Failed to create exporter!");
 
-	if (m_exporter) {
-		m_exporter->init();
+	m_exporter->init();
 
-		m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
-		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
+	// directly bind to the engine
+	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
-		// directly bind to the engine
-		m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
-	}
+	setup_callbacks();
 
 	m_data_exporter.init(m_exporter, m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);

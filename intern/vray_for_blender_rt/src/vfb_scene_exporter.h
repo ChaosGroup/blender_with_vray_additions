@@ -65,13 +65,15 @@ public:
 
 	void                 sync_materials();
 
+	virtual void         setup_callbacks() {}
+
 	void                 draw();
 	void                 resize(int w, int h);
 	void                 tag_update();
 	void                 tag_redraw();
 	void                 tag_ntree(BL::NodeTree ntree, bool updated=true);
 
-	void                 render_start();
+	virtual void         render_start();
 	void                 render_stop();
 
 	int                  is_interrupted();

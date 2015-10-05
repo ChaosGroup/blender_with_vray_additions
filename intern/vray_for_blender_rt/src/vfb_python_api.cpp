@@ -25,7 +25,8 @@
 #endif
 
 #include "cgr_vray_for_blender_rt.h"
-#include "vfb_specialised_exporter.h"
+#include "vfb_scene_exporter_rt.h"
+#include "vfb_scene_exporter_pro.h"
 #include "vfb_params_json.h"
 
 #ifdef USE_BLENDER_VRAY_APPSDK
@@ -257,7 +258,9 @@ static PyObject* vfb_render(PyObject*, PyObject *value)
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
+		python_thread_state_save(&exporter->m_pythonThreadState);
 		exporter->render_start();
+		python_thread_state_restore(&exporter->m_pythonThreadState);
 	}
 
 	Py_RETURN_NONE;
