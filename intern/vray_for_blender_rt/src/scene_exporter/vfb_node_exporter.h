@@ -282,6 +282,7 @@ public:
 
 	AttrPlugin        exportRenderView(const ViewParams &viewParams);
 	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
+	void              fillCameraData(BL::Object &cameraObject, ViewParams &viewParams);
 	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
 	AttrPlugin        exportCameraDefault(ViewParams &viewParams);

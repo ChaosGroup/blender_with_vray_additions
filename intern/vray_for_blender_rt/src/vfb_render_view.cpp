@@ -80,8 +80,9 @@ static float GetLensShift(BL::Object &ob)
 }
 
 
-static void AspectCorrectFovOrtho(const float aspect, ViewParams &viewParams)
+static void AspectCorrectFovOrtho(ViewParams &viewParams)
 {
+	const float aspect = float(viewParams.renderSize.w) / float(viewParams.renderSize.h);
 	if (aspect < 1.0f) {
 		viewParams.renderView.fov = 2.0f * atanf(tanf(viewParams.renderView.fov / 2.0f) * aspect);
 		viewParams.renderView.ortho_width *= aspect;
@@ -130,6 +131,31 @@ AttrPlugin DataExporter::exportSettingsCameraDof(ViewParams &viewParams)
 	}
 
 	return m_exporter->export_plugin(camDofDesc);
+}
+
+
+void DataExporter::fillCameraData(BL::Object &cameraObject, ViewParams &viewParams)
+{
+	BL::Camera cameraData(cameraObject.data());
+
+	PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+	PointerRNA renderView = RNA_pointer_get(&vrayCamera, "RenderView");
+
+	viewParams.renderView.fov = RNA_boolean_get(&vrayCamera, "override_fov")
+	                            ? RNA_float_get(&vrayCamera, "fov")
+	                            : cameraData.angle();
+
+	viewParams.renderView.ortho = (cameraData.type() == BL::Camera::type_ORTHO);
+	viewParams.renderView.ortho_width = cameraData.ortho_scale();
+
+	viewParams.renderView.use_clip_start = RNA_boolean_get(&renderView, "clip_near");
+	viewParams.renderView.use_clip_end   = RNA_boolean_get(&renderView, "clip_far");
+
+	viewParams.renderView.clip_start = cameraData.clip_start();
+	viewParams.renderView.clip_end   = cameraData.clip_end();
+
+	viewParams.renderView.tm = cameraObject.matrix_world();
+	viewParams.cameraObject = cameraObject;
 }
 
 
@@ -241,32 +267,9 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 			viewParams.renderSize.w = view_border.xmax - view_border.xmin + 2;
 			viewParams.renderSize.h = view_border.ymax - view_border.ymin + 2;
 
-			const float aspect = float(viewParams.renderSize.w) / float(viewParams.renderSize.h);
+			m_data_exporter.fillCameraData(cameraObject, viewParams);
 
-			BL::Camera cameraData(cameraObject.data());
-
-			PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
-
-			PointerRNA renderView = RNA_pointer_get(&vrayCamera, "RenderView");
-
-			viewParams.renderView.fov = RNA_boolean_get(&vrayCamera, "override_fov")
-			                            ? RNA_float_get(&vrayCamera, "fov")
-			                            : cameraData.angle();
-
-			viewParams.renderView.ortho = (cameraData.type() == BL::Camera::type_ORTHO);
-			viewParams.renderView.ortho_width = cameraData.ortho_scale();
-
-			AspectCorrectFovOrtho(aspect, viewParams);
-
-			viewParams.renderView.use_clip_start = RNA_boolean_get(&renderView, "clip_near");
-			viewParams.renderView.use_clip_end   = RNA_boolean_get(&renderView, "clip_far");
-
-			viewParams.renderView.clip_start = cameraData.clip_start();
-			viewParams.renderView.clip_end   = cameraData.clip_end();
-
-			viewParams.renderView.tm = cameraObject.matrix_world();
-
-			viewParams.cameraObject = cameraObject;
+			AspectCorrectFovOrtho(viewParams);
 		}
 	}
 	else {
@@ -285,9 +288,7 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 			viewParams.renderView.ortho_width = m_region3d.view_distance() * sensor_size / lens;
 		}
 
-		const float aspect = float(viewParams.renderSize.w) / float(viewParams.renderSize.h);
-
-		AspectCorrectFovOrtho(aspect, viewParams);
+		AspectCorrectFovOrtho(viewParams);
 
 		viewParams.renderView.use_clip_start = !viewParams.renderView.ortho;
 		viewParams.renderView.use_clip_end   = !viewParams.renderView.ortho;
@@ -336,13 +337,16 @@ int SceneExporter::is_physical_updated(ViewParams &viewParams)
 
 void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject)
 {
-	viewParams.renderView.tm = cameraObject.matrix_world();
-
 	BL::Camera camera(cameraObject.data());
 	if (camera) {
-		viewParams.cameraObject = cameraObject;
+		BL::RenderSettings renderSettings(m_scene.render());
 
-		// TODO: Export view from scene camera for final render
+		viewParams.renderSize.w = renderSettings.resolution_x() * renderSettings.resolution_percentage() / 100;
+		viewParams.renderSize.h = renderSettings.resolution_y() * renderSettings.resolution_percentage() / 100;
+
+		m_data_exporter.fillCameraData(cameraObject, viewParams);
+
+		AspectCorrectFovOrtho(viewParams);
 	}
 }
 
