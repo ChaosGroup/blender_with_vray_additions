@@ -151,6 +151,7 @@ public:
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
 	virtual void         set_camera_plugin(const std::string &pluginName) {}
+	virtual void         commit_changes() {}
 
 	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
 	        bool         get_is_viewport() const { return is_viewport; }

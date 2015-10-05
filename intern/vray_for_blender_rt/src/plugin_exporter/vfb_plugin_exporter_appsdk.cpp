@@ -138,15 +138,15 @@ void AppSdkExporter::init()
 		}
 
 		if (m_vray) {
+			VRay::RendererOptions options(m_vray->getOptions());
+			options.keepRTRunning = true;
+			m_vray->setOptions(options);
+
 			m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			m_vray->setOnDumpMessage(CbDumpMessage);
 			m_vray->setRTImageUpdateTimeout(200);
+			m_vray->setAutoCommit(false);
 			// m_vray->setRTImageUpdateDifference();
-
-			VRay::RendererOptions options;
-			options.keepRTRunning = true;
-
-			m_vray->setOptions(options);
 		}
 	}
 }
@@ -188,9 +188,10 @@ void AppSdkExporter::sync()
 			m_used_map.erase(*kIt);
 		}
 
-		m_vray->start();
+		// m_vray->start();
 	}
 #endif
+	commit_changes();
 }
 
 
@@ -249,6 +250,14 @@ void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 			PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
 						plugin.getName().c_str(), err.toString().c_str());
 		}
+	}
+}
+
+
+void AppSdkExporter::commit_changes()
+{
+	if (m_vray) {
+		m_vray->commit();
 	}
 }
 

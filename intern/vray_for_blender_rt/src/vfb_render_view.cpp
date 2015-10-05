@@ -356,10 +356,10 @@ void SceneExporter::sync_view(int)
 
 	const bool needReset = m_viewParams.needReset(viewParams);
 	if (needReset) {
-		m_exporter->stop();
 		m_exporter->remove_plugin(ViewParams::renderViewPluginName);
 		m_exporter->remove_plugin(ViewParams::defaultCameraPluginName);
 		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
+		m_exporter->commit_changes();
 	}
 
 	AttrPlugin renView;
@@ -378,16 +378,13 @@ void SceneExporter::sync_view(int)
 	}
 
 	if (needReset) {
-#if 0
 		if (physCam) {
 			m_exporter->set_camera_plugin(physCam.plugin);
 		}
 		else if (defCam) {
 			m_exporter->set_camera_plugin(defCam.plugin);
 		}
-#else
-		m_exporter->start();
-#endif
+		m_exporter->commit_changes();
 	}
 
 	// Store new params
