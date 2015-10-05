@@ -19,7 +19,7 @@
 #ifdef USE_BLENDER_VRAY_APPSDK
 
 #include "vfb_plugin_exporter_appsdk.h"
-
+#include "BLI_threads.h"
 
 #define CGR_DEBUG_APPSDK_VALUES  0
 
@@ -71,7 +71,7 @@ static void CbDumpMessage(VRay::VRayRenderer&, const char *msg, int level, void*
 		PRINT_INFO_EX("V-Ray: Warning: %s", msg);
 	}
 	else if (level > VRay::MessageWarning && level <= VRay::MessageInfo) {
-		PRINT_INFO_EX("V-Ray: "%s", msg);
+		PRINT_INFO_EX("V-Ray: %s", msg);
 	}
 #endif
 }
@@ -127,6 +127,8 @@ void AppSdkExporter::init()
 		try {
 			VRay::RendererOptions options;
 			options.noDR = true;
+			options.numThreads = BLI_system_thread_count() - 1;
+
 			m_vray = new VRay::VRayRenderer(options);
 		}
 		catch (std::exception &e) {
@@ -136,15 +138,15 @@ void AppSdkExporter::init()
 		}
 
 		if (m_vray) {
+			VRay::RendererOptions options(m_vray->getOptions());
+			options.keepRTRunning = true;
+			m_vray->setOptions(options);
+
 			m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			m_vray->setOnDumpMessage(CbDumpMessage);
 			m_vray->setRTImageUpdateTimeout(200);
+			m_vray->setAutoCommit(false);
 			// m_vray->setRTImageUpdateDifference();
-
-			VRay::RendererOptions options;
-			options.keepRTRunning = true;
-
-			m_vray->setOptions(options);
 		}
 	}
 }
@@ -186,9 +188,10 @@ void AppSdkExporter::sync()
 			m_used_map.erase(*kIt);
 		}
 
-		m_vray->start();
+		// m_vray->start();
 	}
 #endif
+	commit_changes();
 }
 
 
@@ -230,6 +233,31 @@ void AppSdkExporter::set_callback_on_rt_image_updated(ExpoterCallback cb)
 	PluginExporter::set_callback_on_rt_image_updated(cb);
 	if (callback_on_rt_image_updated) {
 		m_vray->setOnRTImageUpdated(CbOnRTImageUpdated, (void*)&callback_on_rt_image_updated);
+	}
+}
+
+
+void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
+{
+	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
+	if (plugin) {
+		PRINT_WARN("Setting camera plugin to: %s",
+				   plugin.getName().c_str());
+		m_vray->setCamera(plugin);
+
+		VRay::Error err = m_vray->getLastError();
+		if (err != VRay::SUCCESS) {
+			PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
+						plugin.getName().c_str(), err.toString().c_str());
+		}
+	}
+}
+
+
+void AppSdkExporter::commit_changes()
+{
+	if (m_vray) {
+		m_vray->commit();
 	}
 }
 
@@ -344,7 +372,6 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 						VRay::ValueList map_channel;
 						map_channel.push_back(VRay::Value(i++));
 
-						// XXX: Craaaazy...
 						VRay::IntList faces;
 						faces.resize(map_channel_data.faces.getCount());
 						memcpy(&faces[0], *map_channel_data.faces, map_channel_data.faces.getBytesCount());
@@ -361,26 +388,24 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 					plug.setValue(p.attrName, VRay::Value(map_channels));
 				}
-#if 0
 				else if (p.attrValue.type == ValueTypeInstancer) {
 					VRay::ValueList instancer;
+					instancer.push_back(VRay::Value(p.attrValue.valInstancer.frameNumber));
 
 					for (int i = 0; i < p.attrValue.valInstancer.data.getCount(); ++i) {
 						const AttrInstancer::Item &item = (*p.attrValue.valInstancer.data)[i];
 
-						// XXX: Also pretty crazy...
 						VRay::ValueList instance;
 						instance.push_back(VRay::Value(item.index));
 						instance.push_back(VRay::Value(to_vray_transform(item.tm)));
 						instance.push_back(VRay::Value(to_vray_transform(item.vel)));
-						instance.push_back(VRay::Value(item.node));
+						instance.push_back(VRay::Value(m_vray->getPlugin(item.node.plugin)));
 
 						instancer.push_back(VRay::Value(instance));
 					}
 
 					plug.setValue(p.attrName, VRay::Value(instancer));
 				}
-#endif
 			}
 		}
 	}
@@ -388,21 +413,21 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	return plugin;
 }
 
+
 int AppSdkExporter::remove_plugin(const std::string &pluginName)
 {
 	bool res = false;
+
+	m_pluginManager.remove(pluginName);
 
 	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
 	if (plugin) {
 		res = m_vray->removePlugin(plugin);
 
-		PRINT_WARN("Removing: %s [%i]",
-		           pluginName.c_str(), res);
-
 		VRay::Error err = m_vray->getLastError();
 		if (err != VRay::SUCCESS) {
-			PRINT_ERROR("Error removing plugin: %s",
-			            err.toString().c_str());
+			PRINT_ERROR("Error removing plugin \"%s\" [%s]!",
+						plugin.getName().c_str(), err.toString().c_str());
 		}
 	}
 

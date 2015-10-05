@@ -9,11 +9,16 @@ bool InteractiveExporter::do_export()
 
 void InteractiveExporter::create_exporter()
 {
-#ifdef USE_BLENDER_VRAY_ZMQ
-	m_settings.exporter_type = ExpoterType::ExpoterTypeZMQ;
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+#if defined(USE_BLENDER_VRAY_APPSDK)
+		m_settings.exporter_type = ExpoterType::ExpoterTypeAppSDK;
+#elif defined(USE_BLENDER_VRAY_ZMQ)
+		m_settings.exporter_type = ExpoterType::ExpoterTypeZMQ;
 #else
-	m_settings.exporter_type = ExpoterType::ExporterTypeInvalid;
+		m_settings.exporter_type = ExpoterType::ExporterTypeInvalid;
 #endif
+	}
+
 	SceneExporter::create_exporter();
 	if (m_exporter) {
 		m_exporter->set_is_viewport(true);

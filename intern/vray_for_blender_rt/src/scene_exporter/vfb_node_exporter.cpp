@@ -244,8 +244,12 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	const std::string &nodeClass = node.bl_idname();
 
 #if 0
-	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"...",
+	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"",
 	              node.name().c_str(), ntree.name().c_str());
+	if (context.object_context.object) {
+		PRINT_INFO_EX("  For object \"%s\"",
+		              context.object_context.object.name().c_str());
+	}
 #endif
 
 	// Outputs

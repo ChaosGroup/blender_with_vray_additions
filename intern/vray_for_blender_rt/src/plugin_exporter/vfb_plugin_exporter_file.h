@@ -44,13 +44,11 @@ public:
 	virtual void        stop();
 
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
-	virtual void        set_settings(const ExporterSettings &);
+	virtual void        set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file);
 private:
-	void setUpSplitWriters();
-	void setUpSingleWriter();
 
 private:
-	boost::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>> m_Writers;
+	boost::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, boost::hash<int>> m_Writers;
 
 	ExporterSettings::ExportFormat m_ExportFormat;
 

@@ -38,13 +38,6 @@ PluginWriter::PluginWriter(std::string fileName, PyObject *pyFile, ExporterSetti
 {
 }
 
-PluginWriter::~PluginWriter()
-{
-	if (good()) {
-		PyObject_CallMethod(m_file, _C("close"), _C(""));
-	}
-}
-
 bool PluginWriter::good() const
 {
 	return m_file != nullptr;
@@ -53,26 +46,6 @@ bool PluginWriter::good() const
 std::string PluginWriter::getName() const
 {
 	return fs::path(m_fileName).filename().string();
-}
-
-PluginWriter &PluginWriter::include(std::string name)
-{
-	if (name != getName() && !name.empty()) {
-		// dont include self
-		m_includeList.insert(std::move(name));
-	}
-	return *this;
-}
-
-void PluginWriter::flush()
-{
-	if (!m_includeList.empty()) {
-		*this << "\n";
-		for (const auto &inc : m_includeList) {
-			*this << "#include \"" << inc << "\"\n";
-		}
-		m_includeList.clear();
-	}
 }
 
 #define PyPrintf(pp, ...)                                         \

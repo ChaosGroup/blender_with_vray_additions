@@ -25,6 +25,7 @@
 #include "vfb_plugin_attrs.h"
 #include "vfb_util_defines.h"
 #include "vfb_export_settings.h"
+#include "vfb_params_desc.h"
 
 #include "BLI_math.h"
 #include "MEM_guardedalloc.h"
@@ -98,7 +99,7 @@ public:
 	PluginDesc fromCache(const PluginDesc &search) const;
 	void updateCache(const PluginDesc &update);
 	void remove(const PluginDesc &pluginDesc);
-	void remove(const std::string &pluginName, const std::string &pluginID);
+	void remove(const std::string &pluginName);
 
 	void clear();
 
@@ -115,7 +116,6 @@ class PluginExporter
 {
 public:
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
-	typedef boost::function<PyObject*(const std::string &)> PythoOpenFileFn;
 
 	PluginExporter():
 		is_viewport(false)
@@ -150,12 +150,15 @@ public:
 	virtual void         set_callback_on_image_ready(ExpoterCallback cb)      { callback_on_image_ready = cb; }
 	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) { callback_on_rt_image_updated = cb; }
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
-	        void         set_python_open_file(PythoOpenFileFn fn)             { python_open_file = fn; }
+
+	virtual void         set_camera_plugin(const std::string &pluginName) {}
+	virtual void         commit_changes() {}
 
 	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
 	        bool         get_is_viewport() const { return is_viewport; }
+	virtual void         set_export_file(VRayForBlender::ParamDesc::PluginType, PyObject *) {}
+
 protected:
-	PythoOpenFileFn      python_open_file;
 
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
@@ -165,8 +168,8 @@ protected:
 	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
 
-private:
-	PluginManager        m_PluginManager;
+	PluginManager        m_pluginManager;
+
 };
 
 PluginExporter* ExporterCreate(ExpoterType type);

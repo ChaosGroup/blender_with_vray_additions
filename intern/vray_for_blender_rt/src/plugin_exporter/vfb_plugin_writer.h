@@ -17,28 +17,20 @@ namespace VRayForBlender {
 class PluginWriter {
 public:
 	PluginWriter(std::string fileName, PyObject *pyFile, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
-	~PluginWriter();
 
 	PluginWriter &writeStr(const char *str);
 
-	void flush();
-
 	ExporterSettings::ExportFormat format() const { return m_format; }
 
-	PluginWriter &include(std::string);
 	std::string getName() const;
 	bool good() const;
 
 	PyObject *getFile() { return m_file; }
 
 private:
-	bool doOpen();
-
-private:
 	std::string m_fileName;
 	PyObject *m_file;
 	ExporterSettings::ExportFormat m_format;
-	std::set<std::string> m_includeList;
 
 private:
 	PluginWriter(const PluginWriter&) = delete;

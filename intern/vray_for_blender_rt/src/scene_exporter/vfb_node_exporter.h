@@ -23,6 +23,7 @@
 #include "vfb_export_settings.h"
 #include "vfb_typedefs.h"
 #include "vfb_params_desc.h"
+#include "vfb_render_view.h"
 
 #include "DNA_ID.h"
 #include <map>
@@ -278,6 +279,10 @@ public:
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
+
+	AttrPlugin        exportRenderView(const ViewParams &viewParams);
+	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
+	AttrPlugin        exportCameraDefault(ViewParams &viewParams);
 
 	void              exportVRayEnvironment(NodeContext &context);
 

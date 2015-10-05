@@ -47,11 +47,11 @@ namespace VRayForBlender {
 
 class TexVoxelData {
 public:
-	TexVoxelData(Object *ob): m_ob(ob)
-	{
-		m_smd = NULL;
-		p_interpolation = 0;
-	}
+	TexVoxelData(Object *ob)
+	    : m_ob(ob)
+	    , m_smd(nullptr)
+	    , p_interpolation(0)
+	{}
 
 	void               initName(const std::string &name);
 	AttrValue          export_plugins(PluginExporter *exporter);
@@ -82,6 +82,6 @@ private:
 	Object            *m_ob;
 };
 
-}
+} // namespace VRayForBlender
 
 #endif // TEX_VOXEL_DATA_H

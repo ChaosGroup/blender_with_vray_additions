@@ -3,43 +3,37 @@
 
 #include "vfb_scene_exporter.h"
 
+
 namespace VRayForBlender {
 
-class InteractiveExporter: public SceneExporter {
+class InteractiveExporter
+        : public SceneExporter
+{
 public:
-	InteractiveExporter(BL::Context         context,
-	                    BL::RenderEngine    engine,
-	                    BL::BlendData       data,
-	                    BL::Scene           scene,
-	                    BL::SpaceView3D     view3d,
-	                    BL::RegionView3D    region3d,
-	                    BL::Region          region):
-	    SceneExporter(context, engine, data, scene, view3d, region3d, region)
+	InteractiveExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene)
+	    : SceneExporter(context, engine, data, scene, BL::SpaceView3D(context.space_data()), context.region_data(), context.region())
 	{}
 
-	virtual bool         do_export();
-	virtual void         sync_dupli(BL::Object ob, const int &check_updated = false);
-	virtual void         create_exporter();
+	virtual bool         do_export() override;
+	virtual void         sync_dupli(BL::Object ob, const int &check_updated = false) override;
+	virtual void         create_exporter() override;
 };
 
-class ProductionExporter: public SceneExporter {
+
+class ProductionExporter
+        : public SceneExporter
+{
 public:
-	ProductionExporter(BL::Context         context,
-	                   BL::RenderEngine    engine,
-	                   BL::BlendData       data,
-	                   BL::Scene           scene,
-	                   BL::SpaceView3D     view3d,
-	                   BL::RegionView3D    region3d,
-	                   BL::Region          region):
-	    SceneExporter(context, engine, data, scene, view3d, region3d, region)
+	ProductionExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene)
+	    : SceneExporter(context, engine, data, scene)
 	{}
 
-	virtual bool         do_export();
-	virtual void         sync_dupli(BL::Object ob, const int &check_updated = false);
-	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override);
-	virtual void         create_exporter();
+	virtual bool         do_export() override;
+	virtual void         sync_dupli(BL::Object ob, const int &check_updated = false) override;
+	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override) override;
+	virtual void         create_exporter() override;
 };
 
-} // VRayForBlender
+} // namespace VRayForBlender
 
 #endif // VRAY_FOR_BLENDER_SPECIALISED_EXPORTER_H

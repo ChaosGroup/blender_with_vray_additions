@@ -36,48 +36,34 @@ VrsceneExporter::VrsceneExporter():
 
 }
 
-void VrsceneExporter::setUpSingleWriter()
+void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file)
 {
-	const auto name = m_FileDir + ".vrscene";
-	auto file = python_open_file(name);
-
-	auto writer = std::shared_ptr<PluginWriter>(new PluginWriter(name, file, m_ExportFormat));
-	for (int c = ParamDesc::PluginUnknown; c <= ParamDesc::PluginUvwgen; c++) {
-		m_Writers[static_cast<ParamDesc::PluginType>(c)] = writer;
+	if (file) {
+		auto writer = std::shared_ptr<PluginWriter>(new PluginWriter("<FIXME>", file, m_ExportFormat));
+		switch (type) {
+		case VRayForBlender::ParamDesc::PluginChannel:
+		case VRayForBlender::ParamDesc::PluginFilter:
+		case VRayForBlender::ParamDesc::PluginSettings:
+			m_Writers[ParamDesc::PluginFilter] = writer;
+			m_Writers[ParamDesc::PluginChannel] = writer;
+			m_Writers[ParamDesc::PluginSettings] = writer;
+			break;
+		case VRayForBlender::ParamDesc::PluginBRDF:
+		case VRayForBlender::ParamDesc::PluginMaterial:
+			m_Writers[ParamDesc::PluginBRDF] = writer;
+			m_Writers[ParamDesc::PluginMaterial] = writer;
+			break;
+		case VRayForBlender::ParamDesc::PluginTexture:
+		case VRayForBlender::ParamDesc::PluginUvwgen:
+			m_Writers[ParamDesc::PluginTexture] = writer;
+			m_Writers[ParamDesc::PluginUvwgen] = writer;
+			break;
+		default:
+			m_Writers[type] = writer;
+		}
+	} else {
+		PRINT_ERROR("Setting nullptr file for %d", static_cast<int>(type));
 	}
-}
-
-void VrsceneExporter::setUpSplitWriters()
-{
-	const auto writerSceneName = m_FileDir + "_scene.vrscene";
-	auto writerScene = std::shared_ptr<PluginWriter>(new PluginWriter(writerSceneName, python_open_file(writerSceneName), m_ExportFormat));
-	const auto writerNodesName = m_FileDir + "_nodes.vrscene";
-	auto writerNodes = std::shared_ptr<PluginWriter>(new PluginWriter(writerNodesName, python_open_file(writerNodesName), m_ExportFormat));
-	const auto writerGeometryName = m_FileDir + "_geometry.vrscene";
-	auto writerGeometry = std::shared_ptr<PluginWriter>(new PluginWriter(writerGeometryName, python_open_file(writerGeometryName), m_ExportFormat));
-	const auto writerCameraName = m_FileDir + "_camera.vrscene";
-	auto writerCamera = std::shared_ptr<PluginWriter>(new PluginWriter(writerCameraName, python_open_file(writerCameraName), m_ExportFormat));
-	const auto writerLightsName = m_FileDir + "_lights.vrscene";
-	auto writerLights = std::shared_ptr<PluginWriter>(new PluginWriter(writerLightsName, python_open_file(writerLightsName), m_ExportFormat));
-	const auto writerTexturesName = m_FileDir + "_textures.vrscene";
-	auto writerTextures = std::shared_ptr<PluginWriter>(new PluginWriter(writerTexturesName, python_open_file(writerTexturesName), m_ExportFormat));
-	const auto writerMaterialsName = m_FileDir + "_materials.vrscene";
-	auto writerMaterials = std::shared_ptr<PluginWriter>(new PluginWriter(writerMaterialsName, python_open_file(writerMaterialsName), m_ExportFormat));
-	const auto writerEnvironmentName = m_FileDir + "_environment.vrscene";
-	auto writerEnvironment = std::shared_ptr<PluginWriter>(new PluginWriter(writerEnvironmentName, python_open_file(writerEnvironmentName), m_ExportFormat));
-
-	m_Writers[ParamDesc::PluginFilter] = writerScene;
-	m_Writers[ParamDesc::PluginChannel] = writerScene;
-	m_Writers[ParamDesc::PluginSettings] = writerScene;
-	m_Writers[ParamDesc::PluginObject] = writerNodes;
-	m_Writers[ParamDesc::PluginGeometry] = writerGeometry;
-	m_Writers[ParamDesc::PluginCamera] = writerCamera;
-	m_Writers[ParamDesc::PluginLight] = writerLights;
-	m_Writers[ParamDesc::PluginTexture] = writerTextures;
-	m_Writers[ParamDesc::PluginUvwgen] = writerTextures;
-	m_Writers[ParamDesc::PluginBRDF] = writerMaterials;
-	m_Writers[ParamDesc::PluginMaterial] = writerMaterials;
-	m_Writers[ParamDesc::PluginEffect] = writerEnvironment;
 }
 
 
@@ -85,58 +71,9 @@ VrsceneExporter::~VrsceneExporter()
 {
 }
 
-void VrsceneExporter::set_settings(const ExporterSettings &settings)
-{
-	m_ExportFormat = settings.export_file_format;
-
-	m_SplitFiles = settings.settings_files.use_separate;
-	m_FileDirType = settings.settings_files.output_type;
-
-	m_ReexportMeshes = settings.export_meshes;
-	fs::path dir;
-
-	switch (m_FileDirType) {
-	case SettingsFiles::OutputDirTypeUser:
-		dir = fs::path(settings.settings_files.output_dir);
-		break;
-	case SettingsFiles::OutputDirTypeScene:
-		dir = fs::path(settings.settings_files.project_path);
-		break;
-	case SettingsFiles::OutputDirTypeTmp:
-		/* fall-through */
-	default:
-		// TODO vrayblender_<USER_NAME>
-		dir = fs::temp_directory_path() /  fs::path("vrayblender_");
-		break;
-	}
-
-	m_FileDir = dir.string();
-
-	char absPath[PATH_MAX];
-	strncpy(absPath, m_FileDir.c_str(), PATH_MAX);
-	BLI_path_abs(absPath, settings.settings_files.project_path.c_str());
-	m_FileDir = absPath;
-
-	if (!fs::exists(m_FileDir)) {
-		fs::create_directories(m_FileDir);
-	}
-
-	// append the file prefix to the dir
-	fs::path fileName = "scene";
-	if (settings.settings_files.output_unique && !settings.settings_files.project_path.empty()) {
-		fileName = fs::path(settings.settings_files.project_path).filename();
-	}
-
-	m_FileDir = (m_FileDir / fileName).string();
-}
 
 void VrsceneExporter::init()
 {
-	if (m_SplitFiles) {
-		this->setUpSplitWriters();
-	} else {
-		this->setUpSingleWriter();
-	}
 }
 
 
@@ -149,11 +86,6 @@ void VrsceneExporter::free()
 void VrsceneExporter::sync()
 {
 	m_Synced = true;
-	for (auto & writer : m_Writers) {
-		if (writer.second) {
-			writer.second->flush();
-		}
-	}
 }
 
 
@@ -204,9 +136,6 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	}
 
 	PluginWriter & writer = *writerPtr;
-	if (m_Writers[ParamDesc::PluginSettings]) {
-		m_Writers[ParamDesc::PluginSettings]->include(writer.getName());
-	}
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
 

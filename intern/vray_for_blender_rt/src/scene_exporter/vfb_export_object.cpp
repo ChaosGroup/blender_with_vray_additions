@@ -21,6 +21,8 @@
 #include "vfb_utils_object.h"
 #include "vfb_utils_nodes.h"
 
+#include "DNA_object_types.h"
+
 
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {
