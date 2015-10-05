@@ -145,8 +145,6 @@ void AppSdkExporter::init()
 			m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			m_vray->setOnDumpMessage(CbDumpMessage);
 			m_vray->setRTImageUpdateTimeout(200);
-			m_vray->setAutoCommit(false);
-			// m_vray->setRTImageUpdateDifference();
 		}
 	}
 }
@@ -160,7 +158,6 @@ void AppSdkExporter::free()
 
 void AppSdkExporter::sync()
 {
-#if 0
 	typedef std::set<std::string> RemoveKeys;
 	RemoveKeys removeKeys;
 
@@ -182,15 +179,11 @@ void AppSdkExporter::sync()
 	}
 
 	if (removeKeys.size()) {
-		m_vray->stop();
-
 		for (RemoveKeys::iterator kIt = removeKeys.begin(); kIt != removeKeys.end(); ++kIt) {
 			m_used_map.erase(*kIt);
 		}
-
-		// m_vray->start();
 	}
-#endif
+
 	commit_changes();
 }
 
@@ -242,13 +235,14 @@ void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
 	if (plugin) {
 		PRINT_WARN("Setting camera plugin to: %s",
-				   plugin.getName().c_str());
+		           plugin.getName().c_str());
+
 		m_vray->setCamera(plugin);
 
 		VRay::Error err = m_vray->getLastError();
 		if (err != VRay::SUCCESS) {
 			PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
-						plugin.getName().c_str(), err.toString().c_str());
+			            plugin.getName().c_str(), err.toString().c_str());
 		}
 	}
 }
@@ -256,6 +250,8 @@ void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 
 void AppSdkExporter::commit_changes()
 {
+	PRINT_WARN("AppSdkExporter::commit_changes()");
+
 	if (m_vray) {
 		m_vray->commit();
 	}
@@ -416,18 +412,34 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 int AppSdkExporter::remove_plugin(const std::string &pluginName)
 {
-	bool res = false;
+	bool res = true;
 
-	m_pluginManager.remove(pluginName);
+	if (m_vray) {
+		PRINT_WARN("Removing plugin: \"%s\"",
+		           pluginName.c_str());
 
-	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
-	if (plugin) {
-		res = m_vray->removePlugin(plugin);
+		m_pluginManager.remove(pluginName);
 
-		VRay::Error err = m_vray->getLastError();
-		if (err != VRay::SUCCESS) {
-			PRINT_ERROR("Error removing plugin \"%s\" [%s]!",
-						plugin.getName().c_str(), err.toString().c_str());
+		res = remove_plugin_impl(m_vray->getPlugin(pluginName, false));
+	}
+
+	return res;
+}
+
+
+int AppSdkExporter::remove_plugin_impl(VRay::Plugin plugin)
+{
+	int res = true;
+
+	if (m_vray) {
+		if (plugin) {
+			res = m_vray->removePlugin(plugin);
+
+			VRay::Error err = m_vray->getLastError();
+			if (err != VRay::SUCCESS) {
+				PRINT_ERROR("Error removing plugin \"%s\" [%s]!",
+				            plugin.getName().c_str(), err.toString().c_str());
+			}
 		}
 	}
 
@@ -456,16 +468,12 @@ void AppSdkExporter::export_vrscene(const std::string &filepath)
 
 VRay::Plugin AppSdkExporter::new_plugin(const PluginDesc &pluginDesc)
 {
-#if 0
-	PRINT_WARN("AppSdkExporter::new_plugin(%s \"%s\")",
-	           pluginDesc.pluginID.c_str(), pluginDesc.pluginName.c_str());
-#endif
 	VRay::Plugin plug = m_vray->newPlugin(pluginDesc.pluginName, pluginDesc.pluginID);
-#if 0
-	if (NOT(pluginDesc.pluginName.empty())) {
-		m_used_map[pluginDesc.pluginName.c_str()] = PluginUsed(plug);
+
+	if (!pluginDesc.pluginName.empty()) {
+		m_used_map[pluginDesc.pluginName] = PluginUsed(plug);
 	}
-#endif
+
 	return plug;
 }
 

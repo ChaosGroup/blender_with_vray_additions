@@ -80,6 +80,7 @@ private:
 	void                 reset_used();
 
 	VRay::Plugin         new_plugin(const PluginDesc &pluginDesc);
+	int                  remove_plugin_impl(VRay::Plugin plugin);
 
 	VRay::VRayRenderer  *m_vray;
 
