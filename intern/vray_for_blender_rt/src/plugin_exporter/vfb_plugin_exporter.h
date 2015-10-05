@@ -80,6 +80,8 @@ struct RenderImage {
 		FreePtrArr(pixels);
 	}
 
+	void flip();
+
 	float *pixels;
 	int    w;
 	int    h;

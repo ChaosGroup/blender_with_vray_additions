@@ -120,3 +120,28 @@ void VRayForBlender::ExporterDelete(VRayForBlender::PluginExporter *exporter)
 {
 	FreePtr(exporter);
 }
+
+
+void RenderImage::flip()
+{
+	if (pixels && w && h) {
+		const int _half_h = h / 2;
+		const int half_h = h % 2 ? _half_h - 1 : _half_h;
+
+		const int row_items = w * 4;
+		const int row_bytes = row_items * sizeof(float);
+
+		float *buf = new float[row_items];
+
+		for (int i = 0; i < half_h; ++i) {
+			float *to_row   = pixels + (i       * row_items);
+			float *from_row = pixels + ((h - i) * row_items);
+
+			memcpy(buf,      to_row,   row_bytes);
+			memcpy(to_row,   from_row, row_bytes);
+			memcpy(from_row, buf,      row_bytes);
+		}
+
+		FreePtr(buf);
+	}
+}
