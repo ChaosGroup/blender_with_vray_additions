@@ -156,6 +156,8 @@ public:
 	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
 	        bool         get_is_viewport() const { return is_viewport; }
 
+	PluginManager       &getPluginManager() { return m_pluginManager; }
+
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
