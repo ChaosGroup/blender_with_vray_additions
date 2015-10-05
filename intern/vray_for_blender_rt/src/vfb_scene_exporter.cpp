@@ -270,6 +270,8 @@ void SceneExporter::sync(const int &check_updated)
 	PRINT_INFO_EX("SceneExporter::sync(%i)",
 	              check_updated);
 
+	m_settings.init(m_data, m_scene);
+
 	clock_t begin = clock();
 	m_data_exporter.clearMaterialCache();
 	sync_prepass();
