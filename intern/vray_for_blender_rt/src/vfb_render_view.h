@@ -28,11 +28,11 @@
 namespace VRayForBlender {
 
 struct RenderSizeParams {
-	RenderSizeParams():
-	    w(0),
-	    h(0),
-	    offs_x(0),
-	    offs_y(0)
+	RenderSizeParams()
+	    : w(0)
+	    , h(0)
+	    , offs_x(0)
+	    , offs_y(0)
 	{}
 
 	int  w;
@@ -43,14 +43,14 @@ struct RenderSizeParams {
 
 
 struct RenderViewParams {
-	RenderViewParams():
-	    fov(0.785398f),
-	    ortho(false),
-	    ortho_width(1.0f),
-	    use_clip_start(false),
-	    clip_start(0.0f),
-	    use_clip_end(false),
-	    clip_end(1.0f)
+	RenderViewParams()
+	    : fov(0.785398f)
+	    , ortho(false)
+	    , ortho_width(1.0f)
+	    , use_clip_start(false)
+	    , clip_start(0.0f)
+	    , use_clip_end(false)
+	    , clip_end(1.0f)
 	{}
 
 	bool operator == (const RenderViewParams &other) const {
