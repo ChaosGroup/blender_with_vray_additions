@@ -80,6 +80,15 @@ static float GetLensShift(BL::Object &ob)
 }
 
 
+static void AspectCorrectFovOrtho(const float aspect, ViewParams &viewParams)
+{
+	if (aspect < 1.0f) {
+		viewParams.renderView.fov = 2.0f * atanf(tanf(viewParams.renderView.fov / 2.0f) * aspect);
+		viewParams.renderView.ortho_width *= aspect;
+	}
+}
+
+
 AttrPlugin DataExporter::exportRenderView(const ViewParams &viewParams)
 {
 	PluginDesc viewDesc(ViewParams::renderViewPluginName, "RenderView");
@@ -247,10 +256,7 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 			viewParams.renderView.ortho = (cameraData.type() == BL::Camera::type_ORTHO);
 			viewParams.renderView.ortho_width = cameraData.ortho_scale();
 
-			if (aspect < 1.0f) {
-				viewParams.renderView.fov = 2.0f * atanf(tanf(viewParams.renderView.fov / 2.0f) * aspect);
-				viewParams.renderView.ortho_width *= aspect;
-			}
+			AspectCorrectFovOrtho(aspect, viewParams);
 
 			viewParams.renderView.use_clip_start = RNA_boolean_get(&renderView, "clip_near");
 			viewParams.renderView.use_clip_end   = RNA_boolean_get(&renderView, "clip_far");
@@ -264,58 +270,32 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		}
 	}
 	else {
-		BL::Object cameraObject = m_view3d.camera();
-
-		float sensor_size = 35.0f;
-		if (cameraObject) {
-			BL::Camera cameraData(cameraObject.data());
-			if (cameraData) {
-				sensor_size = cameraData.sensor_fit() == BL::Camera::sensor_fit_VERTICAL
-				              ? cameraData.sensor_height()
-				              : cameraData.sensor_width();
-			}
-		}
+		static const float sensor_size = 32.0f;
+		const float lens = m_view3d.lens() / 2.0f;
 
 		viewParams.renderSize.offs_x = 0;
 		viewParams.renderSize.offs_y = 0;
 		viewParams.renderSize.w = m_region.width();
 		viewParams.renderSize.h = m_region.height();
 
-		float lens = m_view3d.lens() / 2.f;
+		viewParams.renderView.fov = 2.0f * atanf((0.5f * sensor_size) / lens);
 
 		viewParams.renderView.ortho = (m_region3d.view_perspective() == BL::RegionView3D::view_perspective_ORTHO);
-		viewParams.renderView.ortho_width = m_region3d.view_distance() * sensor_size / lens;
-
-		const ARegion *ar = (const ARegion*)m_region.ptr.data;
-		float aspect = 0.f;
-
 		if (viewParams.renderView.ortho) {
-			aspect = viewParams.renderView.ortho_width / 2.0f;
-		} else {
-			lens /= 2.f;
-			aspect = float(ar->winx) / float(ar->winy);
+			viewParams.renderView.ortho_width = m_region3d.view_distance() * sensor_size / lens;
 		}
 
-		viewParams.renderView.fov = 2.0f * atanf((0.5f * sensor_size) / lens / aspect);
-		viewParams.renderView.fov *= 0.85f;
+		const float aspect = float(viewParams.renderSize.w) / float(viewParams.renderSize.h);
 
-		if (viewParams.renderView.ortho) {
-			viewParams.renderView.use_clip_start = false;
-			viewParams.renderView.use_clip_end   = false;
-		}
-		else {
-			viewParams.renderView.use_clip_start = true;
-			viewParams.renderView.use_clip_end   = true;
-			viewParams.renderView.clip_start = m_view3d.clip_start();
-			viewParams.renderView.clip_end = m_view3d.clip_end();
-		}
+		AspectCorrectFovOrtho(aspect, viewParams);
+
+		viewParams.renderView.use_clip_start = !viewParams.renderView.ortho;
+		viewParams.renderView.use_clip_end   = !viewParams.renderView.ortho;
+		viewParams.renderView.clip_start = m_view3d.clip_start();
+		viewParams.renderView.clip_end = m_view3d.clip_end();
 
 		viewParams.renderView.tm = Math::InvertTm(m_region3d.view_matrix());
-
-		// No physical camera for non camera views
-		viewParams.usePhysicalCamera = false;
-
-		viewParams.cameraObject = cameraObject;
+		viewParams.cameraObject = BL::Object(PointerRNA_NULL);
 	}
 }
 
