@@ -34,6 +34,7 @@ using namespace VRayForBlender;
 const std::string VRayForBlender::ViewParams::renderViewPluginName("renderView");
 const std::string VRayForBlender::ViewParams::physicalCameraPluginName("cameraPhysical");
 const std::string VRayForBlender::ViewParams::defaultCameraPluginName("cameraDefault");
+const std::string VRayForBlender::ViewParams::settingsCameraDofPluginName("settingsCameraDof");
 
 
 static float GetLensShift(BL::Object &ob)
@@ -90,6 +91,9 @@ AttrPlugin DataExporter::exportRenderView(const ViewParams &viewParams)
 	viewDesc.add("orthographic", viewParams.renderView.ortho);
 	viewDesc.add("orthographicWidth", viewParams.renderView.ortho_width);
 
+	// TODO: Set this only for viewport rendering
+	viewDesc.add("use_scene_offset", false);
+
 	return m_exporter->export_plugin(viewDesc);
 }
 
@@ -103,10 +107,25 @@ AttrPlugin DataExporter::exportCameraDefault(ViewParams &viewParams)
 }
 
 
-AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
+AttrPlugin DataExporter::exportSettingsCameraDof(ViewParams &viewParams)
 {
-	AttrPlugin plugin;
+	PluginDesc camDofDesc(ViewParams::settingsCameraDofPluginName, "SettingsCameraDof");
 
+	if (viewParams.cameraObject && viewParams.cameraObject.data()) {
+		BL::Camera cameraData(viewParams.cameraObject.data());
+		if (cameraData) {
+			PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+			PointerRNA cameraDof = RNA_pointer_get(&vrayCamera, "SettingsCameraDof");
+			setAttrsFromPropGroupAuto(camDofDesc, &cameraDof, "SettingsCameraDof");
+		}
+	}
+
+	return m_exporter->export_plugin(camDofDesc);
+}
+
+
+void DataExporter::fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc)
+{
 	BL::Camera cameraData(viewParams.cameraObject.data());
 	if (cameraData) {
 		PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
@@ -131,7 +150,6 @@ AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
 			focus_distance = 5.0f;
 		}
 
-		PluginDesc physCamDesc(ViewParams::physicalCameraPluginName, "CameraPhysical");
 		physCamDesc.add("fov", viewParams.renderView.fov);
 		physCamDesc.add("horizontal_offset", horizontal_offset);
 		physCamDesc.add("vertical_offset",   vertical_offset);
@@ -139,11 +157,16 @@ AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
 		physCamDesc.add("focus_distance",    focus_distance);
 
 		setAttrsFromPropGroupAuto(physCamDesc, &physicalCamera, "CameraPhysical");
-
-		plugin = m_exporter->export_plugin(physCamDesc);
 	}
+}
 
-	return plugin;
+
+AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
+{
+	PluginDesc physCamDesc(ViewParams::physicalCameraPluginName, "CameraPhysical");
+	fillPhysicalCamera(viewParams, physCamDesc);
+
+	return m_exporter->export_plugin(physCamDesc);
 }
 
 
@@ -241,17 +264,17 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		}
 	}
 	else {
-		// XXX: Check if it's possible to use only m_view3d.camera()
-		//
-		BL::Object cameraObject = m_view3d.lock_camera_and_layers()
-		                          ? m_scene.camera()
-		                          : m_view3d.camera();
+		BL::Object cameraObject = m_view3d.camera();
 
-		BL::Camera cameraData(cameraObject.data());
-
-		const float sensor_size = (cameraData.sensor_fit() == BL::Camera::sensor_fit_VERTICAL)
-		                          ? cameraData.sensor_height()
-		                          : cameraData.sensor_width();
+		float sensor_size = 35.0f;
+		if (cameraObject) {
+			BL::Camera cameraData(cameraObject.data());
+			if (cameraData) {
+				sensor_size = cameraData.sensor_fit() == BL::Camera::sensor_fit_VERTICAL
+				              ? cameraData.sensor_height()
+				              : cameraData.sensor_width();
+			}
+		}
 
 		viewParams.renderSize.offs_x = 0;
 		viewParams.renderSize.offs_y = 0;
@@ -274,6 +297,7 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		}
 
 		viewParams.renderView.fov = 2.0f * atanf((0.5f * sensor_size) / lens / aspect);
+		viewParams.renderView.fov *= 0.85f;
 
 		if (viewParams.renderView.ortho) {
 			viewParams.renderView.use_clip_start = false;
@@ -314,6 +338,22 @@ int SceneExporter::is_physical_view(BL::Object &cameraObject)
 }
 
 
+int SceneExporter::is_physical_updated(ViewParams &viewParams)
+{
+	PluginDesc physCamDesc(ViewParams::physicalCameraPluginName, "CameraPhysical");
+	m_data_exporter.fillPhysicalCamera(viewParams, physCamDesc);
+
+	int differs = false;
+	if (m_exporter) {
+		PluginManager &plugMan = m_exporter->getPluginManager();
+
+		differs = plugMan.differs(physCamDesc);
+	}
+
+	return differs;
+}
+
+
 void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject)
 {
 	viewParams.renderView.tm = cameraObject.matrix_world();
@@ -346,25 +386,32 @@ void SceneExporter::sync_view(int)
 
 	viewParams.usePhysicalCamera = is_physical_view(viewParams.cameraObject);
 
-	if (m_viewParams.changedSize(viewParams)) {
-		resize(viewParams.renderSize.w, viewParams.renderSize.h);
+	bool needReset = m_viewParams.needReset(viewParams);
+	if (!needReset && viewParams.usePhysicalCamera) {
+		needReset |= is_physical_updated(viewParams);
 	}
 
-	if (m_viewParams.changedViewPosition(viewParams)) {
-		tag_redraw();
-	}
-
-	const bool needReset = m_viewParams.needReset(viewParams);
 	if (needReset) {
+		if (!m_viewLock.try_lock()) {
+			tag_redraw();
+			return;
+		}
+
+		m_exporter->remove_plugin(ViewParams::settingsCameraDofPluginName);
 		m_exporter->remove_plugin(ViewParams::renderViewPluginName);
 		m_exporter->remove_plugin(ViewParams::defaultCameraPluginName);
 		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
-		m_exporter->commit_changes();
 	}
 
 	AttrPlugin renView;
 	AttrPlugin physCam;
 	AttrPlugin defCam;
+
+	if (needReset &&
+	    !viewParams.renderView.ortho &&
+	    !viewParams.usePhysicalCamera) {
+		m_data_exporter.exportSettingsCameraDof(viewParams);
+	}
 
 	if (viewParams.usePhysicalCamera) {
 		physCam = m_data_exporter.exportCameraPhysical(viewParams);
@@ -384,7 +431,18 @@ void SceneExporter::sync_view(int)
 		else if (defCam) {
 			m_exporter->set_camera_plugin(defCam.plugin);
 		}
+
 		m_exporter->commit_changes();
+
+		m_viewLock.unlock();
+	}
+
+	if (m_viewParams.changedSize(viewParams)) {
+		resize(viewParams.renderSize.w, viewParams.renderSize.h);
+	}
+
+	if (m_viewParams.changedViewPosition(viewParams)) {
+		tag_redraw();
 	}
 
 	// Store new params
