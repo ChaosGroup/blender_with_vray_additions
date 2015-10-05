@@ -281,6 +281,8 @@ public:
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
 
 	AttrPlugin        exportRenderView(const ViewParams &viewParams);
+	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
+	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
 	AttrPlugin        exportCameraDefault(ViewParams &viewParams);
 
