@@ -174,6 +174,8 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 			pluginExporter->set_export_file(PluginType::PluginTexture, textureFile);
 		}
 		exporter->init_data();
+	} else {
+		PRINT_ERROR("Failed to initialize exporter!");
 	}
 
 	return PyLong_FromVoidPtr(exporter);
@@ -223,6 +225,8 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 		exporter->init();
 		exporter->init_data();
 		exporter->do_export();
+	} else {
+		PRINT_ERROR("Failed to initialize RT exporter!");
 	}
 
 	return PyLong_FromVoidPtr(exporter);
