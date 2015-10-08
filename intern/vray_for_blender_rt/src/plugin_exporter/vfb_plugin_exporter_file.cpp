@@ -39,7 +39,7 @@ VrsceneExporter::VrsceneExporter():
 void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file)
 {
 	if (file) {
-		auto writer = std::shared_ptr<PluginWriter>(new PluginWriter("<FIXME>", file, m_ExportFormat));
+		auto writer = std::shared_ptr<PluginWriter>(new PluginWriter(file, m_ExportFormat));
 		switch (type) {
 		case VRayForBlender::ParamDesc::PluginChannel:
 		case VRayForBlender::ParamDesc::PluginFilter:

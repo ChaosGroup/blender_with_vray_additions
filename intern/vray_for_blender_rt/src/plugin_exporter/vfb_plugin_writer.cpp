@@ -31,9 +31,8 @@ struct TraceTransformHex {
 	double v[3];
 };
 
-PluginWriter::PluginWriter(std::string fileName, PyObject *pyFile, ExporterSettings::ExportFormat format)
-    : m_fileName(fileName)
-    , m_file(pyFile)
+PluginWriter::PluginWriter(PyObject *pyFile, ExporterSettings::ExportFormat format)
+    : m_file(pyFile)
     , m_format(format)
 {
 }
@@ -41,11 +40,6 @@ PluginWriter::PluginWriter(std::string fileName, PyObject *pyFile, ExporterSetti
 bool PluginWriter::good() const
 {
 	return m_file != nullptr;
-}
-
-std::string PluginWriter::getName() const
-{
-	return fs::path(m_fileName).filename().string();
 }
 
 #define PyPrintf(pp, ...)                                         \
