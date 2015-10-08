@@ -191,14 +191,6 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 	PyObject *pyData = nullptr;
 	PyObject *pyScene = nullptr;
 
-	PyObject *mainFile = nullptr;
-	PyObject *objectFile = nullptr;
-	PyObject *envFile = nullptr;
-	PyObject *geometryFile = nullptr;
-	PyObject *lightsFile = nullptr;
-	PyObject *materialFile = nullptr;
-	PyObject *textureFile = nullptr;
-
 	static char *kwlist[] = {
 	    /* 0 */_C("context"),
 	    /* 1 */_C("engine"),
