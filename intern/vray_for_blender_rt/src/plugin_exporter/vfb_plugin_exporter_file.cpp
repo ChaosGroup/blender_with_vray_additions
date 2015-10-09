@@ -129,9 +129,15 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		}
 
 		if (!writerPtr) {
-			PRINT_ERROR("No PluginWriter for type %d exproting %s with id [%s]",
-				writerType, name.c_str(), pluginDesc.pluginID.c_str());
-			return plugin;
+			auto settingsWriter = m_Writers[ParamDesc::PluginSettings];
+			if (writerPtr = settingsWriter) {
+				PRINT_WARN("No PluginWriter for type %d exproting %s with id [%s], writing in main file!",
+					writerType, name.c_str(), pluginDesc.pluginID.c_str());
+			} else {
+				PRINT_ERROR("Failed to get plugin writer for type %d exporting %s with id [%s]",
+					writerType, name.c_str(), pluginDesc.pluginID.c_str());
+				return plugin;
+			}
 		}
 	}
 
