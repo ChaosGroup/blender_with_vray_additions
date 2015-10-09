@@ -527,6 +527,10 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 				pluginDesc.add("map_channels_names", map_channels_names);
 				pluginDesc.add("map_channels",       map_channels);
 			}
+
+			if (options.force_dynamic_geometry) {
+				pluginDesc.add("dynamic_geometry", true);
+			}
 		}
 	}
 

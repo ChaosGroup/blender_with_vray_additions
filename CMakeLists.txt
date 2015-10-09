@@ -748,19 +748,15 @@ if(WITH_VRAY_FOR_BLENDER)
 		add_definitions(-DUSE_BLENDER_VRAY_APPSDK)
 	endif()
 
-	if(USE_BLENDER_VRAY_ZMQ)
-		set(ZMQ_ROOT "" CACHE PATH "ZMQ lib location")
+	set(ZMQ_ROOT "" CACHE PATH "ZMQ lib location")
 
-		find_library(ZMQ_LIB
-			NAMES zmq
-			PATHS ${ZMQ_ROOT}/lib
-		)
+	find_library(ZMQ_LIB
+		NAMES zmq
+		PATHS ${ZMQ_ROOT}/lib
+	)
 
-		if(NOT ZMQ_LIB)
-			message(FATAL_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
-		endif()
-
-		add_definitions(-DUSE_BLENDER_VRAY_ZMQ)
+	if(NOT ZMQ_LIB)
+		message(FATAL_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
 	endif()
 
 endif()

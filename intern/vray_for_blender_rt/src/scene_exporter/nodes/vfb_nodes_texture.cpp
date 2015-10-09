@@ -368,37 +368,38 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 
 AttrValue DataExporter::exportVRayNodeTexSky(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
-#if 0
-	PluginDesc  attrs;
+	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
-	BL::NodeSocket sunSock = NodeExporter::getSocketByName(node, "Sun");
+	BL::Object sun(PointerRNA_NULL);
+
+	BL::NodeSocket sunSock(Nodes::GetInputSocketByName(node, "Sun"));
 	if (sunSock && sunSock.is_linked()) {
-		BL::Node conNode = NodeExporter::getConnectedNode(sunSock);
+		BL::Node conNode(Nodes::GetConnectedNode(sunSock));
 		if (conNode) {
 			if (NOT(conNode.bl_idname() == "VRayNodeSelectObject")) {
 				PRINT_ERROR("Sun node could be selected only with \"Select Object\" node.");
 			}
 			else {
-				BL::Object sunOb = NodeExporter::exportVRayNodeSelectObject(ntree, conNode, sunSock, context);
+				BL::Object sunOb = exportVRayNodeSelectObject(ntree, conNode, sunSock, context);
 				if (sunOb && sunOb.type() == BL::Object::type_LAMP) {
-					attrs["sun"] = GetIDName(sunOb, "LA");
+					sun = sunOb;
 				}
 			}
 		}
 	}
 	else {
 		BL::Scene::objects_iterator obIt;
-		for (ExporterSettings::gSet.b_scene.objects.begin(obIt); obIt != ExporterSettings::gSet.b_scene.objects.end(); ++obIt) {
-			BL::Object ob = *obIt;
-			if (ob.type() == BL::Object::type_LAMP) {
-				BL::ID laID = ob.data();
+		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+			BL::Object ob(*obIt);
+			if (ob && ob.type() == BL::Object::type_LAMP) {
+				BL::ID laID(ob.data());
 				if (laID) {
 					BL::Lamp la(laID);
 					if (la.type() == BL::Lamp::type_SUN) {
 						PointerRNA vrayLight = RNA_pointer_get(&la.ptr, "vray");
 						const int direct_type = RNA_enum_get(&vrayLight, "direct_type");
 						if (direct_type == 1) {
-							attrs["sun"] = GetIDName(ob, "LA");
+							sun = ob;
 							break;
 						}
 					}
@@ -407,9 +408,12 @@ AttrValue DataExporter::exportVRayNodeTexSky(BL::NodeTree &ntree, BL::Node &node
 		}
 	}
 
-	return NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, attrs);
-#endif
-	return AttrValue();
+	PluginDesc pluginDesc(pluginName, "TexSky");
+	if (sun) {
+		pluginDesc.add("sun", AttrPlugin(getLightName(sun)));
+	}
+
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 
 

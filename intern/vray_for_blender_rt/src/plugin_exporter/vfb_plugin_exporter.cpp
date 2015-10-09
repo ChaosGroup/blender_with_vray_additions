@@ -26,11 +26,6 @@
 using namespace VRayForBlender;
 
 
-PluginExporter::~PluginExporter()
-{
-}
-
-
 class NullExporter:
         public PluginExporter
 {
@@ -40,6 +35,10 @@ public:
 	virtual void        free() {}
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc&) { return AttrPlugin(); }
 };
+
+
+PluginExporter::~PluginExporter() {}
+
 
 void PluginExporter::set_settings(const ExporterSettings &st)
 {
@@ -51,6 +50,7 @@ void PluginExporter::set_settings(const ExporterSettings &st)
 		this->last_rendered_frame = 0;
 	}
 }
+
 
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 {
@@ -80,6 +80,47 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 	return plg;
 }
 
+
+RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
+{
+	RenderImage image;
+
+	switch (passType) {
+		case BL::RenderPass::type_COMBINED: image = get_image(); break;
+		case BL::RenderPass::type_Z: image = get_render_channel(RenderChannelTypeVfbZdepth); break;
+		case BL::RenderPass::type_COLOR: image = get_render_channel(RenderChannelTypeVfbRealcolor); break;
+		// case BL::RenderPass::type_DIFFUSE: image = get_render_channel(RenderChannelTypeVfbDiffuse); break;
+		// case BL::RenderPass::type_SPECULAR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SHADOW: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_AO: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_REFLECTION: image = get_render_channel(RenderChannelType); break;
+		case BL::RenderPass::type_NORMAL: image = get_render_channel(RenderChannelTypeVfbNormal); break;
+		// case BL::RenderPass::type_VECTOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_REFRACTION: image = get_render_channel(RenderChannelType); break;
+		case BL::RenderPass::type_OBJECT_INDEX: image = get_render_channel(RenderChannelTypeVfbRenderID); break;
+		// case BL::RenderPass::type_UV: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_MIST: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_EMIT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_ENVIRONMENT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_MATERIAL_INDEX: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_DIFFUSE_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_DIFFUSE_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_DIFFUSE_COLOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_GLOSSY_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_GLOSSY_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_GLOSSY_COLOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_TRANSMISSION_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_TRANSMISSION_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_TRANSMISSION_COLOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SUBSURFACE_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SUBSURFACE_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SUBSURFACE_COLOR: image = get_render_channel(RenderChannelType); break;
+	}
+
+	return image;
+}
+
+
 VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
 {
 	PluginExporter *exporter = nullptr;
@@ -94,12 +135,9 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 			exporter = new NullExporter();
 			break;
 #endif
-
-#ifdef USE_BLENDER_VRAY_ZMQ
 		case ExpoterTypeZMQ:
 			exporter = new ZmqExporter();
 			break;
-#endif
 
 #ifdef USE_BLENDER_VRAY_APPSDK
 		case ExpoterTypeAppSDK:

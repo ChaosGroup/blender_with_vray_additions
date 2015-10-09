@@ -25,51 +25,40 @@
 
 AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
-	AttrPlugin output_material;
-	auto ob = context.object_context.object;
+	AttrValue output_material = getDefaultMaterial();
 
+	auto ob = context.object_context.object;
 	if (!ob) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
-					ntree.name().c_str(), node.name().c_str());
-		return output_material;
+		            ntree.name().c_str(), node.name().c_str());
 	}
-	const auto plName = GenPluginName(node, ntree, context);
-
-	const int mtlCount = Blender::GetMaterialCount(ob);
-
-	if (mtlCount > 1) {
-		AttrListPlugin mtls_list(mtlCount);
-		AttrListInt    ids_list(mtlCount);
-
-		int maIdx   = 0;
-		int slotIdx = 0; // For cases with empty slots
-
-		BL::Object::material_slots_iterator slotIt;
-		for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
-			BL::Material ma((*slotIt).material());
-			if (ma) {
-				(*ids_list)[maIdx]  = slotIdx;
-				(*mtls_list)[maIdx] = exportMaterial(ma);
-				maIdx++;
+	else {
+		const int mtlCount = Blender::GetMaterialCount(ob);
+		if (mtlCount) {
+			if (mtlCount == 1) {
+				output_material = exportSingleMaterial(ob);
 			}
+			else {
+				PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
+				fillMtlMulti(ob, mtlMultiDesc);
+
+				mtlMultiDesc.add("wrap_id", RNA_boolean_get(&node.ptr, "wrap_id"));
+
+				BL::NodeSocket mtlid_gen_float = Nodes::GetInputSocketByName(node, "ID Generator");
+				if (mtlid_gen_float.is_linked()) {
+					mtlMultiDesc.add("mtlid_gen_float", exportLinkedSocket(ntree, mtlid_gen_float, context));
+
+					// NOTE: if 'ids_list' presents in the plugin description 'mtlid_gen_*' won't work
+					mtlMultiDesc.del("ids_list");
+				}
+
+				output_material = m_exporter->export_plugin(mtlMultiDesc);
+			}
+
 		}
-
-		PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
-		mtlMultiDesc.add("mtls_list", mtls_list);
-		mtlMultiDesc.add("ids_list", ids_list);
-		mtlMultiDesc.add("wrap_id", RNA_boolean_get(&node.ptr, "wrap_id"));
-
-		BL::NodeSocket mtlid_gen_float = Nodes::GetInputSocketByName(node, "ID Generator");
-		if(mtlid_gen_float.is_linked()) {
-			mtlMultiDesc.add("mtlid_gen_float", exportLinkedSocket(ntree, mtlid_gen_float, context));
-
-			// NOTE: if 'ids_list' presents in the plugin description 'mtlid_gen_*' won't work
-			mtlMultiDesc.del("ids_list");
-		}
-		return m_exporter->export_plugin(mtlMultiDesc);
-	} else {
-		return exportMtlMulti(ob);
 	}
+
+	return output_material;
 }
 
 
@@ -82,18 +71,16 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 		const std::string &mtlSockName = boost::str(boost::format("Material %i") % i);
 
 		BL::NodeSocket mtlSock = Nodes::GetInputSocketByName(node, mtlSockName);
-		if (!mtlSock || !mtlSock.is_linked()) {
-			continue;
+		if (mtlSock && mtlSock.is_linked()) {
+			AttrValue material = exportLinkedSocket(ntree, mtlSock, context);
+			int materialID = RNA_int_get(&mtlSock.ptr, "value");
+
+			mtls_list.append(material.valPlugin);
+			ids_list.append(materialID);
 		}
-
-		AttrValue material = exportLinkedSocket(ntree, mtlSock, context);
-		int materialID = RNA_int_get(&mtlSock.ptr, "value");
-
-		mtls_list.append(material.valPlugin);
-		ids_list.append(materialID);
 	}
 
-	const std::string & pluginName = GenPluginName(node, ntree, context);
+	const std::string &pluginName = GenPluginName(node, ntree, context);
 
 	PluginDesc mtlMultiDesc(pluginName, "MtlMulti", "Mtl@");
 	mtlMultiDesc.add("mtls_list", mtls_list);
@@ -103,10 +90,13 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 	BL::NodeSocket mtlid_gen_sock  = Nodes::GetSocketByAttr(node, "mtlid_gen");
 	BL::NodeSocket mtlid_gen_float_sock = Nodes::GetSocketByAttr(node, "mtlid_gen_float");
 
-	if(mtlid_gen_sock.is_linked()) {
+	if (mtlid_gen_sock.is_linked()) {
 		mtlMultiDesc.add("mtlid_gen", exportLinkedSocket(ntree, mtlid_gen_sock, context));
-	} else if(mtlid_gen_float_sock.is_linked()) {
+		mtlMultiDesc.del("ids_list");
+	}
+	else if (mtlid_gen_float_sock.is_linked()) {
 		mtlMultiDesc.add("mtlid_gen_float", exportLinkedSocket(ntree, mtlid_gen_float_sock, context));
+		mtlMultiDesc.del("ids_list");
 	}
 
 	return m_exporter->export_plugin(mtlMultiDesc);

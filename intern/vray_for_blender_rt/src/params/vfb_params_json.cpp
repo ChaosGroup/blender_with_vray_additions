@@ -155,6 +155,9 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 				else if (attrType == "UVWGEN") {
 					attrDesc.type = AttrTypePluginUvwgen;
 				}
+				else if (attrType == "MATERIAL") {
+					attrDesc.type = AttrTypePluginMaterial;
+				}
 				else if (attrType == "OUTPUT_PLUGIN") {
 					attrDesc.type = AttrTypeOutputPlugin;
 				}

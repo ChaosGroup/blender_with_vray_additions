@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-#ifdef USE_BLENDER_VRAY_ZMQ
 
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
@@ -355,5 +354,3 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 
 	return plugin;
 }
-
-#endif // USE_BLENDER_VRAY_ZMQ

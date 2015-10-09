@@ -23,67 +23,85 @@
 
 #include "vfb_plugin_exporter.h"
 
+#include <vraysdk.hpp>
 
 namespace VRayForBlender {
 
+struct AppSdkInit {
+	AppSdkInit()
+	    : m_vrayInit(nullptr)
+	{
+		try {
+			m_vrayInit = new VRay::VRayInit(true);
+		}
+		catch (std::exception &e) {
+			PRINT_INFO_EX("Error initializing V-Ray library! Error: \"%s\"",
+			              e.what());
+			m_vrayInit = nullptr;
+		}
+	}
 
-struct AppSDKRenderImage:
-        public RenderImage
-{
-	AppSDKRenderImage(const VRay::VRayImage *image);
+	~AppSdkInit() {
+		FreePtr(m_vrayInit);
+	}
+
+	operator bool () const {
+		return !!(m_vrayInit);
+	}
+
+private:
+	AppSdkInit(const AppSdkInit&) = delete;
+	AppSdkInit& operator=(const AppSdkInit&) = delete;
+
+	VRay::VRayInit *m_vrayInit;
+
 };
 
 
-class AppSdkExporter:
-        public PluginExporter
+struct AppSDKRenderImage
+        : public RenderImage
 {
-	struct PluginUsed {
-		PluginUsed() {}
-		PluginUsed(const VRay::Plugin &p):
-		    plugin(p),
-		    used(true)
-		{}
+	AppSDKRenderImage(const VRay::VRayImage *image);
+	AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderElement::PixelFormat pixelFormat);
+};
 
-		VRay::Plugin  plugin;
-		int           used;
-	};
 
-	typedef std::map<std::string, PluginUsed> PluginUsage;
+class AppSdkExporter
+        : public PluginExporter
+{
+	static AppSdkInit    vrayInit;
 
 public:
 	AppSdkExporter();
 	virtual             ~AppSdkExporter();
 
 public:
-	virtual void         init();
-	virtual void         free();
+	virtual void         init() override;
+	virtual void         free() override;
+	virtual void         sync() override;
+	virtual void         start() override;
+	virtual void         stop() override;
 
-	virtual void         sync();
-	virtual void         start();
-	virtual void         stop();
-
-	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc);
-	virtual int          remove_plugin(const std::string &pluginName);
-
-	virtual void         export_vrscene(const std::string &filepath);
-
-	virtual RenderImage  get_image();
-	virtual void         set_render_size(const int &w, const int &h);
-
-	virtual void         set_callback_on_image_ready(ExpoterCallback cb);
-	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb);
-
-	virtual void         set_camera_plugin(const std::string &pluginName) override;
+	virtual void         export_vrscene(const std::string &filepath) override;
+	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc) override;
+	virtual int          remove_plugin(const std::string &pluginName) override;
 	virtual void         commit_changes() override;
 
+	virtual RenderImage  get_image() override;
+	virtual RenderImage  get_render_channel(RenderChannelType channelType) override;
+
+	virtual void         set_render_size(const int &w, const int &h) override;
+	virtual void         set_camera_plugin(const std::string &pluginName) override;
+	virtual void         set_render_mode(RenderMode renderMode) override;
+
+	virtual void         set_callback_on_image_ready(ExpoterCallback cb) override;
+	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) override;
+	virtual void         set_callback_on_message_updated(UpdateMessageCb cb) override;
+
+	virtual void         show_frame_buffer() override;
+
 private:
-	void                 reset_used();
-
-	VRay::Plugin         new_plugin(const PluginDesc &pluginDesc);
-
 	VRay::VRayRenderer  *m_vray;
-
-	PluginUsage          m_used_map;
 
 };
 

@@ -26,33 +26,38 @@ void DataExporter::clearMaterialCache()
 	m_exported_materials.clear();
 }
 
-AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
+
+AttrValue DataExporter::getDefaultMaterial()
 {
-	AttrValue material = m_defaults.override_material
-	                     ? m_defaults.override_material
-	                     : m_defaults.default_material;
+	return m_defaults.override_material
+	        ? m_defaults.override_material
+	        : m_defaults.default_material;
+}
+
+
+AttrValue DataExporter::exportMaterial(BL::Material ma)
+{
+	AttrValue material = getDefaultMaterial();
 
 	if (ma) {
 		auto iter = m_exported_materials.find(ma);
 		if (iter != m_exported_materials.end()) {
-			return iter->second;
+			material = iter->second;
 		}
+		else {
+			BL::NodeTree ntree(Nodes::GetNodeTree(ma));
+			if (ntree) {
+				BL::Node output(Nodes::GetNodeByType(ntree, "VRayNodeOutputMaterial"));
+				if (output) {
+					const bool use_override = m_defaults.override_material && !(RNA_boolean_get(&output.ptr, "dontOverride"));
+					if (!use_override) {
+						BL::NodeSocket materialSock(Nodes::GetInputSocketByName(output, "Material"));
+						if (materialSock) {
+							NodeContext ctx;
+							material = exportLinkedSocket(ntree, materialSock, ctx);
 
-		BL::NodeTree ntree = Nodes::GetNodeTree(ma);
-		if (ntree) {
-			BL::Node output = Nodes::GetNodeByType(ntree, "VRayNodeOutputMaterial");
-			if (output) {
-				bool use_override = m_defaults.override_material && !(RNA_boolean_get(&output.ptr, "dontOverride"));
-				if (!use_override) {
-					BL::NodeSocket materialSock = Nodes::GetInputSocketByName(output, "Material");
-					if (materialSock) {
-						NodeContext ctx;
-						//material = dont_export
-						//           ? exportLinkedSocket(ntree, materialSock, ctx, true)
-						//           : exportVRayNode(ntree, output, materialSock, ctx);
-
-						material = exportVRayNode(ntree, output, materialSock, ctx);
-						m_exported_materials.insert(std::make_pair(ma, material));
+							m_exported_materials.insert(std::make_pair(ma, material));
+						}
 					}
 				}
 			}
@@ -63,41 +68,62 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, bool dont_export)
 }
 
 
-AttrValue DataExporter::exportMtlMulti(BL::Object ob)
+void DataExporter::fillMtlMulti(BL::Object ob, PluginDesc &mtlMultiDesc)
 {
-	AttrValue mtl;
-
 	const int numMaterials = Blender::GetMaterialCount(ob);
 
-	// Use single material
+	AttrListPlugin mtls_list(numMaterials);
+	AttrListInt    ids_list(numMaterials);
+
+	int maIdx   = 0;
+	int slotIdx = 0; // For cases with empty slots
+
+	BL::Object::material_slots_iterator slotIt;
+	for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
+		BL::Material ma((*slotIt).material());
+		if (ma) {
+			(*ids_list)[maIdx]  = slotIdx;
+			(*mtls_list)[maIdx] = exportMaterial(ma);
+			maIdx++;
+		}
+	}
+
+	mtlMultiDesc.add("mtls_list", mtls_list);
+	mtlMultiDesc.add("ids_list", ids_list);
+}
+
+
+AttrValue DataExporter::exportSingleMaterial(BL::Object &ob)
+{
+	AttrValue mtl = getDefaultMaterial();
+
+	BL::Object::material_slots_iterator slotIt;
+	for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt) {
+		BL::Material ma((*slotIt).material());
+		if (ma) {
+			mtl = exportMaterial(ma);
+			break;
+		}
+	}
+
+	return mtl;
+}
+
+
+AttrValue DataExporter::exportMtlMulti(BL::Object ob)
+{
+	AttrValue mtl = getDefaultMaterial();
+
+	const int numMaterials = Blender::GetMaterialCount(ob);
 	if (numMaterials) {
+		// Use single material
 		if (numMaterials == 1) {
-			BL::Material ma(ob.material_slots[0].material());
-			if (ma) {
-				mtl = exportMaterial(ma, true);
-			}
+			mtl = exportSingleMaterial(ob);
 		}
 		// Export MtlMulti
 		else {
-			AttrListPlugin mtls_list(numMaterials);
-			AttrListInt    ids_list(numMaterials);
-
-			int maIdx   = 0;
-			int slotIdx = 0; // For cases with empty slots
-
-			BL::Object::material_slots_iterator slotIt;
-			for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
-				BL::Material ma((*slotIt).material());
-				if (ma) {
-					(*ids_list)[maIdx]  = slotIdx;
-					(*mtls_list)[maIdx] = exportMaterial(ma, true);
-					maIdx++;
-				}
-			}
-
 			PluginDesc mtlMultiDesc(ob.name(), "MtlMulti", "Mtl@");
-			mtlMultiDesc.add("mtls_list", mtls_list);
-			mtlMultiDesc.add("ids_list", ids_list);
+			fillMtlMulti(ob, mtlMultiDesc);
 			mtlMultiDesc.add("wrap_id", true);
 
 			mtl = m_exporter->export_plugin(mtlMultiDesc);

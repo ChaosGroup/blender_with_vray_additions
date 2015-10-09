@@ -16,14 +16,37 @@
  * limitations under the License.
  */
 
-#ifndef VRAY_FOR_BLENDER_STD_TYPEDEFS_H
-#define VRAY_FOR_BLENDER_STD_TYPEDEFS_H
+#ifndef VRAY_FOR_BLENDER_RENDER_IMAGE_H
+#define VRAY_FOR_BLENDER_RENDER_IMAGE_H
 
-#include <set>
-#include <vector>
-#include <string>
+#include "cgr_config.h"
+#include "vfb_util_defines.h"
 
-typedef std::set<std::string>     StrSet;
-typedef std::vector<std::string>  StrVector;
+namespace VRayForBlender {
 
-#endif // VRAY_FOR_BLENDER_STD_TYPEDEFS_H
+struct RenderImage {
+	RenderImage():
+	    pixels(nullptr),
+	    w(0),
+	    h(0)
+	{}
+
+	virtual ~RenderImage() {}
+
+	operator bool () const {
+		return !!(pixels);
+	}
+
+	void   free();
+	void   flip();
+	void   clamp(float max=1.0f, float val=1.0f);
+	void   resetAlpha();
+
+	float *pixels;
+	int    w;
+	int    h;
+};
+
+} // namespace VRayForBlender
+
+#endif // VRAY_FOR_BLENDER_RENDER_IMAGE_H

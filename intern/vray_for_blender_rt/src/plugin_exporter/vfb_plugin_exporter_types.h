@@ -6,19 +6,16 @@
 namespace VRayForBlender {
 
 
-struct ExporterTypeInfo {
+struct EnumItem {
 	const char *key;
 	const char *name;
 	const char *desc;
 };
 
 
-static const ExporterTypeInfo ExporterTypes[] = {
+static const EnumItem ExporterTypes[] = {
 	{"STD",    "V-Ray Standalone", ""},
-
-#ifdef USE_BLENDER_VRAY_ZMQ
 	{"ZMQ", "V-Ray ZMQ Server", ""},
-#endif
 
 #ifdef USE_BLENDER_VRAY_CLOUD
 	{"CLOUD",  "V-Ray Cloud", ""},
@@ -32,10 +29,7 @@ static const ExporterTypeInfo ExporterTypes[] = {
 
 enum ExpoterType {
 	ExpoterTypeFile = 0,
-
-#ifdef USE_BLENDER_VRAY_ZMQ
 	ExpoterTypeZMQ,
-#endif
 
 #ifdef USE_BLENDER_VRAY_CLOUD
 	ExpoterTypeCloud,

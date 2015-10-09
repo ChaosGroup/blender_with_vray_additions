@@ -29,28 +29,33 @@ ExporterSettings::ExporterSettings():
 {}
 
 
-void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
+void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene)
 {
-	PointerRNA vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
-	PointerRNA vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
+	BL::Scene scene(_scene);
+	if (engine && engine.is_preview()) {
+		scene = context.scene();
+	}
 
-	export_hair         = RNA_boolean_get(&vrayExporter, "use_hair");
-	export_fluids       = RNA_boolean_get(&vrayExporter, "use_smoke");
-	use_displace_subdiv = RNA_boolean_get(&vrayExporter, "use_displace");
-	use_subsurf_to_osd  = RNA_boolean_get(&vrayExporter, "subsurf_to_osd");
-	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&vrayExporter, "default_mapping");
-	export_file_format  = (ExportFormat)RNA_enum_ext_get(&vrayExporter, "data_format");
-	export_meshes       = RNA_boolean_get(&vrayExporter, "auto_meshes");
+	m_vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
+	m_vrayExporter = RNA_pointer_get(&m_vrayScene, "Exporter");
 
-	settings_files.use_separate  = RNA_boolean_get(&vrayExporter, "useSeparateFiles");
-	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&vrayExporter, "output");
-	settings_files.output_dir    = RNA_std_string_get(&vrayExporter, "output_dir");
-	settings_files.output_unique = RNA_boolean_get(&vrayExporter, "output_unique");
+	export_hair         = RNA_boolean_get(&m_vrayExporter, "use_hair");
+	export_fluids       = RNA_boolean_get(&m_vrayExporter, "use_smoke");
+	use_displace_subdiv = RNA_boolean_get(&m_vrayExporter, "use_displace");
+	use_subsurf_to_osd  = RNA_boolean_get(&m_vrayExporter, "subsurf_to_osd");
+	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&m_vrayExporter, "default_mapping");
+	export_file_format  = (ExportFormat)RNA_enum_ext_get(&m_vrayExporter, "data_format");
+	export_meshes       = RNA_boolean_get(&m_vrayExporter, "auto_meshes");
+
+	settings_files.use_separate  = RNA_boolean_get(&m_vrayExporter, "useSeparateFiles");
+	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&m_vrayExporter, "output");
+	settings_files.output_dir    = RNA_std_string_get(&m_vrayExporter, "output_dir");
+	settings_files.output_unique = RNA_boolean_get(&m_vrayExporter, "output_unique");
 	settings_files.project_path  = data.filepath();
 
 	// Check what layers to use
 	//
-	const ActiveLayers useLayers = (ActiveLayers)RNA_enum_get(&vrayExporter, "activeLayers");
+	const ActiveLayers useLayers = (ActiveLayers)RNA_enum_get(&m_vrayExporter, "activeLayers");
 	if(useLayers == ActiveLayersScene) {
 		active_layers = scene.layers();
 	}
@@ -60,12 +65,12 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 	else if(useLayers == ActiveLayersCustom) {
 		// Custom layers
 		int layer_values[20];
-		RNA_boolean_get_array(&vrayExporter, "customRenderLayers", layer_values);
+		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", layer_values);
 
 		// TODO: memcpy((void*)(*active_layers), layer_values, 20 * sizeof(int));
 	}
 
-	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&vrayExporter, "animation_mode");
+	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
 	settings_animation.use  = settings_animation.mode != SettingsAnimation::AnimationMode::AnimationModeNone;
 	if (settings_animation.use) {
 		settings_animation.frame_start   = scene.frame_start();
@@ -122,11 +127,20 @@ void ExporterSettings::init(BL::BlendData data, BL::Scene scene)
 	}
 #endif
 
-	exporter_type = (ExpoterType)RNA_enum_get(&vrayExporter, "backend");
-	work_mode     = (WorkMode)RNA_enum_get(&vrayExporter, "work_mode");
+	exporter_type = (ExpoterType)RNA_enum_get(&m_vrayExporter, "backend");
+	work_mode     = (WorkMode)RNA_enum_get(&m_vrayExporter, "work_mode");
 
-	zmq_server_port    = RNA_int_get(&vrayExporter, "zmq_port");
-	zmq_server_address = RNA_std_string_get(&vrayExporter, "zmq_address");
+	zmq_server_port    = RNA_int_get(&m_vrayExporter, "zmq_port");
+	zmq_server_address = RNA_std_string_get(&m_vrayExporter, "zmq_address");
+
+	m_renderMode = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "rendering_mode");
+	if (engine.is_preview()) {
+		m_renderMode = VRayBaseTypes::RenderModeRtCpu;
+	}
+
+	m_renderModeViewport = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode");
+
+	m_viewportResolution = RNA_int_get(&m_vrayExporter, "viewport_resolution") / 100.0f;
 }
 
 
@@ -150,6 +164,12 @@ bool ExporterSettings::is_first_frame()
 		is_first_frame = true;
 	}
 	return is_first_frame;
+}
+
+
+int ExporterSettings::getViewportShowAlpha()
+{
+	return RNA_boolean_get(&m_vrayExporter, "viewport_alpha");
 }
 
 

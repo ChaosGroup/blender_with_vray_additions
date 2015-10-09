@@ -31,14 +31,10 @@ struct RenderSizeParams {
 	RenderSizeParams()
 	    : w(0)
 	    , h(0)
-	    , offs_x(0)
-	    , offs_y(0)
 	{}
 
 	int  w;
 	int  h;
-	int  offs_x;
-	int  offs_y;
 };
 
 
@@ -85,10 +81,15 @@ struct ViewParams {
 	static const std::string renderViewPluginName;
 	static const std::string physicalCameraPluginName;
 	static const std::string defaultCameraPluginName;
+	static const std::string settingsCameraDofPluginName;
 
 	ViewParams()
 	    : usePhysicalCamera(false)
 	    , cameraObject(PointerRNA_NULL)
+	    , viewport_w(0)
+	    , viewport_h(0)
+	    , viewport_offs_x(0)
+	    , viewport_offs_y(0)
 	{}
 
 	int changedParams(const ViewParams &other) const {
@@ -101,8 +102,8 @@ struct ViewParams {
 	}
 
 	int changedViewPosition(const ViewParams &other) const {
-		return (MemberNotEq(renderSize.offs_x) ||
-		        MemberNotEq(renderSize.offs_y));
+		return (MemberNotEq(viewport_offs_x) ||
+		        MemberNotEq(viewport_offs_y));
 	}
 
 	int needReset(ViewParams &other) const {
@@ -116,6 +117,11 @@ struct ViewParams {
 
 	int               usePhysicalCamera;
 	BL::Object        cameraObject;
+
+	int               viewport_w;
+	int               viewport_h;
+	int               viewport_offs_x;
+	int               viewport_offs_y;
 };
 
 } // namespace VRayForBlender

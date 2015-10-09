@@ -42,17 +42,6 @@ extern "C" {
 #include <chrono>
 #include <thread>
 
-/* OpenGL header includes, used everywhere we use OpenGL, to deal with
- * platform differences in one central place. */
-
-#ifdef WITH_GLEW_MX
-#  include "glew-mx.h"
-#else
-#  include <GL/glew.h>
-#  define mxCreateContext() glewInit()
-#  define mxMakeCurrentContext(x) (x)
-#endif
-
 
 using namespace VRayForBlender;
 
@@ -94,7 +83,8 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderGIPlugins.insert("SettingsIrradianceMap");
 		RenderGIPlugins.insert("SettingsDMCGI");
 	}
-	m_settings.init(m_data, m_scene);
+
+	m_settings.update(m_context, m_engine, m_data, m_scene);
 }
 
 
@@ -104,23 +94,19 @@ SceneExporter::~SceneExporter()
 }
 
 
-void SceneExporter::init()
-{
+void SceneExporter::init() {
 	create_exporter();
 	if (!m_exporter) {
 		PRINT_INFO_EX("Failed to create exporter!");
 	}
 	assert(m_exporter && "Failed to create exporter!");
 
-	if (m_exporter) {
-		m_exporter->init();
+	m_exporter->init();
 
-		m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
-		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&SceneExporter::tag_redraw, this)));
+	// directly bind to the engine
+	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
-		// directly bind to the engine
-		m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
-	}
+	setup_callbacks();
 }
 
 void SceneExporter::init_data()
@@ -155,68 +141,6 @@ void SceneExporter::resize(int w, int h)
 	              w, h);
 
 	m_exporter->set_render_size(w, h);
-}
-
-
-void SceneExporter::draw()
-{
-	sync_view(true);
-
-	RenderImage image = m_exporter->get_image();
-	if (!image) {
-		tag_redraw();
-		return;
-	}
-
-	const bool transparent = false;
-
-	glPushMatrix();
-
-	glTranslatef(m_viewParams.renderSize.offs_x, m_viewParams.renderSize.offs_y, 0.0f);
-
-	if (transparent) {
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	}
-
-	glColor3f(1.0f, 1.0f, 1.0f);
-
-	GLuint texid;
-	glGenTextures(1, &texid);
-	glBindTexture(GL_TEXTURE_2D, texid);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image.pixels);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glEnable(GL_TEXTURE_2D);
-
-	glPushMatrix();
-	glTranslatef(0.0f, 0.0f, 0.0f);
-
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex2f(0.0f, 0.0f);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex2f((float)m_viewParams.renderSize.w, 0.0f);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex2f((float)m_viewParams.renderSize.w, (float)m_viewParams.renderSize.h);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex2f(0.0f, (float)m_viewParams.renderSize.h);
-	glEnd();
-
-	glPopMatrix();
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glDisable(GL_TEXTURE_2D);
-	glDeleteTextures(1, &texid);
-
-	if (transparent) {
-		glDisable(GL_BLEND);
-	}
-
-	glPopMatrix();
-
-	image.free();
 }
 
 
@@ -268,46 +192,66 @@ bool SceneExporter::export_animation()
 
 void SceneExporter::sync(const int &check_updated)
 {
-	PRINT_INFO_EX("SceneExporter::sync(%i)",
-	              check_updated);
-
-	clock_t begin = clock();
-	m_data_exporter.clearMaterialCache();
-	sync_prepass();
-
-	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
-
-	for (const auto &pluginID : RenderSettingsPlugins) {
-		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
-
-		PluginDesc pluginDesc(pluginID, pluginID);
-
-		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
-
-		m_exporter->export_plugin(pluginDesc);
+	if (!m_syncLock.try_lock()) {
+		tag_update();
 	}
+	else {
+		PRINT_INFO_EX("SceneExporter::sync(%i)",
+		              check_updated);
 
-	sync_view(check_updated);
-	sync_objects(check_updated);
-	sync_effects(check_updated);
+		m_settings.update(m_context, m_engine, m_data, m_scene);
 
-	m_data_exporter.sync();
+		VRayBaseTypes::RenderMode renderMode = m_view3d
+		                                       ? m_settings.getViewportRenderMode()
+		                                       : m_settings.getRenderMode();
 
-	clock_t end = clock();
+		m_exporter->set_render_mode(renderMode);
 
-	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+		clock_t begin = clock();
+		m_data_exporter.clearMaterialCache();
 
-	PRINT_INFO_EX("Synced in %.3f sec.",
-	              elapsed_secs);
+		sync_prepass();
 
-	// Sync data (will remove deleted objects)
-	m_exporter->sync();
+		// Export once per viewport session
+		if (!check_updated) {
+			sync_render_settings();
 
-	// Export stuff after sync
-	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
-	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
-		const std::string filepath = "scene_app_sdk.vrscene";
-		m_exporter->export_vrscene(filepath);
+			if (!is_viewport()) {
+				sync_render_channels();
+			}
+		}
+
+		// First materials sync is done from "sync_objects"
+		// so run it only in update call
+		if (check_updated) {
+			sync_materials();
+		}
+
+		sync_view(check_updated);
+		sync_objects(check_updated);
+		sync_effects(check_updated);
+
+		// Sync data (will remove deleted objects)
+		m_data_exporter.sync();
+
+		clock_t end = clock();
+
+		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+
+		PRINT_INFO_EX("Synced in %.3f sec.",
+		              elapsed_secs);
+
+		// Sync plugins
+		m_exporter->sync();
+
+		// Export stuff after sync
+		if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
+		    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+			const std::string filepath = "scene_app_sdk.vrscene";
+			m_exporter->export_vrscene(filepath);
+		}
+
+		m_syncLock.unlock();
 	}
 }
 
@@ -598,12 +542,6 @@ void SceneExporter::sync_objects(const int &check_updated)
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)",
 	              check_updated);
 
-	// TODO:
-	// [ ] Track new objects (creation / layer settings change)
-	// [ ] Track deleted objects
-
-	// Sync objects
-	//
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 		if (is_interrupted()) {
@@ -632,7 +570,8 @@ void SceneExporter::sync_objects(const int &check_updated)
 			overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
 
 			sync_object(ob, check_updated, overAttrs);
-		} else {
+		}
+		else {
 			sync_object(ob, check_updated);
 		}
 	}
@@ -642,46 +581,88 @@ void SceneExporter::sync_objects(const int &check_updated)
 void SceneExporter::sync_effects(const int &check_updated)
 {
 	NodeContext ctx;
-	m_data_exporter.exportVRayEnvironment(ctx);
+	m_data_exporter.exportEnvironment(ctx);
+}
+
+
+void SceneExporter::sync_materials()
+{
+	BL::BlendData::materials_iterator maIt;
+
+	for (m_data.materials.begin(maIt); maIt != m_data.materials.end(); ++maIt) {
+		BL::Material ma(*maIt);
+		BL::NodeTree ntree(Nodes::GetNodeTree(ma));
+		if (ntree) {
+			const bool updated = ma.is_updated() || ma.is_updated_data() || ntree.is_updated();
+			if (updated) {
+				m_data_exporter.exportMaterial(ma);
+			}
+		}
+	}
+}
+
+
+void SceneExporter::sync_render_settings()
+{
+	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
+	for (const auto &pluginID : RenderSettingsPlugins) {
+		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
+
+		PluginDesc pluginDesc(pluginID, pluginID);
+
+		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
+
+		m_exporter->export_plugin(pluginDesc);
+	}
+}
+
+
+void SceneExporter::sync_render_channels()
+{
+	BL::NodeTree channelsTree(Nodes::GetNodeTree(m_scene));
+	if (channelsTree) {
+		BL::Node channelsOutput(Nodes::GetNodeByType(channelsTree, "VRayNodeRenderChannels"));
+		if (channelsOutput) {
+			PluginDesc settingsRenderChannels("settingsRenderChannels", "SettingsRenderChannels");
+			settingsRenderChannels.add("unfiltered_fragment_method", RNA_enum_ext_get(&channelsOutput.ptr, "unfiltered_fragment_method"));
+			settingsRenderChannels.add("deep_merge_mode", RNA_enum_ext_get(&channelsOutput.ptr, "deep_merge_mode"));
+			settingsRenderChannels.add("deep_merge_coeff", RNA_float_get(&channelsOutput.ptr, "deep_merge_coeff"));
+			m_exporter->export_plugin(settingsRenderChannels);
+
+			BL::Node::inputs_iterator inIt;
+			for (channelsOutput.inputs.begin(inIt); inIt != channelsOutput.inputs.end(); ++inIt) {
+				BL::NodeSocket inSock(*inIt);
+				if (inSock && inSock.is_linked()) {
+					if (RNA_boolean_get(&inSock.ptr, "use")) {
+						NodeContext context;
+						m_data_exporter.exportLinkedSocket(channelsTree, inSock, context);
+					}
+				}
+			}
+		}
+	}
 }
 
 
 void SceneExporter::tag_update()
 {
-	/* tell blender that we want to get another update callback */
 	m_engine.tag_update();
 }
 
 
 void SceneExporter::tag_redraw()
 {
-#if 0
-	if (background) {
-		/* update stats and progress, only for background here because
-		 * in 3d view we do it in draw for thread safety reasons */
-		update_status_progress();
-
-		/* offline render, redraw if timeout passed */
-		if (time_dt() - last_redraw_time > 1.0) {
-			b_engine.tag_redraw();
-			last_redraw_time = time_dt();
-		}
-	}
-	else {
-#endif
-		/* tell blender that we want to redraw */
-		m_engine.tag_redraw();
-#if 0
-	}
-#endif
+	m_engine.tag_redraw();
 }
 
 
 int SceneExporter::is_interrupted()
 {
-	bool export_interrupt = false;
-	if (m_engine && m_engine.test_break()) {
-		export_interrupt = true;
-	}
-	return export_interrupt;
+	return m_engine && m_engine.test_break();
+}
+
+
+int SceneExporter::is_preview()
+{
+	return m_engine && m_engine.is_preview();
 }
