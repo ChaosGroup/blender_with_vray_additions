@@ -36,20 +36,22 @@ void ProductionExporter::create_exporter()
 void ProductionExporter::setup_callbacks()
 {
 	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&ProductionExporter::cb_on_image_ready, this)));
-	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&ProductionExporter::cb_on_image_ready, this)));
+	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&ProductionExporter::cb_on_rt_image_updated, this)));
 }
 
 
 bool ProductionExporter::do_export()
 {
+	bool res = true;
+
 	if (m_settings.settings_animation.use) {
-		return export_animation();
+		res = export_animation();
 	}
 	else {
 		sync(false);
-		m_exporter->start();
-		return true;
 	}
+
+	return res;
 }
 
 
@@ -109,8 +111,14 @@ void ProductionExporter::render_start()
 {
 	SceneExporter::render_start();
 
+	if (!is_preview()) {
+		m_exporter->show_frame_buffer();
+	}
+
+	m_renderFinished = false;
+
 	std::thread wait_render = std::thread([this] {
-		while (!is_interrupted()) {
+		while (!(is_interrupted() || m_renderFinished)) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(250));
 		}
 	});
@@ -121,46 +129,53 @@ void ProductionExporter::render_start()
 
 void ProductionExporter::cb_on_image_ready()
 {
-	PRINT_INFO_EX("ProductionExporter::on_image_ready()");
+	// PRINT_INFO_EX("ProductionExporter::cb_on_image_ready()");
 
-	RenderImage image = m_exporter->get_image();
-	if (image) {
-		image.flip();
+	m_renderFinished = true;
+}
 
-		BL::RenderSettings renderSettings = m_scene.render();
-		BL::RenderSettings::layers_iterator rslIt;
-		for (renderSettings.layers.begin(rslIt); rslIt != renderSettings.layers.end(); ++rslIt) {
-			BL::SceneRenderLayer sceneRenderLayer(*rslIt);
-			if (sceneRenderLayer) {
-				BL::RenderResult renderResult = m_engine.begin_result(0, 0, m_viewParams.renderSize.w, m_viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
-				if (renderResult) {
-					BL::RenderResult::layers_iterator rrlIt;
-					renderResult.layers.begin(rrlIt);
 
-					// Layer will be missing if it was disabled in the UI
-					if (rrlIt != renderResult.layers.end()) {
-						BL::RenderLayer renderLayer(*rrlIt);
-						if (renderLayer) {
-							BL::RenderLayer::passes_iterator rpIt;
-							for (renderLayer.passes.begin(rpIt); rpIt != renderLayer.passes.end(); ++rpIt) {
-								BL::RenderPass renderPass(*rpIt);
-								if (renderPass) {
-									if (renderPass.type() == BL::RenderPass::type_COMBINED) {
-										renderPass.rect(image.pixels);
-										break;
-									}
+void ProductionExporter::cb_on_rt_image_updated()
+{
+	// PRINT_INFO_EX("ProductionExporter::cb_on_rt_image_updated()");
+
+	BL::RenderSettings renderSettings = m_scene.render();
+
+	BL::RenderSettings::layers_iterator rslIt;
+	renderSettings.layers.begin(rslIt);
+	if (rslIt != renderSettings.layers.end()) {
+		BL::SceneRenderLayer sceneRenderLayer(*rslIt);
+		if (sceneRenderLayer) {
+			BL::RenderResult renderResult = m_engine.begin_result(0, 0, m_viewParams.renderSize.w, m_viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
+			if (renderResult) {
+				BL::RenderResult::layers_iterator rrlIt;
+				renderResult.layers.begin(rrlIt);
+				if (rrlIt != renderResult.layers.end()) {
+					BL::RenderLayer renderLayer(*rrlIt);
+					if (renderLayer) {
+						BL::RenderLayer::passes_iterator rpIt;
+						for (renderLayer.passes.begin(rpIt); rpIt != renderLayer.passes.end(); ++rpIt) {
+							BL::RenderPass renderPass(*rpIt);
+							if (renderPass) {
+								RenderImage image = m_exporter->get_pass(renderPass.type());
+								if (image) {
+									image.flip();
+									image.resetAlpha();
+									image.clamp(1.0f, 1.0f);
+
+									renderPass.rect(image.pixels);
+
+									image.free();
 								}
 							}
-
-							m_engine.update_result(renderResult);
 						}
-					}
 
-					m_engine.end_result(renderResult, false, true);
+						m_engine.update_result(renderResult);
+					}
 				}
+
+				m_engine.end_result(renderResult, false, true);
 			}
 		}
-
-		image.free();
 	}
 }

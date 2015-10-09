@@ -26,11 +26,6 @@
 using namespace VRayForBlender;
 
 
-PluginExporter::~PluginExporter()
-{
-}
-
-
 class NullExporter:
         public PluginExporter
 {
@@ -40,6 +35,10 @@ public:
 	virtual void        free() {}
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc&) { return AttrPlugin(); }
 };
+
+
+PluginExporter::~PluginExporter() {}
+
 
 void PluginExporter::set_settings(const ExporterSettings &st)
 {
@@ -51,6 +50,7 @@ void PluginExporter::set_settings(const ExporterSettings &st)
 		this->last_rendered_frame = 0;
 	}
 }
+
 
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 {
@@ -79,6 +79,47 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 
 	return plg;
 }
+
+
+RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
+{
+	RenderImage image;
+
+	switch (passType) {
+		case BL::RenderPass::type_COMBINED: image = get_image(); break;
+		case BL::RenderPass::type_Z: image = get_render_channel(RenderChannelTypeVfbZdepth); break;
+		case BL::RenderPass::type_COLOR: image = get_render_channel(RenderChannelTypeVfbRealcolor); break;
+		// case BL::RenderPass::type_DIFFUSE: image = get_render_channel(RenderChannelTypeVfbDiffuse); break;
+		// case BL::RenderPass::type_SPECULAR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SHADOW: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_AO: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_REFLECTION: image = get_render_channel(RenderChannelType); break;
+		case BL::RenderPass::type_NORMAL: image = get_render_channel(RenderChannelTypeVfbNormal); break;
+		// case BL::RenderPass::type_VECTOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_REFRACTION: image = get_render_channel(RenderChannelType); break;
+		case BL::RenderPass::type_OBJECT_INDEX: image = get_render_channel(RenderChannelTypeVfbRenderID); break;
+		// case BL::RenderPass::type_UV: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_MIST: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_EMIT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_ENVIRONMENT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_MATERIAL_INDEX: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_DIFFUSE_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_DIFFUSE_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_DIFFUSE_COLOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_GLOSSY_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_GLOSSY_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_GLOSSY_COLOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_TRANSMISSION_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_TRANSMISSION_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_TRANSMISSION_COLOR: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SUBSURFACE_DIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SUBSURFACE_INDIRECT: image = get_render_channel(RenderChannelType); break;
+		// case BL::RenderPass::type_SUBSURFACE_COLOR: image = get_render_channel(RenderChannelType); break;
+	}
+
+	return image;
+}
+
 
 VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
 {
@@ -119,29 +160,4 @@ VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::E
 void VRayForBlender::ExporterDelete(VRayForBlender::PluginExporter *exporter)
 {
 	FreePtr(exporter);
-}
-
-
-void RenderImage::flip()
-{
-	if (pixels && w && h) {
-		const int _half_h = h / 2;
-		const int half_h = h % 2 ? _half_h - 1 : _half_h;
-
-		const int row_items = w * 4;
-		const int row_bytes = row_items * sizeof(float);
-
-		float *buf = new float[row_items];
-
-		for (int i = 0; i < half_h; ++i) {
-			float *to_row   = pixels + (i       * row_items);
-			float *from_row = pixels + ((h - i) * row_items);
-
-			memcpy(buf,      to_row,   row_bytes);
-			memcpy(to_row,   from_row, row_bytes);
-			memcpy(from_row, buf,      row_bytes);
-		}
-
-		FreePtr(buf);
-	}
 }

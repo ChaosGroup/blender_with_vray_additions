@@ -20,7 +20,7 @@
 #include "vfb_utils_nodes.h"
 
 
-void DataExporter::exportVRayEnvironment(NodeContext &context)
+void DataExporter::exportEnvironment(NodeContext &context)
 {
 	BL::Scene worldScene(PointerRNA_NULL);
 
@@ -64,7 +64,7 @@ void DataExporter::exportVRayEnvironment(NodeContext &context)
 				// Effects must be exported before environment because of 'environment_volume' attribute
 				BL::NodeSocket effectsSock = Nodes::GetInputSocketByName(worldOutput, "Effects");
 				if (effectsSock && effectsSock.is_linked()) {
-					BL::Node effectsNode = getConnectedNode(effectsSock, context);
+					BL::Node effectsNode = getConnectedNode(worldTree, effectsSock, context);
 					if (effectsNode) {
 						if (NOT(effectsNode.bl_idname() == "VRayNodeEffectsHolder")) {
 							PRINT_ERROR("Environment: \'Effects\' socket must be connected to \"Effects Container\" node!");
@@ -86,7 +86,7 @@ void DataExporter::exportVRayEnvironment(NodeContext &context)
 
 				BL::NodeSocket envSock = Nodes::GetInputSocketByName(worldOutput, "Environment");
 				if (envSock && envSock.is_linked()) {
-					BL::Node envNode = getConnectedNode(envSock, context);
+					BL::Node envNode = getConnectedNode(worldTree, envSock, context);
 					if (envNode) {
 						if (NOT(envNode.bl_idname() == "VRayNodeEnvironment")) {
 							PRINT_ERROR("Environment: \'Environment\' socket must be connected to \"Environment\" node!");
@@ -108,32 +108,34 @@ void DataExporter::exportVRayEnvironment(NodeContext &context)
 
 							pluginDesc.add("bg_tex",      bg_tex);
 							pluginDesc.add("bg_tex_mult", bg_tex_mult);
-#if 0
-							// Overrides
-							StrSet envOverrides;
-							envOverrides.insert("gi_tex");
-							envOverrides.insert("reflect_tex");
-							envOverrides.insert("refract_tex");
 
-							StrSet::const_iterator envOverIt;
-							for (envOverIt = envOverrides.begin(); envOverIt != envOverrides.end(); ++envOverIt) {
+							// Overrides
+							static StrSet envOverrides;
+							if (envOverrides.empty()) {
+								envOverrides.insert("gi_tex");
+								envOverrides.insert("reflect_tex");
+								envOverrides.insert("refract_tex");
+							}
+
+							for (StrSet::const_iterator envOverIt = envOverrides.begin(); envOverIt != envOverrides.end(); ++envOverIt) {
 								const std::string &overAttr     = *envOverIt;
 								const std::string  overMultAttr =  overAttr + "_mult";
 
-								BL::NodeSocket overSock = NodeExporter::getSocketByAttr(envNode, overAttr);
-								bool           overUse  = RNA_boolean_get(&overSock.ptr, "use");
-								float          overMult = RNA_float_get(&overSock.ptr, "multiplier");
+								BL::NodeSocket overSock(Nodes::GetSocketByAttr(envNode, overAttr));
+								if (overSock) {
+									const bool   overUse  = RNA_boolean_get(&overSock.ptr, "use");
+									const float  overMult = RNA_float_get(&overSock.ptr, "multiplier");
 
-								if (NOT(overUse)) {
-									pluginDesc[overAttr]     = bg_tex;
-									pluginDesc[overMultAttr] = bg_tex_mult;
-								}
-								else {
-									pluginDesc[overAttr]     = NodeExporter::exportSocket(worldTree, overSock, context);
-									pluginDesc[overMultAttr] = BOOST_FORMAT_FLOAT(overMult);
+									if (!overUse) {
+										pluginDesc.add(overAttr,     bg_tex);
+										pluginDesc.add(overMultAttr, bg_tex_mult);
+									}
+									else {
+										pluginDesc.add(overAttr,     exportSocket(worldTree, overSock, context));
+										pluginDesc.add(overMultAttr, overMult);
+									}
 								}
 							}
-#endif
 						}
 					}
 				}

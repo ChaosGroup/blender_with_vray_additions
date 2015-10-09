@@ -32,7 +32,9 @@ public:
 	    : SceneExporter(context, engine, data, scene, BL::SpaceView3D(context.space_data()), context.region_data(), context.region())
 	{}
 
-	virtual bool  do_export() override;
+	virtual bool  do_export() override { return true; }
+
+	virtual void  draw() override;
 	virtual void  sync_dupli(BL::Object ob, const int &check_updated = false) override;
 	virtual void  sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs()) override;
 	virtual void  create_exporter() override;

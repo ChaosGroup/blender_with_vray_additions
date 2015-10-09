@@ -23,6 +23,7 @@
 
 #include "vfb_rna.h"
 #include "vfb_plugin_exporter_types.h"
+#include "base_types.h"
 
 namespace VRayForBlender {
 
@@ -133,7 +134,7 @@ struct ExporterSettings {
 	};
 
 	ExporterSettings();
-	void              init(BL::BlendData data, BL::Scene scene);
+	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene);
 
 	bool              check_data_updates();
 	bool              is_first_frame();
@@ -163,6 +164,20 @@ struct ExporterSettings {
 	std::string       zmq_server_address;
 
 	std::string       override_material;
+
+	VRayBaseTypes::RenderMode  getRenderMode() { return m_renderMode; }
+	VRayBaseTypes::RenderMode  getViewportRenderMode() { return m_renderModeViewport; }
+
+	float                      getViewportResolutionPercentage() { return m_viewportResolution; }
+	int                        getViewportShowAlpha();
+
+private:
+	PointerRNA                 m_vrayScene;
+	PointerRNA                 m_vrayExporter;
+
+	VRayBaseTypes::RenderMode  m_renderMode;
+	VRayBaseTypes::RenderMode  m_renderModeViewport;
+	float                      m_viewportResolution;
 
 };
 

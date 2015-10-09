@@ -24,7 +24,6 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-
 static boost::format FormatFloat("%.6g");
 static boost::format FormatString("\"%s\"");
 static boost::format FormatTmHex("TransformHex(\"%s\")");
@@ -65,7 +64,7 @@ std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeC
 		pluginName += Blender::GetIDName(parent, "GR");
 	}
 
-	return String::StripString(pluginName);
+	return pluginName;
 }
 
 
@@ -156,7 +155,7 @@ void DataExporter::init_defaults()
 }
 
 
-AttrValue DataExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket)
+AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket &socket)
 {
 	AttrValue attrValue;
 
@@ -208,7 +207,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket s
 }
 
 
-AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context)
+AttrValue DataExporter::exportSocket(BL::NodeTree &ntree, BL::NodeSocket &socket, NodeContext &context)
 {
 	AttrValue value;
 	if (socket.is_linked()) {
@@ -221,7 +220,7 @@ AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, 
 }
 
 
-AttrValue DataExporter::exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext &context)
+AttrValue DataExporter::exportSocket(BL::NodeTree &ntree, BL::Node &node, const std::string &socketName, NodeContext &context)
 {
 	BL::NodeSocket socket = Nodes::GetInputSocketByName(node, socketName);
 	return exportSocket(ntree, socket, context);

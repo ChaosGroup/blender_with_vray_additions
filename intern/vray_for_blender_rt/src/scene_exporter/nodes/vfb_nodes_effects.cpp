@@ -222,13 +222,13 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 
 
 
-AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree&, BL::Node &node, BL::NodeSocket&, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
 	AttrListPlugin domains;
 
 	BL::NodeSocket objectSock = Nodes::GetInputSocketByName(node, "Object");
 	if (objectSock && objectSock.is_linked()) {
-		BL::Node domainNode = getConnectedNode(objectSock, context);
+		BL::Node domainNode = getConnectedNode(ntree, objectSock, context);
 		if (domainNode) {
 			ObList domainObList;
 			getSelectorObjectList(domainNode, domainObList);
@@ -260,7 +260,7 @@ AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::No
 		if (gizmosSock && gizmosSock.is_linked()) {
 			AttrValue gizmos;
 
-			BL::Node conNode = getConnectedNode(gizmosSock, context);
+			BL::Node conNode = getConnectedNode(ntree, gizmosSock, context);
 			if (conNode) {
 				if (conNode.bl_idname() != "VRayNodeEnvFogMeshGizmo") {
 					PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node!");
@@ -442,7 +442,7 @@ AttrValue DataExporter::exportVRayNodeSphereFade(BL::NodeTree &ntree, BL::Node &
 	for (node.inputs.begin(inIt); inIt != node.inputs.end(); ++inIt) {
 		BL::NodeSocket inSock = *inIt;
 		if (inSock && inSock.is_linked()) {
-			BL::Node connNode = getConnectedNode(inSock, context);
+			BL::Node connNode = getConnectedNode(ntree, inSock, context);
 			if (connNode && connNode.bl_idname() == "VRayNodeSphereFadeGizmo") {
 				AttrValue sphereFadeGizmo = exportLinkedSocket(ntree, inSock, context);
 				if (sphereFadeGizmo && sphereFadeGizmo.type == ValueTypePlugin) {
@@ -474,7 +474,7 @@ AttrValue DataExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree &ntree, BL::No
 
 	BL::NodeSocket excludeSock = Nodes::GetSocketByAttr(node, "excludeList");
 	if (excludeSock && excludeSock.is_linked()) {
-		BL::Node obSelector = getConnectedNode(excludeSock, context);
+		BL::Node obSelector = getConnectedNode(ntree, excludeSock, context);
 		if (obSelector) {
 			ObList excludeObjects;
 			getSelectorObjectList(obSelector, excludeObjects);

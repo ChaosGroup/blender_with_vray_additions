@@ -72,37 +72,44 @@ struct ObjectContext {
 class NodeContext {
 public:
 	NodeContext() {}
-
-	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object):
-	    object_context(data, scene, object)
+	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object)
+	    : object_context(data, scene, object)
 	{}
 
 	BL::NodeTree getNodeTree() {
-		if(parent.size())
-			return parent.back();
-		return BL::NodeTree(PointerRNA_NULL);
+		BL::NodeTree ntree(PointerRNA_NULL);
+		if (parent.size()) {
+			ntree = parent.back();
+		}
+		return ntree;
 	}
+
 	void pushParentTree(BL::NodeTree nt) {
 		parent.push_back(nt);
 	}
+
 	BL::NodeTree popParentTree() {
-		BL::NodeTree nt = parent.back();
+		BL::NodeTree nt(parent.back());
 		parent.pop_back();
 		return nt;
 	}
 
 	BL::NodeGroup getGroupNode() {
-		if(group.size())
-			return group.back();
-		return BL::NodeGroup(PointerRNA_NULL);
+		BL::Node node(PointerRNA_NULL);
+		if (group.size()) {
+			node = group.back();
+		}
+		return BL::NodeGroup(node);
 	}
-	void pushGroupNode(BL::NodeGroup gr) {
+
+	void pushGroupNode(BL::Node gr) {
 		group.push_back(gr);
 	}
+
 	BL::NodeGroup popGroupNode() {
-		BL::NodeGroup gr = group.back();
+		BL::NodeGroup node(group.back());
 		group.pop_back();
-		return gr;
+		return node;
 	}
 
 	ObjectContext  object_context;
@@ -113,7 +120,7 @@ private:
 	// to prevent plugin overriding.
 	//
 	std::vector<BL::NodeTree>  parent;
-	std::vector<BL::NodeGroup> group;
+	std::vector<BL::Node>      group;
 
 };
 
@@ -186,9 +193,9 @@ struct IdTrack {
 
 
 struct DataDefaults {
-	DataDefaults():
-	    default_material(AttrPlugin()),
-	    override_material(AttrPlugin())
+	DataDefaults()
+	    : default_material(AttrPlugin())
+	    , override_material(AttrPlugin())
 	{}
 
 	AttrValue  default_material;
@@ -197,27 +204,34 @@ struct DataDefaults {
 
 
 struct ObjectOverridesAttrs {
-	bool override;
-
-	int visible;
-	AttrTransform tm;
-	int id;
-	BL::Object dupliHolder;
-	std::string namePrefix;
-
-	inline operator bool() const { return this->override; }
-
-	ObjectOverridesAttrs():
-		override(false),
-		visible(true),
-		id(0),
-		dupliHolder(PointerRNA_NULL),
-		namePrefix("")
+	ObjectOverridesAttrs()
+	    : override(false)
+	    , visible(true)
+	    , id(0)
+	    , dupliHolder(PointerRNA_NULL)
 	{}
+
+	operator bool() const {
+		return override;
+	}
+
+	bool           override;
+	int            visible;
+	AttrTransform  tm;
+	int            id;
+	BL::Object     dupliHolder;
+	std::string    namePrefix;
 };
+
 
 class DataExporter {
 public:
+	enum ExpMode {
+		ExpModeNode = 0,
+		ExpModePlugin,
+		ExpModePluginName,
+	};
+
 	enum UserAttributeType {
 		UserAttributeInt = 0,
 		UserAttributeFloat,
@@ -226,6 +240,14 @@ public:
 	};
 
 	typedef std::map<BL::Material, AttrValue> MaterialCache;
+
+	DataExporter()
+	    : m_data(PointerRNA_NULL)
+	    , m_scene(PointerRNA_NULL)
+	    , m_engine(PointerRNA_NULL)
+	    , m_context(PointerRNA_NULL)
+	    , m_exporter(nullptr)
+	{}
 
 	// Generate unique plugin name from node
 	static std::string            GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context);
@@ -236,29 +258,25 @@ public:
 	static std::string            GetNodePluginID(BL::Node node);
 	static std::string            GetConnectedNodePluginID(BL::NodeSocket fromSocket);
 
+	static void                   tag_ntree(BL::NodeTree ntree, bool updated=true);
+
 	// Generate data name
-	std::string                   getNodeName(BL::Object ob);
-	std::string                   getMeshName(BL::Object ob);
-	std::string                   getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
-	std::string                   getLightName(BL::Object ob);
+	std::string       getNodeName(BL::Object ob);
+	std::string       getMeshName(BL::Object ob);
+	std::string       getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
+	std::string       getLightName(BL::Object ob);
 
-	void                          fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
-	void                          fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
-	                                                 PluginDesc &attrs,
-	                                                 const std::string &texAttrName,
-	                                                 const std::string &colAttrName,
-	                                                 const std::string &posAttrName,
-	                                                 const std::string &typesAttrName="");
-	int                           fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &attrs);
-
-public:
-	DataExporter():
-	    m_data(PointerRNA_NULL),
-	    m_scene(PointerRNA_NULL),
-	    m_engine(PointerRNA_NULL),
-	    m_context(PointerRNA_NULL),
-	    m_exporter(nullptr)
-	{}
+	void              fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
+	void              fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
+	                                     PluginDesc &attrs,
+	                                     const std::string &texAttrName,
+	                                     const std::string &colAttrName,
+	                                     const std::string &posAttrName,
+	                                     const std::string &typesAttrName="");
+	int               fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &attrs);
+	void              fillCameraData(BL::Object &cameraObject, ViewParams &viewParams);
+	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
+	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
 	void              init(PluginExporter *exporter);
 	void              init(PluginExporter *exporter, ExporterSettings settings);
@@ -272,42 +290,43 @@ public:
 	void              setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc);
 	void              setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID);
 
-	BL::Node          getConnectedNode(BL::NodeSocket fromSocket, NodeContext &context);
-
-	AttrValue         exportGeomStaticMesh(BL::Object ob);
-	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
-	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
-	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
-	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
-
-	AttrPlugin        exportRenderView(const ViewParams &viewParams);
-	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
-	void              fillCameraData(BL::Object &cameraObject, ViewParams &viewParams);
-	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
-	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
-	AttrPlugin        exportCameraDefault(ViewParams &viewParams);
-
-	void              exportVRayEnvironment(NodeContext &context);
-
-	void              clearMaterialCache();
-	AttrValue         exportMtlMulti(BL::Object ob);
-	AttrValue         exportMaterial(BL::Material b_ma, bool dont_export=false);
+	BL::Node          getConnectedNode(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         getConnectedNodePluginName(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
 
 	void              getSelectorObjectList(BL::Node node, ObList &obList);
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
 
+	AttrValue         exportMaterial(BL::Material ma);
+	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
+	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
+	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
+	void              exportEnvironment(NodeContext &context);
+
+	AttrValue         exportSingleMaterial(BL::Object &ob);
+	AttrValue         exportMtlMulti(BL::Object ob);
+	AttrValue         exportGeomStaticMesh(BL::Object ob);
+	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
+	AttrPlugin        exportRenderView(const ViewParams &viewParams);
+	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
+	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
+	AttrPlugin        exportCameraDefault(ViewParams &viewParams);
+
+	void              exportLinkedSocketEx(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
+	                                       ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin);
+	AttrValue         exportLinkedSocket(BL::NodeTree &ntree, BL::NodeSocket &socket, NodeContext &context);
+	AttrValue         exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket &socket);
+	AttrValue         exportSocket(BL::NodeTree &ntree, BL::NodeSocket &socket, NodeContext &context);
+	AttrValue         exportSocket(BL::NodeTree &ntree, BL::Node &node, const std::string &socketName, NodeContext &context);
+
 	AttrValue         exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
 
-	AttrValue         exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context, bool dont_export=false);
-	AttrValue         exportDefaultSocket(BL::NodeTree ntree, BL::NodeSocket socket);
-	AttrValue         exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, NodeContext &context);
-	AttrValue         exportSocket(BL::NodeTree ntree, BL::Node node, const std::string &socketName, NodeContext &context);
+	AttrValue         getDefaultMaterial();
 
 	int               isObjectVisible(BL::Object ob);
 
-	static void       tag_ntree(BL::NodeTree ntree, bool updated=true);
+	void              clearMaterialCache();
 
 private:
 	BL::Object        exportVRayNodeSelectObject(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
@@ -351,11 +370,10 @@ private:
 
 	AttrValue         exportBlenderNodeNormal(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
-private:
-	BL::NodeSocket    getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket);
-
 public:
 	StrSet            RenderChannelNames;
+	IdCache           m_id_cache;
+	IdTrack           m_id_track;
 
 private:
 	BL::BlendData     m_data;
@@ -370,10 +388,6 @@ private:
 	EvalMode          m_evalMode;
 	MaterialCache     m_exported_materials;
 
-	// XXX: Add accessors
-public:
-	IdCache           m_id_cache;
-	IdTrack           m_id_track;
 };
 
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H

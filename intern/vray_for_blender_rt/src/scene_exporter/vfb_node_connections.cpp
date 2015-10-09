@@ -25,247 +25,121 @@
 #include "vfb_utils_nodes.h"
 
 
-// NOTE: The same as VRayNodeExporter::exportLinkedSocket,
-// but returns connected node
-//
-BL::Node DataExporter::getConnectedNode(BL::NodeSocket fromSocket, NodeContext &context)
+void DataExporter::exportLinkedSocketEx(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
+                                        ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin)
 {
-	BL::NodeSocket conSock = Nodes::GetConnectedSocket(fromSocket);
-	// NOTE: This could happen while reconnecting nodes and material preview is active
-	if (NOT(conSock.ptr.data))
-		return BL::Node(PointerRNA_NULL);
+	outNode   = BL::Node(PointerRNA_NULL);
+	outPlugin = AttrPlugin();
 
-	BL::Node conNode = conSock.node();
-	// NOTE: This could happen while reconnecting nodes and material preview is active
-	if (NOT(conNode.ptr.data))
-		return BL::Node(PointerRNA_NULL);
-
-	// If we are connected to the Group node,
-	// we have to found the actual socket/node from the group node tree
-	//
-	if (conNode.is_a(&RNA_ShaderNodeGroup) || conNode.is_a(&RNA_NodeCustomGroup)) {
-		// Setting nested context
-		context.pushGroupNode(conNode.ptr);
-
-		// Get real socket / node to export
-		conSock = DataExporter::getNodeGroupSocketReal(conNode, conSock);
-		// NOTE: This could happen while reconnecting nodes and material preview is active
-		if (NOT(conSock.ptr.data))
-			return BL::Node(PointerRNA_NULL);
-
-		conNode = conSock.node();
-
-		// Restoring context
-		context.popGroupNode();
-	}
-	else if (conNode.is_a(&RNA_NodeGroupInput)) {
-		BL::NodeGroup groupNode  = context.getGroupNode();
-		if (NOT(groupNode)) {
-			PRINT_ERROR("Socket: %s => No group node and / or tree in context!",
-			            fromSocket.name().c_str());
-			return BL::Node(PointerRNA_NULL);
-		}
-
-		// Find socket connected to fromSocket on the Group Input node
-		BL::NodeSocket inputNodeSocket = Nodes::GetConnectedSocket(fromSocket);
-
-		// Now have to find a correspondent socket on the Group node
-		// and then export connected node from the parent tree
-		//
-		BL::NodeSocket groupInputSocket(PointerRNA_NULL);
-		BL::Node::inputs_iterator inIt;
-		for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
-			BL::NodeSocket sock = *inIt;
-			if (sock.name().empty())
-				continue;
-			if (inputNodeSocket.name() == sock.name()) {
-				groupInputSocket = sock;
-				break;
-			}
-		}
-		if (NOT(groupInputSocket)) {
-			PRINT_ERROR("Group node name: %s => Node tree: %s => Input socket not found!",
-			            groupNode.name().c_str(), groupNode.node_tree().name().c_str());
-			return BL::Node(PointerRNA_NULL);
-		}
-
-		// Forward the real socket
-		conSock = Nodes::GetConnectedSocket(groupInputSocket);
-		if (NOT(conSock.ptr.data))
-			return BL::Node(PointerRNA_NULL);
-
-		// Finally get the node connected to the socket on the Group node
-		conNode = DataExporter::getConnectedNode(groupInputSocket, context);
-		if (NOT(conNode)) {
-			PRINT_ERROR("Group node name: %s => Connected node is not found!",
-			            groupNode.name().c_str());
-			return BL::Node(PointerRNA_NULL);
-		}
-	}
-	else if (conNode.is_a(&RNA_NodeReroute)) {
-		if (conNode.internal_links.length()) {
-			BL::NodeSocket rerouteInSock = conNode.internal_links[0].from_socket();
-			if (rerouteInSock) {
-				conSock = Nodes::GetConnectedSocket(rerouteInSock);
-				if (NOT(conSock.ptr.data))
-					return BL::Node(PointerRNA_NULL);
-				conNode = DataExporter::getConnectedNode(rerouteInSock, context);
-			}
-		}
-	}
-	else if (conNode.bl_idname() == "VRayNodeDebugSwitch") {
-		const int inputIndex = RNA_enum_get(&conNode.ptr, "input_index");
-		const std::string inputSocketName = boost::str(boost::format("Input %i") % inputIndex);
-
-		BL::NodeSocket inputSocket = Nodes::GetInputSocketByName(conNode, inputSocketName);
-		if (NOT(inputSocket && inputSocket.is_linked()))
-			return BL::Node(PointerRNA_NULL);
-
-		conNode = DataExporter::getConnectedNode(inputSocket, context);
-	}
-
-	return conNode;
-}
-
-
-BL::NodeSocket DataExporter::getNodeGroupSocketReal(BL::Node node, BL::NodeSocket fromSocket)
-{
-	BL::NodeTree groupTree = Nodes::GetGroupNodeTree(node);
-	if (NOT(groupTree)) {
-		PRINT_ERROR("Group node name: %s => Tree not found!",
-		            node.name().c_str());
-		return BL::NodeSocket(PointerRNA_NULL);
-	}
-	BL::NodeGroupOutput groupOutput(PointerRNA_NULL);
-	BL::NodeTree::nodes_iterator nodeIt;
-	for(groupTree.nodes.begin(nodeIt); nodeIt != groupTree.nodes.end(); ++nodeIt) {
-		BL::Node gNode = *nodeIt;
-
-		if (gNode.is_a(&RNA_NodeGroupOutput)) {
-			groupOutput = BL::NodeGroupOutput(gNode);
-			break;
-		}
-	}
-	if (NOT(groupOutput)) {
-		PRINT_ERROR("Node tree: %s => Active output not found!",
-		            groupTree.name().c_str());
-		return BL::NodeSocket(PointerRNA_NULL);
-	}
-
-	// fromSocket is a socket on the Group node.
-	// We have to find a corresponding socket on a GroupOutput node
-	// Searching by name atm...
-	//
-	BL::NodeSocket toSocket(PointerRNA_NULL);
-	BL::Node::inputs_iterator inIt;
-	for(groupOutput.inputs.begin(inIt); inIt != groupOutput.inputs.end(); ++inIt ) {
-		BL::NodeSocket sock = *inIt;
-		if (sock.name().empty())
-			continue;
-		if (fromSocket.name() == sock.name()) {
-			toSocket = sock;
-			break;
-		}
-	}
-	if (NOT(toSocket)) {
-		PRINT_ERROR("Node tree: %s => Group node name: %s => Input socket not found!",
-		            groupTree.name().c_str(), node.name().c_str());
-		return BL::NodeSocket(PointerRNA_NULL);
-	}
-
-	// Finally get the socket connected to the Group Output socket
-	//
-	toSocket = Nodes::GetConnectedSocket(toSocket);
-
-	return toSocket;
-}
-
-
-AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fromSocket, NodeContext &context, bool dont_export)
-{
-	AttrValue attrValue;
-
-	BL::NodeSocket toSocket = Nodes::GetConnectedSocket(fromSocket);
-	BL::Node       toNode   = Nodes::GetConnectedNode(fromSocket);
-
-	if (toSocket && toNode) {
-		// If we are connected to the Group node,
-		// we have to found the actual socket/node from the group node tree
-		if (toNode.is_a(&RNA_ShaderNodeGroup) || toNode.is_a(&RNA_NodeCustomGroup)) {
-			// Get group tree
-			BL::NodeTree groupTree = Nodes::GetGroupNodeTree(toNode);
-
-			// Setting nested context
-			context.pushGroupNode(toNode.ptr);
-			context.pushParentTree(ntree);
-
-			// Get real socket / node to export
-			toSocket = DataExporter::getNodeGroupSocketReal(toNode, toSocket);
-
-			// NOTE: This could happen while reconnecting nodes and material preview is active
-			if (toSocket) {
-				toNode = toSocket.node();
-
-				attrValue = dont_export
-				            ? AttrPlugin(DataExporter::GenPluginName(toNode, groupTree, context))
-				            : exportVRayNode(groupTree, toNode, fromSocket, context);
-
-			}
-
-			// Restoring context
-			context.popParentTree();
-			context.popGroupNode();
-		}
-		else if (toNode.is_a(&RNA_NodeGroupInput)) {
-			BL::NodeGroup groupNode  = context.getGroupNode();
-			BL::NodeTree  parentTree = context.getNodeTree();
-			if (NOT(groupNode && parentTree)) {
-				PRINT_ERROR("Node tree: %s => No group node and / or tree in context!",
-				            ntree.name().c_str());
-			}
-			else {
-				// Find socket connected to fromSocket on the Group Input node
-				BL::NodeSocket inputNodeSocket = Nodes::GetConnectedSocket(fromSocket);
-
-				// Now have to find a correspondent socket on the Group node
-				// and then export connected node from the parent tree
-				//
-				BL::NodeSocket groupInputSocket(PointerRNA_NULL);
-				BL::Node::inputs_iterator inIt;
-				for(groupNode.inputs.begin(inIt); inIt != groupNode.inputs.end(); ++inIt ) {
-					BL::NodeSocket sock = *inIt;
-					if (sock.name().empty())
-						continue;
-					if (inputNodeSocket.name() == sock.name()) {
-						groupInputSocket = sock;
-						break;
-					}
-				}
-				if (NOT(groupInputSocket)) {
-					PRINT_ERROR("Node tree: %s => Group node name: %s => Input socket not found!",
+	BL::NodeSocket toSocket(Nodes::GetConnectedSocket(fromSocket));
+	if (toSocket) {
+		BL::Node toNode(toSocket.node());
+		if (toNode)  {
+			if (toNode.is_a(&RNA_ShaderNodeGroup) ||
+			    toNode.is_a(&RNA_NodeCustomGroup))
+			{
+				BL::Node     groupNode(toNode);
+				BL::NodeTree groupTree(Nodes::GetGroupNodeTree(groupNode));
+				if (!groupTree) {
+					PRINT_ERROR("Node tree \"%s\", group node \"%s\": Tree not found!",
 					            ntree.name().c_str(), groupNode.name().c_str());
 				}
-				else if (NOT(groupInputSocket.is_linked())) {
-					attrValue = DataExporter::exportDefaultSocket(ntree, groupInputSocket);
-				}
-				// Forward the real socket
 				else {
-					toSocket = Nodes::GetConnectedSocket(groupInputSocket);
-					if (toSocket) {
-						// Finally get the node connected to the socket on the Group node
-						toNode = DataExporter::getConnectedNode(groupInputSocket, context);
-						if (NOT(toNode)) {
-							PRINT_ERROR("Node tree: %s => Node name: %s => Connected node is not found!",
-							            ntree.name().c_str(), groupNode.name().c_str());
+					// Setting nested context
+					context.pushGroupNode(groupNode);
+					context.pushParentTree(ntree);
+
+					// Find group tree output node that we are connected to
+					BL::NodeGroupOutput groupOutput(PointerRNA_NULL);
+					BL::NodeTree::nodes_iterator nodeIt;
+					for (groupTree.nodes.begin(nodeIt); nodeIt != groupTree.nodes.end(); ++nodeIt) {
+						BL::Node n(*nodeIt);
+						if (n.is_a(&RNA_NodeGroupOutput)) {
+							groupOutput = BL::NodeGroupOutput(n);
+							break;
+						}
+					}
+					if (!groupOutput) {
+						PRINT_ERROR("Group node \"%s\", group tree \"%s\": Output node not found!",
+						            groupNode.name().c_str(), groupTree.name().c_str());
+					}
+					else {
+						// Find the correspondend socket on a GroupOutput node:
+						//   fromSocket is a socket of the connected node,
+						//   but we need to find a socket corresponding to the one on a group node,
+						//   which is toSocket and comprate with its name
+						//
+						BL::NodeSocket groupOutputInSocket(PointerRNA_NULL);
+						BL::Node::inputs_iterator inSockIt;
+						for(groupOutput.inputs.begin(inSockIt); inSockIt != groupOutput.inputs.end(); ++inSockIt ) {
+							BL::NodeSocket sock(*inSockIt);
+							if (!sock.name().empty() && sock.name() == toSocket.name()) {
+								groupOutputInSocket = sock;
+								break;
+							}
+						}
+						if (!groupOutputInSocket) {
+							PRINT_ERROR("Group tree \"%s\", group output \"%s\": Input socket is not found!",
+							            groupTree.name().c_str(), groupOutput.name().c_str());
+						}
+						else {
+							// Finally get node connected to the socket on a group output node
+							exportLinkedSocketEx(groupTree, groupOutputInSocket, context, expMode, outNode, outPlugin);
+						}
+					}
+
+					// Restoring context
+					context.popParentTree();
+					context.popGroupNode();
+				}
+			}
+			else if (toNode.is_a(&RNA_NodeGroupInput)) {
+				BL::Node groupInputNode(toNode);
+
+				BL::NodeGroup groupNode  = context.getGroupNode();
+				BL::NodeTree  parentTree = context.getNodeTree();
+				if (!parentTree) {
+					PRINT_ERROR("Group tree \"%s\", group input \"%s\": Parent tree is not found in context!",
+					            ntree.name().c_str(), groupInputNode.name().c_str());
+				}
+				else if (!groupNode) {
+					PRINT_ERROR("Group tree \"%s\", group input \"%s\": Parent group node is not found in context!",
+					            ntree.name().c_str(), groupInputNode.name().c_str());
+				}
+				else {
+					// Find socket connected to fromSocket on the Group Input node
+					//
+					BL::NodeSocket groupInputOutputSocket(Nodes::GetConnectedSocket(fromSocket));
+
+					// Now have to find a correspondent socket on the Group node
+					// and then export connected node from the parent tree
+					//
+					BL::NodeSocket groupNodeInputSocket(PointerRNA_NULL);
+					BL::Node::inputs_iterator inSockIt;
+
+					for (groupNode.inputs.begin(inSockIt); inSockIt != groupNode.inputs.end(); ++inSockIt) {
+						BL::NodeSocket sock(*inSockIt);
+						if (!sock.name().empty() && sock.name() == groupInputOutputSocket.name()) {
+							groupNodeInputSocket = sock;
+							break;
+						}
+					}
+					if (!groupNodeInputSocket) {
+						PRINT_ERROR("Group tree \"%s\", group node \"%s\": Input socket is not found!",
+						            parentTree.name().c_str(), groupNode.name().c_str());
+					}
+					else {
+						if (!groupNodeInputSocket.is_linked()) {
+							outNode   = groupNode;
+							outPlugin = exportDefaultSocket(ntree, groupNodeInputSocket);
 						}
 						else {
 							// We are going out of group here
 							BL::NodeTree  currentTree  = context.popParentTree();
 							BL::NodeGroup currentGroup = context.popGroupNode();
 
-							attrValue = dont_export
-							            ? AttrPlugin(DataExporter::GenPluginName(toNode, parentTree, context))
-							            : exportVRayNode(parentTree, toNode, fromSocket, context);
+							// Finally get the node connected to the socket on the Group node
+							exportLinkedSocketEx(parentTree, groupNodeInputSocket, context, expMode, outNode, outPlugin);
 
 							// We could go into the group after
 							context.pushGroupNode(currentGroup);
@@ -274,47 +148,83 @@ AttrValue DataExporter::exportLinkedSocket(BL::NodeTree ntree, BL::NodeSocket fr
 					}
 				}
 			}
-		}
-		else if (toNode.is_a(&RNA_NodeReroute)) {
-			if (toNode.internal_links.length()) {
-				BL::NodeSocket rerouteInSock = toNode.internal_links[0].from_socket();
-				if (rerouteInSock) {
-					toSocket = Nodes::GetConnectedSocket(rerouteInSock);
-					toNode   = DataExporter::getConnectedNode(rerouteInSock, context);
-					if (toNode && toNode) {
-						attrValue = dont_export
-						            ? AttrPlugin(DataExporter::GenPluginName(toNode, ntree, context))
-						            : exportVRayNode(ntree, toNode, fromSocket, context);
+			else if (toNode.is_a(&RNA_NodeReroute)) {
+				if (toNode.internal_links.length()) {
+					BL::NodeSocket rerouteInSock = toNode.internal_links[0].from_socket();
+					if (rerouteInSock) {
+						// NOTE: We using "rerouteInSock", because "exportLinkedSocketEx"
+						// accepts fromSocket and get the connected socket itself
+						exportLinkedSocketEx(ntree, rerouteInSock, context, expMode, outNode, outPlugin);
+					}
+				}
+			}
+			else if(toNode.bl_idname() == "VRayNodeDebugSwitch") {
+				static boost::format FmtSwitch("Input %i");
+
+				const int inputIndex = RNA_enum_get(&toNode.ptr, "input_index");
+				const std::string inputSocketName = boost::str(FmtSwitch % inputIndex);
+
+				BL::NodeSocket inputSocket = Nodes::GetInputSocketByName(toNode, inputSocketName);
+				if (inputSocket && inputSocket.is_linked()) {
+					exportLinkedSocketEx(ntree, inputSocket, context, expMode, outNode, outPlugin);
+				}
+			}
+			else {
+				if (expMode == ExpModePluginName) {
+					outPlugin = AttrPlugin(DataExporter::GenPluginName(toNode, ntree, context));
+				}
+				else if (expMode == ExpModePlugin) {
+					outPlugin = exportVRayNode(ntree, toNode, fromSocket, context);
+				}
+				outNode = toNode;
+
+				// Check if we need to use specific output
+				if (expMode == ExpModePluginName || expMode == ExpModePlugin) {
+					if (RNA_struct_find_property(&toSocket.ptr, "vray_attr")) {
+						const std::string &conSockAttrName = RNA_std_string_get(&toSocket.ptr, "vray_attr");
+						if (!conSockAttrName.empty()) {
+							if (!(conSockAttrName == "uvwgen" ||
+								  conSockAttrName == "bitmap"))
+							{
+								outPlugin.valPlugin.output = conSockAttrName;
+							}
+						}
 					}
 				}
 			}
 		}
-		else if (toNode.bl_idname() == "VRayNodeDebugSwitch") {
-			const int inputIndex = RNA_enum_get(&toNode.ptr, "input_index");
-			const std::string inputSocketName = boost::str(boost::format("Input %i") % inputIndex);
-
-			BL::NodeSocket inputSocket = Nodes::GetInputSocketByName(toNode, inputSocketName);
-			if (inputSocket && inputSocket.is_linked()) {
-				attrValue = DataExporter::exportLinkedSocket(ntree, inputSocket, context, dont_export);
-			}
-		}
-		else {
-			attrValue = dont_export
-			            ? AttrPlugin(DataExporter::GenPluginName(toNode, ntree, context))
-			            : exportVRayNode(ntree, toNode, fromSocket, context);
-		}
-
-		if (RNA_struct_find_property(&toSocket.ptr, "vray_attr")) {
-			std::string conSockAttrName = RNA_std_string_get(&toSocket.ptr, "vray_attr");
-			if (!conSockAttrName.empty()) {
-				if (!(conSockAttrName == "uvwgen" || conSockAttrName == "bitmap")) {
-					// Store output attribute name
-					attrValue.valPlugin.output = conSockAttrName;
-				}
-			}
-		}
 	}
-
-	return attrValue;
 }
 
+
+BL::Node DataExporter::getConnectedNode(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	BL::Node  conNode(PointerRNA_NULL);
+	AttrValue conPlugin;
+
+	exportLinkedSocketEx(ntree, fromSocket, context, DataExporter::ExpModeNode, conNode, conPlugin);
+
+	return conNode;
+}
+
+
+AttrValue DataExporter::exportLinkedSocket(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	BL::Node  conNode(PointerRNA_NULL);
+	AttrValue conPlugin;
+
+	exportLinkedSocketEx(ntree, fromSocket, context, DataExporter::ExpModePlugin, conNode, conPlugin);
+
+	return conPlugin;
+}
+
+
+AttrValue DataExporter::getConnectedNodePluginName(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	BL::Node  conNode(PointerRNA_NULL);
+	AttrValue conPlugin;
+
+	exportLinkedSocketEx(ntree, fromSocket, context, DataExporter::ExpModePluginName, conNode, conPlugin);
+
+	return conPlugin;
+}

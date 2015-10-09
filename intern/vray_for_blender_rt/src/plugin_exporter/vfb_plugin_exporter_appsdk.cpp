@@ -21,10 +21,22 @@
 #include "vfb_plugin_exporter_appsdk.h"
 #include "BLI_threads.h"
 
+#include <boost/algorithm/string.hpp>
+
+
 #define CGR_DEBUG_APPSDK_VALUES  0
+
+#define DUMP_MESSAGE(...) {\
+	fprintf(stdout, COLOR_BLUE "V-Ray Core" COLOR_DEFAULT ": "); \
+	fprintf(stdout, __VA_ARGS__); \
+	fprintf(stdout, "\n"); \
+	fflush(stdout); }
 
 
 using namespace VRayForBlender;
+
+
+AppSdkInit AppSdkExporter::vrayInit;
 
 
 inline VRay::Color to_vray_color(const AttrColor &c)
@@ -63,17 +75,18 @@ inline VRay::Transform to_vray_transform(const AttrTransform &tm)
 
 static void CbDumpMessage(VRay::VRayRenderer&, const char *msg, int level, void*)
 {
+	std::string message(msg);
+	boost::erase_all(message, "\n");
+
 	if (level <= VRay::MessageError) {
-		PRINT_INFO_EX("V-Ray: Error: %s", msg);
+		DUMP_MESSAGE(COLOR_RED "Error: %s" COLOR_DEFAULT, message.c_str());
 	}
-#if 0
 	else if (level > VRay::MessageError && level <= VRay::MessageWarning) {
-		PRINT_INFO_EX("V-Ray: Warning: %s", msg);
+		DUMP_MESSAGE(COLOR_YELLOW "Warning: %s" COLOR_DEFAULT, message.c_str());
 	}
 	else if (level > VRay::MessageWarning && level <= VRay::MessageInfo) {
-		PRINT_INFO_EX("V-Ray: %s", msg);
+		DUMP_MESSAGE("%s", message.c_str());
 	}
-#endif
 }
 
 
@@ -91,6 +104,12 @@ static void CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage*, void *user
 }
 
 
+static void CbOnProgress(VRay::VRayRenderer&, const char *msg, int /*elementNumber*/, int /*elementsCount*/, void *userData)
+{
+	(*(PluginExporter::UpdateMessageCb*)userData)("", msg);
+}
+
+
 AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
 {
 	if (image) {
@@ -102,6 +121,7 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
 		h = image->getHeight();
 
 		pixels = new float[w * h * 4];
+
 		std::memcpy(pixels, image->getPixelData(), w * h * 4 * sizeof(float));
 
 		delete image;
@@ -109,25 +129,62 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
 }
 
 
-AppSdkExporter::AppSdkExporter():
-    m_vray(nullptr)
+AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderElement::PixelFormat pixelFormat)
+{
+	if (image) {
+		w = image->getWidth();
+		h = image->getHeight();
+
+		const int pixelCount = w * h;
+
+		pixels = new float[pixelCount * 4];
+
+		const VRay::AColor *imagePixels = image->getPixelData();
+
+		for (int p = 0; p < pixelCount; ++p) {
+			const VRay::AColor &imagePixel = imagePixels[p];
+			float *bufferPixel = pixels + (p * 4);
+
+			if (pixelFormat == VRay::RenderElement::PF_RGB_FLOAT) {
+				bufferPixel[0] = imagePixel.color.r;
+				bufferPixel[1] = imagePixel.color.g;
+				bufferPixel[2] = imagePixel.color.b;
+				bufferPixel[3] = 1.0f;
+			}
+		}
+
+		delete image;
+	}
+}
+
+
+AppSdkExporter::AppSdkExporter()
+    : m_vray(nullptr)
 {
 }
 
 
 AppSdkExporter::~AppSdkExporter()
 {
+	if (m_vray) {
+		if (m_vray->isRendering()) {
+			m_vray->stop();
+		}
+	}
 	free();
 }
 
 
 void AppSdkExporter::init()
 {
-	if (!m_vray) {
+	if (AppSdkExporter::vrayInit && !m_vray) {
 		try {
 			VRay::RendererOptions options;
+			options.keepRTRunning = true;
 			options.noDR = true;
 			options.numThreads = BLI_system_thread_count() - 1;
+			options.showFrameBuffer = false;
+			options.renderMode = VRay::RendererOptions::RENDER_MODE_RT_CPU;
 
 			m_vray = new VRay::VRayRenderer(options);
 		}
@@ -138,11 +195,8 @@ void AppSdkExporter::init()
 		}
 
 		if (m_vray) {
-			VRay::RendererOptions options(m_vray->getOptions());
-			options.keepRTRunning = true;
-			m_vray->setOptions(options);
-
-			m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
+			m_vray->setAutoCommit(false);
+			// m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_GPU);
 			m_vray->setOnDumpMessage(CbDumpMessage);
 			m_vray->setRTImageUpdateTimeout(200);
 		}
@@ -158,32 +212,6 @@ void AppSdkExporter::free()
 
 void AppSdkExporter::sync()
 {
-	typedef std::set<std::string> RemoveKeys;
-	RemoveKeys removeKeys;
-
-	for (auto &pIt : m_used_map) {
-		if (NOT(pIt.second.used)) {
-			removeKeys.insert(pIt.first);
-
-			bool res = m_vray->removePlugin(pIt.second.plugin);
-
-			PRINT_WARN("Removing: %s [%i]",
-			           pIt.second.plugin.getName().c_str(), res);
-
-			VRay::Error err = m_vray->getLastError();
-			if (err != VRay::SUCCESS) {
-				PRINT_ERROR("Error removing plugin: %s",
-				            err.toString().c_str());
-			}
-		}
-	}
-
-	if (removeKeys.size()) {
-		for (RemoveKeys::iterator kIt = removeKeys.begin(); kIt != removeKeys.end(); ++kIt) {
-			m_used_map.erase(*kIt);
-		}
-	}
-
 	commit_changes();
 }
 
@@ -203,6 +231,36 @@ void AppSdkExporter::stop()
 RenderImage AppSdkExporter::get_image()
 {
 	return AppSDKRenderImage(m_vray->getImage());
+}
+
+
+RenderImage AppSdkExporter::get_render_channel(RenderChannelType channelType)
+{
+	RenderImage renderChannel;
+
+	if (m_vray) {
+		try {
+			VRay::RenderElements renderElements = m_vray->getRenderElements();
+			VRay::RenderElement  renderElement = renderElements.getByType((VRay::RenderElement::Type)channelType);
+			if (renderElement) {
+				VRay::RenderElement::PixelFormat pixelFormat = renderElement.getDefaultPixelFormat();
+
+				PRINT_INFO_EX("Found render channel: %i (pixel format %i)",
+				              channelType, pixelFormat);
+
+				if (pixelFormat == VRay::RenderElement::PF_RGBA_FLOAT) {
+					renderChannel = AppSDKRenderImage(renderElement.getImage());
+				}
+				else {
+					renderChannel = AppSDKRenderImage(renderElement.getImage(), pixelFormat);
+				}
+			}
+		}
+		catch (...) {
+		}
+	}
+
+	return renderChannel;
 }
 
 
@@ -230,19 +288,46 @@ void AppSdkExporter::set_callback_on_rt_image_updated(ExpoterCallback cb)
 }
 
 
+void AppSdkExporter::set_callback_on_message_updated(PluginExporter::UpdateMessageCb cb)
+{
+	PluginExporter::set_callback_on_message_updated(cb);
+	if (on_message_update) {
+		// m_vray->setOnProgress(CbOnProgress, (void*)&on_message_update);
+	}
+}
+
+
 void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 {
-	VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
-	if (plugin) {
-		PRINT_WARN("Setting camera plugin to: %s",
-		           plugin.getName().c_str());
+	if (m_vray) {
+		VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
+		if (plugin) {
+			PRINT_WARN("Setting camera plugin to: %s",
+			           plugin.getName().c_str());
 
-		m_vray->setCamera(plugin);
+			m_vray->setCamera(plugin);
 
-		VRay::Error err = m_vray->getLastError();
-		if (err != VRay::SUCCESS) {
-			PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
-			            plugin.getName().c_str(), err.toString().c_str());
+			VRay::Error err = m_vray->getLastError();
+			if (err != VRay::SUCCESS) {
+				PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
+				            plugin.getName().c_str(), err.toString().c_str());
+			}
+		}
+	}
+}
+
+
+void AppSdkExporter::set_render_mode(RenderMode renderMode)
+{
+	if (m_vray) {
+		VRay::RendererOptions::RenderMode _curMode = m_vray->getRenderMode();
+		VRay::RendererOptions::RenderMode _newMode = (VRay::RendererOptions::RenderMode)renderMode;
+		if (_curMode != _newMode) {
+			PRINT_WARN("AppSdkExporter::set_render_mode(%i)", _newMode);
+
+			m_vray->setRenderMode(_newMode);
+			m_vray->stop();
+			m_vray->start();
 		}
 	}
 }
@@ -258,16 +343,14 @@ void AppSdkExporter::commit_changes()
 }
 
 
-void AppSdkExporter::reset_used()
+void AppSdkExporter::show_frame_buffer()
 {
-	for (auto &pair : m_used_map) {
-		pair.second.used = false;
+	if (m_vray) {
+		m_vray->showFrameBuffer(true, false);
 	}
 }
 
 
-// TODO: Support exporting empty list data, could happen with "Build" modifier, for example
-//
 AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 {
 	AttrPlugin plugin;
@@ -277,7 +360,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		           pluginDesc.pluginName.c_str());
 	}
 	else {
-		VRay::Plugin plug = new_plugin(pluginDesc);
+		VRay::Plugin plug =  m_vray->newPlugin(pluginDesc.pluginName, pluginDesc.pluginID);
 		if (NOT(plug)) {
 			PRINT_ERROR("Failed to create plugin: %s [%s]",
 			            pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str());
@@ -287,7 +370,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 			for (const auto &pIt : pluginDesc.pluginAttrs) {
 				const PluginAttr &p = pIt.second;
-#if 1
+#if 0
 				PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
 				              pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str(), p.attrName.c_str());
 #endif
@@ -420,18 +503,7 @@ int AppSdkExporter::remove_plugin(const std::string &pluginName)
 
 		m_pluginManager.remove(pluginName);
 
-		res = remove_plugin_impl(m_vray->getPlugin(pluginName, false));
-	}
-
-	return res;
-}
-
-
-int AppSdkExporter::remove_plugin_impl(VRay::Plugin plugin)
-{
-	int res = true;
-
-	if (m_vray) {
+		VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
 		if (plugin) {
 			res = m_vray->removePlugin(plugin);
 
@@ -449,6 +521,8 @@ int AppSdkExporter::remove_plugin_impl(VRay::Plugin plugin)
 
 void AppSdkExporter::export_vrscene(const std::string &filepath)
 {
+	PRINT_WARN("AppSdkExporter::export_vrscene()");
+
 	VRay::VRayExportSettings exportParams;
 	exportParams.useHexFormat = false;
 	exportParams.compressed = false;
@@ -463,18 +537,6 @@ void AppSdkExporter::export_vrscene(const std::string &filepath)
 		PRINT_ERROR("Error: %s",
 		            err.toString().c_str());
 	}
-}
-
-
-VRay::Plugin AppSdkExporter::new_plugin(const PluginDesc &pluginDesc)
-{
-	VRay::Plugin plug = m_vray->newPlugin(pluginDesc.pluginName, pluginDesc.pluginID);
-
-	if (!pluginDesc.pluginName.empty()) {
-		m_used_map[pluginDesc.pluginName] = PluginUsed(plug);
-	}
-
-	return plug;
 }
 
 #endif // USE_BLENDER_VRAY_APPSDK

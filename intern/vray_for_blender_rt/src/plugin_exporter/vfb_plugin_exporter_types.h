@@ -6,14 +6,14 @@
 namespace VRayForBlender {
 
 
-struct ExporterTypeInfo {
+struct EnumItem {
 	const char *key;
 	const char *name;
 	const char *desc;
 };
 
 
-static const ExporterTypeInfo ExporterTypes[] = {
+static const EnumItem ExporterTypes[] = {
 	{"STD",    "V-Ray Standalone", ""},
 
 #ifdef USE_BLENDER_VRAY_ZMQ

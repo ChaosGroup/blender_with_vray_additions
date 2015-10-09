@@ -51,37 +51,42 @@ public:
 
 public:
 	virtual bool         do_export() = 0;
-	void                 sync(const int &check_updated=false);
-	void                 sync_prepass();
-
-	void                 get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject);
-	void                 get_view_from_viewport(ViewParams &viewParams);
-	void                 sync_view(int check_updated=false);
 
 	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
-	void                 sync_objects(const int &check_updated=false);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
-	void                 sync_effects(const int &check_updated=false);
 
+	void                 sync_prepass();
+	void                 sync(const int &check_updated=false);
+	void                 sync_view(int check_updated=false);
+	void                 sync_objects(const int &check_updated=false);
+	void                 sync_effects(const int &check_updated=false);
 	void                 sync_materials();
+	void                 sync_render_settings();
+	void                 sync_render_channels();
 
 	virtual void         setup_callbacks() {}
+	virtual void         draw() {}
 
-	void                 draw();
 	void                 resize(int w, int h);
+
 	void                 tag_update();
 	void                 tag_redraw();
-	void                 tag_ntree(BL::NodeTree ntree, bool updated=true);
 
 	virtual void         render_start();
 	void                 render_stop();
 
 	int                  is_interrupted();
+	int                  is_viewport() { return !!m_view3d; }
+	int                  is_preview();
 
 protected:
-	bool                 export_animation();
 	virtual void         create_exporter();
+
+	bool                 export_animation();
+
 	unsigned int         get_layer(BlLayers array);
+	void                 get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject);
+	void                 get_view_from_viewport(ViewParams &viewParams);
 
 public:
 	void                *m_pythonThreadState;
@@ -106,6 +111,7 @@ private:
 
 private:
 	boost::mutex         m_viewLock;
+	boost::mutex         m_syncLock;
 };
 
 }

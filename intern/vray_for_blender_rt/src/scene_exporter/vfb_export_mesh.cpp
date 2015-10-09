@@ -20,16 +20,23 @@
 #include "vfb_utils_mesh.h"
 
 
-
 AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 {
 	AttrValue geom;
 
 	PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
 
+	// Add real work mode check
+	VRayBaseTypes::RenderMode renderMode = m_evalMode == EvalModePreview
+	                                       ? m_settings.getViewportRenderMode()
+	                                       : m_settings.getRenderMode();
+
 	VRayForBlender::Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;
 	options.mode = m_evalMode;
+	options.force_dynamic_geometry = (renderMode == RenderModeRtGpuOpenCL) ||
+	                                 (renderMode == RenderModeRtGpuCUDA) ||
+	                                 (renderMode == RenderModeRtGpu);
 
 	int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 	if (!err) {

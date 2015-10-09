@@ -20,18 +20,10 @@
 
 #include <Python.h>
 
-#ifdef USE_BLENDER_VRAY_APPSDK
-#include <vraysdk.hpp>
-#endif
-
 #include "cgr_vray_for_blender_rt.h"
 #include "vfb_scene_exporter_rt.h"
 #include "vfb_scene_exporter_pro.h"
 #include "vfb_params_json.h"
-
-#ifdef USE_BLENDER_VRAY_APPSDK
-static VRay::VRayInit *VRayInit = nullptr;
-#endif
 
 
 static void python_thread_state_save(void **python_thread_state)
@@ -63,19 +55,6 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 {
 	PRINT_INFO_EX("vfb_load()");
 
-#ifdef USE_BLENDER_VRAY_APPSDK
-	if (!VRayInit) {
-		try {
-			VRayInit = new VRay::VRayInit(false);
-		}
-		catch (std::exception &e) {
-			PRINT_INFO_EX("Error initing V-Ray! Error: \"%s\"",
-			              e.what());
-			VRayInit = nullptr;
-		}
-	}
-#endif
-
 	char *jsonDirpath = NULL;
 	if (!PyArg_ParseTuple(args, "s", &jsonDirpath)) {
 		PRINT_ERROR("PyArg_ParseTuple");
@@ -91,10 +70,6 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 static PyObject* vfb_unload(PyObject*)
 {
 	PRINT_INFO_EX("vfb_unload()");
-
-#ifdef USE_BLENDER_VRAY_APPSDK
-	FreePtr(VRayInit);
-#endif
 
 	Py_RETURN_NONE;
 }
@@ -188,7 +163,11 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 
 		exporter = new VRayForBlender::InteractiveExporter(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
 		exporter->init();
-		exporter->do_export();
+
+		python_thread_state_save(&exporter->m_pythonThreadState);
+		exporter->sync(false);
+		exporter->render_start();
+		python_thread_state_restore(&exporter->m_pythonThreadState);
 	}
 
 	return PyLong_FromVoidPtr(exporter);
@@ -271,18 +250,14 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 {
 	PRINT_INFO_EX("vfb_get_exporter_types()");
 
-	static PyObject *expTypesList = NULL;
+	PyObject *expTypesList = PyTuple_New(ExpoterTypeLast);
 
-	if (!expTypesList) {
-		expTypesList = PyTuple_New(ExpoterTypeLast);
+	for (int i = 0; i < ExpoterTypeLast; ++i) {
+		static const char *item_format = "(sss)";
 
-		for (int i = 0; i < ExpoterTypeLast; ++i) {
-			static const char *item_format = "(sss)";
-
-			PyObject *list_item = Py_BuildValue(item_format,
-												ExporterTypes[i].key, ExporterTypes[i].name, ExporterTypes[i].desc);
-			PyTuple_SET_ITEM(expTypesList, i, list_item);
-		}
+		PyObject *list_item = Py_BuildValue(item_format,
+											ExporterTypes[i].key, ExporterTypes[i].name, ExporterTypes[i].desc);
+		PyTuple_SET_ITEM(expTypesList, i, list_item);
 	}
 
 	return expTypesList;

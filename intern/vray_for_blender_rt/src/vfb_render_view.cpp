@@ -189,6 +189,7 @@ void DataExporter::fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCa
 		physCamDesc.add("horizontal_offset", horizontal_offset);
 		physCamDesc.add("vertical_offset",   vertical_offset);
 		physCamDesc.add("lens_shift",        lens_shift);
+		physCamDesc.add("specify_focus",     true);
 		physCamDesc.add("focus_distance",    focus_distance);
 
 		setAttrsFromPropGroupAuto(physCamDesc, &physicalCamera, "CameraPhysical");
@@ -261,11 +262,19 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 			view_border.ymin = ((rect_camera.ymin - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
 			view_border.ymax = ((rect_camera.ymax - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
 
-			viewParams.renderSize.offs_x = view_border.xmin;
-			viewParams.renderSize.offs_y = view_border.ymin;
 			// NOTE: +2 to match camera border
-			viewParams.renderSize.w = view_border.xmax - view_border.xmin + 2;
-			viewParams.renderSize.h = view_border.ymax - view_border.ymin + 2;
+			const int render_w = view_border.xmax - view_border.xmin + 2;
+			const int render_h = view_border.ymax - view_border.ymin + 2;
+
+			// Render size
+			viewParams.renderSize.w = render_w;
+			viewParams.renderSize.h = render_h;
+
+			// Viewport settings
+			viewParams.viewport_w      = render_w;
+			viewParams.viewport_h      = render_h;
+			viewParams.viewport_offs_x = view_border.xmin;
+			viewParams.viewport_offs_y = view_border.ymin;
 
 			m_data_exporter.fillCameraData(cameraObject, viewParams);
 
@@ -276,10 +285,15 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		static const float sensor_size = 32.0f;
 		const float lens = m_view3d.lens() / 2.0f;
 
-		viewParams.renderSize.offs_x = 0;
-		viewParams.renderSize.offs_y = 0;
+		// Render size
 		viewParams.renderSize.w = m_region.width();
 		viewParams.renderSize.h = m_region.height();
+
+		// Viewport settings
+		viewParams.viewport_offs_x = 0;
+		viewParams.viewport_offs_y = 0;
+		viewParams.viewport_w      = m_region.width();
+		viewParams.viewport_h      = m_region.height();
 
 		viewParams.renderView.fov = 2.0f * atanf((0.5f * sensor_size) / lens);
 
@@ -357,6 +371,9 @@ void SceneExporter::sync_view(int)
 
 	if (m_view3d) {
 		get_view_from_viewport(viewParams);
+
+		viewParams.renderSize.w *= m_settings.getViewportResolutionPercentage();
+		viewParams.renderSize.h *= m_settings.getViewportResolutionPercentage();
 	}
 	else {
 		BL::Object sceneCamera(m_scene.camera());
@@ -404,19 +421,21 @@ void SceneExporter::sync_view(int)
 		defCam = m_data_exporter.exportCameraDefault(viewParams);
 	}
 
-	if (needReset || m_viewParams.changedParams(viewParams)) {
+	const bool paramsChanged = m_viewParams.changedParams(viewParams);
+	if (needReset || paramsChanged) {
 		renView = m_data_exporter.exportRenderView(viewParams);
 	}
 
 	if (needReset) {
+		// Commit camera plugin removal / creation
+		m_exporter->commit_changes();
+
 		if (physCam) {
 			m_exporter->set_camera_plugin(physCam.plugin);
 		}
 		else if (defCam) {
 			m_exporter->set_camera_plugin(defCam.plugin);
 		}
-
-		m_exporter->commit_changes();
 
 		m_viewLock.unlock();
 	}
@@ -431,4 +450,9 @@ void SceneExporter::sync_view(int)
 
 	// Store new params
 	m_viewParams = viewParams;
+
+	// Or use "autocommit"
+	if (paramsChanged) {
+		m_exporter->commit_changes();
+	}
 }

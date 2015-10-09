@@ -21,8 +21,15 @@
 
 #include "vfb_scene_exporter.h"
 
-
 namespace VRayForBlender {
+
+class ImageBuffer {
+	void   allocate(int w, int h) { pixels = new float[w * h]; }
+	float *pixels;
+};
+
+class RenderImageMan {
+};
 
 class ProductionExporter
         : public SceneExporter
@@ -31,6 +38,7 @@ public:
 	ProductionExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene)
 	    : SceneExporter(context, engine, data, scene)
 	    , m_renderResult(PointerRNA_NULL)
+	    , m_renderFinished(false)
 	{}
 
 	virtual void      create_exporter() override;
@@ -45,9 +53,12 @@ public:
 
 public:
 	void              cb_on_image_ready();
+	void              cb_on_rt_image_updated();
 
 private:
 	BL::RenderResult  m_renderResult;
+	int               m_renderFinished;
+	RenderImageMan    m_imageMan;
 
 };
 

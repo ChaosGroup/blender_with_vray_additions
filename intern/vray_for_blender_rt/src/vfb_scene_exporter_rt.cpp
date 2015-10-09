@@ -18,6 +18,14 @@
 
 #include "vfb_scene_exporter_rt.h"
 
+#ifdef WITH_GLEW_MX
+#  include "glew-mx.h"
+#else
+#  include <GL/glew.h>
+#  define mxCreateContext() glewInit()
+#  define mxMakeCurrentContext(x) (x)
+#endif
+
 
 void InteractiveExporter::create_exporter()
 {
@@ -44,14 +52,6 @@ void InteractiveExporter::setup_callbacks()
 {
 	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&InteractiveExporter::cb_on_image_ready, this)));
 	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&InteractiveExporter::cb_on_image_ready, this)));
-}
-
-
-bool InteractiveExporter::do_export()
-{
-	sync(false);
-	m_exporter->start();
-	return true;
 }
 
 
@@ -101,5 +101,75 @@ void InteractiveExporter::sync_object(BL::Object ob, const int &check_updated, c
 				}
 			}
 		}
+	}
+}
+
+
+void InteractiveExporter::draw()
+{
+	sync_view(true);
+
+	RenderImage image = m_exporter->get_image();
+	if (!image) {
+		tag_redraw();
+	}
+	else {
+		const bool transparent = m_settings.getViewportShowAlpha();
+
+		glPushMatrix();
+		glTranslatef(m_viewParams.viewport_offs_x, m_viewParams.viewport_offs_y, 0.0f);
+
+		if (transparent) {
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else {
+			image.resetAlpha();
+		}
+		image.clamp();
+
+		glColor3f(1.0f, 1.0f, 1.0f);
+
+		GLuint texid;
+		glGenTextures(1, &texid);
+		glBindTexture(GL_TEXTURE_2D, texid);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image.pixels);
+
+		const int glFilter = (m_viewParams.viewport_w == m_viewParams.renderSize.w)
+		                     ? GL_NEAREST
+		                     : GL_LINEAR;
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, glFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, glFilter);
+
+		glEnable(GL_TEXTURE_2D);
+
+		glPushMatrix();
+		glTranslatef(0.0f, 0.0f, 0.0f);
+
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 1.0f);
+		glVertex2f(0.0f, 0.0f);
+		glTexCoord2f(1.0f, 1.0f);
+		glVertex2f((float)m_viewParams.viewport_w, 0.0f);
+		glTexCoord2f(1.0f, 0.0f);
+		glVertex2f((float)m_viewParams.viewport_w, (float)m_viewParams.viewport_h);
+		glTexCoord2f(0.0f, 0.0f);
+		glVertex2f(0.0f, (float)m_viewParams.viewport_h);
+		glEnd();
+
+		glPopMatrix();
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDisable(GL_TEXTURE_2D);
+		glDeleteTextures(1, &texid);
+
+		if (transparent) {
+			glDisable(GL_BLEND);
+		}
+
+		glPopMatrix();
+
+		image.free();
 	}
 }

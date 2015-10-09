@@ -25,27 +25,19 @@
 #include "vfb_plugin_attrs.h"
 #include "vfb_util_defines.h"
 #include "vfb_export_settings.h"
+#include "vfb_plugin_exporter_types.h"
+#include "vfb_plugin_manager.h"
+#include "vfb_render_image.h"
 
-#include "BLI_math.h"
-#include "MEM_guardedalloc.h"
-#include "RNA_types.h"
-#include "RNA_access.h"
 #include "RNA_blender_cpp.h"
 
-#ifdef USE_BLENDER_VRAY_APPSDK
-#include <vraysdk.hpp>
-#endif
-
-#include <map>
-#include <set>
-
-#include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/unordered_map.hpp>
-#include "vfb_plugin_exporter_types.h"
+
 
 namespace VRayForBlender {
 
+struct ExporterSettings;
 
 struct ExpoterCallback {
 	typedef boost::function<void(void)> CallbackFunction;
@@ -60,57 +52,6 @@ struct ExpoterCallback {
 	}
 
 	CallbackFunction cb;
-};
-
-
-struct RenderImage {
-	RenderImage():
-	    pixels(nullptr),
-	    w(0),
-	    h(0)
-	{}
-
-	virtual ~RenderImage() {}
-
-	operator bool () const {
-		return !!(pixels);
-	}
-
-	void free() {
-		FreePtrArr(pixels);
-	}
-
-	void flip();
-
-	float *pixels;
-	int    w;
-	int    h;
-};
-
-struct ExporterSettings;
-
-class PluginManager {
-public:
-	PluginManager();
-
-	bool inCache(const PluginDesc &pluginDesc) const;
-	bool differs(const PluginDesc &pluginDesc) const;
-	PluginDesc differences(const PluginDesc &pluginDesc) const;
-
-	PluginDesc fromCache(const PluginDesc &search) const;
-	void updateCache(const PluginDesc &update);
-	void remove(const PluginDesc &pluginDesc);
-	void remove(const std::string &pluginName);
-
-	void clear();
-
-private:
-
-	std::pair<bool, PluginDesc> diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const;
-	std::string getKey(const PluginDesc &pluginDesc) const;
-
-	// id + name -> PluginDesc
-	boost::unordered_map<std::string, PluginDesc> cache;
 };
 
 class PluginExporter
@@ -137,15 +78,22 @@ public:
 	virtual void         export_vrscene(const std::string&) {}
 
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
-	        AttrPlugin   export_plugin(const PluginDesc &pluginDesc);
+	AttrPlugin           export_plugin(const PluginDesc &pluginDesc);
 
 	virtual int          remove_plugin(const std::string&) { return 0; }
 
 	virtual float        get_last_rendered_frame() const { return last_rendered_frame; }
-	        void         set_current_frame(float val)    { current_scene_frame = val; }
+	void                 set_current_frame(float val)    { current_scene_frame = val; }
 	virtual bool         is_aborted() const { return false; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }
+	virtual RenderImage  get_render_channel(RenderChannelType channelType) { return RenderImage(); }
+
+	RenderImage          get_pass(BL::RenderPass::type_enum passType);
+
+	virtual void         show_frame_buffer() {}
+	virtual void         set_render_mode(RenderMode renderMode) {}
+
 	virtual void         set_render_size(const int&, const int&) {}
 
 	virtual void         set_callback_on_image_ready(ExpoterCallback cb)      { callback_on_image_ready = cb; }
@@ -155,8 +103,8 @@ public:
 	virtual void         set_camera_plugin(const std::string &pluginName) {}
 	virtual void         commit_changes() {}
 
-	        void         set_is_viewport(bool flag)  { is_viewport = flag; }
-	        bool         get_is_viewport() const { return is_viewport; }
+	void                 set_is_viewport(bool flag)  { is_viewport = flag; }
+	bool                 get_is_viewport() const { return is_viewport; }
 
 	PluginManager       &getPluginManager() { return m_pluginManager; }
 
