@@ -19,6 +19,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
+#include "utils/cgr_string.h"
 
 
 void DataExporter::clearMaterialCache()
@@ -52,9 +53,21 @@ AttrValue DataExporter::exportMaterial(BL::Material ma)
 					const bool use_override = m_defaults.override_material && !(RNA_boolean_get(&output.ptr, "dontOverride"));
 					if (!use_override) {
 						BL::NodeSocket materialSock(Nodes::GetInputSocketByName(output, "Material"));
-						if (materialSock) {
+						if (materialSock && materialSock.is_linked()) {
 							NodeContext ctx;
 							material = exportLinkedSocket(ntree, materialSock, ctx);
+
+							// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
+							if (material.type == ValueTypePlugin && material.valPlugin && material.valPlugin.plugin.find("Mtl") == std::string::npos) {
+
+								const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.valPlugin.plugin);
+								PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
+								mtlSingleWrapper.add("brdf", material.valPlugin);
+
+								PRINT_INFO_EX("Wrapping BRDF in single material %s", wrapper_name.c_str());
+
+								material = m_exporter->export_plugin(mtlSingleWrapper);
+							}
 
 							m_exported_materials.insert(std::make_pair(ma, material));
 						}
