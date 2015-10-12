@@ -62,6 +62,8 @@ private:
 	void                zmqCallback(VRayMessage & message, ZmqWrapper * client);
 
 private:
+	RenderMode          m_RenderMode;
+
 	int                 m_ServerPort;
 	std::string         m_ServerAddress;
 	ZmqClient          *m_Client;

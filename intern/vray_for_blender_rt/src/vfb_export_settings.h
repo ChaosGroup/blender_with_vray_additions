@@ -165,10 +165,10 @@ struct ExporterSettings {
 
 	std::string       override_material;
 
-	VRayBaseTypes::RenderMode  getRenderMode() { return m_renderMode; }
-	VRayBaseTypes::RenderMode  getViewportRenderMode() { return m_renderModeViewport; }
+	VRayBaseTypes::RenderMode  getRenderMode() const { return m_renderMode; }
+	VRayBaseTypes::RenderMode  getViewportRenderMode() const { return m_renderModeViewport; }
 
-	float                      getViewportResolutionPercentage() { return m_viewportResolution; }
+	float                      getViewportResolutionPercentage() const { return m_viewportResolution; }
 	int                        getViewportShowAlpha();
 
 private:

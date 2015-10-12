@@ -193,6 +193,7 @@ void ZmqExporter::init()
 		auto mode = this->animation_settings.use && !this->is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
 		m_Client->send(VRayMessage::createMessage(mode));
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
 	}
@@ -216,6 +217,7 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 {
 	PluginExporter::set_settings(settings);
 
+	this->m_RenderMode = settings.getRenderMode();
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
 	this->animation_settings = settings.settings_animation;
