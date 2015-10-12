@@ -305,14 +305,26 @@ void SceneExporter::sync_prepass()
 	}
 }
 
+bool SceneExporter::layers_intersect(const BlLayers &left, const BlLayers &right) const
+{
+	for (unsigned int c = 0; c < 20; c++) {
+		if (left.data[c] && right.data[c]) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 unsigned int SceneExporter::get_layer(BlLayers array)
 {
 	unsigned int layer = 0;
 
-	for(unsigned int i = 0; i < 20; i++)
-		if (array[i])
+	for (unsigned int i = 0; i < 20; i++) {
+		if (array[i]) {
 			layer |= (1 << i);
+		}
+	}
 
 	return layer;
 }
@@ -468,8 +480,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::DupliObject dupliOb(*dupIt);
 		BL::Object      dupOb(dupliOb.object());
 
-		const bool visible_on_layer = get_layer(dupOb.layers()) & m_scene.active_layer();
-
+		const bool visible_on_layer = layers_intersect(m_scene.layers(), dupOb.layers());
 		const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
 
 		const bool is_light = Blender::IsLight(dupOb);
@@ -552,7 +563,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 
 		if (ob.is_duplicator()) {
 			const bool is_updated = check_updated ? ob.is_updated() : true;
-			const bool visible_on_layer = get_layer(ob.layers()) & m_scene.active_layer();
+			const bool visible_on_layer = layers_intersect(ob.layers(), m_scene.layers());
 
 			if (is_updated) {
 				sync_dupli(ob, check_updated);
