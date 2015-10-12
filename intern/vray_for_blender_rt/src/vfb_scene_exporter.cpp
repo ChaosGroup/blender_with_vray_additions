@@ -208,7 +208,6 @@ void SceneExporter::sync(const int &check_updated)
 		m_exporter->set_render_mode(renderMode);
 
 		clock_t begin = clock();
-		m_data_exporter.clearMaterialCache();
 
 		sync_prepass();
 
@@ -271,6 +270,7 @@ void SceneExporter::sync_prepass()
 {
 	m_data_exporter.m_id_cache.clear();
 	m_data_exporter.m_id_track.reset_usage();
+	m_data_exporter.clearMaterialCache();
 
 	BL::BlendData::node_groups_iterator nIt;
 	for (m_data.node_groups.begin(nIt); nIt != m_data.node_groups.end(); ++nIt) {
