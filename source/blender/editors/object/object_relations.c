@@ -1795,7 +1795,7 @@ static void single_object_users(Main *bmain, Scene *scene, View3D *v3d, const in
 
 	/* object and group pointers */
 	for (base = FIRSTBASE; base; base = base->next) {
-		BKE_object_relink(base->object);
+		BKE_libblock_relink(&base->object->id);
 	}
 
 	set_sca_new_poins();
