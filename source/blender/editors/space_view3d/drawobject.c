@@ -829,7 +829,7 @@ void view3d_cached_text_draw_add(const float co[3],
 	BLI_LINKS_PREPEND(g_v3d_strings[g_v3d_string_level], vos);
 
 	copy_v3_v3(vos->vec, co);
-	copy_v4_v4_char((char *)vos->col.ub, (const char *)col);
+	copy_v4_v4_uchar(vos->col.ub, col);
 	vos->xoffs = xoffs;
 	vos->flag = flag;
 	vos->str_len = str_len;
@@ -7653,7 +7653,9 @@ void draw_object(Scene *scene, ARegion *ar, View3D *v3d, Base *base, const short
 		}
 	}
 
-	if ((md = modifiers_findByType(ob, eModifierType_Smoke)) && (modifier_isEnabled(scene, md, eModifierMode_Realtime))) {
+	if (((base->flag & OB_FROMDUPLI) == 0) &&
+	    (md = modifiers_findByType(ob, eModifierType_Smoke)) &&
+	    (modifier_isEnabled(scene, md, eModifierMode_Realtime))) {
 		smd = (SmokeModifierData *)md;
 
 		if (smd->domain) {
