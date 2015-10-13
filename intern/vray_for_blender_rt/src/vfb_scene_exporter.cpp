@@ -120,7 +120,7 @@ void SceneExporter::create_exporter()
 {
 	m_exporter = ExporterCreate(m_settings.exporter_type);
 	if (!m_exporter) {
-		m_exporter = ExporterCreate(ExpoterType::ExporterTypeInvalid);
+		m_exporter = ExporterCreate(m_settings.exporter_type = ExpoterType::ExporterTypeInvalid);
 		if (!m_exporter) {
 			return;
 		}

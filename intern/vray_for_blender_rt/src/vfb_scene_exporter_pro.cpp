@@ -93,15 +93,17 @@ void ProductionExporter::render_start()
 		m_exporter->show_frame_buffer();
 	}
 
-	m_renderFinished = false;
+	if (m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
+		m_renderFinished = false;
 
-	std::thread wait_render = std::thread([this] {
-		while (!(is_interrupted() || m_renderFinished)) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(250));
-		}
-	});
+		std::thread wait_render = std::thread([this] {
+			while (!(is_interrupted() || m_renderFinished)) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			}
+		});
 
-	wait_render.join();
+		wait_render.join();
+	}
 }
 
 
