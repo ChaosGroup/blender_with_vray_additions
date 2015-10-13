@@ -85,19 +85,20 @@ std::string RNA_enum_name_get(PointerRNA *ptr, const char *attrName)
 int RNA_enum_ext_get(PointerRNA *ptr, const char *attrName)
 {
 	int enum_item_index = RNA_enum_get(ptr, attrName);
-	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
 
+	const EnumPropertyItem *enum_item = RNA_enum_item(ptr, attrName);
 	if (!enum_item->identifier) {
 		PropertyRNA *prop = RNA_struct_find_property(ptr, attrName);
 		if (prop) {
-			PRINT_ERROR("Property \"%s\": Enum identifier not found!",
+			PRINT_ERROR("Property \"%s\": Enum identifier is not found!",
 						prop->name);
 		}
 	}
 	else {
 		// If enum item is digit, return it as int
-		if (enum_item->identifier[0] >= '0' && enum_item->identifier[0] <= '9') {
-			enum_item_index = atoi(enum_item->identifier);
+		int tmp_int = 0;
+		if (sscanf(enum_item->identifier, "%i", &tmp_int) == 1) {
+			enum_item_index = tmp_int;
 		}
 	}
 
