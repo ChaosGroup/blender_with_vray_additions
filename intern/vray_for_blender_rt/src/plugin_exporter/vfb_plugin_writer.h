@@ -100,7 +100,7 @@ template <> inline
 PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
 {
 	if (!val.empty()) {
-		pp << "ListString" << listName;
+		pp << "List" << listName;
 		pp << "(\n    \"" << StripString((*val)[0]) << "\"";
 		for (int c = 1; c < val.getCount(); c++) {
 			pp << "," << (newLine ? "\n    " : "    ") << "\"" << StripString((*val)[c]) << "\"";
