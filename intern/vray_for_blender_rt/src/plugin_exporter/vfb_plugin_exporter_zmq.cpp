@@ -217,7 +217,11 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 {
 	PluginExporter::set_settings(settings);
 
-	this->m_RenderMode = settings.getRenderMode();
+	if (this->is_viewport) {
+		this->m_RenderMode = settings.getViewportRenderMode();
+	} else {
+		this->m_RenderMode = settings.getRenderMode();
+	}
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
 	this->animation_settings = settings.settings_animation;
