@@ -125,7 +125,6 @@ ZmqExporter::ZmqExporter():
 
 ZmqExporter::~ZmqExporter()
 {
-	stop();
 	free();
 	m_Client->setFlushOnExit(true);
 	delete m_Client;
