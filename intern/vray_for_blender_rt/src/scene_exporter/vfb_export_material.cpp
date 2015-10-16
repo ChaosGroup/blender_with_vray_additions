@@ -64,9 +64,15 @@ AttrValue DataExporter::exportMaterial(BL::Material ma)
 								PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
 								mtlSingleWrapper.add("brdf", material.valPlugin);
 
-								PRINT_INFO_EX("Wrapping BRDF in single material %s", wrapper_name.c_str());
+								// PRINT_INFO_EX("Wrapping BRDF in single material %s", wrapper_name.c_str());
 
 								material = m_exporter->export_plugin(mtlSingleWrapper);
+							}
+
+							if (m_exporter->get_is_viewport()) {
+								PluginDesc genericWrapper("MtlRenderStats@" + ntree.name(), "MtlRenderStats");
+								genericWrapper.add("base_mtl", material.valPlugin);
+								material = m_exporter->export_plugin(genericWrapper);
 							}
 
 							m_exported_materials.insert(std::make_pair(ma, material));
