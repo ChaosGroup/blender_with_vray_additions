@@ -62,25 +62,6 @@ void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	ob.dupli_list_clear();
 }
 
-
-void InteractiveExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override)
-{
-	BL::Object::modifiers_iterator modIt;
-	SceneExporter::sync_object(ob, check_updated, override);
-
-	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
-		BL::Modifier mod(*modIt);
-		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-			BL::ParticleSystemModifier psm(mod);
-			BL::ParticleSystem psys = psm.particle_system();
-			if (psys) {
-				m_data_exporter.exportHair(ob, psm, psys, check_updated);
-			}
-		}
-	}
-}
-
-
 void InteractiveExporter::draw()
 {
 	sync_view(true);

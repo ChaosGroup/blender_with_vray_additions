@@ -36,7 +36,6 @@ public:
 
 	virtual void  draw() override;
 	virtual void  sync_dupli(BL::Object ob, const int &check_updated = false) override;
-	virtual void  sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs()) override;
 	virtual void  create_exporter() override;
 
 	virtual void  setup_callbacks();

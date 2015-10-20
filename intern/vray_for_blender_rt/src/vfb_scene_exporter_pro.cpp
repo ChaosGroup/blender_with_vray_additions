@@ -64,12 +64,9 @@ void ProductionExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	ob.dupli_list_clear();
 }
 
-
-void ProductionExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override)
+void ProductionExporter::sync_object_modiefiers(BL::Object ob, const int &check_updated)
 {
 	BL::Object::modifiers_iterator modIt;
-	SceneExporter::sync_object(ob, check_updated, override);
-
 	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
 		BL::Modifier mod(*modIt);
 		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {

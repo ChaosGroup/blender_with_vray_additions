@@ -55,7 +55,7 @@ public:
 	virtual bool         do_export() = 0;
 
 	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
-	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override);
+	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
 
 	void                 sync_prepass();

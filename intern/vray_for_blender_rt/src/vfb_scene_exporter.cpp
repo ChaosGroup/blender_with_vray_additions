@@ -143,6 +143,46 @@ void SceneExporter::resize(int w, int h)
 	m_exporter->set_render_size(w, h);
 }
 
+static int ob_has_dupli(BL::Object ob) {
+	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
+}
+
+static int ob_is_duplicator_renderable(BL::Object ob) {
+	bool is_renderable = true;
+
+	// Dulpi
+	if (ob_has_dupli(ob)) {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
+	}
+
+	// Particles
+	// Particle system "Show / Hide Emitter" has priority over dupli
+	if (ob.particle_systems.length()) {
+		is_renderable = true;
+
+		BL::Object::modifiers_iterator mdIt;
+		for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
+			BL::Modifier md(*mdIt);
+			if (md.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+				BL::ParticleSystemModifier pmod(md);
+				BL::ParticleSystem psys(pmod.particle_system());
+				if (psys) {
+					BL::ParticleSettings pset(psys.settings());
+					if (pset) {
+						if (!pset.use_render_emitter()) {
+							is_renderable = false;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return is_renderable;
+}
+
 
 void SceneExporter::render_start()
 {
@@ -329,7 +369,7 @@ unsigned int SceneExporter::get_layer(BlLayers array)
 	return layer;
 }
 
-void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs &override)
+void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updated)
 {
 	BL::Object::modifiers_iterator modIt;
 	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
@@ -371,6 +411,14 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				m_data_exporter.m_id_cache.insert(ob);
 			}
 
+			auto overrideAttr = override;
+
+			if (!override && ob.modifiers.length()) {
+				overrideAttr.override = true;
+				overrideAttr.visible = ob_is_duplicator_renderable(ob);
+				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
+			}
+
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 
 			PRINT_INFO_EX("Syncing: %s...",
@@ -383,60 +431,20 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 #endif
 
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
-				m_data_exporter.exportObject(ob, check_updated, override);
+				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 			}
 			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
-				m_data_exporter.exportLight(ob, check_updated, override);
+				m_data_exporter.exportLight(ob, check_updated, overrideAttr);
 			}
 
 			// Reset update flag
 			RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 
-			sync_object_modiefiers(ob, check_updated, override);
+			sync_object_modiefiers(ob, check_updated);
 		}
+
 	}
 }
-
-static int ob_has_dupli(BL::Object ob) {
-	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
-}
-
-static int ob_is_duplicator_renderable(BL::Object ob) {
-	bool is_renderable = true;
-
-	// Dulpi
-	if (ob_has_dupli(ob)) {
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
-	}
-
-	// Particles
-	// Particle system "Show / Hide Emitter" has priority over dupli
-	if (ob.particle_systems.length()) {
-		is_renderable = true;
-
-		BL::Object::modifiers_iterator mdIt;
-		for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
-			BL::Modifier md(*mdIt);
-			if (md.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-				BL::ParticleSystemModifier pmod(md);
-				BL::ParticleSystem psys(pmod.particle_system());
-				if (psys) {
-					BL::ParticleSettings pset(psys.settings());
-					if (pset) {
-						if (!pset.use_render_emitter()) {
-							is_renderable = false;
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return is_renderable;
-}
-
 
 void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
