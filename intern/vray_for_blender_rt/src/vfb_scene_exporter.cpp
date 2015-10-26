@@ -677,7 +677,7 @@ void SceneExporter::tag_redraw()
 
 int SceneExporter::is_interrupted()
 {
-	return m_engine && m_engine.test_break();
+	return m_engine && m_engine.test_break() && m_exporter && m_exporter->is_aborted();
 }
 
 

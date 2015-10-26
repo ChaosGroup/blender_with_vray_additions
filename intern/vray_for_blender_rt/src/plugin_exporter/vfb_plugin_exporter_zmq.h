@@ -25,6 +25,8 @@
 #include "zmq_wrapper.h"
 #include "zmq_message.hpp"
 
+#include <unordered_map>
+
 namespace VRayForBlender {
 
 class ZmqExporter:
@@ -34,7 +36,7 @@ public:
 
 	struct ZmqRenderImage:
 		public RenderImage {
-		void update(const VRayMessage &, ZmqExporter *);
+		void update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp);
 	};
 
 	ZmqExporter();
@@ -53,6 +55,7 @@ public:
 	virtual bool        is_running() const { return m_Started; }
 
 	virtual RenderImage get_image();
+	virtual RenderImage get_render_channel(RenderChannelType channelType);
 	virtual void        set_render_size(const int &w, const int &h);
 	virtual bool        is_aborted() const { return m_IsAborted; }
 
@@ -69,7 +72,9 @@ private:
 	ZmqClient          *m_Client;
 
 	std::mutex          m_ImgMutex;
+	std::mutex          m_ZmqClientMutex;
 	ZmqRenderImage      m_CurrentImage;
+	std::unordered_map<RenderChannelType, ZmqRenderImage> m_LayerImages;
 	float               m_LastExportedFrame;
 	bool                m_IsAborted;
 	bool                m_Started;

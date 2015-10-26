@@ -84,8 +84,6 @@ void ProductionExporter::sync_object_modiefiers(BL::Object ob, const int &check_
 
 void ProductionExporter::render_start()
 {
-	SceneExporter::render_start();
-
 	if (!is_preview()) {
 		m_exporter->show_frame_buffer();
 	}
@@ -94,12 +92,15 @@ void ProductionExporter::render_start()
 		m_renderFinished = false;
 
 		std::thread wait_render = std::thread([this] {
-			while (!(is_interrupted() || m_renderFinished)) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			while (!is_interrupted() && !m_renderFinished) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
 		});
 
+		SceneExporter::render_start();
 		wait_render.join();
+	} else {
+		SceneExporter::render_start();
 	}
 }
 
@@ -111,18 +112,16 @@ void ProductionExporter::cb_on_image_ready()
 	m_renderFinished = true;
 }
 
-
 void ProductionExporter::cb_on_rt_image_updated()
 {
 	// PRINT_INFO_EX("ProductionExporter::cb_on_rt_image_updated()");
-
 	BL::RenderSettings renderSettings = m_scene.render();
 
 	BL::RenderSettings::layers_iterator rslIt;
 	renderSettings.layers.begin(rslIt);
 	if (rslIt != renderSettings.layers.end()) {
 		BL::SceneRenderLayer sceneRenderLayer(*rslIt);
-		if (sceneRenderLayer) {
+		if (sceneRenderLayer && !is_interrupted()) {
 			BL::RenderResult renderResult = m_engine.begin_result(0, 0, m_viewParams.renderSize.w, m_viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
 			if (renderResult) {
 				BL::RenderResult::layers_iterator rrlIt;
@@ -135,7 +134,7 @@ void ProductionExporter::cb_on_rt_image_updated()
 							BL::RenderPass renderPass(*rpIt);
 							if (renderPass) {
 								RenderImage image = m_exporter->get_pass(renderPass.type());
-								if (image) {
+								if (image && !is_interrupted()) {
 									image.flip();
 									image.resetAlpha();
 									image.clamp(1.0f, 1.0f);
@@ -147,7 +146,9 @@ void ProductionExporter::cb_on_rt_image_updated()
 							}
 						}
 
-						m_engine.update_result(renderResult);
+						if (!is_interrupted()) {
+							m_engine.update_result(renderResult);
+						}
 					}
 				}
 

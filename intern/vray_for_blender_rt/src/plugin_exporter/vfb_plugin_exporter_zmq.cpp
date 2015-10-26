@@ -86,28 +86,48 @@ static float * jpegToPixelData(unsigned char * data, int size) {
 	return imageData;
 }
 
-void ZmqExporter::ZmqRenderImage::update(const VRayMessage & msg, ZmqExporter * exp) {
-	auto img = msg.getValue<VRayBaseTypes::AttrImage>();
+void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp) {
 
-	if (img->imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
-		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img->data.get()), img->size);
+	if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
+		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img.data.get()), img.size);
 
 		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
 
-		this->w = img->width;
-		this->h = img->height;
+		this->w = img.width;
+		this->h = img.height;
 		delete[] pixels;
 		this->pixels = imgData;
-	} else if (img->imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
-		const float * imgData = reinterpret_cast<const float *>(img->data.get());
-		float * myImage = new float[img->width * img->height * 4];
+	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL ||
+		       img.imageType == VRayBaseTypes::AttrImage::ImageType::RGB_REAL ||
+		       img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL) {
+
+		const float * imgData = reinterpret_cast<const float *>(img.data.get());
+		float * myImage = new float[img.width * img.height * 4];
 
 		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
 
-		memcpy(myImage, imgData, img->width * img->height * 4 * sizeof(float));
+		if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
+			memcpy(myImage, imgData, img.width * img.height * 4 * sizeof(float));
+		} else {
+			// pad missing channels
+			const int sourceStep = img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL ? 1 : 4;
+			for (int c = 0; c < img.width * img.height; ++c) {
+				const float * source = imgData + (c * sourceStep);
+				float * dest = myImage + (c * 4);
 
-		this->w = img->width;
-		this->h = img->height;
+				if (img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL) {
+					dest[0] = dest[1] = dest[2] = source[0];
+				} else {
+					memcpy(dest, source, 4 * sizeof(float));
+				}
+
+				dest[3] = 1.0;
+			}
+		}
+
+
+		this->w = img.width;
+		this->h = img.height;
 		delete[] pixels;
 		this->pixels = myImage;
 	}
@@ -115,11 +135,12 @@ void ZmqExporter::ZmqRenderImage::update(const VRayMessage & msg, ZmqExporter * 
 
 
 ZmqExporter::ZmqExporter():
-	m_Client(new ZmqClient()),
+	m_Client(nullptr),
 	m_LastExportedFrame(std::numeric_limits<float>::min()),
 	m_IsAborted(false),
 	m_Started(false)
 {
+	checkZmqClient();
 }
 
 
@@ -130,44 +151,60 @@ ZmqExporter::~ZmqExporter()
 	delete m_Client;
 }
 
-
-RenderImage ZmqExporter::get_image() {
+RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
 	RenderImage img;
 
-	if (this->m_CurrentImage.pixels) {
+	auto imgIter = m_LayerImages.find(channelType);
+	if (imgIter != m_LayerImages.end()) {
 		std::unique_lock<std::mutex> lock(m_ImgMutex);
+		imgIter = m_LayerImages.find(channelType);
 
-		img.w = this->m_CurrentImage.w;
-		img.h = this->m_CurrentImage.h;
-		img.pixels = new float[this->m_CurrentImage.w * this->m_CurrentImage.h * 4];
-		memcpy(img.pixels, this->m_CurrentImage.pixels, this->m_CurrentImage.w * this->m_CurrentImage.h * 4 * sizeof(float));
+		if (imgIter != m_LayerImages.end()) {
+			RenderImage &storedImage = imgIter->second;
+			if (storedImage.pixels) {
+
+				img.w = storedImage.w;
+				img.h = storedImage.h;
+				img.pixels = new float[storedImage.w * storedImage.h * 4];
+				memcpy(img.pixels, storedImage.pixels, storedImage.w * storedImage.h * 4 * sizeof(float));
+			}
+		}
 	}
-
 	return img;
+}
+
+RenderImage ZmqExporter::get_image() {
+	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
 void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 	const auto msgType = message.getType();
-	if (msgType == VRayMessage::Type::SingleValue) {
-		switch (message.getValueType()) {
-		case VRayBaseTypes::ValueType::ValueTypeImage:
-			this->m_CurrentImage.update(message, this);
-			if (this->callback_on_rt_image_updated) {
-				callback_on_rt_image_updated.cb();
+	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
+		if (this->on_message_update) {
+			auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
+			auto newLine = msg.find_first_of("\n\r");
+			if (newLine != std::string::npos) {
+				msg.resize(newLine);
 			}
-			break;
-		case VRayBaseTypes::ValueType::ValueTypeString:
-			if (this->on_message_update) {
-				auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
-				auto newLine = msg.find_first_of("\n\r");
-				if (newLine != std::string::npos) {
-					msg.resize(newLine);
-				}
 
-				this->on_message_update("", msg.c_str());
-			}
-			break;
+			this->on_message_update("", msg.c_str());
 		}
+	} else if (msgType == VRayMessage::Type::Image) {
+		auto set = message.getValue<VRayBaseTypes::AttrImageSet>();
+		bool ready = false;
+		for (const auto &img : set->images) {
+			m_LayerImages[img.first].update(img.second, this);
+			ready = ready || img.first == RenderChannelType::RenderChannelTypeNone;
+		}
+
+		if (this->callback_on_rt_image_updated) {
+			callback_on_rt_image_updated.cb();
+		}
+
+		if (ready && this->callback_on_image_ready) {
+			this->callback_on_image_ready.cb();
+		}
+
 	} else if (msgType == VRayMessage::Type::ChangeRenderer) {
 		if (message.getRendererAction() == VRayMessage::RendererAction::SetRendererStatus) {
 			if (!(m_IsAborted = (message.getRendererStatus() == VRayMessage::RendererStatus::Abort))) {
@@ -190,9 +227,18 @@ void ZmqExporter::init()
 		m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
 
 		auto mode = this->animation_settings.use && !this->is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
+		if (mode == VRayMessage::RendererType::Animation || !this->is_viewport) {
+			m_RenderMode = RenderMode::RenderModeProduction;
+		}
 		m_Client->send(VRayMessage::createMessage(mode));
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
+
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbZdepth)));
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbNormal)));
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRenderID)));
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
 	}
@@ -200,15 +246,21 @@ void ZmqExporter::init()
 
 void ZmqExporter::checkZmqClient()
 {
-	if (!m_Client->connected()) {
-		// we can't connect dont retry
-		return;
-	}
+	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
 
-	if (!m_Client->good()) {
-		delete m_Client;
+	if (!m_Client) {
 		m_Client = new ZmqClient();
-		this->init();
+	} else {
+		if (!m_Client->connected()) {
+			// we can't connect dont retry
+			return;
+		}
+
+		if (!m_Client->good()) {
+			delete m_Client;
+			m_Client = new ZmqClient();
+			this->init();
+		}
 	}
 }
 
