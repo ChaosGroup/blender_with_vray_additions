@@ -109,47 +109,41 @@ static void CbOnProgress(VRay::VRayRenderer&, const char *msg, int /*elementNumb
 	(*(PluginExporter::UpdateMessageCb*)userData)("", msg);
 }
 
-
-AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image)
-{
-	if (image) {
-#if 0
-		PRINT_INFO_EX("Has some pixels %p (%i x %i)",
-		              image->getPixelData(), image->getWidth(), image->getHeight());
-#endif
-		w = image->getWidth();
-		h = image->getHeight();
-
-		pixels = new float[w * h * 4];
-
-		std::memcpy(pixels, image->getPixelData(), w * h * 4 * sizeof(float));
-
-		delete image;
-	}
-}
-
-
 AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderElement::PixelFormat pixelFormat)
 {
 	if (image) {
 		w = image->getWidth();
 		h = image->getHeight();
 
+		switch (pixelFormat) {
+		case VRay::RenderElement::PF_BW_FLOAT:
+			channels = 1;
+			break;
+		case VRay::RenderElement::PF_RGB_FLOAT:
+			channels = 3;
+			break;
+		case VRay::RenderElement::PF_RGBA_FLOAT:
+			channels = 4;
+			break;
+		default:
+			break;
+		}
+
 		const int pixelCount = w * h;
 
-		pixels = new float[pixelCount * 4];
+		pixels = new float[pixelCount * channels];
 
 		const VRay::AColor *imagePixels = image->getPixelData();
 
 		for (int p = 0; p < pixelCount; ++p) {
 			const VRay::AColor &imagePixel = imagePixels[p];
-			float *bufferPixel = pixels + (p * 4);
+			float *bufferPixel = pixels + (p * channels);
 
-			if (pixelFormat == VRay::RenderElement::PF_RGB_FLOAT) {
-				bufferPixel[0] = imagePixel.color.r;
-				bufferPixel[1] = imagePixel.color.g;
-				bufferPixel[2] = imagePixel.color.b;
-				bufferPixel[3] = 1.0f;
+			switch (channels) {
+			case 4: bufferPixel[3] = imagePixel.alpha;
+			case 3: bufferPixel[2] = imagePixel.color.b;
+			case 2: bufferPixel[1] = imagePixel.color.g;
+			case 1: bufferPixel[0] = imagePixel.color.r;
 			}
 		}
 
@@ -248,15 +242,11 @@ RenderImage AppSdkExporter::get_render_channel(RenderChannelType channelType)
 				PRINT_INFO_EX("Found render channel: %i (pixel format %i)",
 				              channelType, pixelFormat);
 
-				if (pixelFormat == VRay::RenderElement::PF_RGBA_FLOAT) {
-					renderChannel = AppSDKRenderImage(renderElement.getImage());
-				}
-				else {
-					renderChannel = AppSDKRenderImage(renderElement.getImage(), pixelFormat);
-				}
+				renderChannel = AppSDKRenderImage(renderElement.getImage(), pixelFormat);
 			}
 		}
 		catch (...) {
+			PRINT_WARN("Ignored exception");
 		}
 	}
 

@@ -61,8 +61,7 @@ private:
 struct AppSDKRenderImage
         : public RenderImage
 {
-	AppSDKRenderImage(const VRay::VRayImage *image);
-	AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderElement::PixelFormat pixelFormat);
+	AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderElement::PixelFormat pixelFormat = VRay::RenderElement::PF_RGBA_FLOAT);
 };
 
 
