@@ -39,6 +39,8 @@ public:
 		void update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp);
 	};
 
+	typedef std::unordered_map<RenderChannelType, ZmqRenderImage, std::hash<int>> ImageMap;
+
 	ZmqExporter();
 	virtual            ~ZmqExporter();
 
@@ -74,7 +76,7 @@ private:
 	std::mutex          m_ImgMutex;
 	std::mutex          m_ZmqClientMutex;
 	ZmqRenderImage      m_CurrentImage;
-	std::unordered_map<RenderChannelType, ZmqRenderImage> m_LayerImages;
+	ImageMap            m_LayerImages;
 	float               m_LastExportedFrame;
 	bool                m_IsAborted;
 	bool                m_Started;
