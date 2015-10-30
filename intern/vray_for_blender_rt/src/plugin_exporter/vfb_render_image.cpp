@@ -19,7 +19,7 @@
 #include "vfb_render_image.h"
 
 #include <cstring>
-
+#include <algorithm>
 
 using namespace VRayForBlender;
 
@@ -36,7 +36,7 @@ void RenderImage::flip()
 		const int _half_h = h / 2;
 		const int half_h = h % 2 ? _half_h : _half_h - 1;
 
-		const int row_items = w * 4;
+		const int row_items = w * channels;
 		const int row_bytes = row_items * sizeof(float);
 
 		float *buf = new float[row_items];
@@ -57,10 +57,10 @@ void RenderImage::flip()
 
 void RenderImage::resetAlpha()
 {
-	if (pixels && w && h) {
+	if (channels == 4 && pixels && w && h) {
 		const int pixelCount = w * h;
 		for (int p = 0; p < pixelCount; ++p) {
-			float *pixel = pixels + (p * 4);
+			float *pixel = pixels + (p * channels);
 			pixel[3] = 1.0f;
 		}
 	}
@@ -72,11 +72,11 @@ void RenderImage::clamp(float max, float val)
 	if (pixels && w && h) {
 		const int pixelCount = w * h;
 		for (int p = 0; p < pixelCount; ++p) {
-			float *pixel = pixels + (p * 4);
-			for (int c = 0; c < 3; ++c) {
-				if (pixel[c] > max) {
-					pixel[c] = val;
-				}
+			float *pixel = pixels + (p * channels);
+			switch (channels) {
+			case 3: pixel[2] = pixel[2] > max ? val : pixel[2];
+			case 2: pixel[1] = pixel[1] > max ? val : pixel[1];
+			case 1: pixel[0] = pixel[0] > max ? val : pixel[0];
 			}
 		}
 	}

@@ -36,7 +36,7 @@ static void jpegErrorExit(j_common_ptr cinfo) {
 	longjmp(myerr->setjmp_buffer, 1);
 }
 
-static float * jpegToPixelData(unsigned char * data, int size) {
+static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 	jpeg_decompress_struct jpegInfo;
 	JpegErrorManager jpegError;
 
@@ -62,6 +62,7 @@ static float * jpegToPixelData(unsigned char * data, int size) {
 		return nullptr;
 	}
 
+	channels = jpegInfo.output_components;
 	int rowStride = jpegInfo.output_width * jpegInfo.output_components;
 	float * imageData = new float[jpegInfo.output_height * rowStride];
 	JSAMPARRAY buffer = (*jpegInfo.mem->alloc_sarray)((j_common_ptr)&jpegInfo, JPOOL_IMAGE, rowStride, 1);
@@ -87,12 +88,15 @@ static float * jpegToPixelData(unsigned char * data, int size) {
 }
 
 void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp) {
+	// convertions here should match the blender's render pass channel requirements
 
 	if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
-		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img.data.get()), img.size);
+		int channels = 0;
+		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img.data.get()), img.size, channels);
 
 		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
 
+		this->channels = channels;
 		this->w = img.width;
 		this->h = img.height;
 		delete[] pixels;
@@ -102,34 +106,54 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 		       img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL) {
 
 		const float * imgData = reinterpret_cast<const float *>(img.data.get());
-		float * myImage = new float[img.width * img.height * 4];
+		float * myImage = nullptr;
+		int channels = 0;
 
-		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+		switch (img.imageType) {
+		case VRayBaseTypes::AttrImage::ImageType::RGBA_REAL:
+			channels = 4;
+			myImage = new float[img.width * img.height * channels];
+			memcpy(myImage, imgData, img.width * img.height * channels * sizeof(float));
 
-		if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
-			memcpy(myImage, imgData, img.width * img.height * 4 * sizeof(float));
-		} else {
-			// pad missing channels
-			const int sourceStep = img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL ? 1 : 4;
+			break;
+		case VRayBaseTypes::AttrImage::ImageType::RGB_REAL:
+			channels = 3;
+			myImage = new float[img.width * img.height * channels];
+
 			for (int c = 0; c < img.width * img.height; ++c) {
-				const float * source = imgData + (c * sourceStep);
-				float * dest = myImage + (c * 4);
+				const float * source = imgData + (c * 4);
+				float * dest = myImage + (c * channels);
 
-				if (img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL) {
-					dest[0] = dest[1] = dest[2] = source[0];
-				} else {
-					memcpy(dest, source, 4 * sizeof(float));
-				}
-
-				dest[3] = 1.0;
+				dest[0] = source[0];
+				dest[1] = source[1];
+				dest[2] = source[2];
 			}
+
+			break;
+		case VRayBaseTypes::AttrImage::ImageType::BW_REAL:
+			channels = 1;
+			myImage = new float[img.width * img.height * channels];
+
+			for (int c = 0; c < img.width * img.height; ++c) {
+				const float * source = imgData + (c * 4);
+				float * dest = myImage + (c * channels);
+
+				dest[0] = source[0];
+			}
+
+			break;
+		default:
+			PRINT_WARN("MISSING IMAGE FORMAT CONVERTION FOR %d", img.imageType);
 		}
 
-
-		this->w = img.width;
-		this->h = img.height;
-		delete[] pixels;
-		this->pixels = myImage;
+		{
+			std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+			this->channels = channels;
+			this->w = img.width;
+			this->h = img.height;
+			delete[] pixels;
+			this->pixels = myImage;
+		}
 	}
 }
 
@@ -165,8 +189,9 @@ RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
 
 				img.w = storedImage.w;
 				img.h = storedImage.h;
-				img.pixels = new float[storedImage.w * storedImage.h * 4];
-				memcpy(img.pixels, storedImage.pixels, storedImage.w * storedImage.h * 4 * sizeof(float));
+				img.channels = storedImage.channels;
+				img.pixels = new float[storedImage.w * storedImage.h * storedImage.channels];
+				memcpy(img.pixels, storedImage.pixels, storedImage.w * storedImage.h * storedImage.channels * sizeof(float));
 			}
 		}
 	}

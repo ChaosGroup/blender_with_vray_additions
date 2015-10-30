@@ -28,7 +28,8 @@ struct RenderImage {
 	RenderImage():
 	    pixels(nullptr),
 	    w(0),
-	    h(0)
+	    h(0),
+	    channels(0)
 	{}
 
 	virtual ~RenderImage() {}
@@ -45,6 +46,7 @@ struct RenderImage {
 	float *pixels;
 	int    w;
 	int    h;
+	int    channels;
 };
 
 } // namespace VRayForBlender
