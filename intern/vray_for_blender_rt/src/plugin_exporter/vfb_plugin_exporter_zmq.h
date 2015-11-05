@@ -80,6 +80,9 @@ private:
 	float               m_LastExportedFrame;
 	bool                m_IsAborted;
 	bool                m_Started;
+
+	int                 m_RenderWidth;
+	int                 m_RenderHeight;
 };
 } // namespace VRayForBlender
 

@@ -90,11 +90,31 @@ static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp) {
 	// convertions here should match the blender's render pass channel requirements
 
-	if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
+	if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL && img.isBucket()) {
+		// merge in the bucket
+
+		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+
+		if (!this->pixels) {
+			PRINT_WARN("Result image not allocated, can't merge bucket!");
+		} else if (this->channels != 4) {
+			PRINT_WARN("Result image missmatch of channel count - %d, instead of %d!", channels, 4);
+		} else {
+			lock.unlock();
+			const float * sourceImage = reinterpret_cast<const float *>(img.data.get());
+
+			for (int c = 0; c < img.height; ++c) {
+				float * dest = this->pixels + (img.y + c) * w * channels + img.x * channels;
+				const float * source = sourceImage + c * img.width * channels;
+				memcpy(dest, source, sizeof(float) * img.width * channels);
+			}
+		}
+
+	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 		int channels = 0;
 		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img.data.get()), img.size, channels);
 
-		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+		std::lock_guard<std::mutex> lock(exp->m_ImgMutex);
 
 		this->channels = channels;
 		this->w = img.width;
@@ -147,7 +167,7 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 		}
 
 		{
-			std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+			std::lock_guard<std::mutex> lock(exp->m_ImgMutex);
 			this->channels = channels;
 			this->w = img.width;
 			this->h = img.height;
@@ -162,7 +182,9 @@ ZmqExporter::ZmqExporter():
 	m_Client(nullptr),
 	m_LastExportedFrame(std::numeric_limits<float>::min()),
 	m_IsAborted(false),
-	m_Started(false)
+	m_Started(false),
+	m_RenderWidth(0),
+	m_RenderHeight(0)
 {
 	checkZmqClient();
 }
@@ -214,7 +236,7 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 		bool ready = false;
 		for (const auto &img : set->images) {
 			m_LayerImages[img.first].update(img.second, this);
-			ready = ready || img.first == RenderChannelType::RenderChannelTypeNone;
+			ready = ready || (img.first == RenderChannelType::RenderChannelTypeNone && !img.second.isBucket());
 		}
 
 		if (this->callback_on_rt_image_updated) {
@@ -314,6 +336,24 @@ void ZmqExporter::sync()
 
 void ZmqExporter::set_render_size(const int &w, const int &h)
 {
+	if (!is_viewport) {
+		auto imageIter = m_LayerImages.find(RenderChannelType::RenderChannelTypeNone);
+		if (imageIter == m_LayerImages.end()) {
+			std::unique_lock<std::mutex> lock(m_ImgMutex);
+			auto & image = m_LayerImages[RenderChannelType::RenderChannelTypeNone];
+
+			if (!image.pixels || image.w != w || image.h != h || image.channels != 4) {
+			
+				image.channels = 4;
+				image.w = w;
+				image.h = h;
+
+				delete[] image.pixels;
+				image.pixels = new float[image.w * image.h * image.channels];
+				memset(image.pixels, 0, image.w * image.h * image.channels);
+			}
+		}
+	}
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Resize, w, h));
 }
