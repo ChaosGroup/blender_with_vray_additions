@@ -23,12 +23,44 @@
 
 using namespace VRayForBlender;
 
-
-void RenderImage::free()
+RenderImage::RenderImage(RenderImage && other):
+	pixels(nullptr),
+	w(0),
+	h(0),
+	channels(0)
 {
-	FreePtrArr(pixels);
+	*this = std::move(other);
 }
 
+RenderImage & RenderImage::operator=(RenderImage && other)
+{
+	if (this != &other) {
+		std::swap(pixels, other.pixels);
+		std::swap(w, other.w);
+		std::swap(h, other.h);
+		std::swap(channels, other.channels);
+	}
+	return *this;
+}
+
+RenderImage RenderImage::deepCopy(const RenderImage &source)
+{
+	RenderImage dest;
+
+	dest.w = source.w;
+	dest.h = source.h;
+	dest.channels = source.channels;
+	dest.pixels = new float[source.w * source.h * source.channels];
+	memcpy(dest.pixels, source.pixels, source.w * source.h * source.channels * sizeof(float));
+
+	return dest;
+}
+
+RenderImage::~RenderImage()
+{
+	delete pixels;
+	pixels = nullptr;
+}
 
 void RenderImage::flip()
 {
@@ -74,6 +106,7 @@ void RenderImage::clamp(float max, float val)
 		for (int p = 0; p < pixelCount; ++p) {
 			float *pixel = pixels + (p * channels);
 			switch (channels) {
+			case 4:
 			case 3: pixel[2] = pixel[2] > max ? val : pixel[2];
 			case 2: pixel[1] = pixel[1] > max ? val : pixel[1];
 			case 1: pixel[0] = pixel[0] > max ? val : pixel[0];

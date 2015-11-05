@@ -21,6 +21,7 @@
 
 #include "cgr_config.h"
 #include "vfb_util_defines.h"
+#include <utility>
 
 namespace VRayForBlender {
 
@@ -32,13 +33,20 @@ struct RenderImage {
 	    channels(0)
 	{}
 
-	virtual ~RenderImage() {}
+	RenderImage(const RenderImage &) = delete;
+	RenderImage & operator=(const RenderImage &) = delete;
+
+	static RenderImage deepCopy(const RenderImage &source);
+
+	RenderImage(RenderImage && other);
+	RenderImage & operator=(RenderImage && other);
+
+	virtual ~RenderImage();
 
 	operator bool () const {
 		return !!(pixels);
 	}
 
-	void   free();
 	void   flip();
 	void   clamp(float max=1.0f, float val=1.0f);
 	void   resetAlpha();

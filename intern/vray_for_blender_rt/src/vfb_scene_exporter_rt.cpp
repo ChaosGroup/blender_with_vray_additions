@@ -126,7 +126,5 @@ void InteractiveExporter::draw()
 		}
 
 		glPopMatrix();
-
-		image.free();
 	}
 }

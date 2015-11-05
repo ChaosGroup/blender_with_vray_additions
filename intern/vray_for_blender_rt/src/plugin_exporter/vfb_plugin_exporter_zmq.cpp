@@ -186,12 +186,7 @@ RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
 		if (imgIter != m_LayerImages.end()) {
 			RenderImage &storedImage = imgIter->second;
 			if (storedImage.pixels) {
-
-				img.w = storedImage.w;
-				img.h = storedImage.h;
-				img.channels = storedImage.channels;
-				img.pixels = new float[storedImage.w * storedImage.h * storedImage.channels];
-				memcpy(img.pixels, storedImage.pixels, storedImage.w * storedImage.h * storedImage.channels * sizeof(float));
+				img = std::move(RenderImage::deepCopy(storedImage));
 			}
 		}
 	}
