@@ -20,6 +20,7 @@
 #define VRAY_FOR_BLENDER_EXPORTER_PRODUCTION_H
 
 #include "vfb_scene_exporter.h"
+#include <mutex>
 
 namespace VRayForBlender {
 
@@ -41,6 +42,8 @@ public:
 	    , m_renderFinished(false)
 	{}
 
+	virtual           ~ProductionExporter() override;
+
 	virtual void      create_exporter() override;
 
 	virtual bool      do_export() override;
@@ -60,6 +63,7 @@ private:
 	int               m_renderFinished;
 	RenderImageMan    m_imageMan;
 
+	std::mutex        m_callback_mtx;
 };
 
 } // namespace VRayForBlender

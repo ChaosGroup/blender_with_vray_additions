@@ -91,17 +91,27 @@ void ProductionExporter::render_start()
 	if (m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
 		m_renderFinished = false;
 
-		std::thread wait_render = std::thread([this] {
-			while (!is_interrupted() && !m_renderFinished) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			}
-		});
-
 		SceneExporter::render_start();
-		wait_render.join();
+
+		while (!is_interrupted() && !m_renderFinished) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+
+		{
+			std::lock_guard<std::mutex> l(m_callback_mtx);
+			m_exporter->set_callback_on_image_ready(ExpoterCallback());
+			m_exporter->set_callback_on_rt_image_updated(ExpoterCallback());
+		}
 	} else {
 		SceneExporter::render_start();
 	}
+}
+
+ProductionExporter::~ProductionExporter()
+{
+	std::lock_guard<std::mutex> l(m_callback_mtx);
+	delete m_exporter;
+	m_exporter = nullptr;
 }
 
 
@@ -109,12 +119,14 @@ void ProductionExporter::cb_on_image_ready()
 {
 	// PRINT_INFO_EX("ProductionExporter::cb_on_image_ready()");
 
+	std::lock_guard<std::mutex> l(m_callback_mtx);
 	m_renderFinished = true;
 }
 
 void ProductionExporter::cb_on_rt_image_updated()
 {
 	// PRINT_INFO_EX("ProductionExporter::cb_on_rt_image_updated()");
+	std::lock_guard<std::mutex> l(m_callback_mtx);
 	BL::RenderSettings renderSettings = m_scene.render();
 
 	BL::RenderSettings::layers_iterator rslIt;
@@ -134,21 +146,19 @@ void ProductionExporter::cb_on_rt_image_updated()
 							BL::RenderPass renderPass(*rpIt);
 							if (renderPass) {
 								RenderImage image = m_exporter->get_pass(renderPass.type());
-								if (image && !is_interrupted()) {
+								if (image && image.w == m_viewParams.renderSize.w && image.h == m_viewParams.renderSize.h) {
 									image.flip();
 									image.resetAlpha();
 									image.clamp(1.0f, 1.0f);
 
-									renderPass.rect(image.pixels);
-
-									image.free();
+									if (renderPass) {
+										renderPass.rect(image.pixels);
+									}
 								}
 							}
 						}
 
-						if (!is_interrupted()) {
-							m_engine.update_result(renderResult);
-						}
+						m_engine.update_result(renderResult);
 					}
 				}
 

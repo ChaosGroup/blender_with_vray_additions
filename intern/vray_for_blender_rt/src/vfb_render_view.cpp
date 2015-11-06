@@ -365,7 +365,7 @@ void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cam
 }
 
 
-void SceneExporter::sync_view(int)
+void SceneExporter::sync_view(int check_updated)
 {
 	ViewParams viewParams;
 
@@ -440,7 +440,7 @@ void SceneExporter::sync_view(int)
 		m_viewLock.unlock();
 	}
 
-	if (m_viewParams.changedSize(viewParams)) {
+	if (m_viewParams.changedSize(viewParams) || !check_updated) {
 		resize(viewParams.renderSize.w, viewParams.renderSize.h);
 	}
 

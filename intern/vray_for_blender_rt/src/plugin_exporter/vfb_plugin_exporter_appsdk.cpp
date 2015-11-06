@@ -89,26 +89,6 @@ static void CbDumpMessage(VRay::VRayRenderer&, const char *msg, int level, void*
 	}
 }
 
-
-static void CbOnImageReady(VRay::VRayRenderer&, void *userData)
-{
-	ExpoterCallback *cb = (ExpoterCallback*)userData;
-	cb->cb();
-}
-
-
-static void CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage*, void *userData)
-{
-	ExpoterCallback *cb = (ExpoterCallback*)userData;
-	cb->cb();
-}
-
-
-static void CbOnProgress(VRay::VRayRenderer&, const char *msg, int /*elementNumber*/, int /*elementsCount*/, void *userData)
-{
-	(*(PluginExporter::UpdateMessageCb*)userData)("", msg);
-}
-
 AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderElement::PixelFormat pixelFormat)
 {
 	if (image) {
@@ -154,6 +134,7 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderE
 
 AppSdkExporter::AppSdkExporter()
     : m_vray(nullptr)
+    , m_done(false)
 {
 }
 
@@ -191,10 +172,34 @@ void AppSdkExporter::init()
 		if (m_vray) {
 			m_vray->setAutoCommit(false);
 			// m_vray->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_GPU);
-			m_vray->setOnDumpMessage(CbDumpMessage);
+			// m_vray->setOnBucketReady<AppSdkExporter, &AppSdkExporter::bucket_ready>(*this);
+
+			m_vray->setOnDumpMessage<AppSdkExporter, &AppSdkExporter::CbOnProgress>(*this);
 			m_vray->setRTImageUpdateTimeout(200);
 		}
 	}
+}
+
+void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
+{
+	m_done = true;
+	if (callback_on_image_ready) {
+		callback_on_image_ready.cb();
+	}
+}
+
+
+void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage*, void *userData)
+{
+	if (callback_on_rt_image_updated) {
+		callback_on_rt_image_updated.cb();
+	}
+}
+
+
+void AppSdkExporter::CbOnProgress(VRay::VRayRenderer &, const char * msg, int, void *)
+{
+	on_message_update("", msg);
 }
 
 
@@ -212,6 +217,7 @@ void AppSdkExporter::sync()
 
 void AppSdkExporter::start()
 {
+	m_vray->setOnBucketReady<AppSdkExporter, &AppSdkExporter::bucket_ready>(*this);
 	m_vray->start();
 }
 
@@ -222,9 +228,36 @@ void AppSdkExporter::stop()
 }
 
 
+void AppSdkExporter::bucket_ready(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg)
+{
+	(void)arg;
+
+	const float * sourceImage = reinterpret_cast<const float *>(img->getPixelData());
+
+	char buff[256];
+	sprintf(buff, "D:/sc/bucket-%d-%d.jpg", x, y);
+	img->saveToJpegFile(buff);
+	PRINT_INFO_EX("SAVED JPG %s", buff);
+
+	for (int c = 0; c < img->getHeight(); ++c) {
+		float * dest = m_bucket_image.pixels + (y + c) * m_bucket_image.w * m_bucket_image.channels + x * m_bucket_image.channels;
+		const float * source = sourceImage + c * img->getWidth() * m_bucket_image.channels;
+		memcpy(dest, source, sizeof(float) * img->getWidth() * m_bucket_image.channels);
+	}
+
+	if (callback_on_rt_image_updated) {
+		callback_on_rt_image_updated.cb();
+	}
+}
+
+
 RenderImage AppSdkExporter::get_image()
 {
-	return AppSDKRenderImage(m_vray->getImage());
+	if (m_done) {
+		return AppSDKRenderImage(m_vray->getImage());
+	} else {
+		return RenderImage::deepCopy(m_bucket_image);
+	}
 }
 
 
@@ -245,8 +278,11 @@ RenderImage AppSdkExporter::get_render_channel(RenderChannelType channelType)
 				renderChannel = AppSDKRenderImage(renderElement.getImage(), pixelFormat);
 			}
 		}
+		catch (VRay::VRayException &e) {
+			PRINT_WARN("VRayException %s", e.what());
+		}
 		catch (...) {
-			PRINT_WARN("Ignored exception");
+			PRINT_WARN("Ignored exception AppSdkExporter::get_render_channel");
 		}
 	}
 
@@ -256,6 +292,14 @@ RenderImage AppSdkExporter::get_render_channel(RenderChannelType channelType)
 
 void AppSdkExporter::set_render_size(const int &w, const int &h)
 {
+	if (m_bucket_image.w != w && m_bucket_image.h != h) {
+		delete[] m_bucket_image.pixels;
+		m_bucket_image.w = w;
+		m_bucket_image.h = h;
+		m_bucket_image.channels = 4;
+		m_bucket_image.pixels = new float[w * h * m_bucket_image.channels];
+	}
+
 	m_vray->setImageSize(w, h);
 }
 
@@ -264,7 +308,7 @@ void AppSdkExporter::set_callback_on_image_ready(ExpoterCallback cb)
 {
 	PluginExporter::set_callback_on_image_ready(cb);
 	if (callback_on_image_ready) {
-		m_vray->setOnImageReady(CbOnImageReady, (void*)&callback_on_image_ready);
+		m_vray->setOnImageReady<AppSdkExporter, &AppSdkExporter::CbOnImageReady>(*this);
 	}
 }
 
@@ -273,7 +317,7 @@ void AppSdkExporter::set_callback_on_rt_image_updated(ExpoterCallback cb)
 {
 	PluginExporter::set_callback_on_rt_image_updated(cb);
 	if (callback_on_rt_image_updated) {
-		m_vray->setOnRTImageUpdated(CbOnRTImageUpdated, (void*)&callback_on_rt_image_updated);
+		m_vray->setOnRTImageUpdated<AppSdkExporter, &AppSdkExporter::CbOnRTImageUpdated>(*this);
 	}
 }
 
@@ -282,7 +326,7 @@ void AppSdkExporter::set_callback_on_message_updated(PluginExporter::UpdateMessa
 {
 	PluginExporter::set_callback_on_message_updated(cb);
 	if (on_message_update) {
-		// m_vray->setOnProgress(CbOnProgress, (void*)&on_message_update);
+		// m_vray->setOnProgress<AppSdkExporter, &AppSdkExporter::CbOnProgress>(*this);
 	}
 }
 

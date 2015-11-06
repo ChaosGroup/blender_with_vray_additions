@@ -100,7 +100,16 @@ public:
 	virtual void         show_frame_buffer() override;
 
 private:
+	void                 CbOnImageReady(VRay::VRayRenderer&, void *userData);
+	void                 CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage*, void *userData);
+	void                 CbOnProgress(VRay::VRayRenderer &, const char * msg, int, void *);
+
+	void                 bucket_ready(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg);
+
+private:
 	VRay::VRayRenderer  *m_vray;
+	RenderImage          m_bucket_image;
+	bool                 m_done;
 
 };
 
