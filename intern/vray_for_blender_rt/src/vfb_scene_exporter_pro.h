@@ -21,6 +21,7 @@
 
 #include "vfb_scene_exporter.h"
 #include <mutex>
+#include <vector>
 
 namespace VRayForBlender {
 
@@ -62,6 +63,8 @@ private:
 	BL::RenderResult  m_renderResult;
 	int               m_renderFinished;
 	RenderImageMan    m_imageMan;
+
+	std::vector<BL::RenderResult> m_renderResultsList;
 
 	std::mutex        m_callback_mtx;
 };

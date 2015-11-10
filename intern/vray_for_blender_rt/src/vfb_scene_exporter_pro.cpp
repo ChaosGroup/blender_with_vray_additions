@@ -84,6 +84,22 @@ void ProductionExporter::sync_object_modiefiers(BL::Object ob, const int &check_
 
 void ProductionExporter::render_start()
 {
+	BL::RenderSettings renderSettings = m_scene.render();
+
+	BL::RenderSettings::layers_iterator rslIt;
+	renderSettings.layers.begin(rslIt);
+	if (rslIt != renderSettings.layers.end()) {
+		BL::SceneRenderLayer sceneRenderLayer(*rslIt);
+		if (sceneRenderLayer && !is_interrupted()) {
+			BL::RenderResult renderResult = m_engine.begin_result(0, 0, m_viewParams.renderSize.w, m_viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
+			if (renderResult) {
+				m_renderResultsList.push_back(renderResult);
+			}
+		}
+	}
+
+
+
 	if (!is_preview()) {
 		m_exporter->show_frame_buffer();
 	}
@@ -104,6 +120,11 @@ void ProductionExporter::render_start()
 		}
 	} else {
 		SceneExporter::render_start();
+	}
+
+
+	for (auto & result : m_renderResultsList) {
+		m_engine.end_result(result, false, true);
 	}
 }
 
@@ -127,36 +148,25 @@ void ProductionExporter::cb_on_rt_image_updated()
 {
 	// PRINT_INFO_EX("ProductionExporter::cb_on_rt_image_updated()");
 	std::lock_guard<std::mutex> l(m_callback_mtx);
-	BL::RenderSettings renderSettings = m_scene.render();
 
-	BL::RenderSettings::layers_iterator rslIt;
-	renderSettings.layers.begin(rslIt);
-	if (rslIt != renderSettings.layers.end()) {
-		BL::SceneRenderLayer sceneRenderLayer(*rslIt);
-		if (sceneRenderLayer && !is_interrupted()) {
-			BL::RenderResult renderResult = m_engine.begin_result(0, 0, m_viewParams.renderSize.w, m_viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
-			if (renderResult) {
-				BL::RenderResult::layers_iterator rrlIt;
-				renderResult.layers.begin(rrlIt);
-				if (rrlIt != renderResult.layers.end()) {
-					BL::RenderLayer renderLayer(*rrlIt);
-					if (renderLayer) {
-						BL::RenderLayer::passes_iterator rpIt;
-						for (renderLayer.passes.begin(rpIt); rpIt != renderLayer.passes.end(); ++rpIt) {
-							BL::RenderPass renderPass(*rpIt);
-							if (renderPass) {
-								RenderImagePtr image = m_exporter->get_pass(renderPass.type());
-								if (image && *image && image->w == m_viewParams.renderSize.w && image->h == m_viewParams.renderSize.h) {
-									renderPass.rect(image->pixels);
-								}
-							}
+	for (auto & result : m_renderResultsList) {
+		BL::RenderResult::layers_iterator rrlIt;
+		result.layers.begin(rrlIt);
+		if (rrlIt != result.layers.end()) {
+			BL::RenderLayer renderLayer(*rrlIt);
+			if (renderLayer) {
+				BL::RenderLayer::passes_iterator rpIt;
+				for (renderLayer.passes.begin(rpIt); rpIt != renderLayer.passes.end(); ++rpIt) {
+					BL::RenderPass renderPass(*rpIt);
+					if (renderPass) {
+						RenderImagePtr image = m_exporter->get_pass(renderPass.type());
+						if (image && *image && image->w == m_viewParams.renderSize.w && image->h == m_viewParams.renderSize.h) {
+							renderPass.rect(image->pixels);
 						}
-
-						m_engine.update_result(renderResult);
 					}
 				}
 
-				m_engine.end_result(renderResult, false, true);
+				m_engine.update_result(result);
 			}
 		}
 	}

@@ -109,13 +109,20 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 		int channels = 0;
 		float * imgData = jpegToPixelData(reinterpret_cast<unsigned char*>(img.data.get()), img.size, channels);
 
-		std::lock_guard<std::mutex> lock(exp->m_ImgMutex);
+		{
+			std::lock_guard<std::mutex> lock(exp->m_ImgMutex);
 
-		this->channels = channels;
-		this->w = img.width;
-		this->h = img.height;
-		delete[] pixels;
-		this->pixels = imgData;
+			this->channels = channels;
+			this->w = img.width;
+			this->h = img.height;
+			delete[] pixels;
+			this->pixels = imgData;
+		}
+
+		flip();
+		resetAlpha();
+		clamp(1.0f, 1.0f);
+
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL ||
 		       img.imageType == VRayBaseTypes::AttrImage::ImageType::RGB_REAL ||
 		       img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL) {
@@ -169,6 +176,10 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 			delete[] pixels;
 			this->pixels = myImage;
 		}
+
+		flip();
+		resetAlpha();
+		clamp(1.0f, 1.0f);
 	}
 }
 
