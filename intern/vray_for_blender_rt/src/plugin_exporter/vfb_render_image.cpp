@@ -23,6 +23,30 @@
 
 using namespace VRayForBlender;
 
+namespace {
+	void resetAlpha(float * data, int w, int h, int channels) {
+		if (channels == 4) {
+			for (int c = 3; c < w * h * channels; c+=4) {
+				data[c] = 1.0f;
+			}
+		}
+	}
+
+	void clamp(float * data, int w, int h, int channels, float max, float val) {
+		const int pixelCount = w * h;
+		for (int p = 0; p < pixelCount; ++p) {
+			float *pixel = data + (p * channels);
+			switch (channels) {
+			case 4:
+			case 3: pixel[2] = pixel[2] > max ? val : pixel[2];
+			case 2: pixel[1] = pixel[1] > max ? val : pixel[1];
+			case 1: pixel[0] = pixel[0] > max ? val : pixel[0];
+			}
+		}
+	}
+}
+
+
 RenderImage::RenderImage(RenderImage && other):
 	pixels(nullptr),
 	w(0),
@@ -70,6 +94,9 @@ void RenderImage::updateRegion(const float *data, int x, int y, int w, int h)
 		const float * source = data + c * w * channels;
 		float * dest = this->pixels + (y - c - 1) * this->w * channels + x * channels;
 		memcpy(dest, source, sizeof(float) * w * channels);
+
+		::resetAlpha(dest, w, 1, channels);
+		::clamp(dest, w, 1, channels, 1.0f, 1.0f);
 	}
 }
 
@@ -100,12 +127,8 @@ void RenderImage::flip()
 
 void RenderImage::resetAlpha()
 {
-	if (channels == 4 && pixels && w && h) {
-		const int pixelCount = w * h;
-		for (int p = 0; p < pixelCount; ++p) {
-			float *pixel = pixels + (p * channels);
-			pixel[3] = 1.0f;
-		}
+	if (pixels && w && h) {
+		::resetAlpha(pixels, w, h, channels);
 	}
 }
 
@@ -113,15 +136,6 @@ void RenderImage::resetAlpha()
 void RenderImage::clamp(float max, float val)
 {
 	if (pixels && w && h) {
-		const int pixelCount = w * h;
-		for (int p = 0; p < pixelCount; ++p) {
-			float *pixel = pixels + (p * channels);
-			switch (channels) {
-			case 4:
-			case 3: pixel[2] = pixel[2] > max ? val : pixel[2];
-			case 2: pixel[1] = pixel[1] > max ? val : pixel[1];
-			case 1: pixel[0] = pixel[0] > max ? val : pixel[0];
-			}
-		}
+		::clamp(pixels, w, h, channels, max, val);
 	}
 }
