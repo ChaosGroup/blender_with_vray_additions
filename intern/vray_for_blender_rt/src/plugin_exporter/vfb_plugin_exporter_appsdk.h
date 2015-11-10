@@ -86,8 +86,8 @@ public:
 	virtual int          remove_plugin(const std::string &pluginName) override;
 	virtual void         commit_changes() override;
 
-	virtual RenderImage  get_image() override;
-	virtual RenderImage  get_render_channel(RenderChannelType channelType) override;
+	virtual RenderImagePtr get_image() override;
+	virtual RenderImagePtr get_render_channel(RenderChannelType channelType) override;
 
 	virtual void         set_render_size(const int &w, const int &h) override;
 	virtual void         set_camera_plugin(const std::string &pluginName) override;
@@ -108,7 +108,7 @@ private:
 
 private:
 	VRay::VRayRenderer  *m_vray;
-	RenderImage          m_bucket_image;
+	RenderImagePtr       m_bucket_image;
 	bool                 m_done;
 
 };

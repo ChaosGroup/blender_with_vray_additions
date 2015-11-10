@@ -21,7 +21,9 @@
 
 #include "cgr_config.h"
 #include "vfb_util_defines.h"
+
 #include <utility>
+#include <memory>
 
 namespace VRayForBlender {
 
@@ -47,6 +49,9 @@ struct RenderImage {
 		return !!(pixels);
 	}
 
+	// rotates the region around h/2 and flips it vertically
+	void   updateRegion(const float *data, int x, int y, int w, int h);
+
 	void   flip();
 	void   clamp(float max=1.0f, float val=1.0f);
 	void   resetAlpha();
@@ -56,6 +61,8 @@ struct RenderImage {
 	int    h;
 	int    channels;
 };
+
+typedef std::shared_ptr<RenderImage> RenderImagePtr;
 
 } // namespace VRayForBlender
 

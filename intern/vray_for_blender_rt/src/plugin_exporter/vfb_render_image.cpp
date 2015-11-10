@@ -62,6 +62,17 @@ RenderImage::~RenderImage()
 	pixels = nullptr;
 }
 
+void RenderImage::updateRegion(const float *data, int x, int y, int w, int h)
+{
+	y = this->h - y;
+
+	for (int c = 0; c < h; ++c) {
+		const float * source = data + c * w * channels;
+		float * dest = this->pixels + (y - c - 1) * this->w * channels + x * channels;
+		memcpy(dest, source, sizeof(float) * w * channels);
+	}
+}
+
 void RenderImage::flip()
 {
 	if (pixels && w && h) {

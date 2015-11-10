@@ -66,8 +66,8 @@ void InteractiveExporter::draw()
 {
 	sync_view(true);
 
-	RenderImage image = m_exporter->get_image();
-	if (!image) {
+	RenderImagePtr image = m_exporter->get_image();
+	if (!image || !*image) {
 		tag_redraw();
 	}
 	else {
@@ -81,16 +81,16 @@ void InteractiveExporter::draw()
 			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		}
 		else {
-			image.resetAlpha();
+			image->resetAlpha();
 		}
-		image.clamp();
+		image->clamp();
 
 		glColor3f(1.0f, 1.0f, 1.0f);
 
 		GLuint texid;
 		glGenTextures(1, &texid);
 		glBindTexture(GL_TEXTURE_2D, texid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image.pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, image->w, image->h, 0, GL_RGBA, GL_FLOAT, image->pixels);
 
 		const int glFilter = (m_viewParams.viewport_w == m_viewParams.renderSize.w)
 		                     ? GL_NEAREST

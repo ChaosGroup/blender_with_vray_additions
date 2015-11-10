@@ -101,13 +101,8 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 			PRINT_WARN("Result image missmatch of channel count - %d, instead of %d!", channels, 4);
 		} else {
 			lock.unlock();
-			const float * sourceImage = reinterpret_cast<const float *>(img.data.get());
 
-			for (int c = 0; c < img.height; ++c) {
-				float * dest = this->pixels + (img.y + c) * w * channels + img.x * channels;
-				const float * source = sourceImage + c * img.width * channels;
-				memcpy(dest, source, sizeof(float) * img.width * channels);
-			}
+			updateRegion(reinterpret_cast<const float *>(img.data.get()), img.x, img.y, img.width, img.height);
 		}
 
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
@@ -197,8 +192,8 @@ ZmqExporter::~ZmqExporter()
 	delete m_Client;
 }
 
-RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
-	RenderImage img;
+RenderImagePtr ZmqExporter::get_render_channel(RenderChannelType channelType) {
+	RenderImagePtr img;
 
 	auto imgIter = m_LayerImages.find(channelType);
 	if (imgIter != m_LayerImages.end()) {
@@ -206,16 +201,15 @@ RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
 		imgIter = m_LayerImages.find(channelType);
 
 		if (imgIter != m_LayerImages.end()) {
-			RenderImage &storedImage = imgIter->second;
-			if (storedImage.pixels) {
-				img = std::move(RenderImage::deepCopy(storedImage));
+			if (imgIter->second) {
+				img = imgIter->second;
 			}
 		}
 	}
 	return img;
 }
 
-RenderImage ZmqExporter::get_image() {
+RenderImagePtr ZmqExporter::get_image() {
 	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
@@ -235,7 +229,14 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 		auto set = message.getValue<VRayBaseTypes::AttrImageSet>();
 		bool ready = false;
 		for (const auto &img : set->images) {
-			m_LayerImages[img.first].update(img.second, this);
+			auto savedImage = m_LayerImages.find(img.first);
+			if (savedImage == m_LayerImages.end()) {
+				savedImage = m_LayerImages.insert(std::make_pair(img.first, RenderImagePtr(new ZmqRenderImage()))).first;
+			}
+			if (!savedImage->second) {
+				savedImage->second = RenderImagePtr(new ZmqRenderImage());
+			}
+			reinterpret_cast<ZmqRenderImage *>(savedImage->second.get())->update(img.second, this);
 			ready = ready || (img.first == RenderChannelType::RenderChannelTypeNone && !img.second.isBucket());
 		}
 
@@ -341,16 +342,19 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 		if (imageIter == m_LayerImages.end()) {
 			std::unique_lock<std::mutex> lock(m_ImgMutex);
 			auto & image = m_LayerImages[RenderChannelType::RenderChannelTypeNone];
+			if (!image) {
+				image.reset(new RenderImage());
+			}
 
-			if (!image.pixels || image.w != w || image.h != h || image.channels != 4) {
+			if (!image->pixels || image->w != w || image->h != h || image->channels != 4) {
 			
-				image.channels = 4;
-				image.w = w;
-				image.h = h;
+				image->channels = 4;
+				image->w = w;
+				image->h = h;
 
-				delete[] image.pixels;
-				image.pixels = new float[image.w * image.h * image.channels];
-				memset(image.pixels, 0, image.w * image.h * image.channels);
+				delete[] image->pixels;
+				image->pixels = new float[image->w * image->h * image->channels];
+				memset(image->pixels, 0, image->w * image->h * image->channels);
 			}
 		}
 	}
