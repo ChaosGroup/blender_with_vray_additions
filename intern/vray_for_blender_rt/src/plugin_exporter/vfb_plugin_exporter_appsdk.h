@@ -109,7 +109,7 @@ private:
 private:
 	VRay::VRayRenderer  *m_vray;
 	RenderImagePtr       m_bucket_image;
-	bool                 m_done;
+	bool                 m_started;
 
 };
 

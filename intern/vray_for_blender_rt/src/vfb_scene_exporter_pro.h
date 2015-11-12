@@ -63,6 +63,7 @@ private:
 	BL::RenderResult  m_renderResult;
 	int               m_renderFinished;
 	RenderImageMan    m_imageMan;
+	volatile bool     m_imageDirty;
 
 	std::vector<BL::RenderResult> m_renderResultsList;
 

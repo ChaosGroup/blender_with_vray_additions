@@ -134,8 +134,8 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderE
 
 AppSdkExporter::AppSdkExporter()
     : m_vray(nullptr)
-    , m_done(false)
-	, m_bucket_image(new RenderImage())
+    , m_bucket_image(new RenderImage())
+    , m_started(false)
 {
 }
 
@@ -184,7 +184,6 @@ void AppSdkExporter::init()
 void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
 {
 	PRINT_INFO_EX("AppSdkExporter::CbOnImageReady");
-	m_done = true;
 	if (callback_on_image_ready) {
 		callback_on_image_ready.cb();
 	}
@@ -221,6 +220,7 @@ void AppSdkExporter::sync()
 void AppSdkExporter::start()
 {
 	PRINT_INFO_EX("AppSdkExporter::start()");
+	m_started = true;
 	m_vray->setOnBucketReady<AppSdkExporter, &AppSdkExporter::bucket_ready>(*this);
 	m_vray->start();
 	m_vray->setOnRTImageUpdated<AppSdkExporter, &AppSdkExporter::CbOnRTImageUpdated>(*this);
@@ -234,10 +234,8 @@ void AppSdkExporter::stop()
 }
 
 
-void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, const char *host, VRay::VRayImage *img, void *arg)
+void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, const char *host, VRay::VRayImage *img, void *)
 {
-	(void)arg;
-
 	m_bucket_image->updateRegion(reinterpret_cast<const float *>(img->getPixelData()), x, y, img->getWidth(), img->getHeight());
 
 	if (callback_on_rt_image_updated) {
@@ -248,8 +246,13 @@ void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, co
 
 RenderImagePtr AppSdkExporter::get_image()
 {
-	if (m_done) {
-		return RenderImagePtr(new AppSDKRenderImage(m_vray->getImage()));
+	if (m_started && m_vray->isImageReady()) {
+		m_vray->setOnBucketReady(nullptr);
+		auto ptr = RenderImagePtr(new AppSDKRenderImage(m_vray->getImage()));
+		ptr->flip();
+		ptr->resetAlpha();
+		ptr->clamp();
+		return ptr;
 	} else {
 		return m_bucket_image;
 	}
@@ -267,8 +270,8 @@ RenderImagePtr AppSdkExporter::get_render_channel(RenderChannelType channelType)
 			if (renderElement) {
 				VRay::RenderElement::PixelFormat pixelFormat = renderElement.getDefaultPixelFormat();
 
-				PRINT_INFO_EX("Found render channel: %i (pixel format %i)",
-				              channelType, pixelFormat);
+				//PRINT_INFO_EX("Found render channel: %i (pixel format %i)",
+				//              channelType, pixelFormat);
 
 				renderChannel.reset(new AppSDKRenderImage(renderElement.getImage(), pixelFormat));
 			}

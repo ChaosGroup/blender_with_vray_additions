@@ -106,11 +106,37 @@ void ProductionExporter::render_start()
 
 	if (m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
 		m_renderFinished = false;
+		m_imageDirty = false;
 
 		SceneExporter::render_start();
+		int draws = 0;
 
+		auto start = std::chrono::high_resolution_clock::now();
 		while (!is_interrupted() && !m_renderFinished) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			auto now = std::chrono::high_resolution_clock::now();
+
+			if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() > (1000 / 10)) {
+				if (m_imageDirty) {
+					m_imageDirty = false;
+					for (auto & result : m_renderResultsList) {
+						BL::RenderResult::layers_iterator rrlIt;
+						result.layers.begin(rrlIt);
+						if (rrlIt != result.layers.end()) {
+							m_engine.update_result(result);
+						}
+					}
+				}
+				start = std::chrono::high_resolution_clock::now();
+			}
+		}
+
+		for (auto & result : m_renderResultsList) {
+			BL::RenderResult::layers_iterator rrlIt;
+			result.layers.begin(rrlIt);
+			if (rrlIt != result.layers.end()) {
+				m_engine.update_result(result);
+			}
 		}
 
 		{
@@ -148,6 +174,7 @@ void ProductionExporter::cb_on_rt_image_updated()
 {
 	// PRINT_INFO_EX("ProductionExporter::cb_on_rt_image_updated()");
 	std::lock_guard<std::mutex> l(m_callback_mtx);
+	m_imageDirty = true;
 
 	for (auto & result : m_renderResultsList) {
 		BL::RenderResult::layers_iterator rrlIt;
@@ -166,7 +193,9 @@ void ProductionExporter::cb_on_rt_image_updated()
 					}
 				}
 
-				m_engine.update_result(result);
+				if (is_preview()) {
+					m_engine.update_result(result);
+				}
 			}
 		}
 	}
