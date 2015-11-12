@@ -118,11 +118,6 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 			delete[] pixels;
 			this->pixels = imgData;
 		}
-
-		flip();
-		resetAlpha();
-		clamp(1.0f, 1.0f);
-
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL ||
 		       img.imageType == VRayBaseTypes::AttrImage::ImageType::RGB_REAL ||
 		       img.imageType == VRayBaseTypes::AttrImage::ImageType::BW_REAL) {
@@ -248,7 +243,7 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 				savedImage->second = RenderImagePtr(new ZmqRenderImage());
 			}
 			reinterpret_cast<ZmqRenderImage *>(savedImage->second.get())->update(img.second, this);
-			ready = ready || (img.first == RenderChannelType::RenderChannelTypeNone && !img.second.isBucket());
+			ready = ready || (!is_viewport && img.first == RenderChannelType::RenderChannelTypeNone && !img.second.isBucket());
 		}
 
 		if (this->callback_on_rt_image_updated) {
@@ -289,10 +284,12 @@ void ZmqExporter::init()
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
 
 		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbZdepth)));
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbNormal)));
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRenderID)));
+		if (!is_viewport) {
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbZdepth)));
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbNormal)));
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRenderID)));
+		}
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
 	}
