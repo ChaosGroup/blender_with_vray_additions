@@ -246,12 +246,14 @@ void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, co
 
 RenderImagePtr AppSdkExporter::get_image()
 {
-	if (m_started && m_vray->isImageReady()) {
+	if (m_started && m_vray->isImageReady() || is_viewport) {
 		m_vray->setOnBucketReady(nullptr);
 		auto ptr = RenderImagePtr(new AppSDKRenderImage(m_vray->getImage()));
-		ptr->flip();
-		ptr->resetAlpha();
-		ptr->clamp();
+		if (!is_viewport) {
+			ptr->flip();
+			ptr->resetAlpha();
+			ptr->clamp();
+		}
 		return ptr;
 	} else {
 		return m_bucket_image;
