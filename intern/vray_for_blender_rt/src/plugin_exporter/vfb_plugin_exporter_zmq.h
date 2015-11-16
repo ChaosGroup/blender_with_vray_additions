@@ -36,7 +36,7 @@ public:
 
 	struct ZmqRenderImage:
 		public RenderImage {
-		void update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp);
+		void update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp, bool fixImage);
 	};
 
 	typedef std::unordered_map<RenderChannelType, RenderImagePtr, std::hash<int>> ImageMap;

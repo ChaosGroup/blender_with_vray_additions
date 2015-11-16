@@ -98,8 +98,6 @@ void ProductionExporter::render_start()
 		}
 	}
 
-
-
 	if (!is_preview()) {
 		m_exporter->show_frame_buffer();
 	}

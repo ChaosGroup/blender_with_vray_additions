@@ -87,7 +87,7 @@ static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 	return imageData;
 }
 
-void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp) {
+void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp, bool fixImage) {
 	// convertions here should match the blender's render pass channel requirements
 
 	if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL && img.isBucket()) {
@@ -103,6 +103,7 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 			lock.unlock();
 
 			updateRegion(reinterpret_cast<const float *>(img.data.get()), img.x, img.y, img.width, img.height);
+			fixImage = false;
 		}
 
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
@@ -171,7 +172,9 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 			delete[] pixels;
 			this->pixels = myImage;
 		}
+	}
 
+	if (fixImage) {
 		flip();
 		resetAlpha();
 		clamp(1.0f, 1.0f);
@@ -233,7 +236,7 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 		}
 	} else if (msgType == VRayMessage::Type::Image) {
 		auto set = message.getValue<VRayBaseTypes::AttrImageSet>();
-		bool ready = false;
+		bool ready = set->sourceType == VRayBaseTypes::ImageSourceType::ImageReady;
 		for (const auto &img : set->images) {
 			auto savedImage = m_LayerImages.find(img.first);
 			if (savedImage == m_LayerImages.end()) {
@@ -242,8 +245,7 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 			if (!savedImage->second) {
 				savedImage->second = RenderImagePtr(new ZmqRenderImage());
 			}
-			reinterpret_cast<ZmqRenderImage *>(savedImage->second.get())->update(img.second, this);
-			ready = ready || (!is_viewport && img.first == RenderChannelType::RenderChannelTypeNone && !img.second.isBucket());
+			reinterpret_cast<ZmqRenderImage *>(savedImage->second.get())->update(img.second, this, !is_viewport);
 		}
 
 		if (this->callback_on_rt_image_updated) {
