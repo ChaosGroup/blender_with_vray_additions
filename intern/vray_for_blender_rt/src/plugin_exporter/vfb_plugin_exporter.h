@@ -37,6 +37,7 @@
 #include <boost/function.hpp>
 #include <boost/unordered_map.hpp>
 
+
 namespace VRayForBlender {
 
 struct ExporterSettings;
@@ -88,10 +89,10 @@ public:
 	void                 set_current_frame(float val)    { current_scene_frame = val; }
 	virtual bool         is_aborted() const { return false; }
 
-	virtual RenderImagePtr get_image() { return RenderImagePtr(); }
-	virtual RenderImagePtr get_render_channel(RenderChannelType channelType) { return RenderImagePtr(); }
+	virtual RenderImage  get_image() { return RenderImage(); }
+	virtual RenderImage  get_render_channel(RenderChannelType channelType) { return RenderImage(); }
 
-	RenderImagePtr       get_pass(BL::RenderPass::type_enum passType);
+	RenderImage          get_pass(BL::RenderPass::type_enum passType);
 
 	virtual void         show_frame_buffer() {}
 	virtual void         set_render_mode(RenderMode renderMode) {}

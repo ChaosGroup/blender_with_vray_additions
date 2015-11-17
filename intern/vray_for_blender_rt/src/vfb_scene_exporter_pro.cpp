@@ -184,9 +184,9 @@ void ProductionExporter::cb_on_rt_image_updated()
 				for (renderLayer.passes.begin(rpIt); rpIt != renderLayer.passes.end(); ++rpIt) {
 					BL::RenderPass renderPass(*rpIt);
 					if (renderPass) {
-						RenderImagePtr image = m_exporter->get_pass(renderPass.type());
-						if (image && *image && image->w == m_viewParams.renderSize.w && image->h == m_viewParams.renderSize.h) {
-							renderPass.rect(image->pixels);
+						RenderImage image = m_exporter->get_pass(renderPass.type());
+						if (image && image.w == m_viewParams.renderSize.w && image.h == m_viewParams.renderSize.h) {
+							renderPass.rect(image.pixels);
 						}
 					}
 				}

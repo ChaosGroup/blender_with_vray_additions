@@ -39,7 +39,7 @@ public:
 		void update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp, bool fixImage);
 	};
 
-	typedef std::unordered_map<RenderChannelType, RenderImagePtr, std::hash<int>> ImageMap;
+	typedef std::unordered_map<RenderChannelType, ZmqRenderImage, std::hash<int>> ImageMap;
 
 	ZmqExporter();
 	virtual            ~ZmqExporter();
@@ -56,8 +56,8 @@ public:
 	virtual void        stop();
 	virtual bool        is_running() const { return m_Started; }
 
-	virtual RenderImagePtr get_image();
-	virtual RenderImagePtr get_render_channel(RenderChannelType channelType);
+	virtual RenderImage get_image();
+	virtual RenderImage get_render_channel(RenderChannelType channelType);
 	virtual void        set_render_size(const int &w, const int &h);
 	virtual bool        is_aborted() const { return m_IsAborted; }
 

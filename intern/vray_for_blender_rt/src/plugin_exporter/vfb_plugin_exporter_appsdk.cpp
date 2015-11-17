@@ -134,7 +134,6 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderE
 
 AppSdkExporter::AppSdkExporter()
     : m_vray(nullptr)
-    , m_bucket_image(new RenderImage())
     , m_started(false)
 {
 }
@@ -190,9 +189,14 @@ void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
 }
 
 
-void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage*, void *userData)
+void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *img, void *userData)
 {
-	PRINT_INFO_EX("AppSdkExporter::CbOnRTImageUpdated");
+	if (!is_viewport) {
+		m_bucket_image = AppSDKRenderImage(m_vray->getImage());
+		m_bucket_image.flip();
+		m_bucket_image.resetAlpha();
+		m_bucket_image.clamp();
+	}
 	if (callback_on_rt_image_updated) {
 		callback_on_rt_image_updated.cb();
 	}
@@ -223,8 +227,12 @@ void AppSdkExporter::start()
 	m_started = true;
 	m_vray->setOnBucketReady<AppSdkExporter, &AppSdkExporter::bucket_ready>(*this);
 	m_vray->start();
-	m_vray->setOnRTImageUpdated<AppSdkExporter, &AppSdkExporter::CbOnRTImageUpdated>(*this);
-	m_vray->setOnImageReady<AppSdkExporter, &AppSdkExporter::CbOnImageReady>(*this);
+	if (callback_on_rt_image_updated) {
+		m_vray->setOnRTImageUpdated<AppSdkExporter, &AppSdkExporter::CbOnRTImageUpdated>(*this);
+	}
+	if (callback_on_image_ready) {
+		m_vray->setOnImageReady<AppSdkExporter, &AppSdkExporter::CbOnImageReady>(*this);
+	}
 }
 
 
@@ -236,7 +244,7 @@ void AppSdkExporter::stop()
 
 void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, const char *host, VRay::VRayImage *img, void *)
 {
-	m_bucket_image->updateRegion(reinterpret_cast<const float *>(img->getPixelData()), x, y, img->getWidth(), img->getHeight());
+	m_bucket_image.updateRegion(reinterpret_cast<const float *>(img->getPixelData()), x, y, img->getWidth(), img->getHeight());
 
 	if (callback_on_rt_image_updated) {
 		callback_on_rt_image_updated.cb();
@@ -244,26 +252,26 @@ void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, co
 }
 
 
-RenderImagePtr AppSdkExporter::get_image()
+RenderImage AppSdkExporter::get_image()
 {
 	if (m_started && m_vray->isImageReady() || is_viewport) {
 		m_vray->setOnBucketReady(nullptr);
-		auto ptr = RenderImagePtr(new AppSDKRenderImage(m_vray->getImage()));
+		auto img = AppSDKRenderImage(m_vray->getImage());
 		if (!is_viewport) {
-			ptr->flip();
-			ptr->resetAlpha();
-			ptr->clamp();
+			img.flip();
+			img.resetAlpha();
+			img.clamp();
 		}
-		return ptr;
+		return std::move(img);
 	} else {
-		return m_bucket_image;
+		return RenderImage::deepCopy(m_bucket_image);
 	}
 }
 
 
-RenderImagePtr AppSdkExporter::get_render_channel(RenderChannelType channelType)
+RenderImage AppSdkExporter::get_render_channel(RenderChannelType channelType)
 {
-	RenderImagePtr renderChannel;
+	RenderImage renderChannel;
 
 	if (m_vray) {
 		try {
@@ -275,7 +283,7 @@ RenderImagePtr AppSdkExporter::get_render_channel(RenderChannelType channelType)
 				//PRINT_INFO_EX("Found render channel: %i (pixel format %i)",
 				//              channelType, pixelFormat);
 
-				renderChannel.reset(new AppSDKRenderImage(renderElement.getImage(), pixelFormat));
+				renderChannel = AppSDKRenderImage(renderElement.getImage(), pixelFormat);
 			}
 		}
 		catch (VRay::VRayException &e) {
@@ -292,12 +300,12 @@ RenderImagePtr AppSdkExporter::get_render_channel(RenderChannelType channelType)
 
 void AppSdkExporter::set_render_size(const int &w, const int &h)
 {
-	if (m_bucket_image->w != w && m_bucket_image->h != h) {
-		delete[] m_bucket_image->pixels;
-		m_bucket_image->w = w;
-		m_bucket_image->h = h;
-		m_bucket_image->channels = 4;
-		m_bucket_image->pixels = new float[w * h * m_bucket_image->channels];
+	if (m_bucket_image.w != w && m_bucket_image.h != h) {
+		delete[] m_bucket_image.pixels;
+		m_bucket_image.w = w;
+		m_bucket_image.h = h;
+		m_bucket_image.channels = 4;
+		m_bucket_image.pixels = new float[w * h * m_bucket_image.channels];
 	}
 
 	m_vray->setImageSize(w, h);

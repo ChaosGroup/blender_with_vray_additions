@@ -81,9 +81,9 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 }
 
 
-RenderImagePtr PluginExporter::get_pass(BL::RenderPass::type_enum passType)
+RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
 {
-	RenderImagePtr image;
+	RenderImage image;
 
 	switch (passType) {
 		case BL::RenderPass::type_COMBINED: image = get_image(); break;
