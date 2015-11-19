@@ -420,6 +420,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			}
 
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
 			PRINT_INFO_EX("Syncing: %s...",
 							ob.name().c_str());
@@ -431,7 +432,11 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 #endif
 
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
-				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+				if (RNA_boolean_get(&vrayClipper, "enabled")) {
+					m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
+				} else {
+					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+				}
 			}
 			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
 				m_data_exporter.exportLight(ob, check_updated, overrideAttr);

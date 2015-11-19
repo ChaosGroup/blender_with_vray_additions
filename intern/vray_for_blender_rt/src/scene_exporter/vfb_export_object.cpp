@@ -163,6 +163,54 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 	return node;
 }
 
+AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, const ObjectOverridesAttrs &overrideAttrs) 
+{
+	PointerRNA vrayObject  = RNA_pointer_get(&ob.ptr, "vray");
+	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+	const std::string &pluginName = getNodeName(ob);// attrs.namePrefix + "VRayClipper@" + GetIDName(ob);
+
+	auto material = exportMtlMulti(ob);
+	//const std::string &material = VRayNodeExporter::exportMtlMulti(ExporterSettings::gSet.b_data, ob);
+
+	PluginDesc nodeDesc(pluginName, "VRayClipper");
+
+	if (material) {
+		nodeDesc.add("material", material);
+	}
+
+	nodeDesc.add("enabled", 1);
+	nodeDesc.add("affect_light", RNA_boolean_get(&vrayClipper, "affect_light"));
+	nodeDesc.add("only_camera_rays", RNA_boolean_get(&vrayClipper, "only_camera_rays"));
+	nodeDesc.add("clip_lights", RNA_boolean_get(&vrayClipper, "clip_lights"));
+	nodeDesc.add("use_obj_mtl", RNA_boolean_get(&vrayClipper, "use_obj_mtl"));
+	nodeDesc.add("set_material_id", RNA_boolean_get(&vrayClipper, "set_material_id"));
+	nodeDesc.add("material_id", RNA_int_get(&vrayClipper, "material_id"));
+	nodeDesc.add("object_id", ob.pass_index());
+	nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+
+	const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
+	if (NOT(excludeGroupName.empty())) {
+		AttrListPlugin plList;
+		BL::BlendData::groups_iterator grIt;
+		for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
+			BL::Group gr = *grIt;
+			if (gr.name() == excludeGroupName) {
+				BL::Group::objects_iterator grObIt;
+				for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
+					BL::Object ob = *grObIt;
+					plList.append(getNodeName(ob));
+				}
+				break;
+			}
+		}
+
+		nodeDesc.add("exclusion_mode", RNA_enum_get(&vrayClipper, "exclusion_mode"));
+		nodeDesc.add("exclusion_nodes", plList);
+	}
+
+	return m_exporter->export_plugin(nodeDesc);
+}
 
 void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated)
 {

@@ -256,13 +256,13 @@ RenderImage AppSdkExporter::get_image()
 {
 	if (m_started && m_vray->isImageReady() || is_viewport) {
 		m_vray->setOnBucketReady(nullptr);
-		auto img = AppSDKRenderImage(m_vray->getImage());
+		RenderImage img = AppSDKRenderImage(m_vray->getImage());
 		if (!is_viewport) {
 			img.flip();
 			img.resetAlpha();
 			img.clamp();
 		}
-		return std::move(img);
+		return img;
 	} else {
 		return RenderImage::deepCopy(m_bucket_image);
 	}
