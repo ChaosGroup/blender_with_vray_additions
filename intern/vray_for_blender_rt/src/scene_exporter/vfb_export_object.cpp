@@ -168,10 +168,8 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	PointerRNA vrayObject  = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
-	const std::string &pluginName = getNodeName(ob);// attrs.namePrefix + "VRayClipper@" + GetIDName(ob);
-
+	const std::string &pluginName = getNodeName(ob);
 	auto material = exportMtlMulti(ob);
-	//const std::string &material = VRayNodeExporter::exportMtlMulti(ExporterSettings::gSet.b_data, ob);
 
 	PluginDesc nodeDesc(pluginName, "VRayClipper");
 
