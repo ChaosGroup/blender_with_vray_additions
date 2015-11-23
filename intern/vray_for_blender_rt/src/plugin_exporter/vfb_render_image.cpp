@@ -103,8 +103,7 @@ void RenderImage::updateRegion(const float *data, int x, int y, int w, int h)
 void RenderImage::flip()
 {
 	if (pixels && w && h) {
-		const int _half_h = h / 2;
-		const int half_h = h % 2 ? _half_h : _half_h - 1;
+		const int half_h = h / 2;
 
 		const int row_items = w * channels;
 		const int row_bytes = row_items * sizeof(float);
