@@ -181,6 +181,10 @@ PluginDesc PluginManager::differences(const PluginDesc &pluginDesc) const
 	return diffWithCache(pluginDesc, true).second;
 }
 
+const PluginDesc & PluginManager::operator[](const PluginDesc &search) const {
+	return cache.find(getKey(search))->second;
+}
+
 PluginDesc PluginManager::fromCache(const PluginDesc &search) const
 {
 	auto iter = cache.find(getKey(search));
@@ -199,6 +203,7 @@ void PluginManager::updateCache(const PluginDesc &update)
 		cache.insert(make_pair(key, update));
 	} else {
 		iter->second.pluginAttrs = update.pluginAttrs;
+		iter->second.pluginID = update.pluginID;
 	}
 }
 

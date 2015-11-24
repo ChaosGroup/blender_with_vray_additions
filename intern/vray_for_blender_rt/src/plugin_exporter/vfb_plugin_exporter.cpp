@@ -63,7 +63,15 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 			plg = this->export_plugin_impl(pluginDesc);
 			m_pluginManager.updateCache(pluginDesc);
 		} else if (inCache && isDifferent) {
-			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+			const auto &cachedPlugin = m_pluginManager[pluginDesc];
+
+			if (cachedPlugin.pluginID != pluginDesc.pluginID) {
+				this->remove_plugin(cachedPlugin.pluginName);
+				plg = this->export_plugin_impl(pluginDesc);
+			} else {
+				plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+			}
+
 			m_pluginManager.updateCache(pluginDesc);
 		}
 	} else {
