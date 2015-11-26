@@ -169,6 +169,15 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
 	const std::string &pluginName = getNodeName(ob);
+	m_id_track.insert(ob, pluginName);
+
+	bool is_updated      = check_updated ? ob.is_updated()      : true;
+	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+	if (!is_updated && !is_data_updated) {
+		return pluginName;
+	}
+
 	auto material = exportMtlMulti(ob);
 
 	PluginDesc nodeDesc(pluginName, "VRayClipper");
@@ -206,6 +215,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 		nodeDesc.add("exclusion_mode", RNA_enum_get(&vrayClipper, "exclusion_mode"));
 		nodeDesc.add("exclusion_nodes", plList);
 	}
+
 
 	return m_exporter->export_plugin(nodeDesc);
 }
