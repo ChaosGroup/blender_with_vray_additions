@@ -433,6 +433,24 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
 				if (RNA_boolean_get(&vrayClipper, "enabled")) {
+
+					const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
+					if (NOT(excludeGroupName.empty())) {
+						AttrListPlugin plList;
+						BL::BlendData::groups_iterator grIt;
+						for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
+							BL::Group gr = *grIt;
+							if (gr.name() == excludeGroupName) {
+								BL::Group::objects_iterator grObIt;
+								for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
+									BL::Object ob = *grObIt;
+									sync_object(ob, check_updated);
+								}
+								break;
+							}
+						}
+					}
+
 					m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
 				} else {
 					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
