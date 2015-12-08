@@ -203,6 +203,26 @@ static VFontData *vfont_get_data(Main *bmain, VFont *vfont)
 	return vfont->data;
 }
 
+/* Bad naming actually in this case... */
+void BKE_vfont_init(VFont *vfont)
+{
+	PackedFile *pf = get_builtin_packedfile();
+
+	if (pf) {
+		VFontData *vfd;
+
+		vfd = BLI_vfontdata_from_freetypefont(pf);
+		if (vfd) {
+			vfont->data = vfd;
+
+			BLI_strncpy(vfont->name, FO_BUILTIN_NAME, sizeof(vfont->name));
+		}
+
+		/* Free the packed file */
+		freePackedFile(pf);
+	}
+}
+
 VFont *BKE_vfont_load(Main *bmain, const char *filepath)
 {
 	char filename[FILE_MAXFILE];
@@ -273,7 +293,7 @@ VFont *BKE_vfont_load_exists_ex(struct Main *bmain, const char *filepath, bool *
 		BLI_path_abs(strtest, ID_BLEND_PATH(bmain, &vfont->id));
 
 		if (BLI_path_cmp(strtest, str) == 0) {
-			vfont->id.us++;  /* officially should not, it doesn't link here! */
+			id_us_plus(&vfont->id);  /* officially should not, it doesn't link here! */
 			if (r_exists)
 				*r_exists = true;
 			return vfont;

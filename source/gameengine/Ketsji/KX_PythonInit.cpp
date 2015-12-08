@@ -37,9 +37,6 @@
 #endif
 
 #ifdef WITH_PYTHON
-#  ifdef   _POSIX_C_SOURCE
-#    undef _POSIX_C_SOURCE
-#  endif
 #  ifdef   _XOPEN_SOURCE
 #    undef _XOPEN_SOURCE
 #  endif
@@ -101,7 +98,6 @@ extern "C" {
 #include "SCA_PythonKeyboard.h"
 #include "SCA_PythonMouse.h"
 #include "KX_ConstraintActuator.h"
-#include "KX_IpoActuator.h"
 #include "KX_SoundActuator.h"
 #include "KX_StateActuator.h"
 #include "BL_ActionActuator.h"

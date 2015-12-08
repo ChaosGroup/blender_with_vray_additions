@@ -55,7 +55,6 @@
 #include "KX_RayCast.h"
 #include "KX_PythonInit.h"
 #include "KX_PyMath.h"
-#include "KX_PythonSeq.h"
 #include "SCA_IActuator.h"
 #include "SCA_ISensor.h"
 #include "SCA_IController.h"
@@ -69,6 +68,7 @@
 #include "BL_Action.h"
 
 #include "EXP_PyObjectPlus.h" /* python stuff */
+#include "EXP_ListWrapper.h"
 #include "BLI_utildefines.h"
 
 #ifdef WITH_PYTHON
@@ -481,11 +481,6 @@ void KX_GameObject::UpdateActionManager(float curtime)
 	GetActionManager()->Update(curtime);
 }
 
-void KX_GameObject::UpdateActionIPOs()
-{
-	GetActionManager()->UpdateIPOs();
-}
-
 float KX_GameObject::GetActionFrame(short layer)
 {
 	return GetActionManager()->GetActionFrame(layer);
@@ -523,6 +518,11 @@ void KX_GameObject::ProcessReplica()
 	m_pGraphicController = NULL;
 	m_pPhysicsController = NULL;
 	m_pSGNode = NULL;
+
+	/* Dupli group and instance list are set later in replication.
+	 * See KX_Scene::DupliGroupRecurse. */
+	m_pDupliGroupObject = NULL;
+	m_pInstanceObjects = NULL;
 	m_pClient_info = new KX_ClientObjectInfo(*m_pClient_info);
 	m_pClient_info->m_gameobject = this;
 	m_actionManager = NULL;
@@ -949,6 +949,9 @@ void KX_GameObject::InitIPO(bool ipo_as_force,
 void KX_GameObject::UpdateIPO(float curframetime,
 							  bool recurse) 
 {
+	/* This function shouldn't call BL_Action::Update, not even indirectly, 
+	 * as it will cause deadlock due to the lock in BL_Action::Update. */
+
 	// just the 'normal' update procedure.
 	GetSGNode()->SetSimulatedTime(curframetime,recurse);
 	GetSGNode()->UpdateWorldData(curframetime);
@@ -3059,20 +3062,83 @@ int KX_GameObject::pyattr_set_obcolor(void *self_v, const KX_PYATTRIBUTE_DEF *at
 	return PY_SET_ATTR_SUCCESS;
 }
 
+static int kx_game_object_get_sensors_size_cb(void *self_v)
+{
+	return ((KX_GameObject *)self_v)->GetSensors().size();
+}
+
+static PyObject *kx_game_object_get_sensors_item_cb(void *self_v, int index)
+{
+	return ((KX_GameObject *)self_v)->GetSensors()[index]->GetProxy();
+}
+
+static const char *kx_game_object_get_sensors_item_name_cb(void *self_v, int index)
+{
+	return ((KX_GameObject *)self_v)->GetSensors()[index]->GetName().ReadPtr();
+}
+
 /* These are experimental! */
 PyObject *KX_GameObject::pyattr_get_sensors(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
-	return KX_PythonSeq_CreatePyObject((static_cast<KX_GameObject*>(self_v))->m_proxy, KX_PYGENSEQ_OB_TYPE_SENSORS);
+	return (new CListWrapper(self_v,
+							 ((KX_GameObject *)self_v)->GetProxy(),
+							 NULL,
+							 kx_game_object_get_sensors_size_cb,
+							 kx_game_object_get_sensors_item_cb,
+							 kx_game_object_get_sensors_item_name_cb,
+							 NULL))->NewProxy(true);
+}
+
+static int kx_game_object_get_controllers_size_cb(void *self_v)
+{
+	return ((KX_GameObject *)self_v)->GetControllers().size();
+}
+
+static PyObject *kx_game_object_get_controllers_item_cb(void *self_v, int index)
+{
+	return ((KX_GameObject *)self_v)->GetControllers()[index]->GetProxy();
+}
+
+static const char *kx_game_object_get_controllers_item_name_cb(void *self_v, int index)
+{
+	return ((KX_GameObject *)self_v)->GetControllers()[index]->GetName().ReadPtr();
 }
 
 PyObject *KX_GameObject::pyattr_get_controllers(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
-	return KX_PythonSeq_CreatePyObject((static_cast<KX_GameObject*>(self_v))->m_proxy, KX_PYGENSEQ_OB_TYPE_CONTROLLERS);
+	return (new CListWrapper(self_v,
+							 ((KX_GameObject *)self_v)->GetProxy(),
+							 NULL,
+							 kx_game_object_get_controllers_size_cb,
+							 kx_game_object_get_controllers_item_cb,
+							 kx_game_object_get_controllers_item_name_cb,
+							 NULL))->NewProxy(true);
+}
+
+static int kx_game_object_get_actuators_size_cb(void *self_v)
+{
+	return ((KX_GameObject *)self_v)->GetActuators().size();
+}
+
+static PyObject *kx_game_object_get_actuators_item_cb(void *self_v, int index)
+{
+	return ((KX_GameObject *)self_v)->GetActuators()[index]->GetProxy();
+}
+
+static const char *kx_game_object_get_actuators_item_name_cb(void *self_v, int index)
+{
+	return ((KX_GameObject *)self_v)->GetActuators()[index]->GetName().ReadPtr();
 }
 
 PyObject *KX_GameObject::pyattr_get_actuators(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
-	return KX_PythonSeq_CreatePyObject((static_cast<KX_GameObject*>(self_v))->m_proxy, KX_PYGENSEQ_OB_TYPE_ACTUATORS);
+	return (new CListWrapper(self_v,
+							 ((KX_GameObject *)self_v)->GetProxy(),
+							 NULL,
+							 kx_game_object_get_actuators_size_cb,
+							 kx_game_object_get_actuators_item_cb,
+							 kx_game_object_get_actuators_item_name_cb,
+							 NULL))->NewProxy(true);
 }
 /* End experimental */
 
@@ -3670,8 +3736,9 @@ KX_PYMETHODDEF_DOC(KX_GameObject, rayCastTo,
 
 	RayCastData rayData(propName, false, (1 << OB_MAX_COL_MASKS) - 1);
 	KX_RayCast::Callback<KX_GameObject, RayCastData> callback(this, spc, &rayData);
-	if (KX_RayCast::RayTest(pe, fromPoint, toPoint, callback))
+	if (KX_RayCast::RayTest(pe, fromPoint, toPoint, callback) && rayData.m_hitObject) {
 		return rayData.m_hitObject->GetProxy();
+	}
 	
 	Py_RETURN_NONE;
 }
@@ -3817,8 +3884,7 @@ KX_PYMETHODDEF_DOC(KX_GameObject, rayCast,
 	RayCastData rayData(propName, xray, mask);
 	KX_RayCast::Callback<KX_GameObject, RayCastData> callback(this, spc, &rayData, face, (poly == 2));
 
-	if (KX_RayCast::RayTest(pe, fromPoint, toPoint, callback))
-	{
+	if (KX_RayCast::RayTest(pe, fromPoint, toPoint, callback) && rayData.m_hitObject) {
 		PyObject *returnValue = (poly == 2) ? PyTuple_New(5) : (poly) ? PyTuple_New(4) : PyTuple_New(3);
 		if (returnValue) { // unlikely this would ever fail, if it does python sets an error
 			PyTuple_SET_ITEM(returnValue, 0, rayData.m_hitObject->GetProxy());

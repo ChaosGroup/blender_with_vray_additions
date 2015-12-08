@@ -461,12 +461,19 @@ static SpinLock HashTableLock;
 static void free_idhash_value(void *val)
 {
 	BLI_ghash_free(val, NULL, NULL);
+
+	//if (prop->data.pointer)
+	//	id_us_min(((ID *)prop->data.pointer));
+	//prop->data.pointer = id;
+	//id_us_plus(id);
 }
 
 void IDP_init(void)
 {
 	IDP_IDHashTable = BLI_ghash_new(BLI_ghashutil_ptrhash, BLI_ghashutil_ptrcmp, __func__);
 	BLI_spin_init(&HashTableLock);
+
+	//id_us_min(((ID *)prop->data.pointer));
 }
 
 void IDP_exit(void)

@@ -4231,6 +4231,8 @@ void ED_operatortypes_screen(void)
 	WM_operatortype_append(ED_OT_undo_push);
 	WM_operatortype_append(ED_OT_redo);
 	WM_operatortype_append(ED_OT_undo_history);
+
+	WM_operatortype_append(ED_OT_flush_edits);
 	
 }
 
@@ -4302,14 +4304,13 @@ void ED_keymap_screen(wmKeyConfig *keyconf)
 	WM_keymap_verify_item(keymap, "SCREEN_OT_area_move", LEFTMOUSE, KM_PRESS, 0, 0);
 	
 	WM_keymap_verify_item(keymap, "SCREEN_OT_area_options", RIGHTMOUSE, KM_PRESS, 0, 0);
-	
-	WM_keymap_add_item(keymap, "SCREEN_OT_header", F9KEY, KM_PRESS, KM_ALT, 0);
-	
+
 	/* Header Editing ------------------------------------------------ */
 	keymap = WM_keymap_find(keyconf, "Header", 0, 0);
-	
+
+	WM_keymap_add_item(keymap, "SCREEN_OT_header", F9KEY, KM_PRESS, KM_ALT, 0);
 	WM_keymap_add_item(keymap, "SCREEN_OT_header_toolbox", RIGHTMOUSE, KM_PRESS, 0, 0);
-	
+
 	/* Screen General ------------------------------------------------ */
 	keymap = WM_keymap_find(keyconf, "Screen", 0, 0);
 	

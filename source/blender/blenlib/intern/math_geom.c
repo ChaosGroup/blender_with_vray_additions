@@ -649,7 +649,7 @@ void closest_on_tri_to_point_v3(float r[3], const float p[3],
 /******************************* Intersection ********************************/
 
 /* intersect Line-Line, shorts */
-int isect_line_line_v2_int(const int v1[2], const int v2[2], const int v3[2], const int v4[2])
+int isect_seg_seg_v2_int(const int v1[2], const int v2[2], const int v3[2], const int v4[2])
 {
 	float div, lambda, mu;
 
@@ -692,7 +692,7 @@ int isect_line_line_v2_point(const float v0[2], const float v1[2], const float v
 }
 
 /* intersect Line-Line, floats */
-int isect_line_line_v2(const float v1[2], const float v2[2], const float v3[2], const float v4[2])
+int isect_seg_seg_v2(const float v1[2], const float v2[2], const float v3[2], const float v4[2])
 {
 	float div, lambda, mu;
 
@@ -714,7 +714,10 @@ int isect_line_line_v2(const float v1[2], const float v2[2], const float v3[2], 
  *  -1: collinear
  *   1: intersection
  */
-int isect_seg_seg_v2_point(const float v0[2], const float v1[2], const float v2[2], const float v3[2], float r_vi[2])
+int isect_seg_seg_v2_point(
+        const float v0[2], const float v1[2],
+        const float v2[2], const float v3[2],
+        float r_vi[2])
 {
 	float s10[2], s32[2], s30[2], d;
 	const float eps = 1e-6f;
@@ -813,7 +816,7 @@ int isect_seg_seg_v2_point(const float v0[2], const float v1[2], const float v2[
 	}
 }
 
-bool isect_seg_seg_v2(const float v1[2], const float v2[2], const float v3[2], const float v4[2])
+bool isect_seg_seg_v2_simple(const float v1[2], const float v2[2], const float v3[2], const float v4[2])
 {
 #define CCW(A, B, C) \
 	((C[1] - A[1]) * (B[0] - A[0]) > \
@@ -824,17 +827,15 @@ bool isect_seg_seg_v2(const float v1[2], const float v2[2], const float v3[2], c
 #undef CCW
 }
 
+/**
+ * \param l1, l2: Coordinates (point of line).
+ * \param sp, r:  Coordinate and radius (sphere).
+ * \return r_p1, r_p2: Intersection coordinates.
+ */
 int isect_line_sphere_v3(const float l1[3], const float l2[3],
                          const float sp[3], const float r,
                          float r_p1[3], float r_p2[3])
 {
-	/* l1:         coordinates (point of line)
-	 * l2:         coordinates (point of line)
-	 * sp, r:      coordinates and radius (sphere)
-	 * r_p1, r_p2: return intersection coordinates
-	 */
-
-
 	/* adapted for use in blender by Campbell Barton - 2011
 	 *
 	 * atelier iebele abel - 2001
@@ -1256,38 +1257,27 @@ bool isect_ray_tri_v3(
 /**
  * if clip is nonzero, will only return true if lambda is >= 0.0
  * (i.e. intersection point is along positive d)
+ *
+ * \note #line_plane_factor_v3() shares logic.
  */
 bool isect_ray_plane_v3(
         const float p1[3], const float d[3],
-        const float v0[3], const float v1[3], const float v2[3],
+        const float plane[4],
         float *r_lambda, const bool clip)
 {
-	const float epsilon = 0.00000001f;
-	float p[3], s[3], e1[3], e2[3], q[3];
-	float a, f;
-	/* float  u, v; */ /*UNUSED*/
+	float h[3], plane_co[3];
+	float dot;
 
-	sub_v3_v3v3(e1, v1, v0);
-	sub_v3_v3v3(e2, v2, v0);
-
-	cross_v3_v3v3(p, d, e2);
-	a = dot_v3v3(e1, p);
-	/* note: these values were 0.000001 in 2.4x but for projection snapping on
-	 * a human head (1BU == 1m), subsurf level 2, this gave many errors - campbell */
-	if ((a > -epsilon) && (a < epsilon)) return false;
-	f = 1.0f / a;
-
-	sub_v3_v3v3(s, p1, v0);
-
-	/* u = f * dot_v3v3(s, p); */ /*UNUSED*/
-
-	cross_v3_v3v3(q, s, e1);
-
-	/* v = f * dot_v3v3(d, q); */ /*UNUSED*/
-
-	*r_lambda = f * dot_v3v3(e2, q);
-	if (clip && (*r_lambda < 0.0f)) return false;
-
+	dot = dot_v3v3(plane, d);
+	if (dot == 0.0f) {
+		return false;
+	}
+	mul_v3_v3fl(plane_co, plane, (-plane[3] / len_squared_v3(plane)));
+	sub_v3_v3v3(h, p1, plane_co);
+	*r_lambda = -dot_v3v3(plane, h) / dot;
+	if (clip && (*r_lambda < 0.0f)) {
+		return false;
+	}
 	return true;
 }
 
@@ -1384,16 +1374,14 @@ bool isect_ray_tri_watertight_v3(
 	const float cy = c_ky - sy * c_kz;
 
 	/* Calculate scaled barycentric coordinates. */
-	float u = cx * by - cy * bx;
-	int sign_mask = (float_as_int(u) & (int)0x80000000);
-	float v = ax * cy - ay * cx;
-	float w, det;
+	const float u = cx * by - cy * bx;
+	const float v = ax * cy - ay * cx;
+	const float w = bx * ay - by * ax;
+	float det;
 
-	if (sign_mask != (float_as_int(v) & (int)0x80000000)) {
-		return false;
-	}
-	w = bx * ay - by * ax;
-	if (sign_mask != (float_as_int(w) & (int)0x80000000)) {
+	if ((u < 0.0f || v < 0.0f || w < 0.0f) &&
+	    (u > 0.0f || v > 0.0f || w > 0.0f))
+	{
 		return false;
 	}
 
@@ -1406,8 +1394,9 @@ bool isect_ray_tri_watertight_v3(
 		/* Calculate scaled z-coordinates of vertices and use them to calculate
 		 * the hit distance.
 		 */
+		const int sign_det = (float_as_int(det) & (int)0x80000000);
 		const float t = (u * a_kz + v * b_kz + w * c_kz) * sz;
-		const float sign_t = xor_fl(t, sign_mask);
+		const float sign_t = xor_fl(t, sign_det);
 		if ((sign_t < 0.0f)
 		    /* differ from Cycles, don't read r_lambda's original value
 		     * otherwise we won't match any of the other intersect functions here...
@@ -2023,7 +2012,8 @@ bool isect_axial_line_tri_v3(const int axis, const float p1[3], const float p2[3
  */
 int isect_line_line_epsilon_v3(
         const float v1[3], const float v2[3],
-        const float v3[3], const float v4[3], float i1[3], float i2[3],
+        const float v3[3], const float v4[3],
+        float r_i1[3], float r_i2[3],
         const float epsilon)
 {
 	float a[3], b[3], c[3], ab[3], cb[3];
@@ -2047,8 +2037,8 @@ int isect_line_line_epsilon_v3(
 		cross_v3_v3v3(cb, c, b);
 
 		mul_v3_fl(a, dot_v3v3(cb, ab) / div);
-		add_v3_v3v3(i1, v1, a);
-		copy_v3_v3(i2, i1);
+		add_v3_v3v3(r_i1, v1, a);
+		copy_v3_v3(r_i2, r_i1);
 
 		return 1; /* one intersection only */
 	}
@@ -2074,10 +2064,10 @@ int isect_line_line_epsilon_v3(
 		cross_v3_v3v3(cb, c, b);
 
 		mul_v3_fl(a, dot_v3v3(cb, ab) / dot_v3v3(ab, ab));
-		add_v3_v3v3(i1, v1, a);
+		add_v3_v3v3(r_i1, v1, a);
 
 		/* for the second line, just substract the offset from the first intersection point */
-		sub_v3_v3v3(i2, i1, t);
+		sub_v3_v3v3(r_i2, r_i1, t);
 
 		return 2; /* two nearest points */
 	}
@@ -2085,10 +2075,11 @@ int isect_line_line_epsilon_v3(
 
 int isect_line_line_v3(
         const float v1[3], const float v2[3],
-        const float v3[3], const float v4[3], float i1[3], float i2[3])
+        const float v3[3], const float v4[3],
+        float r_i1[3], float r_i2[3])
 {
 	const float epsilon = 0.000001f;
-	return isect_line_line_epsilon_v3(v1, v2, v3, v4, i1, i2, epsilon);
+	return isect_line_line_epsilon_v3(v1, v2, v3, v4, r_i1, r_i2, epsilon);
 }
 
 /** Intersection point strictly between the two lines
@@ -2364,7 +2355,9 @@ static bool point_in_slice(const float p[3], const float v1[3], const float l1[3
 
 	sub_v3_v3v3(rp, p, v1);
 	h = dot_v3v3(q, rp) / dot_v3v3(q, q);
-	return (h < 0.0f || h > 1.0f) ? false : true;
+	/* note: when 'h' is nan/-nan, this check returns false
+	 * without explicit check - covering the degenerate case */
+	return (h >= 0.0f && h <= 1.0f);
 }
 
 #if 0
@@ -2408,22 +2401,15 @@ bool isect_point_tri_v3(const float p[3], const float v1[3], const float v2[3], 
                         float r_vi[3])
 {
 	if (isect_point_tri_prism_v3(p, v1, v2, v3)) {
-		float no[3], n1[3], n2[3];
+		float plane[4];
+		float no[3];
 
 		/* Could use normal_tri_v3, but doesn't have to be unit-length */
-		sub_v3_v3v3(n1, v1, v2);
-		sub_v3_v3v3(n2, v2, v3);
-		cross_v3_v3v3(no, n1, n2);
+		cross_tri_v3(no, v1, v2, v3);
+		BLI_assert(len_squared_v3(no) != 0.0f);
 
-		if (LIKELY(len_squared_v3(no) != 0.0f)) {
-			float plane[4];
-			plane_from_point_normal_v3(plane, v1, no);
-			closest_to_plane_v3(r_vi, plane, p);
-		}
-		else {
-			/* degenerate */
-			copy_v3_v3(r_vi, p);
-		}
+		plane_from_point_normal_v3(plane, v1, no);
+		closest_to_plane_v3(r_vi, plane, p);
 
 		return true;
 	}
@@ -4603,13 +4589,13 @@ bool is_quad_convex_v3(const float v1[3], const float v2[3], const float v3[3], 
 	mul_v2_m3v3(vec[3], mat, v4);
 
 	/* linetests, the 2 diagonals have to instersect to be convex */
-	return (isect_line_line_v2(vec[0], vec[2], vec[1], vec[3]) > 0);
+	return (isect_seg_seg_v2(vec[0], vec[2], vec[1], vec[3]) > 0);
 }
 
 bool is_quad_convex_v2(const float v1[2], const float v2[2], const float v3[2], const float v4[2])
 {
 	/* linetests, the 2 diagonals have to instersect to be convex */
-	return (isect_line_line_v2(v1, v3, v2, v4) > 0);
+	return (isect_seg_seg_v2(v1, v3, v2, v4) > 0);
 }
 
 bool is_poly_convex_v2(const float verts[][2], unsigned int nr)

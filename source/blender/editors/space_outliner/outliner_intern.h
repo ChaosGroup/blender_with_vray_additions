@@ -150,8 +150,15 @@ int outliner_item_do_activate(struct bContext *C, int x, int y, bool extend, boo
 
 /* outliner_edit.c ---------------------------------------------- */
 
-void outliner_do_object_operation(struct bContext *C, struct Scene *scene, struct SpaceOops *soops, struct ListBase *lb, 
-                                  void (*operation_cb)(struct bContext *C, struct Scene *scene, struct TreeElement *, struct TreeStoreElem *, TreeStoreElem *));
+void outliner_do_object_operation_ex(
+        struct bContext *C, struct Scene *scene, struct SpaceOops *soops, struct ListBase *lb,
+        void (*operation_cb)(struct bContext *C, struct Scene *scene,
+                             struct TreeElement *, struct TreeStoreElem *, TreeStoreElem *),
+        bool recurse_selected);
+void outliner_do_object_operation(
+        struct bContext *C, struct Scene *scene, struct SpaceOops *soops, struct ListBase *lb,
+        void (*operation_cb)(struct bContext *C, struct Scene *scene,
+                             struct TreeElement *, struct TreeStoreElem *, TreeStoreElem *));
 
 int common_restrict_check(struct bContext *C, struct Object *ob);
 
@@ -169,12 +176,18 @@ void group_toggle_renderability_cb(struct bContext *C, struct Scene *scene, Tree
 
 void item_rename_cb(struct bContext *C, struct Scene *scene, TreeElement *te, struct TreeStoreElem *tsep, struct TreeStoreElem *tselem);
 
+void lib_delete_cb(
+        struct bContext *C, struct Scene *scene, struct TreeElement *te,
+        struct TreeStoreElem *tsep, struct TreeStoreElem *tselem);
+
 TreeElement *outliner_dropzone_find(const struct SpaceOops *soops, const float fmval[2], const bool children);
 /* ...................................................... */
 
 void OUTLINER_OT_item_activate(struct wmOperatorType *ot);
 void OUTLINER_OT_item_openclose(struct wmOperatorType *ot);
 void OUTLINER_OT_item_rename(struct wmOperatorType *ot);
+
+void OUTLINER_OT_lib_delete(struct wmOperatorType *ot);
 
 void OUTLINER_OT_show_one_level(struct wmOperatorType *ot);
 void OUTLINER_OT_show_active(struct wmOperatorType *ot);
@@ -211,6 +224,7 @@ void OUTLINER_OT_operation(struct wmOperatorType *ot);
 void OUTLINER_OT_scene_operation(struct wmOperatorType *ot);
 void OUTLINER_OT_object_operation(struct wmOperatorType *ot);
 void OUTLINER_OT_group_operation(struct wmOperatorType *ot);
+void OUTLINER_OT_lib_operation(struct wmOperatorType *ot);
 void OUTLINER_OT_id_operation(struct wmOperatorType *ot);
 void OUTLINER_OT_data_operation(struct wmOperatorType *ot);
 void OUTLINER_OT_animdata_operation(struct wmOperatorType *ot);
