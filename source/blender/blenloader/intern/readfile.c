@@ -2112,6 +2112,7 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 {
 	IDProperty *loop;
 	IDProperty *idp_loop;
+	void       *newaddr = NULL;
 	int i;
 
 	if (!prop) return;
@@ -2120,8 +2121,11 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 	for (loop = prop->data.group.first; loop; loop = loop->next) {
 		switch (loop->type) {
 		case IDP_ID: /* DatablockProperty */
-			loop->data.pointer = newlibadr(fd, NULL, IDP_Id(loop));
-			IDP_ID_Register(loop);
+			newaddr = newlibadr(fd, NULL, IDP_Id(loop));
+			if (newaddr) {
+				loop->data.pointer = newaddr;
+				IDP_ID_Register(loop);
+			}
 			break;
 		case IDP_IDPARRAY: /* CollectionProperty */
 			idp_loop = IDP_Array(loop);
@@ -2715,7 +2719,7 @@ static void lib_link_node_socket(FileData *fd, ID *UNUSED(id), bNodeSocket *sock
 	/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 	 * of library blocks that implement this.*/
 	if (sock->prop)
-		IDP_LibLinkProperty(sock->prop, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+		IDP_LibLinkProperty(sock->prop, fd);
 }
 
 /* singe node tree (also used for material/scene trees), ntree is not NULL */
@@ -2734,7 +2738,7 @@ static void lib_link_ntree(FileData *fd, ID *id, bNodeTree *ntree)
 		/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 		 * of library blocks that implement this.*/
 		if (node->prop)
-			IDP_LibLinkProperty(node->prop, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+			IDP_LibLinkProperty(node->prop, fd);
 
 		node->id= newlibadr_us(fd, id->lib, node->id);
 
@@ -3665,7 +3669,7 @@ static void lib_link_image(FileData *fd, Main *main)
 	
 	for (ima = main->image.first; ima; ima = ima->id.next) {
 		if (ima->id.flag & LIB_NEED_LINK) {
-			IDP_LibLinkProperty(ima->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+			IDP_LibLinkProperty(ima->id.properties, fd);
 			
 			ima->id.flag -= LIB_NEED_LINK;
 		}
@@ -3906,10 +3910,10 @@ static void lib_link_material(FileData *fd, Main *main)
 	for (ma = main->mat.first; ma; ma = ma->id.next) {
 		if (ma->id.flag & LIB_NEED_LINK) {
 			lib_link_animdata(fd, &ma->id, ma->adt);
-			
+
 			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(ma->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+			IDP_LibLinkProperty(ma->id.properties, fd);
 			
 			ma->ipo = newlibadr_us(fd, ma->id.lib, ma->ipo);
 			ma->group = newlibadr_us(fd, ma->id.lib, ma->group);
@@ -4359,12 +4363,11 @@ static void lib_link_mesh(FileData *fd, Main *main)
 			int i;
 
 			if (me->adt) lib_link_animdata(fd, &me->id, me->adt);
-			
+
 			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(me->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
-			lib_link_animdata(fd, &me->id, me->adt);
-			
+			IDP_LibLinkProperty(me->id.properties, fd);
+
 			/* this check added for python created meshes */
 			if (me->mat) {
 				for (i = 0; i < me->totcol; i++) {
@@ -4692,7 +4695,7 @@ static void lib_link_object(FileData *fd, Main *main)
 	
 	for (ob = main->object.first; ob; ob = ob->id.next) {
 		if (ob->id.flag & LIB_NEED_LINK) {
-			IDP_LibLinkProperty(ob->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+			IDP_LibLinkProperty(ob->id.properties, fd);
 			lib_link_animdata(fd, &ob->id, ob->adt);
 			
 // XXX deprecated - old animation system <<<
@@ -5592,11 +5595,10 @@ static void lib_link_scene(FileData *fd, Main *main)
 
 			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(sce->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
-			lib_link_animdata(fd, &sce->id, sce->adt);
-			
+			IDP_LibLinkProperty(sce->id.properties, fd);
+
 			lib_link_keyingsets(fd, &sce->id, &sce->keyingsets);
-			
+
 			sce->camera = newlibadr(fd, sce->id.lib, sce->camera);
 			sce->world = newlibadr_us(fd, sce->id.lib, sce->world);
 			sce->set = newlibadr(fd, sce->id.lib, sce->set);
@@ -7568,11 +7570,9 @@ static void lib_link_linestyle(FileData *fd, Main *main)
 		if (linestyle->id.flag & LIB_NEED_LINK) {
 			linestyle->id.flag -= LIB_NEED_LINK;
 
-			if (linestyle->adt)
-				lib_link_animdata(fd, &linestyle->id, linestyle->adt);
-
-			IDP_LibLinkProperty(linestyle->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
 			lib_link_animdata(fd, &linestyle->id, linestyle->adt);
+
+			IDP_LibLinkProperty(linestyle->id.properties, fd);
 
 			for (m = linestyle->color_modifiers.first; m; m = m->next) {
 				switch (m->type) {
