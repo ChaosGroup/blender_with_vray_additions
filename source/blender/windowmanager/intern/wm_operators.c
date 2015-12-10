@@ -105,6 +105,7 @@
 #include "ED_util.h"
 #include "ED_view3d.h"
 
+#include "GPU_basic_shader.h"
 #include "GPU_material.h"
 
 #include "RNA_access.h"
@@ -4152,7 +4153,7 @@ static void radial_control_set_tex(RadialControl *rc)
 			if ((ibuf = BKE_brush_gen_radial_control_imbuf(rc->image_id_ptr.data, rc->use_secondary_tex))) {
 				glGenTextures(1, &rc->gltex);
 				glBindTexture(GL_TEXTURE_2D, rc->gltex);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, ibuf->x, ibuf->y, 0,
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA8, ibuf->x, ibuf->y, 0,
 				             GL_ALPHA, GL_FLOAT, ibuf->rect_float);
 				MEM_freeN(ibuf->rect_float);
 				MEM_freeN(ibuf);
@@ -4187,7 +4188,7 @@ static void radial_control_paint_tex(RadialControl *rc, float radius, float alph
 		}
 
 		/* draw textured quad */
-		glEnable(GL_TEXTURE_2D);
+		GPU_basic_shader_bind(GPU_SHADER_TEXTURE_2D | GPU_SHADER_USE_COLOR);
 		glBegin(GL_QUADS);
 		glTexCoord2f(0, 0);
 		glVertex2f(-radius, -radius);
@@ -4198,7 +4199,7 @@ static void radial_control_paint_tex(RadialControl *rc, float radius, float alph
 		glTexCoord2f(0, 1);
 		glVertex2f(-radius, radius);
 		glEnd();
-		glDisable(GL_TEXTURE_2D);
+		GPU_basic_shader_bind(GPU_SHADER_USE_COLOR);
 
 		/* undo rotation */
 		if (rc->rot_prop)

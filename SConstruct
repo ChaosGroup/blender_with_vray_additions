@@ -556,7 +556,6 @@ else:
 
 # TODO, make optional (as with CMake)
 env['CPPFLAGS'].append('-DWITH_AVI')
-env['CPPFLAGS'].append('-DWITH_OPENNL')
 
 if env['OURPLATFORM'] not in ('win32-vc', 'win64-vc'):
     env['CPPFLAGS'].append('-DHAVE_STDBOOL_H')
@@ -798,8 +797,8 @@ if B.targets != ['cudakernels']:
     data_to_c_simple("source/blender/gpu/shaders/gpu_program_smoke_frag.glsl")
     data_to_c_simple("source/blender/gpu/shaders/gpu_program_smoke_color_frag.glsl")
 
-    data_to_c_simple("source/blender/gpu/shaders/gpu_shader_simple_frag.glsl")
-    data_to_c_simple("source/blender/gpu/shaders/gpu_shader_simple_vert.glsl")
+    data_to_c_simple("source/blender/gpu/shaders/gpu_shader_basic_frag.glsl")
+    data_to_c_simple("source/blender/gpu/shaders/gpu_shader_basic_vert.glsl")
     data_to_c_simple("source/blender/gpu/shaders/gpu_shader_material.glsl")
     data_to_c_simple("source/blender/gpu/shaders/gpu_shader_material.glsl")
     data_to_c_simple("source/blender/gpu/shaders/gpu_shader_sep_gaussian_blur_frag.glsl")

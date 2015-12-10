@@ -15,29 +15,20 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
- * The Original Code is Copyright (C) 2001-2002 by NaN Holding BV.
+ * The Original Code is Copyright (C) 2015 Blender Foundation.
  * All rights reserved.
  *
- * The Original Code is: all of this file.
- *
- * Contributor(s): none yet.
+ * Contributor(s): Blender Foundation,
+ *                 Bastien Montagne
  *
  * ***** END GPL LICENSE BLOCK *****
  */
 
-/** \file RAS_GLExtensionManager.h
- *  \ingroup bgerastogl
- */
+#ifndef __EIGEN_C_API_H__
+#define __EIGEN_C_API_H__
 
-#ifndef __RAS_GLEXTENSIONMANAGER_H__
-#define __RAS_GLEXTENSIONMANAGER_H__
+#include "intern/eigenvalues.h"
+#include "intern/linear_solver.h"
+#include "intern/svd.h"
 
-/** Note: this used to have a lot more code, but now extension handling
- * is done by GLEW, so it does mostly debug stuff */
-
-namespace bgl
-{
-	void InitExtensions(bool debug);
-} /* namespace bgl */
-
-#endif /* __RAS_GLEXTENSIONMANAGER_H__ */
+#endif  /* __EIGEN_C_API_H__ */

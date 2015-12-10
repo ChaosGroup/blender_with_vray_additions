@@ -96,8 +96,8 @@
 #include "UI_resources.h"
 
 #include "GPU_draw.h"
+#include "GPU_framebuffer.h"
 #include "GPU_material.h"
-#include "GPU_extensions.h"
 #include "GPU_compositing.h"
 
 #include "view3d_intern.h"  /* own include */
@@ -3309,9 +3309,6 @@ ImBuf *ED_view3d_draw_offscreen_imbuf(
 	float winmat[4][4];
 
 	if (own_ofs) {
-		/* state changes make normal drawing go weird otherwise */
-		glPushAttrib(GL_LIGHTING_BIT);
-
 		/* bind */
 		ofs = GPU_offscreen_create(sizex, sizey, full_samples ? 0 : samples, err_out);
 		if (ofs == NULL) {

@@ -74,8 +74,8 @@ static DerivedMesh *navmesh_dm_createNavMeshForVisualization(DerivedMesh *dm);
 #include "BLI_sys_types.h" /* for intptr_t support */
 
 #include "GPU_buffers.h"
-#include "GPU_extensions.h"
 #include "GPU_glew.h"
+#include "GPU_shader.h"
 
 #ifdef WITH_OPENSUBDIV
 #  include "DNA_userdef_types.h"
@@ -3529,14 +3529,11 @@ static void navmesh_drawColored(DerivedMesh *dm)
 
 #if 0
 	//UI_ThemeColor(TH_WIRE);
-	glDisable(GL_LIGHTING);
 	glLineWidth(2.0);
 	dm->drawEdges(dm, 0, 1);
 	glLineWidth(1.0);
-	glEnable(GL_LIGHTING);
 #endif
 
-	glDisable(GL_LIGHTING);
 	/* if (GPU_buffer_legacy(dm) ) */ /* TODO - VBO draw code, not high priority - campbell */
 	{
 		DEBUG_VBO("Using legacy code. drawNavMeshColored\n");
@@ -3566,7 +3563,6 @@ static void navmesh_drawColored(DerivedMesh *dm)
 		}
 		glEnd();
 	}
-	glEnable(GL_LIGHTING);
 }
 
 static void navmesh_DM_drawFacesTex(
