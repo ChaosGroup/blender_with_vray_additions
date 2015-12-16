@@ -272,10 +272,13 @@ void VRsceneExporter::exportObjectsPre()
 	m_psys.clear();
 
 	// Create particle system data
-	// Needed for the correct first frame
+	// Needed for the correct first frame when particles
+	// generation is not started from the beginning of the
+	// animation range.
 	//
-	if(ExporterSettings::gSet.m_isAnimation && ExporterSettings::gSet.IsFirstFrame())
+	if (ExporterSettings::gSet.m_isAnimation) {
 		initDupli();
+	}
 }
 
 
@@ -1250,28 +1253,29 @@ void VRsceneExporter::initDupli()
 {
 	PointerRNA sceneRNA;
 	RNA_id_pointer_create((ID*)ExporterSettings::gSet.m_sce, &sceneRNA);
-	BL::Scene bl_sce(sceneRNA);
+	BL::Scene scene(sceneRNA);
 
-	BL::Scene::objects_iterator bl_obIt;
-	for(bl_sce.objects.begin(bl_obIt); bl_obIt != bl_sce.objects.end(); ++bl_obIt) {
-		BL::Object bl_ob = *bl_obIt;
-		if(bl_ob.type() == BL::Object::type_META)
-			continue;
-		if(bl_ob.is_duplicator()) {
-			if(bl_ob.particle_systems.length()) {
-				BL::Object::particle_systems_iterator bl_psysIt;
-				for(bl_ob.particle_systems.begin(bl_psysIt); bl_psysIt != bl_ob.particle_systems.end(); ++bl_psysIt) {
-					BL::ParticleSystem bl_psys = *bl_psysIt;
-					BL::ParticleSettings bl_pset = bl_psys.settings();
-
-					if (IS_PSYS_HAIR(bl_pset))
-						continue;
-
-					m_psys.get(bl_pset.name());
+	BL::Scene::objects_iterator obIt;
+	for (scene.objects.begin(obIt); obIt != scene.objects.end(); ++obIt) {
+		BL::Object ob = *obIt;
+		if ((ob.type() != BL::Object::type_META) && ob.is_duplicator()) {
+			// From particles
+			BL::Object::particle_systems_iterator psIt;
+			for (ob.particle_systems.begin(psIt); psIt != ob.particle_systems.end(); ++psIt) {
+				BL::ParticleSystem psys = *psIt;
+				if (psys) {
+					BL::ParticleSettings pset = psys.settings();
+					if (pset && !IS_PSYS_HAIR(pset)) {
+						const std::string instancerName = ob.name() + psys.name() + pset.name();
+						m_psys.get(instancerName);
+					}
 				}
 			}
-			if(bl_ob.dupli_type() != BL::Object::dupli_type_NONE)
-				m_psys.get(bl_ob.name());
+
+			// From dupli
+			if (ob.dupli_type() != BL::Object::dupli_type_NONE) {
+				m_psys.get(ob.name());
+			}
 		}
 	}
 }
