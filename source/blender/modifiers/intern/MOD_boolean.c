@@ -32,6 +32,7 @@
  *  \ingroup modifiers
  */
 
+// #ifdef DEBUG_TIME
 #define USE_BMESH
 #ifdef WITH_MOD_BOOLEAN
 #  define USE_CARVE WITH_MOD_BOOLEAN
@@ -53,7 +54,9 @@
 #include "MOD_util.h"
 
 #ifdef USE_BMESH
+#include "BLI_alloca.h"
 #include "BLI_math_geom.h"
+#include "BKE_material.h"
 #include "MEM_guardedalloc.h"
 
 #include "bmesh.h"
@@ -61,8 +64,10 @@
 #include "tools/bmesh_intersect.h"
 #endif
 
+#ifdef DEBUG_TIME
 #include "PIL_time.h"
 #include "PIL_time_utildefines.h"
+#endif
 
 static void copyData(ModifierData *md, ModifierData *target)
 {
@@ -190,13 +195,16 @@ static DerivedMesh *applyModifier_bmesh(
 			BMesh *bm;
 			const BMAllocTemplate allocsize = BMALLOC_TEMPLATE_FROM_DM(dm, dm_other);
 
+#ifdef DEBUG_TIME
 			TIMEIT_START(boolean_bmesh);
+#endif
 			bm = BM_mesh_create(&allocsize);
 
 			DM_to_bmesh_ex(dm_other, bm, true);
 			DM_to_bmesh_ex(dm, bm, true);
 
-			if (1) {
+			/* main bmesh intersection setup */
+			{
 				/* create tessface & intersect */
 				const int looptris_tot = poly_to_tri_count(bm->totface, bm->totloop);
 				int tottri;
@@ -232,17 +240,30 @@ static DerivedMesh *applyModifier_bmesh(
 
 					/* we need face normals because of 'BM_face_split_edgenet'
 					 * we could calculate on the fly too (before calling split). */
-					float nmat[4][4];
-					invert_m4_m4(nmat, omat);
+					{
+						float nmat[4][4];
+						invert_m4_m4(nmat, omat);
 
-					BMFace *efa;
-					i = 0;
-					BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
-						mul_transposed_mat3_m4_v3(nmat, efa->no);
-						normalize_v3(efa->no);
-						BM_elem_flag_enable(efa, BM_FACE_TAG);  /* temp tag to test which side split faces are from */
-						if (++i == i_faces_end) {
-							break;
+						const short ob_src_totcol = bmd->object->totcol;
+						short *material_remap = BLI_array_alloca(material_remap, ob_src_totcol ? ob_src_totcol : 1);
+
+						BKE_material_remap_object_calc(ob, bmd->object, material_remap);
+
+						BMFace *efa;
+						i = 0;
+						BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
+							mul_transposed_mat3_m4_v3(nmat, efa->no);
+							normalize_v3(efa->no);
+							BM_elem_flag_enable(efa, BM_FACE_TAG);  /* temp tag to test which side split faces are from */
+
+							/* remap material */
+							if (LIKELY(efa->mat_nr < ob_src_totcol)) {
+								efa->mat_nr = material_remap[efa->mat_nr];
+							}
+
+							if (++i == i_faces_end) {
+								break;
+							}
 						}
 					}
 				}
@@ -271,7 +292,9 @@ static DerivedMesh *applyModifier_bmesh(
 
 			result->dirty |= DM_DIRTY_NORMALS;
 
+#ifdef DEBUG_TIME
 			TIMEIT_END(boolean_bmesh);
+#endif
 
 			return result;
 		}
@@ -315,12 +338,15 @@ static DerivedMesh *applyModifier_carve(
 		result = get_quick_derivedMesh(derivedData, dm, bmd->operation);
 
 		if (result == NULL) {
+#ifdef DEBUG_TIME
 			TIMEIT_START(boolean_carve);
+#endif
 
 			result = NewBooleanDerivedMesh(dm, bmd->object, derivedData, ob,
 			                               1 + bmd->operation);
-
+#ifdef DEBUG_TIME
 			TIMEIT_END(boolean_carve);
+#endif
 		}
 
 		/* if new mesh returned, return it; otherwise there was

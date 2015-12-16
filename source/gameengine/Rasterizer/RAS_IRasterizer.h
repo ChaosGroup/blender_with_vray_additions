@@ -422,7 +422,7 @@ public:
 	/**
 	 * Render Tools
 	 */
-	virtual void applyTransform(double *oglmatrix, int drawingmode) = 0;
+	virtual void applyTransform(float *oglmatrix, int drawingmode) = 0;
 
 	/**
 	 * Renders 2D boxes.
@@ -446,7 +446,7 @@ public:
 	 */
 	virtual void RenderText3D(
 	        int fontid, const char *text, int size, int dpi,
-	        const float color[4], const double mat[16], float aspect) = 0;
+	        const float color[4], const float mat[16], float aspect) = 0;
 
 	/**
 	 * Renders 2D text string.

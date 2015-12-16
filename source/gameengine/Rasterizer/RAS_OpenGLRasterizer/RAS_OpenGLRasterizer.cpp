@@ -89,17 +89,17 @@ RAS_OpenGLRasterizer::RAS_OpenGLRasterizer(RAS_ICanvas* canvas, RAS_STORAGE_TYPE
 	:RAS_IRasterizer(canvas),
 	m_2DCanvas(canvas),
 	m_fogenabled(false),
-	m_time(0.0),
+	m_time(0.0f),
 	m_campos(0.0f, 0.0f, 0.0f),
 	m_camortho(false),
 	m_stereomode(RAS_STEREO_NOSTEREO),
 	m_curreye(RAS_STEREO_LEFTEYE),
-	m_eyeseparation(0.0),
-	m_focallength(0.0),
+	m_eyeseparation(0.0f),
+	m_focallength(0.0f),
 	m_setfocallength(false),
 	m_noOfScanlines(32),
 	m_motionblur(0),
-	m_motionblurvalue(-1.0),
+	m_motionblurvalue(-1.0f),
 	m_usingoverrideshader(false),
 	m_clientobject(NULL),
 	m_auxilaryClientInfo(NULL),
@@ -171,10 +171,10 @@ bool RAS_OpenGLRasterizer::Init()
 	glFrontFace(GL_CCW);
 	m_last_frontface = true;
 
-	m_redback = 0.4375;
-	m_greenback = 0.4375;
-	m_blueback = 0.4375;
-	m_alphaback = 0.0;
+	m_redback = 0.4375f;
+	m_greenback = 0.4375f;
+	m_blueback = 0.4375f;
+	m_alphaback = 0.0f;
 
 	glClearColor(m_redback,m_greenback,m_blueback,m_alphaback);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -249,7 +249,7 @@ void RAS_OpenGLRasterizer::Exit()
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
-	glClearDepth(1.0); 
+	glClearDepth(1.0f);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glClearColor(m_redback, m_greenback, m_blueback, m_alphaback);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -371,8 +371,8 @@ void RAS_OpenGLRasterizer::FlushDebugShapes(SCA_IScene *scene)
 		glColor4f(debugShapes[i].m_color[0], debugShapes[i].m_color[1], debugShapes[i].m_color[2], 1.0f);
 		const MT_Scalar *fromPtr = &debugShapes[i].m_pos.x();
 		const MT_Scalar *toPtr= &debugShapes[i].m_param.x();
-		glVertex3dv(fromPtr);
-		glVertex3dv(toPtr);
+		glVertex3fv(fromPtr);
+		glVertex3fv(toPtr);
 	}
 	glEnd();
 
@@ -383,7 +383,7 @@ void RAS_OpenGLRasterizer::FlushDebugShapes(SCA_IScene *scene)
 		glBegin(GL_LINE_LOOP);
 		glColor4f(debugShapes[i].m_color[0], debugShapes[i].m_color[1], debugShapes[i].m_color[2], 1.0f);
 
-		static const MT_Vector3 worldUp(0.0, 0.0, 1.0);
+		static const MT_Vector3 worldUp(0.0f, 0.0f, 1.0f);
 		MT_Vector3 norm = debugShapes[i].m_param;
 		MT_Matrix3x3 tr;
 		if (norm.fuzzyZero() || norm == worldUp)
@@ -403,12 +403,12 @@ void RAS_OpenGLRasterizer::FlushDebugShapes(SCA_IScene *scene)
 		int n = (int)debugShapes[i].m_param2.y();
 		for (int j = 0; j<n; j++)
 		{
-			MT_Scalar theta = j*M_PI*2/n;
-			MT_Vector3 pos(cos(theta) * rad, sin(theta) * rad, 0.0);
+			MT_Scalar theta = j*(float)M_PI*2/n;
+			MT_Vector3 pos(cosf(theta) * rad, sinf(theta) * rad, 0.0f);
 			pos = pos*tr;
 			pos += debugShapes[i].m_pos;
 			const MT_Scalar* posPtr = &pos.x();
-			glVertex3dv(posPtr);
+			glVertex3fv(posPtr);
 		}
 		glEnd();
 	}
@@ -546,7 +546,7 @@ void RAS_OpenGLRasterizer::SetEye(const StereoEye eye)
 				glColorMask(GL_TRUE, GL_FALSE, GL_FALSE, GL_FALSE);
 			}
 			else {
-				//glAccum(GL_LOAD, 1.0);
+				//glAccum(GL_LOAD, 1.0f);
 				glColorMask(GL_FALSE, GL_TRUE, GL_TRUE, GL_FALSE);
 				ClearDepthBuffer();
 			}
@@ -823,22 +823,22 @@ void RAS_OpenGLRasterizer::DrawDerivedMesh(class RAS_MeshSlot &ms)
 void RAS_OpenGLRasterizer::SetProjectionMatrix(MT_CmMatrix4x4 &mat)
 {
 	glMatrixMode(GL_PROJECTION);
-	double* matrix = &mat(0, 0);
-	glLoadMatrixd(matrix);
+	float* matrix = &mat(0, 0);
+	glLoadMatrixf(matrix);
 
-	m_camortho = (mat(3, 3) != 0.0);
+	m_camortho = (mat(3, 3) != 0.0f);
 }
 
 void RAS_OpenGLRasterizer::SetProjectionMatrix(const MT_Matrix4x4 & mat)
 {
 	glMatrixMode(GL_PROJECTION);
-	double matrix[16];
+	float matrix[16];
 	/* Get into argument. Looks a bit dodgy, but it's ok. */
 	mat.getValue(matrix);
 	/* Internally, MT_Matrix4x4 uses doubles (MT_Scalar). */
-	glLoadMatrixd(matrix);
+	glLoadMatrixf(matrix);
 
-	m_camortho= (mat[3][3] != 0.0);
+	m_camortho= (mat[3][3] != 0.0f);
 }
 
 MT_Matrix4x4 RAS_OpenGLRasterizer::GetFrustumMatrix(
@@ -852,7 +852,7 @@ MT_Matrix4x4 RAS_OpenGLRasterizer::GetFrustumMatrix(
 	bool 
 ) {
 	MT_Matrix4x4 result;
-	double mat[16];
+	float mat[16];
 
 	// correction for stereo
 	if (Stereo())
@@ -891,7 +891,7 @@ MT_Matrix4x4 RAS_OpenGLRasterizer::GetFrustumMatrix(
 	glLoadIdentity();
 	glFrustum(left, right, bottom, top, frustnear, frustfar);
 		
-	glGetDoublev(GL_PROJECTION_MATRIX, mat);
+	glGetFloatv(GL_PROJECTION_MATRIX, mat);
 	result.setValue(mat);
 
 	return result;
@@ -906,14 +906,14 @@ MT_Matrix4x4 RAS_OpenGLRasterizer::GetOrthoMatrix(
 	float frustfar
 ) {
 	MT_Matrix4x4 result;
-	double mat[16];
+	float mat[16];
 
 	// stereo is meaning less for orthographic, disable it
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(left, right, bottom, top, frustnear, frustfar);
 		
-	glGetDoublev(GL_PROJECTION_MATRIX, mat);
+	glGetFloatv(GL_PROJECTION_MATRIX, mat);
 	result.setValue(mat);
 
 	return result;
@@ -931,8 +931,8 @@ void RAS_OpenGLRasterizer::SetViewMatrix(const MT_Matrix4x4 &mat,
 	// correction for stereo
 	if (Stereo() && perspective)
 	{
-		MT_Vector3 unitViewDir(0.0, -1.0, 0.0);  // minus y direction, Blender convention
-		MT_Vector3 unitViewupVec(0.0, 0.0, 1.0);
+		MT_Vector3 unitViewDir(0.0f, -1.0f, 0.0f);  // minus y direction, Blender convention
+		MT_Vector3 unitViewupVec(0.0f, 0.0f, 1.0f);
 		MT_Vector3 viewDir, viewupVec;
 		MT_Vector3 eyeline;
 
@@ -950,7 +950,7 @@ void RAS_OpenGLRasterizer::SetViewMatrix(const MT_Matrix4x4 &mat,
 				// translate to left by half the eye distance
 				MT_Transform transform;
 				transform.setIdentity();
-				transform.translate(-(eyeline * m_eyeseparation / 2.0));
+				transform.translate(-(eyeline * m_eyeseparation / 2.0f));
 				m_viewmatrix *= transform;
 				}
 				break;
@@ -959,7 +959,7 @@ void RAS_OpenGLRasterizer::SetViewMatrix(const MT_Matrix4x4 &mat,
 				// translate to right by half the eye distance
 				MT_Transform transform;
 				transform.setIdentity();
-				transform.translate(eyeline * m_eyeseparation / 2.0);
+				transform.translate(eyeline * m_eyeseparation / 2.0f);
 				m_viewmatrix *= transform;
 				}
 				break;
@@ -974,7 +974,7 @@ void RAS_OpenGLRasterizer::SetViewMatrix(const MT_Matrix4x4 &mat,
 	m_viewmatrix.getValue(glviewmat);
 
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(glviewmat);
+	glLoadMatrixf(glviewmat);
 	m_campos = pos;
 }
 
@@ -1066,7 +1066,7 @@ void RAS_OpenGLRasterizer::EnableMotionBlur(float motionblurvalue)
 void RAS_OpenGLRasterizer::DisableMotionBlur()
 {
 	m_motionblur = 0;
-	m_motionblurvalue = -1.0;
+	m_motionblurvalue = -1.0f;
 }
 
 void RAS_OpenGLRasterizer::SetAlphaBlend(int alphablend)
@@ -1287,7 +1287,7 @@ void RAS_OpenGLRasterizer::RemoveLight(RAS_ILightObject* lightobject)
 		m_lights.erase(lit);
 }
 
-bool RAS_OpenGLRasterizer::RayHit(struct KX_ClientObjectInfo *client, KX_RayCast *result, double *oglmatrix)
+bool RAS_OpenGLRasterizer::RayHit(struct KX_ClientObjectInfo *client, KX_RayCast *result, float *oglmatrix)
 {
 	if (result->m_hitMesh) {
 
@@ -1301,14 +1301,14 @@ bool RAS_OpenGLRasterizer::RayHit(struct KX_ClientObjectInfo *client, KX_RayCast
 		left = (dir.cross(resultnormal)).safe_normalized();
 		// for the up vector, we take the 'resultnormal' returned by the physics
 
-		double maat[16] = {left[0],         left[1],         left[2],         0,
+		float maat[16] = {left[0],         left[1],         left[2],         0,
 			               dir[0],          dir[1],          dir[2],          0,
 				           resultnormal[0], resultnormal[1], resultnormal[2], 0,
 					       0,               0,               0,               1};
 
-		glTranslated(oglmatrix[12],oglmatrix[13],oglmatrix[14]);
+		glTranslatef(oglmatrix[12],oglmatrix[13],oglmatrix[14]);
 		//glMultMatrixd(oglmatrix);
-		glMultMatrixd(maat);
+		glMultMatrixf(maat);
 		return true;
 	}
 	else {
@@ -1316,7 +1316,7 @@ bool RAS_OpenGLRasterizer::RayHit(struct KX_ClientObjectInfo *client, KX_RayCast
 	}
 }
 
-void RAS_OpenGLRasterizer::applyTransform(double* oglmatrix,int objectdrawmode )
+void RAS_OpenGLRasterizer::applyTransform(float* oglmatrix,int objectdrawmode )
 {
 	/* FIXME:
 	blender: intern/moto/include/MT_Vector3.inl:42: MT_Vector3 operator/(const
@@ -1337,14 +1337,14 @@ void RAS_OpenGLRasterizer::applyTransform(double* oglmatrix,int objectdrawmode )
 		//page 360/361 3D Game Engine Design, David Eberly for a discussion
 		// on screen aligned and axis aligned billboards
 		// assumed is that the preprocessor transformed all billboard polygons
-		// so that their normal points into the positive x direction (1.0, 0.0, 0.0)
+		// so that their normal points into the positive x direction (1.0f, 0.0f, 0.0f)
 		// when new parenting for objects is done, this rotation
 		// will be moved into the object
 
 		MT_Point3 objpos (oglmatrix[12],oglmatrix[13],oglmatrix[14]);
 		MT_Point3 campos = GetCameraPosition();
 		MT_Vector3 dir = (campos - objpos).safe_normalized();
-		MT_Vector3 up(0,0,1.0);
+		MT_Vector3 up(0,0,1.0f);
 
 		KX_GameObject* gameobj = (KX_GameObject*)m_clientobject;
 		// get scaling of halo object
@@ -1369,13 +1369,13 @@ void RAS_OpenGLRasterizer::applyTransform(double* oglmatrix,int objectdrawmode )
 		dir  *= size[1];
 		up   *= size[2];
 
-		double maat[16] = {left[0], left[1], left[2], 0,
+		float maat[16] = {left[0], left[1], left[2], 0,
 		                   dir[0],  dir[1],  dir[2],  0,
 		                   up[0],   up[1],   up[2],   0,
 		                   0,       0,       0,       1};
 
 		glTranslatef(objpos[0],objpos[1],objpos[2]);
-		glMultMatrixd(maat);
+		glMultMatrixf(maat);
 
 	}
 	else {
@@ -1399,11 +1399,11 @@ void RAS_OpenGLRasterizer::applyTransform(double* oglmatrix,int objectdrawmode )
 			if (!physics_controller && parent)
 				physics_controller = parent->GetPhysicsController();
 
-			KX_RayCast::Callback<RAS_OpenGLRasterizer, double> callback(this, physics_controller, oglmatrix);
+			KX_RayCast::Callback<RAS_OpenGLRasterizer, float> callback(this, physics_controller, oglmatrix);
 			if (!KX_RayCast::RayTest(physics_environment, frompoint, topoint, callback))
 			{
 				// couldn't find something to cast the shadow on...
-				glMultMatrixd(oglmatrix);
+				glMultMatrixf(oglmatrix);
 			}
 			else
 			{ // we found the "ground", but the cast matrix doesn't take
@@ -1415,7 +1415,7 @@ void RAS_OpenGLRasterizer::applyTransform(double* oglmatrix,int objectdrawmode )
 		{
 
 			// 'normal' object
-			glMultMatrixd(oglmatrix);
+			glMultMatrixf(oglmatrix);
 		}
 	}
 }
@@ -1504,7 +1504,7 @@ void RAS_OpenGLRasterizer::RenderBox2D(int xco,
 
 void RAS_OpenGLRasterizer::RenderText3D(
         int fontid, const char *text, int size, int dpi,
-        const float color[4], const double mat[16], float aspect)
+        const float color[4], const float mat[16], float aspect)
 {
 	/* gl prepping */
 	DisableForText();
@@ -1591,13 +1591,13 @@ void RAS_OpenGLRasterizer::MotionBlur()
 		if (state==1)
 		{
 			//bugfix:load color buffer into accum buffer for the first time(state=1)
-			glAccum(GL_LOAD, 1.0);
+			glAccum(GL_LOAD, 1.0f);
 			SetMotionBlurState(2);
 		}
 		else if (motionblurvalue >= 0.0f && motionblurvalue <= 1.0f) {
 			glAccum(GL_MULT, motionblurvalue);
 			glAccum(GL_ACCUM, 1-motionblurvalue);
-			glAccum(GL_RETURN, 1.0);
+			glAccum(GL_RETURN, 1.0f);
 			glFlush();
 		}
 	}
