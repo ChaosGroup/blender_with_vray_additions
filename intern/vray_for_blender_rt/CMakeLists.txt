@@ -46,7 +46,7 @@ set(INC
 )
 
 if(USE_BLENDER_VRAY_ZMQ)
-	list(APPEND INC ${ZMQ_ROOT}/include)
+	list(APPEND INC ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
 	list(APPEND INC extern/vray-zmq-wrapper/extern/cppzmq)
 
 	file(GLOB_RECURSE HEADERS "*.h")

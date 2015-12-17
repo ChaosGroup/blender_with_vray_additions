@@ -297,7 +297,8 @@ function(SETUP_LIBDIRS)
 	if(WITH_VRAY_FOR_BLENDER)
 		link_directories(${APPSDK_ROOT}/bin)
 		link_directories(${APPSDK_PATH}/devel)
-		link_directories(${ZMQ_PATH}/lib)
+		link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/${CMAKE_BUILD_TYPE})
+		link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/${CMAKE_BUILD_TYPE})
 	endif()
 	if(WIN32 AND NOT UNIX)
 		link_directories(${PTHREADS_LIBPATH})
@@ -467,7 +468,16 @@ function(setup_liblinks
 		if(USE_BLENDER_VRAY_APPSDK)
 			target_link_libraries(${target} VRaySDKLibrary)
 		endif()
-		target_link_libraries(${target} ${ZMQ_LIB})
+		if(UNIX)
+			target_link_libraries(${target}
+				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a
+				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/Release/libsodium.a
+				)
+		elseif(WIN32)
+			target_link_libraries(${target} libsodium)
+			target_link_libraries(${target} libzmq)
+			target_link_libraries(${target} wsock32 ws2_32)
+		endif()
 	endif()
 
 	#system libraries with no dependencies such as platform link libs or opengl should go last
