@@ -25,6 +25,43 @@
 
 using namespace VRayForBlender;
 
+ZmqWorkerPool::ZmqWorkerPool()
+{
+}
+
+ZmqWorkerPool & ZmqWorkerPool::getInstance()
+{
+	static ZmqWorkerPool pool;
+	return pool;
+}
+
+ClientPtr ZmqWorkerPool::getClient()
+{
+	if (m_Clients.empty()) {
+		m_Clients.push(ClientPtr(new ZmqClient()));
+	}
+
+	auto cl = std::move(m_Clients.top());
+	m_Clients.pop();
+	return cl;
+}
+
+void ZmqWorkerPool::returnClient(ClientPtr cl)
+{
+	cl->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
+	m_Clients.push(std::move(cl));
+}
+
+ZmqWorkerPool::~ZmqWorkerPool()
+{
+	while (!m_Clients.empty()) {
+		m_Clients.top()->setFlushOnExit(false);
+		m_Clients.top()->forceFree();
+		m_Clients.pop();
+	}
+}
+
+
 struct JpegErrorManager {
 	jpeg_error_mgr pub;
 	jmp_buf setjmp_buffer;
@@ -198,8 +235,11 @@ ZmqExporter::ZmqExporter():
 ZmqExporter::~ZmqExporter()
 {
 	free();
-	m_Client->setFlushOnExit(true);
-	delete m_Client;
+
+	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
+
+	m_Client->setCallback(ZmqWrapper::ZmqWrapperCallback_t());
+	ZmqWorkerPool::getInstance().returnClient(std::move(m_Client));
 }
 
 RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
@@ -225,6 +265,8 @@ RenderImage ZmqExporter::get_image() {
 }
 
 void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
+	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
+
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
 		if (this->on_message_update) {
@@ -268,9 +310,12 @@ void ZmqExporter::init()
 
 		m_Client->setCallback(std::bind(&ZmqExporter::zmqCallback, this, _1, _2));
 
-		char portStr[32];
-		snprintf(portStr, 32, ":%d", this->m_ServerPort);
-		m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
+		if (!m_Client->connected()) {
+			char portStr[32];
+			snprintf(portStr, 32, ":%d", this->m_ServerPort);
+			m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
+		}
+
 		if (m_Client->connected()) {
 			auto mode = this->animation_settings.use && !this->is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
 			if (mode == VRayMessage::RendererType::Animation || !this->is_viewport) {
@@ -298,7 +343,7 @@ void ZmqExporter::checkZmqClient()
 	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
 
 	if (!m_Client) {
-		m_Client = new ZmqClient();
+		m_Client = ZmqWorkerPool::getInstance().getClient();
 	} else {
 		if (!m_Client->connected()) {
 			// we can't connect dont retry
@@ -306,8 +351,8 @@ void ZmqExporter::checkZmqClient()
 		}
 
 		if (!m_Client->good()) {
-			delete m_Client;
-			m_Client = new ZmqClient();
+			m_Client.release();
+			m_Client = ZmqWorkerPool::getInstance().getClient();
 			this->init();
 		}
 	}

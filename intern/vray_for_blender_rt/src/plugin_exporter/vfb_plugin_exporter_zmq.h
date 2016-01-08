@@ -26,8 +26,28 @@
 #include "zmq_message.hpp"
 
 #include <unordered_map>
+#include <stack>
+#include <vector>
 
 namespace VRayForBlender {
+
+typedef std::unique_ptr<ZmqClient> ClientPtr;
+
+class ZmqWorkerPool {
+public:
+
+	static ZmqWorkerPool & getInstance();
+	ClientPtr getClient();
+	void returnClient(ClientPtr cl);
+
+private:
+	std::stack<ClientPtr, std::vector<ClientPtr>> m_Clients;
+
+private:
+	~ZmqWorkerPool();
+	ZmqWorkerPool();
+};
+
 
 class ZmqExporter:
         public PluginExporter
@@ -73,7 +93,7 @@ private:
 
 	int                 m_ServerPort;
 	std::string         m_ServerAddress;
-	ZmqClient          *m_Client;
+	ClientPtr           m_Client;
 
 	std::mutex          m_ImgMutex;
 	std::mutex          m_ZmqClientMutex;
