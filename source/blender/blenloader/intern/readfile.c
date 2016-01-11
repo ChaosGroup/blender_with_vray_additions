@@ -8280,7 +8280,7 @@ static void lib_link_all(FileData *fd, Main *main)
 			continue; /* Since nodetrees aren't all in main, they do their own id-prop linking */
 
 		while (loop) {
-			if (loop->flag & LIB_TAG_NEED_LINK) /* Don't unset yet! */
+			if (loop->tag & LIB_TAG_NEED_LINK) /* Don't unset yet! */
 				IDP_LibLinkProperty(loop->properties, fd);
 			loop = loop->next;
 		}
