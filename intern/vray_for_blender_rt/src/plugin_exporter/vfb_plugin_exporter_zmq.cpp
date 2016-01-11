@@ -73,6 +73,51 @@ static void jpegErrorExit(j_common_ptr cinfo) {
 	longjmp(myerr->setjmp_buffer, 1);
 }
 
+
+static void init_source(j_decompress_ptr cinfo) {}
+
+static boolean fill_input_buffer (j_decompress_ptr cinfo) {
+	unsigned char *buf = (unsigned char *) cinfo->src->next_input_byte - 2;
+
+	buf[0] = (JOCTET) 0xFF;
+	buf[1] = (JOCTET) JPEG_EOI;
+
+	cinfo->src->next_input_byte = buf;
+	cinfo->src->bytes_in_buffer = 2;
+
+	return TRUE;
+}
+
+static void skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
+    struct jpeg_source_mgr* src = (struct jpeg_source_mgr*) cinfo->src;
+
+    if (num_bytes > 0) {
+        src->next_input_byte += (size_t) num_bytes;
+        src->bytes_in_buffer -= (size_t) num_bytes;
+    }
+}
+
+static void term_source(j_decompress_ptr cinfo) {}
+
+static void jpeg_mem_src_own(j_decompress_ptr cinfo, const unsigned char * buffer, int nbytes) {
+    struct jpeg_source_mgr* src;
+
+    if (cinfo->src == NULL) {   /* first time for this JPEG object? */
+        cinfo->src = (struct jpeg_source_mgr *)
+            (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
+            sizeof(struct jpeg_source_mgr));
+    }
+
+    src = (struct jpeg_source_mgr*) cinfo->src;
+    src->init_source = init_source;
+    src->fill_input_buffer = fill_input_buffer;
+    src->skip_input_data = skip_input_data;
+    src->resync_to_restart = jpeg_resync_to_restart; /* use default method */
+    src->term_source = term_source;
+    src->bytes_in_buffer = nbytes;
+    src->next_input_byte = (JOCTET*)buffer;
+}
+
 static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 	jpeg_decompress_struct jpegInfo;
 	JpegErrorManager jpegError;
@@ -87,7 +132,7 @@ static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 	}
 
 	jpeg_create_decompress(&jpegInfo);
-	jpeg_mem_src(&jpegInfo, data, size);
+	jpeg_mem_src_own(&jpegInfo, data, size);
 
 	if (jpeg_read_header(&jpegInfo, TRUE) != JPEG_HEADER_OK) {
 		return nullptr;
