@@ -3678,7 +3678,7 @@ static void lib_link_image(FileData *fd, Main *main)
 	
 	for (ima = main->image.first; ima; ima = ima->id.next) {
 		if (ima->id.tag & LIB_TAG_NEED_LINK) {
-			IDP_LibLinkProperty(ima->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+			IDP_LibLinkProperty(ima->id.properties, fd);
 			
 			ima->id.tag &= ~LIB_TAG_NEED_LINK;
 		}
@@ -4704,7 +4704,7 @@ static void lib_link_object(FileData *fd, Main *main)
 	
 	for (ob = main->object.first; ob; ob = ob->id.next) {
 		if (ob->id.tag & LIB_TAG_NEED_LINK) {
-			IDP_LibLinkProperty(ob->id.properties, (fd->flags & FD_FLAGS_SWITCH_ENDIAN), fd);
+			IDP_LibLinkProperty(ob->id.properties, fd);
 			lib_link_animdata(fd, &ob->id, ob->adt);
 			
 // XXX deprecated - old animation system <<<
@@ -8280,7 +8280,7 @@ static void lib_link_all(FileData *fd, Main *main)
 			continue; /* Since nodetrees aren't all in main, they do their own id-prop linking */
 
 		while (loop) {
-			if (loop->flag & LIB_NEED_LINK) /* Don't unset yet! */
+			if (loop->flag & LIB_TAG_NEED_LINK) /* Don't unset yet! */
 				IDP_LibLinkProperty(loop->properties, fd);
 			loop = loop->next;
 		}
