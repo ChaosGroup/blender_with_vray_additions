@@ -827,7 +827,9 @@ static ImBuf *add_ibuf_size(unsigned int width, unsigned int height, const char 
 }
 
 /* adds new image block, creates ImBuf and initializes color */
-Image *BKE_image_add_generated(Main *bmain, unsigned int width, unsigned int height, const char *name, int depth, int floatbuf, short gen_type, const float color[4], const bool stereo3d)
+Image *BKE_image_add_generated(
+        Main *bmain, unsigned int width, unsigned int height, const char *name,
+        int depth, int floatbuf, short gen_type, const float color[4], const bool stereo3d)
 {
 	/* on save, type is changed to FILE in editsima.c */
 	Image *ima = image_alloc(bmain, name, IMA_SRC_GENERATED, IMA_TYPE_UV_TEST);
@@ -1136,14 +1138,14 @@ void BKE_image_free_all_textures(void)
 #endif
 
 	for (ima = G.main->image.first; ima; ima = ima->id.next)
-		ima->id.flag &= ~LIB_DOIT;
+		ima->id.tag &= ~LIB_TAG_DOIT;
 
 	for (tex = G.main->tex.first; tex; tex = tex->id.next)
 		if (tex->ima)
-			tex->ima->id.flag |= LIB_DOIT;
+			tex->ima->id.tag |= LIB_TAG_DOIT;
 
 	for (ima = G.main->image.first; ima; ima = ima->id.next) {
-		if (ima->cache && (ima->id.flag & LIB_DOIT)) {
+		if (ima->cache && (ima->id.tag & LIB_TAG_DOIT)) {
 #ifdef CHECK_FREED_SIZE
 			uintptr_t old_size = image_mem_size(ima);
 #endif
@@ -2092,7 +2094,7 @@ void BKE_render_result_stamp_info(Scene *scene, Object *camera, struct RenderRes
 
 void BKE_stamp_info_callback(void *data, struct StampData *stamp_data, StampCallback callback, bool noskip)
 {
-	if (!callback || !stamp_data) {
+	if ((callback == NULL) || (stamp_data == NULL)) {
 		return;
 	}
 
@@ -2166,7 +2168,7 @@ bool BKE_imbuf_alpha_test(ImBuf *ibuf)
 
 /* note: imf->planes is ignored here, its assumed the image channels
  * are already set */
-void BKE_imbuf_write_prepare(ImBuf *ibuf, ImageFormatData *imf)
+void BKE_imbuf_write_prepare(ImBuf *ibuf, const ImageFormatData *imf)
 {
 	char imtype = imf->imtype;
 	char compress = imf->compress;
@@ -2298,7 +2300,7 @@ void BKE_imbuf_write_prepare(ImBuf *ibuf, ImageFormatData *imf)
 	}
 }
 
-int BKE_imbuf_write(ImBuf *ibuf, const char *name, ImageFormatData *imf)
+int BKE_imbuf_write(ImBuf *ibuf, const char *name, const ImageFormatData *imf)
 {
 	int ok;
 
@@ -2337,7 +2339,9 @@ int BKE_imbuf_write_as(ImBuf *ibuf, const char *name, ImageFormatData *imf,
 	return ok;
 }
 
-int BKE_imbuf_write_stamp(Scene *scene, struct RenderResult *rr, ImBuf *ibuf, const char *name, struct ImageFormatData *imf)
+int BKE_imbuf_write_stamp(
+        Scene *scene, struct RenderResult *rr, ImBuf *ibuf, const char *name,
+        const struct ImageFormatData *imf)
 {
 	if (scene && scene->r.stamp & R_STAMP_ALL)
 		BKE_imbuf_stamp_info(rr, ibuf);
@@ -2861,21 +2865,30 @@ bool BKE_image_is_stereo(Image *ima)
             BLI_findstring(&ima->views, STEREO_RIGHT_NAME, offsetof(ImageView, name)));
 }
 
-static void image_view_from_render_view(ImageView *iv_dst, RenderView *rv_src)
-{
-	BLI_strncpy(iv_dst->name, rv_src->name, sizeof(iv_dst->name));
-}
-
 static void image_init_multilayer_multiview(Image *ima, RenderResult *rr)
 {
+	/* update image views from render views, but only if they actually changed,
+	 * to avoid invalid memory access during render. ideally these should always
+	 * be acquired with a mutex along with the render result, but there are still
+	 * some places with just an image pointer that need to access views */
+	if (rr && BLI_listbase_count(&ima->views) == BLI_listbase_count(&rr->views)) {
+		ImageView *iv = ima->views.first;
+		RenderView *rv = rr->views.first;
+		bool modified = false;
+		for (; rv; rv = rv->next, iv = iv->next) {
+			modified |= !STREQ(rv->name, iv->name);
+		}
+		if (!modified)
+			return;
+	}
+
 	BKE_image_free_views(ima);
+
 	if (rr) {
-		RenderView *rv_src;
-		for (rv_src = rr->views.first; rv_src; rv_src = rv_src->next) {
-			ImageView *iv_dst;
-			iv_dst = MEM_callocN(sizeof(ImageView), "Viewer Image View");
-			image_view_from_render_view(iv_dst, rv_src);
-			BLI_addhead(&ima->views, iv_dst);
+		for (RenderView *rv = rr->views.first; rv; rv = rv->next) {
+			ImageView *iv = MEM_callocN(sizeof(ImageView), "Viewer Image View");
+			BLI_strncpy(iv->name, rv->name, sizeof(iv->name));
+			BLI_addtail(&ima->views, iv);
 		}
 	}
 }

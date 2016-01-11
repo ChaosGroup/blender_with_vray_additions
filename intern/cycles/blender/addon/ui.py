@@ -60,6 +60,20 @@ def use_cpu(context):
     return (device_type == 'NONE' or cscene.device == 'CPU')
 
 
+def use_opencl(context):
+    cscene = context.scene.cycles
+    device_type = context.user_preferences.system.compute_device_type
+
+    return (device_type == 'OPENCL' and cscene.device == 'GPU')
+
+
+def use_cuda(context):
+    cscene = context.scene.cycles
+    device_type = context.user_preferences.system.compute_device_type
+
+    return (device_type == 'CUDA' and cscene.device == 'GPU')
+
+
 def use_branched_path(context):
     cscene = context.scene.cycles
     device_type = context.user_preferences.system.compute_device_type
@@ -280,6 +294,12 @@ class CyclesRender_PT_motion_blur(CyclesButtonsPanel, Panel):
         row.operator("render.shutter_curve_preset", icon='SHARPCURVE', text="").shape = 'SHARP'
         row.operator("render.shutter_curve_preset", icon='LINCURVE', text="").shape = 'LINE'
         row.operator("render.shutter_curve_preset", icon='NOCURVE', text="").shape = 'MAX'
+
+        col = layout.column()
+        col.prop(cscene, "rolling_shutter_type")
+        row = col.row()
+        row.active = cscene.rolling_shutter_type != 'NONE'
+        row.prop(cscene, "rolling_shutter_duration")
 
 
 class CyclesRender_PT_film(CyclesButtonsPanel, Panel):

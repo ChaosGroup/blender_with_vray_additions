@@ -412,7 +412,7 @@ bool ED_wpaint_fill(VPaint *wp, Object *ob, float paintweight)
 					dw->weight = paintweight;
 
 					if (me->editflag & ME_EDIT_MIRROR_X) {  /* x mirror painting */
-						int j = mesh_get_x_mirror_vert(ob, vidx, topology);
+						int j = mesh_get_x_mirror_vert(ob, NULL, vidx, topology);
 						if (j >= 0) {
 							/* copy, not paint again */
 							if (vgroup_mirror != -1) {
@@ -1718,7 +1718,7 @@ static void do_weight_paint_vertex(
 
 	/* from now on we can check if mirrors enabled if this var is -1 and not bother with the flag */
 	if (me->editflag & ME_EDIT_MIRROR_X) {
-		index_mirr = mesh_get_x_mirror_vert(ob, index, topology);
+		index_mirr = mesh_get_x_mirror_vert(ob, NULL, index, topology);
 		vgroup_mirr = (wpi->vgroup_mirror != -1) ? wpi->vgroup_mirror : wpi->vgroup_active;
 
 		/* another possible error - mirror group _and_ active group are the same (which is fine),
@@ -1956,8 +1956,8 @@ static int wpaint_mode_toggle_exec(bContext *C, wmOperator *op)
 		}
 
 		/* weight paint specific */
-		ED_mesh_mirror_spatial_table(NULL, NULL, NULL, 'e');
-		ED_mesh_mirror_topo_table(NULL, 'e');
+		ED_mesh_mirror_spatial_table(NULL, NULL, NULL, NULL, 'e');
+		ED_mesh_mirror_topo_table(NULL, NULL, 'e');
 
 		paint_cursor_delete_textures();
 	}
@@ -1972,7 +1972,7 @@ static int wpaint_mode_toggle_exec(bContext *C, wmOperator *op)
 		BKE_paint_init(scene, ePaintWeight, PAINT_CURSOR_WEIGHT_PAINT);
 
 		/* weight paint specific */
-		ED_mesh_mirror_spatial_table(ob, NULL, NULL, 's');
+		ED_mesh_mirror_spatial_table(ob, NULL, NULL, NULL, 's');
 		ED_vgroup_sync_from_pose(ob);
 	}
 	
@@ -2020,6 +2020,15 @@ void PAINT_OT_weight_paint_toggle(wmOperatorType *ot)
 
 /* ************ weight paint operator ********** */
 
+enum eWPaintFlag {
+	WPAINT_ENSURE_MIRROR = (1 << 0),
+};
+
+struct WPaintVGroupIndex {
+	int active;
+	int mirror;
+};
+
 struct WPaintData {
 	ViewContext vc;
 	int *indexar;
@@ -2038,11 +2047,18 @@ struct WPaintData {
 };
 
 /* ensure we have data on wpaint start, add if needed */
-static bool wpaint_ensure_data(bContext *C, wmOperator *op)
+static bool wpaint_ensure_data(
+        bContext *C, wmOperator *op,
+        enum eWPaintFlag flag, struct WPaintVGroupIndex *vgroup_index)
 {
 	Scene *scene = CTX_data_scene(C);
 	Object *ob = CTX_data_active_object(C);
 	Mesh *me = BKE_mesh_from_object(ob);
+
+	if (vgroup_index) {
+		vgroup_index->active = -1;
+		vgroup_index->mirror = -1;
+	}
 
 	if (scene->obedit) {
 		return false;
@@ -2090,6 +2106,14 @@ static bool wpaint_ensure_data(bContext *C, wmOperator *op)
 		return false;
 	}
 
+	vgroup_index->active = ob->actdef - 1;
+
+	if (flag & WPAINT_ENSURE_MIRROR) {
+		if (me->editflag & ME_EDIT_MIRROR_X) {
+			vgroup_index->mirror = wpaint_mirror_vgroup_ensure(ob, vgroup_index->active);
+		}
+	}
+
 	return true;
 }
 
@@ -2102,20 +2126,29 @@ static bool wpaint_stroke_test_start(bContext *C, wmOperator *op, const float UN
 	Object *ob = CTX_data_active_object(C);
 	Mesh *me = BKE_mesh_from_object(ob);
 	struct WPaintData *wpd;
+	struct WPaintVGroupIndex vgroup_index;
 
 	float mat[4][4], imat[4][4];
 
-	if (wpaint_ensure_data(C, op) == false) {
+	if (wpaint_ensure_data(C, op, WPAINT_ENSURE_MIRROR, &vgroup_index) == false) {
 		return false;
 	}
 
 	{
 		/* check if we are attempting to paint onto a locked vertex group,
 		 * and other options disallow it from doing anything useful */
-		bDeformGroup *dg = BLI_findlink(&ob->defbase, (ob->actdef - 1));
+		bDeformGroup *dg;
+		dg = BLI_findlink(&ob->defbase, vgroup_index.active);
 		if (dg->flag & DG_LOCK_WEIGHT) {
 			BKE_report(op->reports, RPT_WARNING, "Active group is locked, aborting");
 			return false;
+		}
+		if (vgroup_index.mirror != -1) {
+			dg = BLI_findlink(&ob->defbase, vgroup_index.mirror);
+			if (dg->flag & DG_LOCK_WEIGHT) {
+				BKE_report(op->reports, RPT_WARNING, "Mirror group is locked, aborting");
+				return false;
+			}
 		}
 	}
 
@@ -2125,8 +2158,8 @@ static bool wpaint_stroke_test_start(bContext *C, wmOperator *op, const float UN
 	paint_stroke_set_mode_data(stroke, wpd);
 	view3d_set_viewcontext(C, &wpd->vc);
 
-	wpd->vgroup_active = ob->actdef - 1;
-	wpd->vgroup_mirror = -1;
+	wpd->vgroup_active = vgroup_index.active;
+	wpd->vgroup_mirror = vgroup_index.mirror;
 
 	/* set up auto-normalize, and generate map for detecting which
 	 * vgroups affect deform bones */
@@ -2147,11 +2180,6 @@ static bool wpaint_stroke_test_start(bContext *C, wmOperator *op, const float UN
 	invert_m4_m4(imat, mat);
 	copy_m3_m4(wpd->wpimat, imat);
 
-	/* if mirror painting, find the other group */
-	if (me->editflag & ME_EDIT_MIRROR_X) {
-		wpd->vgroup_mirror = wpaint_mirror_vgroup_ensure(ob, wpd->vgroup_active);
-	}
-	
 	return true;
 }
 
@@ -2510,7 +2538,7 @@ static int weight_paint_set_exec(bContext *C, wmOperator *op)
 	Brush *brush = BKE_paint_brush(&ts->wpaint->paint);
 	float vgroup_weight = BKE_brush_weight_get(scene, brush);
 
-	if (wpaint_ensure_data(C, op) == false) {
+	if (wpaint_ensure_data(C, op, WPAINT_ENSURE_MIRROR, NULL) == false) {
 		return OPERATOR_CANCELLED;
 	}
 
@@ -3206,7 +3234,7 @@ static int paint_weight_gradient_exec(bContext *C, wmOperator *op)
 		vert_cache = gesture->userdata;
 	}
 	else {
-		if (wpaint_ensure_data(C, op) == false) {
+		if (wpaint_ensure_data(C, op, 0, NULL) == false) {
 			return OPERATOR_CANCELLED;
 		}
 
@@ -3265,7 +3293,7 @@ static int paint_weight_gradient_invoke(bContext *C, wmOperator *op, const wmEve
 {
 	int ret;
 
-	if (wpaint_ensure_data(C, op) == false) {
+	if (wpaint_ensure_data(C, op, 0, NULL) == false) {
 		return OPERATOR_CANCELLED;
 	}
 

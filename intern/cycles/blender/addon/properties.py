@@ -92,6 +92,7 @@ enum_tile_order = (
     ('LEFT_TO_RIGHT', "Left to Right", "Render from left to right"),
     ('TOP_TO_BOTTOM', "Top to Bottom", "Render from top to bottom"),
     ('BOTTOM_TO_TOP', "Bottom to Top", "Render from bottom to top"),
+    ('HILBERT_SPIRAL', "Hilbert Spiral", "Render in a Hilbert Spiral"),
     )
 
 enum_use_layer_samples = (
@@ -529,6 +530,24 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 ('CENTER', "Center on Frame", "The shutter is open during the current frame"),
                 ('END', "End on Frame", "The shutter closes at the current frame"),
                 ),
+            )
+
+        cls.rolling_shutter_type = EnumProperty(
+            name="Shutter Type",
+            default='NONE',
+            description="Type of rolling shutter effect matching CMOS-based cameras",
+            items=(
+                ('NONE', "None", "No rolling shutter effect used"),
+                ('TOP', "Top-Bottom", "Sensor is being scanned from top to bottom")
+                # TODO(seergey): Are there real cameras with different scanning direction?
+                ),
+            )
+
+        cls.rolling_shutter_duration = FloatProperty(
+            name="Rolling Shutter Duration",
+            description="Scanline \"exposure\" time for the rolling shutter effect",
+            default = 0.1,
+            min=0.0, max=1.0,
             )
 
     @classmethod

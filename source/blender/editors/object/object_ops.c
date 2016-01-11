@@ -336,19 +336,19 @@ void ED_keymap_object(wmKeyConfig *keyconf)
 	WM_keymap_add_item(keymap, "OBJECT_OT_select_mirror", MKEY, KM_PRESS, KM_CTRL | KM_SHIFT, 0);
 	
 	kmi = WM_keymap_add_item(keymap, "OBJECT_OT_select_hierarchy", LEFTBRACKETKEY, KM_PRESS, 0, 0);
-	RNA_enum_set_identifier(kmi->ptr, "direction", "PARENT");
+	RNA_enum_set_identifier(NULL, kmi->ptr, "direction", "PARENT");
 	RNA_boolean_set(kmi->ptr, "extend", false);
 
 	kmi = WM_keymap_add_item(keymap, "OBJECT_OT_select_hierarchy", LEFTBRACKETKEY, KM_PRESS, KM_SHIFT, 0);
-	RNA_enum_set_identifier(kmi->ptr, "direction", "PARENT");
+	RNA_enum_set_identifier(NULL, kmi->ptr, "direction", "PARENT");
 	RNA_boolean_set(kmi->ptr, "extend", true);
 
 	kmi = WM_keymap_add_item(keymap, "OBJECT_OT_select_hierarchy", RIGHTBRACKETKEY, KM_PRESS, 0, 0);
-	RNA_enum_set_identifier(kmi->ptr, "direction", "CHILD");
+	RNA_enum_set_identifier(NULL, kmi->ptr, "direction", "CHILD");
 	RNA_boolean_set(kmi->ptr, "extend", false);
 
 	kmi = WM_keymap_add_item(keymap, "OBJECT_OT_select_hierarchy", RIGHTBRACKETKEY, KM_PRESS, KM_SHIFT, 0);
-	RNA_enum_set_identifier(kmi->ptr, "direction", "CHILD");
+	RNA_enum_set_identifier(NULL, kmi->ptr, "direction", "CHILD");
 	RNA_boolean_set(kmi->ptr, "extend", true);
 
 	WM_keymap_verify_item(keymap, "OBJECT_OT_parent_set", PKEY, KM_PRESS, KM_CTRL, 0);
@@ -464,6 +464,7 @@ void ED_keymap_proportional_cycle(struct wmKeyConfig *UNUSED(keyconf), struct wm
 
 	kmi = WM_keymap_add_item(keymap, "WM_OT_context_cycle_enum", OKEY, KM_PRESS, KM_SHIFT, 0);
 	RNA_string_set(kmi->ptr, "data_path", "tool_settings.proportional_edit_falloff");
+	RNA_boolean_set(kmi->ptr, "wrap", true);
 }
 
 void ED_keymap_proportional_obmode(struct wmKeyConfig *UNUSED(keyconf), struct wmKeyMap *keymap)

@@ -156,7 +156,7 @@ static void pointdensity_cache_psys(Scene *scene,
 		                            CD_MASK_BAREMESH | CD_MASK_MTFACE | CD_MASK_MCOL);
 	}
 
-	if ( !psys_check_enabled(ob, psys)) {
+	if (!psys_check_enabled(ob, psys)) {
 		psys_render_restore(ob, psys);
 		return;
 	}

@@ -278,7 +278,6 @@ void RE_DataBase_GetView(struct Render *re, float mat[4][4]) RET_NONE
 int	externtex(struct MTex *mtex, const float vec[3], float *tin, float *tr, float *tg, float *tb, float *ta, const int thread, struct ImagePool *pool, const bool skip_load_image) RET_ZERO
 float texture_value_blend(float tex, float out, float fact, float facg, int blendtype) RET_ZERO
 void texture_rgb_blend(float in[3], const float tex[3], const float out[3], float fact, float facg, int blendtype) RET_NONE
-const unsigned char stipple_quarttone[128];
 double elbeemEstimateMemreq(int res, float sx, float sy, float sz, int refine, char *retstr) RET_ZERO
 struct Render *RE_NewRender(const char *name) RET_NULL
 void RE_SwapResult(struct Render *re, struct RenderResult **rr) RET_NONE
@@ -498,8 +497,8 @@ void ED_object_constraint_tag_update(struct Object *ob, struct bConstraint *con)
 void ED_vgroup_vert_add(struct Object *ob, struct bDeformGroup *dg, int vertnum, float weight, int assignmode) RET_NONE
 void ED_vgroup_vert_remove(struct Object *ob, struct bDeformGroup *dg, int vertnum) RET_NONE
 float ED_vgroup_vert_weight(struct Object *ob, struct bDeformGroup *dg, int vertnum) RET_ZERO
-int ED_mesh_mirror_topo_table(struct Object *ob, char mode) RET_ZERO
-int ED_mesh_mirror_spatial_table(struct Object *ob, struct BMEditMesh *em, const float co[3], char mode) RET_ZERO
+int ED_mesh_mirror_topo_table(struct Object *ob, struct DerivedMesh *dm, char mode) RET_ZERO
+int ED_mesh_mirror_spatial_table(struct Object *ob, struct BMEditMesh *em, struct DerivedMesh *dm, const float co[3], char mode) RET_ZERO
 
 float ED_rollBoneToVector(EditBone *bone, const float new_up_axis[3], const bool axis_only) RET_ZERO
 void ED_space_image_get_size(struct SpaceImage *sima, int *width, int *height) RET_NONE

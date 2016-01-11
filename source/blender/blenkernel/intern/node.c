@@ -1975,6 +1975,15 @@ bNodeTree *ntreeFromID(ID *id)
 	}
 }
 
+static void extern_local_ntree(bNodeTree *ntree)
+{
+	for (bNode *node = ntree->nodes.first; node; node = node->next) {
+		if (node->id) {
+			id_lib_extern(node->id);
+		}
+	}
+}
+
 void ntreeMakeLocal(bNodeTree *ntree)
 {
 	Main *bmain = G.main;
@@ -1988,6 +1997,7 @@ void ntreeMakeLocal(bNodeTree *ntree)
 	if (ntree->id.lib == NULL) return;
 	if (ntree->id.us == 1) {
 		id_clear_lib_data(bmain, (ID *)ntree);
+		extern_local_ntree(ntree);
 		return;
 	}
 	
@@ -2008,6 +2018,7 @@ void ntreeMakeLocal(bNodeTree *ntree)
 	/* if all users are local, we simply make tree local */
 	if (local && !lib) {
 		id_clear_lib_data(bmain, (ID *)ntree);
+		extern_local_ntree(ntree);
 	}
 	else if (local && lib) {
 		/* this is the mixed case, we copy the tree and assign it to local users */

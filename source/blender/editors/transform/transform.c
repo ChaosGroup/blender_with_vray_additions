@@ -2038,6 +2038,10 @@ void saveTransform(bContext *C, TransInfo *t, wmOperator *op)
 			RNA_property_boolean_set(op->ptr, prop, (t->flag & T_ALT_TRANSFORM) != 0);
 		}
 	}
+
+	if ((prop = RNA_struct_find_property(op->ptr, "correct_uv"))) {
+		RNA_property_boolean_set(op->ptr, prop, (t->settings->uvcalc_flag & UVCALC_TRANSFORM_CORRECT) != 0);
+	}
 }
 
 /**
@@ -6821,25 +6825,25 @@ static void drawEdgeSlide(TransInfo *t)
 
 				UI_ThemeColorShadeAlpha(TH_SELECT, -30, alpha_shade);
 				glPointSize(ctrl_size);
-				bglBegin(GL_POINTS);
+				glBegin(GL_POINTS);
 				if (sld->flipped) {
-					if (curr_sv->v_side[1]) bglVertex3fv(curr_sv->v_side[1]->co);
+					if (curr_sv->v_side[1]) glVertex3fv(curr_sv->v_side[1]->co);
 				}
 				else {
-					if (curr_sv->v_side[0]) bglVertex3fv(curr_sv->v_side[0]->co);
+					if (curr_sv->v_side[0]) glVertex3fv(curr_sv->v_side[0]->co);
 				}
-				bglEnd();
+				glEnd();
 
 				UI_ThemeColorShadeAlpha(TH_SELECT, 255, alpha_shade);
 				glPointSize(guide_size);
-				bglBegin(GL_POINTS);
+				glBegin(GL_POINTS);
 #if 0
 				interp_v3_v3v3(co_mark, co_b, co_a, fac);
-				bglVertex3fv(co_mark);
+				glVertex3fv(co_mark);
 #endif
 				interp_line_v3_v3v3v3(co_mark, co_b, curr_sv->v_co_orig, co_a, fac);
-				bglVertex3fv(co_mark);
-				bglEnd();
+				glVertex3fv(co_mark);
+				glEnd();
 			}
 			else {
 				if (is_clamp == false) {
@@ -7432,15 +7436,15 @@ static void drawVertSlide(TransInfo *t)
 					glVertex3fv(b);
 				}
 			}
-			bglEnd();
+			glEnd();
 
 			glPointSize(ctrl_size);
 
-			bglBegin(GL_POINTS);
-			bglVertex3fv((sld->flipped && sld->use_even) ?
-			             curr_sv->co_link_orig_3d[curr_sv->co_link_curr] :
-			             curr_sv->co_orig_3d);
-			bglEnd();
+			glBegin(GL_POINTS);
+			glVertex3fv((sld->flipped && sld->use_even) ?
+			            curr_sv->co_link_orig_3d[curr_sv->co_link_curr] :
+			            curr_sv->co_orig_3d);
+			glEnd();
 
 			glDisable(GL_BLEND);
 

@@ -472,7 +472,7 @@ if(WITH_GLEW_ES AND WITH_SYSTEM_GLEW)
 	set(WITH_SYSTEM_GLEW OFF)
 endif()
 
-if(MSVC)
+if(WIN32)
 	getDefaultWindowsPrefixBase(CMAKE_GENERIC_PROGRAM_FILES)
 	set(CPACK_INSTALL_PREFIX ${CMAKE_GENERIC_PROGRAM_FILES}/${})
 endif()
@@ -495,7 +495,7 @@ option_defaults_clear()
 # By default we want to install to the directory we are compiling our executables
 # unless specified otherwise, which we currently do not allow
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-	if(MSVC)
+	if(WIN32)
 		set(CMAKE_INSTALL_PREFIX ${EXECUTABLE_OUTPUT_PATH}/\${BUILD_TYPE} CACHE PATH "default install path" FORCE)
 	elseif(APPLE)
 		set(CMAKE_INSTALL_PREFIX ${EXECUTABLE_OUTPUT_PATH}/\${BUILD_TYPE} CACHE PATH "default install path" FORCE)
@@ -1349,9 +1349,7 @@ elseif(WIN32)
 			set(PNG_LIBPATH ${PNG}/lib) # not cmake defined
 		endif()
 
-		if(MSVC)
-			set(JPEG_NAMES ${JPEG_NAMES} libjpeg)
-		endif()
+		set(JPEG_NAMES ${JPEG_NAMES} libjpeg)
 		find_package(jpeg REQUIRED)
 
 		set(PTHREADS_INCLUDE_DIRS ${LIBDIR}/pthreads/include)
@@ -1499,8 +1497,8 @@ elseif(WIN32)
 					set(BOOST_DEBUG_POSTFIX "vc120-mt-sgd-1_55.lib")
 				else()
 					set(BOOST_LIBPATH ${BOOST}/lib)
-					set(BOOST_POSTFIX "vc90-mt-s-1_49.lib")
-					set(BOOST_DEBUG_POSTFIX "vc90-mt-sgd-1_49.lib")
+					set(BOOST_POSTFIX "vc140-mt-s-1_60.lib")
+					set(BOOST_DEBUG_POSTFIX "vc140-mt-sgd-1_60.lib")
 				endif()
 				set(BOOST_LIBRARIES
 					optimized libboost_date_time-${BOOST_POSTFIX} optimized libboost_filesystem-${BOOST_POSTFIX}
@@ -1596,8 +1594,13 @@ elseif(WIN32)
 		if(WITH_SDL)
 			set(SDL ${LIBDIR}/sdl)
 			set(SDL_INCLUDE_DIR ${SDL}/include)
-			set(SDL_LIBRARY SDL2)
 			set(SDL_LIBPATH ${SDL}/lib)
+			# MinGW TODO: Update MinGW to SDL2
+			if(NOT CMAKE_COMPILER_IS_GNUCC)
+				set(SDL_LIBRARY SDL2)
+			else()
+				set(SDL_LIBRARY SDL)
+			endif()
 		endif()
 
 		# Audio IO
@@ -1627,12 +1630,7 @@ elseif(WIN32)
 		
 		if(WITH_MINGW64)
 			message(STATUS "Compiling for 64 bit with MinGW-w64.")
-			execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-			if(GCC_VERSION VERSION_GREATER 4.9 OR GCC_VERSION VERSION_EQUAL 4.9)
-				set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/mingw64_gcc49)
-			else()
-				set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/mingw64)
-			endif()
+			set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/mingw64)
 		else()
 			message(STATUS "Compiling for 32 bit with MinGW-w32.")
 			set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/mingw32)
@@ -2482,7 +2480,7 @@ if(WITH_OPENMP)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 		else()
 			# Typically avoid adding flags as defines but we can't
-			# ass OpenMP flags to the linker for static builds, meaning
+			# pass OpenMP flags to the linker for static builds, meaning
 			# we can't add any OpenMP related flags to CFLAGS variables
 			# since they're passed to the linker as well.
 			add_definitions("${OpenMP_C_FLAGS}")
@@ -2591,6 +2589,61 @@ endif()
 
 if(WITH_PYTHON_MODULE)
 	add_definitions(-DPy_ENABLE_SHARED)
+endif()
+
+#-----------------------------------------------------------------------------
+# Configure GLog/GFlags
+
+if(WITH_LIBMV OR WITH_GTESTS OR (WITH_CYCLES AND WITH_CYCLES_LOGGING))
+	set(GLOG_DEFINES
+		-DGOOGLE_GLOG_DLL_DECL=
+	)
+
+	set(GFLAGS_DEFINES
+		-DGFLAGS_DLL_DEFINE_FLAG=
+		-DGFLAGS_DLL_DECLARE_FLAG=
+		-DGFLAGS_DLL_DECL=
+	)
+endif()
+
+#-----------------------------------------------------------------------------
+# Configure Ceres
+
+if(WITH_LIBMV)
+	set(CERES_DEFINES)
+
+	TEST_SHARED_PTR_SUPPORT()
+	if(SHARED_PTR_FOUND)
+		if(SHARED_PTR_TR1_MEMORY_HEADER)
+			list(APPEND CERES_DEFINES -DCERES_TR1_MEMORY_HEADER)
+		endif()
+		if(SHARED_PTR_TR1_NAMESPACE)
+			list(APPEND CERES_DEFINES -DCERES_TR1_SHARED_PTR)
+		endif()
+	else()
+		message(FATAL_ERROR "Ceres: Unable to find shared_ptr.")
+	endif()
+
+	TEST_UNORDERED_MAP_SUPPORT()
+	if(HAVE_STD_UNORDERED_MAP_HEADER)
+		if(HAVE_UNORDERED_MAP_IN_STD_NAMESPACE)
+			list(APPEND CERES_DEFINES -DCERES_STD_UNORDERED_MAP)
+		else()
+			if(HAVE_UNORDERED_MAP_IN_TR1_NAMESPACE)
+				list(APPEND CERES_DEFINES -DCERES_STD_UNORDERED_MAP_IN_TR1_NAMESPACE)
+			else()
+				list(APPEND CERES_DEFINES -DCERES_NO_UNORDERED_MAP)
+				message(STATUS "Ceres: Replacing unordered_map/set with map/set (warning: slower!)")
+			endif()
+		endif()
+	else()
+		if(HAVE_UNORDERED_MAP_IN_TR1_NAMESPACE)
+			list(APPEND CERES_DEFINES -DCERES_TR1_UNORDERED_MAP)
+		else()
+			list(APPEND CERES_DEFINES -DCERES_NO_UNORDERED_MAP)
+			message(STATUS "Ceres: Replacing unordered_map/set with map/set (warning: slower!)")
+		endif()
+	endif()
 endif()
 
 #-----------------------------------------------------------------------------
@@ -2749,6 +2802,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
 		"/w34062"  # switch statement contains 'default' but no 'case' labels
 		# disable:
 		"/wd4018"  # signed/unsigned mismatch
+		"/wd4146"  # unary minus operator applied to unsigned type, result still unsigned
 		"/wd4065"  # switch statement contains 'default' but no 'case' labels
 		"/wd4127"  # conditional expression is constant
 		"/wd4181"  # qualifier applied to reference type; ignored

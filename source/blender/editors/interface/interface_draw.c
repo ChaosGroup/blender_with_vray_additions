@@ -1133,14 +1133,17 @@ void ui_draw_but_COLORBAND(uiBut *but, uiWidgetColors *UNUSED(wcol), const rcti 
 	sizey_solid = sizey / 4;
 	y1 = rect->ymin;
 
+	/* Drawing the checkerboard.
+	 * This could be optimized with a single checkerboard shader,
+	 * instead of drawing twice and using stippling the second time. */
 	/* layer: background, to show tranparency */
 	glColor4ub(UI_ALPHA_CHECKER_DARK, UI_ALPHA_CHECKER_DARK, UI_ALPHA_CHECKER_DARK, 255);
 	glRectf(x1, y1, x1 + sizex, rect->ymax);
-	glEnable(GL_POLYGON_STIPPLE);
+	GPU_basic_shader_bind(GPU_SHADER_STIPPLE | GPU_SHADER_USE_COLOR);
 	glColor4ub(UI_ALPHA_CHECKER_LIGHT, UI_ALPHA_CHECKER_LIGHT, UI_ALPHA_CHECKER_LIGHT, 255);
-	glPolygonStipple(stipple_checker_8px);
+	GPU_basic_shader_stipple(GPU_SHADER_STIPPLE_CHECKER_8PX);
 	glRectf(x1, y1, x1 + sizex, rect->ymax);
-	glDisable(GL_POLYGON_STIPPLE);
+	GPU_basic_shader_bind(GPU_SHADER_USE_COLOR);
 
 	/* layer: color ramp */
 	glShadeModel(GL_FLAT);
@@ -1503,7 +1506,7 @@ void ui_draw_but_CURVE(ARegion *ar, uiBut *but, uiWidgetColors *wcol, const rcti
 	/* the points, use aspect to make them visible on edges */
 	cmp = cuma->curve;
 	glPointSize(3.0f);
-	bglBegin(GL_POINTS);
+	glBegin(GL_POINTS);
 	for (a = 0; a < cuma->totpoint; a++) {
 		if (cmp[a].flag & CUMA_SELECT)
 			UI_ThemeColor(TH_TEXT_HI);
@@ -1511,9 +1514,9 @@ void ui_draw_but_CURVE(ARegion *ar, uiBut *but, uiWidgetColors *wcol, const rcti
 			UI_ThemeColor(TH_TEXT);
 		fac[0] = rect->xmin + zoomx * (cmp[a].x - offsx);
 		fac[1] = rect->ymin + zoomy * (cmp[a].y - offsy);
-		bglVertex2fv(fac);
+		glVertex2fv(fac);
 	}
-	bglEnd();
+	glEnd();
 	glPointSize(1.0f);
 	
 	/* restore scissortest */

@@ -167,14 +167,14 @@ endif()
 		bf_blenkernel # duplicate for linking
 		bf_intern_mikktspace
 		extern_recastnavigation
-		bf_intern_raskter
 		bf_intern_opencolorio
 		bf_intern_glew_mx
 		bf_intern_eigen
 		extern_rangetree
 		extern_wcwidth
-		extern_libmv
+		bf_intern_libmv
 		extern_glog
+		extern_gflags
 		extern_sdlew
 	)
 
