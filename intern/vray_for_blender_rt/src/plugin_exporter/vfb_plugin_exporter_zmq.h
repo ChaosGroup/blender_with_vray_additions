@@ -79,6 +79,7 @@ public:
 	virtual RenderImage get_image();
 	virtual RenderImage get_render_channel(RenderChannelType channelType);
 	virtual void        set_render_size(const int &w, const int &h);
+	virtual void        set_viewport_quality(int quality);
 	virtual bool        is_aborted() const { return m_IsAborted; }
 
 
@@ -103,6 +104,7 @@ private:
 	bool                m_IsAborted;
 	bool                m_Started;
 
+	int                 m_RenderQuality;
 	int                 m_RenderWidth;
 	int                 m_RenderHeight;
 };

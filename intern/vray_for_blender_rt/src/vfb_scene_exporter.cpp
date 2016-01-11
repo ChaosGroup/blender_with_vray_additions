@@ -246,6 +246,7 @@ void SceneExporter::sync(const int &check_updated)
 		                                       : m_settings.getRenderMode();
 
 		m_exporter->set_render_mode(renderMode);
+		m_exporter->set_viewport_quality(m_settings.viewportQuality);
 
 		clock_t begin = clock();
 

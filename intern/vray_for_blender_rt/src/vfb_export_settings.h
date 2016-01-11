@@ -160,6 +160,7 @@ struct ExporterSettings {
 	int               use_displace_subdiv;
 	int               use_subsurf_to_osd;
 
+	int               viewportQuality;
 	int               zmq_server_port;
 	std::string       zmq_server_address;
 

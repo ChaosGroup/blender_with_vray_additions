@@ -271,7 +271,8 @@ ZmqExporter::ZmqExporter():
 	m_IsAborted(false),
 	m_Started(false),
 	m_RenderWidth(0),
-	m_RenderHeight(0)
+	m_RenderHeight(0),
+	m_RenderQuality(100)
 {
 	checkZmqClient();
 }
@@ -369,6 +370,7 @@ void ZmqExporter::init()
 			m_Client->send(VRayMessage::createMessage(mode));
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
 
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
 			if (!is_viewport) {
@@ -412,6 +414,7 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 	} else {
 		this->m_RenderMode = settings.getRenderMode();
 	}
+	this->m_RenderQuality = settings.viewportQuality;
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
 	this->animation_settings = settings.settings_animation;
@@ -429,6 +432,14 @@ void ZmqExporter::free()
 
 void ZmqExporter::sync()
 {
+}
+
+void ZmqExporter::set_viewport_quality(int quality)
+{
+	if (quality != m_RenderQuality) {
+		m_RenderQuality = quality;
+		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
+	}
 }
 
 void ZmqExporter::set_render_size(const int &w, const int &h)

@@ -141,6 +141,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	m_renderModeViewport = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode");
 
 	m_viewportResolution = RNA_int_get(&m_vrayExporter, "viewport_resolution") / 100.0f;
+	viewportQuality = RNA_int_get(&m_vrayExporter, "viewport_jpeg_quality");
 }
 
 
