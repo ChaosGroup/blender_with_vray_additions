@@ -23,6 +23,8 @@
 #ifndef CGR_CONFIG
 #define CGR_CONFIG
 
+#define BOOST_NO_CXX11_ALLOCATOR
+
 #ifndef NOMINMAX
 #  define NOMINMAX
 #endif
