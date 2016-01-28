@@ -131,7 +131,7 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 			widths.resize(tot_verts);
 			hair_vertices.resize(tot_verts);
 
-			const bool has_uv = psmd->dm && CustomData_number_of_layers(&psmd->dm->faceData, CD_MTFACE);
+			const bool has_uv = psmd->dm_final && CustomData_number_of_layers(&psmd->dm_final->faceData, CD_MTFACE);
 			if (has_uv) {
 				strand_uvw.resize(tot_verts);
 			}
@@ -164,19 +164,19 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 
 					ChildParticle *cpa = ps->child + p;
 					if(pst->childtype == PART_CHILD_FACES) {
-						GetParticleUV(PART_FROM_FACE, psmd->dm, cpa->fuv, layer_idx, cpa->num, uv);
+						GetParticleUV(PART_FROM_FACE, psmd->dm_final, cpa->fuv, layer_idx, cpa->num, uv);
 					}
 					else {
 						ParticleData *parent = ps->particles + cpa->parent;
 
 						int num = parent->num_dmcache;
 						if (num == DMCACHE_NOTFOUND) {
-							if (parent->num < psmd->dm->getNumTessFaces(psmd->dm)) {
+							if (parent->num < psmd->dm_final->getNumTessFaces(psmd->dm_final)) {
 								num = parent->num;
 							}
 						}
 
-						GetParticleUV(pst->from, psmd->dm, parent->fuv, layer_idx, num, uv);
+						GetParticleUV(pst->from, psmd->dm_final, parent->fuv, layer_idx, num, uv);
 					}
 				}
 			}

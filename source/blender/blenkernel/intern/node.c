@@ -3147,7 +3147,7 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 			}
 
 			// Tag update for ID.is_updated()
-			ntree->id.flag |= LIB_ID_RECALC;
+			ntree->id.flag |= LIB_TAG_ID_RECALC;
 
 			WM_main_add_notifier(ND_DRAW_RENDER_VIEWPORT, NULL);
 		}
