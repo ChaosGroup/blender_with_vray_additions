@@ -6,12 +6,11 @@
 	path = release/scripts/addons_contrib
 	url = http://git.blender.org/blender-addons-contrib.git
 	ignore = all
-[submodule "scons"]
-	path = scons
-	url = http://git.blender.org/scons.git
+[submodule "release/datafiles/locale"]
+	path = release/datafiles/locale
+	url = http://git.blender.org/blender-translations.git
 	ignore = all
 [submodule "intern/vray_for_blender_rt/extern/vray-zmq-wrapper"]
 	path = intern/vray_for_blender_rt/extern/vray-zmq-wrapper
 	url = https://github.com/bdancer/vray-zmq-wrapper.git
 	branch = master
-	ignore = all
