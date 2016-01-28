@@ -153,10 +153,14 @@ void transpose_m4_m4(float R[4][4], float A[4][4]);
 
 int compare_m4m4(float mat1[4][4], float mat2[4][4], float limit);
 
-void normalize_m3(float R[3][3]);
-void normalize_m3_m3(float R[3][3], float A[3][3]);
-void normalize_m4(float R[4][4]);
-void normalize_m4_m4(float R[4][4], float A[4][4]);
+void normalize_m3_ex(float R[3][3], float r_scale[3]) ATTR_NONNULL();
+void normalize_m3(float R[3][3]) ATTR_NONNULL();
+void normalize_m3_m3_ex(float R[3][3], float A[3][3], float r_scale[3]) ATTR_NONNULL();
+void normalize_m3_m3(float R[3][3], float A[3][3]) ATTR_NONNULL();
+void normalize_m4_ex(float R[4][4], float r_scale[3]) ATTR_NONNULL();
+void normalize_m4(float R[4][4]) ATTR_NONNULL();
+void normalize_m4_m4_ex(float R[4][4], float A[4][4], float r_scale[3]) ATTR_NONNULL();
+void normalize_m4_m4(float R[4][4], float A[4][4]) ATTR_NONNULL();
 
 void orthogonalize_m3(float R[3][3], int axis);
 void orthogonalize_m4(float R[4][4], int axis);
@@ -169,6 +173,10 @@ bool is_orthonormal_m4(float mat[4][4]);
 bool is_uniform_scaled_m3(float mat[3][3]);
 bool is_uniform_scaled_m4(float m[4][4]);
 
+/* Note: 'adjoint' here means the adjugate (adjunct, "classical adjoint") matrix!
+ * Nowadays 'adjoint' usually refers to the conjugate transpose,
+ * which for real-valued matrices is simply the transpose.
+ */
 void adjoint_m2_m2(float R[2][2], float A[2][2]);
 void adjoint_m3_m3(float R[3][3], float A[3][3]);
 void adjoint_m4_m4(float R[4][4], float A[4][4]);

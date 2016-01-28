@@ -824,7 +824,11 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 				if(NOT(mapChannel))
 					continue;
 
-				PYTHON_PRINTF(output, "\"%s\"", mapChannel->name.c_str());
+				std::string channelName = mapChannel->name;
+				boost::erase_all(channelName, "\"");
+				boost::erase_all(channelName, "'");
+
+				PYTHON_PRINTF(output, "\"%s\"", channelName.c_str());
 				if(i < mapChannelCount-1)
 					PYTHON_PRINT(output, ",");
 			}

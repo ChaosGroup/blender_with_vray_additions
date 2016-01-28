@@ -28,7 +28,7 @@
 #include "BL_ActionManager.h"
 #include "DNA_ID.h"
 
-#define IS_TAGGED(_id) ((_id) && (((ID *)_id)->flag & LIB_DOIT))
+#define IS_TAGGED(_id) ((_id) && (((ID *)_id)->tag & LIB_TAG_DOIT))
 
 BL_ActionManager::BL_ActionManager(class KX_GameObject *obj):
 	m_obj(obj),
@@ -160,15 +160,5 @@ void BL_ActionManager::Update(float curtime)
 		if (!it->second->IsDone()) {
 			it->second->Update(curtime);
 		}
-	}
-}
-
-void BL_ActionManager::UpdateIPOs()
-{
-	BL_ActionMap::iterator it;
-	for (it = m_layers.begin(); it != m_layers.end(); ++it)
-	{
-		if (!it->second->IsDone())
-			it->second->UpdateIPOs();
 	}
 }

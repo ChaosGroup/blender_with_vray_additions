@@ -43,6 +43,7 @@
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
+#include "BLI_array.h"
 #include "BLI_blenlib.h"
 #include "BLI_bitmap.h"
 #include "BLI_math.h"
@@ -52,6 +53,7 @@
 #include "BKE_cdderivedmesh.h"
 #include "BKE_editmesh.h"
 #include "BKE_key.h"
+#include "BKE_library.h"
 #include "BKE_material.h"
 #include "BKE_modifier.h"
 #include "BKE_mesh.h"
@@ -73,8 +75,8 @@ static DerivedMesh *navmesh_dm_createNavMeshForVisualization(DerivedMesh *dm);
 #include "BLI_sys_types.h" /* for intptr_t support */
 
 #include "GPU_buffers.h"
-#include "GPU_extensions.h"
 #include "GPU_glew.h"
+#include "GPU_shader.h"
 
 #ifdef WITH_OPENSUBDIV
 #  include "DNA_userdef_types.h"
@@ -581,7 +583,6 @@ void DM_update_tessface_data(DerivedMesh *dm)
 
 void DM_generate_tangent_tessface_data(DerivedMesh *dm, bool generate)
 {
-	int i;
 	MFace *mf, *mface = dm->getTessFaceArray(dm);
 	MPoly *mp = dm->getPolyArray(dm);
 	MLoop *ml = dm->getLoopArray(dm);
@@ -601,9 +602,10 @@ void DM_generate_tangent_tessface_data(DerivedMesh *dm, bool generate)
 		return;
 
 	if (generate) {
-		for (i = 0; i < ldata->totlayer; i++) {
-			if (ldata->layers[i].type == CD_TANGENT)
+		for (int i = 0; i < ldata->totlayer; i++) {
+			if (ldata->layers[i].type == CD_TANGENT) {
 				CustomData_add_layer_named(fdata, CD_TANGENT, CD_CALLOC, NULL, totface, ldata->layers[i].name);
+			}
 		}
 		CustomData_bmesh_update_active_layers(fdata, pdata, ldata);
 	}
@@ -800,7 +802,8 @@ void DM_to_mesh(DerivedMesh *dm, Mesh *me, Object *ob, CustomDataMask mask, bool
 	 * stack*/
 	if (tmp.totvert != me->totvert && !did_shapekeys && me->key) {
 		printf("%s: YEEK! this should be recoded! Shape key loss!: ID '%s'\n", __func__, tmp.id.name);
-		if (tmp.key) tmp.key->id.us--;
+		if (tmp.key)
+			id_us_min(&tmp.key->id);
 		tmp.key = NULL;
 	}
 
@@ -1443,7 +1446,7 @@ static void calc_weightpaint_vert_array(
 	MDeformVert *dv = DM_get_vert_data_layer(dm, CD_MDEFORMVERT);
 	int numVerts = dm->getNumVerts(dm);
 
-	if (dv) {
+	if (dv && (ob->actdef != 0)) {
 		unsigned char (*wc)[4] = r_wtcol_v;
 		unsigned int i;
 
@@ -1468,7 +1471,10 @@ static void calc_weightpaint_vert_array(
 	}
 	else {
 		unsigned char col[4];
-		if (draw_flag & (CALC_WP_GROUP_USER_ACTIVE | CALC_WP_GROUP_USER_ALL)) {
+		if ((ob->actdef == 0) && !BLI_listbase_is_empty(&ob->defbase)) {
+			ARRAY_SET_ITEMS(col, 0xff, 0, 0xff, 0xff);
+		}
+		else if (draw_flag & (CALC_WP_GROUP_USER_ACTIVE | CALC_WP_GROUP_USER_ALL)) {
 			copy_v3_v3_char((char *)col, dm_wcinfo->alert_color);
 			col[3] = 255;
 		}
@@ -3426,7 +3432,7 @@ void DM_draw_attrib_vertex(DMVertexAttribs *attribs, int a, int index, int vert,
 		if (attribs->orco.gl_texco)
 			glTexCoord3fv(orco);
 		else
-			glVertexAttrib3fvARB(attribs->orco.gl_index, orco);
+			glVertexAttrib3fv(attribs->orco.gl_index, orco);
 	}
 
 	/* uv texture coordinates */
@@ -3444,7 +3450,7 @@ void DM_draw_attrib_vertex(DMVertexAttribs *attribs, int a, int index, int vert,
 		if (attribs->tface[b].gl_texco)
 			glTexCoord2fv(uv);
 		else
-			glVertexAttrib2fvARB(attribs->tface[b].gl_index, uv);
+			glVertexAttrib2fv(attribs->tface[b].gl_index, uv);
 	}
 
 	/* vertex colors */
@@ -3459,14 +3465,14 @@ void DM_draw_attrib_vertex(DMVertexAttribs *attribs, int a, int index, int vert,
 			col[0] = 0; col[1] = 0; col[2] = 0; col[3] = 0;
 		}
 
-		glVertexAttrib4ubvARB(attribs->mcol[b].gl_index, col);
+		glVertexAttrib4ubv(attribs->mcol[b].gl_index, col);
 	}
 
 	/* tangent for normal mapping */
 	if (attribs->tottang) {
 		/*const*/ float (*array)[4] = attribs->tang.array;
 		const float *tang = (array) ? array[loop] : zero;
-		glVertexAttrib4fvARB(attribs->tang.gl_index, tang);
+		glVertexAttrib4fv(attribs->tang.gl_index, tang);
 	}
 }
 
@@ -3524,14 +3530,11 @@ static void navmesh_drawColored(DerivedMesh *dm)
 
 #if 0
 	//UI_ThemeColor(TH_WIRE);
-	glDisable(GL_LIGHTING);
 	glLineWidth(2.0);
 	dm->drawEdges(dm, 0, 1);
 	glLineWidth(1.0);
-	glEnable(GL_LIGHTING);
 #endif
 
-	glDisable(GL_LIGHTING);
 	/* if (GPU_buffer_legacy(dm) ) */ /* TODO - VBO draw code, not high priority - campbell */
 	{
 		DEBUG_VBO("Using legacy code. drawNavMeshColored\n");
@@ -3561,7 +3564,6 @@ static void navmesh_drawColored(DerivedMesh *dm)
 		}
 		glEnd();
 	}
-	glEnable(GL_LIGHTING);
 }
 
 static void navmesh_DM_drawFacesTex(
@@ -3667,26 +3669,73 @@ static DerivedMesh *navmesh_dm_createNavMeshForVisualization(DerivedMesh *dm)
 
 void DM_init_origspace(DerivedMesh *dm)
 {
-	static float default_osf[4][2] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+	const float default_osf[4][2] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
 	OrigSpaceLoop *lof_array = CustomData_get_layer(&dm->loopData, CD_ORIGSPACE_MLOOP);
-	OrigSpaceLoop *lof;
 	const int numpoly = dm->getNumPolys(dm);
 	// const int numloop = dm->getNumLoops(dm);
+	MVert *mv = dm->getVertArray(dm);
+	MLoop *ml = dm->getLoopArray(dm);
 	MPoly *mp = dm->getPolyArray(dm);
-	int i, j;
+	int i, j, k;
+
+	float (*vcos_2d)[2] = NULL;
+	BLI_array_staticdeclare(vcos_2d, 64);
 
 	for (i = 0; i < numpoly; i++, mp++) {
-		/* only quads/tri's for now */
+		OrigSpaceLoop *lof = lof_array + mp->loopstart;
+
 		if (mp->totloop == 3 || mp->totloop == 4) {
-			lof = lof_array + mp->loopstart;
 			for (j = 0; j < mp->totloop; j++, lof++) {
 				copy_v2_v2(lof->uv, default_osf[j]);
+			}
+		}
+		else {
+			MLoop *l = &ml[mp->loopstart];
+			float p_nor[3], co[3];
+			float mat[3][3];
+
+			float min[2] = {FLT_MAX, FLT_MAX}, max[2] = {FLT_MIN, FLT_MIN};
+			float translate[2], scale[2];
+
+			BKE_mesh_calc_poly_normal(mp, l, mv, p_nor);
+			axis_dominant_v3_to_m3(mat, p_nor);
+
+			BLI_array_empty(vcos_2d);
+			BLI_array_reserve(vcos_2d, mp->totloop);
+			for (j = 0; j < mp->totloop; j++, l++) {
+				mul_v3_m3v3(co, mat, mv[l->v].co);
+				copy_v2_v2(vcos_2d[j], co);
+
+				for (k = 0; k < 2; k++) {
+					if (co[k] > max[k])
+						max[k] = co[k];
+					else if (co[k] < min[k])
+						min[k] = co[k];
+				}
+			}
+
+			/* Brings min to (0, 0). */
+			negate_v2_v2(translate, min);
+
+			/* Scale will bring max to (1, 1). */
+			sub_v2_v2v2(scale, max, min);
+			if (scale[0] == 0.0f)
+				scale[0] = 1e-9f;
+			if (scale[1] == 0.0f)
+				scale[1] = 1e-9f;
+			invert_v2(scale);
+
+			/* Finally, transform all vcos_2d into ((0, 0), (1, 1)) square and assing them as origspace. */
+			for (j = 0; j < mp->totloop; j++, lof++) {
+				add_v2_v2v2(lof->uv, vcos_2d[j], translate);
+				mul_v2_v2(lof->uv, scale);
 			}
 		}
 	}
 
 	dm->dirty |= DM_DIRTY_TESS_CDLAYERS;
+	BLI_array_free(vcos_2d);
 }
 
 

@@ -71,7 +71,7 @@ static int strip_modifier_add_exec(bContext *C, wmOperator *op)
 	Sequence *seq = BKE_sequencer_active_get(scene);
 	int type = RNA_enum_get(op->ptr, "type");
 
-	BKE_sequence_modifier_new(seq, NULL, type);
+	BKE_sequence_modifier_new(seq, NULL, type, scene);
 
 	BKE_sequence_invalidate_cache(scene, seq);
 	WM_event_add_notifier(C, NC_SCENE | ND_SEQUENCER, scene);
@@ -96,7 +96,7 @@ void SEQUENCER_OT_strip_modifier_add(wmOperatorType *ot)
 	ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
 	/* properties */
-	prop = RNA_def_enum(ot->srna, "type", sequence_modifier_type_items, seqModifierType_ColorBalance, "Type", "");
+	prop = RNA_def_enum(ot->srna, "type", rna_enum_sequence_modifier_type_items, seqModifierType_ColorBalance, "Type", "");
 	ot->prop = prop;
 }
 

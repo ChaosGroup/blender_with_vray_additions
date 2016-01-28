@@ -17,9 +17,9 @@
 #include "split/kernel_data_init.h"
 
 __kernel void kernel_ocl_path_trace_data_init(
-        ccl_global char *globals,
-        ccl_global char *shader_data_sd,                  /* Arguments related to ShaderData */
-        ccl_global char *shader_data_sd_DL_shadow,        /* Arguments related to ShaderData */
+        ccl_global char *kg,
+        ccl_global char *sd,
+        ccl_global char *sd_DL_shadow,
 
         ccl_global float3 *P_sd,
         ccl_global float3 *P_sd_DL_shadow,
@@ -59,12 +59,6 @@ __kernel void kernel_ocl_path_trace_data_init(
 
         ccl_global float *ray_length_sd,
         ccl_global float *ray_length_sd_DL_shadow,
-
-        ccl_global int *ray_depth_sd,
-        ccl_global int *ray_depth_sd_DL_shadow,
-
-        ccl_global int *transparent_depth_sd,
-        ccl_global int *transparent_depth_sd_DL_shadow,
 
         /* Ray differentials. */
         ccl_global differential3 *dP_sd,
@@ -141,9 +135,9 @@ __kernel void kernel_ocl_path_trace_data_init(
 #endif
         int parallel_samples)                        /* Number of samples to be processed in parallel */
 {
-	kernel_data_init(globals,
-	                 shader_data_sd,
-	                 shader_data_sd_DL_shadow,
+	kernel_data_init((KernelGlobals *)kg,
+	                 (ShaderData *)sd,
+	                 (ShaderData *)sd_DL_shadow,
 	                 P_sd,
 	                 P_sd_DL_shadow,
 	                 N_sd,
@@ -170,10 +164,6 @@ __kernel void kernel_ocl_path_trace_data_init(
 	                 time_sd_DL_shadow,
 	                 ray_length_sd,
 	                 ray_length_sd_DL_shadow,
-	                 ray_depth_sd,
-	                 ray_depth_sd_DL_shadow,
-	                 transparent_depth_sd,
-	                 transparent_depth_sd_DL_shadow,
 
 	                 /* Ray differentials. */
 	                 dP_sd,

@@ -1248,36 +1248,74 @@ bool is_uniform_scaled_m4(float m[4][4])
 	return is_uniform_scaled_m3(t);
 }
 
+void normalize_m3_ex(float mat[3][3], float r_scale[3])
+{
+	int i;
+	for (i = 0; i < 3; i++) {
+		r_scale[i] = normalize_v3(mat[i]);
+	}
+}
 void normalize_m3(float mat[3][3])
 {
-	normalize_v3(mat[0]);
-	normalize_v3(mat[1]);
-	normalize_v3(mat[2]);
+	int i;
+	for (i = 0; i < 3; i++) {
+		normalize_v3(mat[i]);
+	}
 }
 
+void normalize_m3_m3_ex(float rmat[3][3], float mat[3][3], float r_scale[3])
+{
+	int i;
+	for (i = 0; i < 3; i++) {
+		r_scale[i] = normalize_v3_v3(rmat[i], mat[i]);
+	}
+}
 void normalize_m3_m3(float rmat[3][3], float mat[3][3])
 {
-	normalize_v3_v3(rmat[0], mat[0]);
-	normalize_v3_v3(rmat[1], mat[1]);
-	normalize_v3_v3(rmat[2], mat[2]);
+	int i;
+	for (i = 0; i < 3; i++) {
+		normalize_v3_v3(rmat[i], mat[i]);
+	}
 }
 
+void normalize_m4_ex(float mat[4][4], float r_scale[3])
+{
+	int i;
+	for (i = 0; i < 3; i++) {
+		r_scale[i] = normalize_v3(mat[i]);
+		if (r_scale[i] != 0.0f) {
+			mat[i][3] /= r_scale[i];
+		}
+	}
+}
 void normalize_m4(float mat[4][4])
 {
-	float len;
-
-	len = normalize_v3(mat[0]);
-	if (len != 0.0f) mat[0][3] /= len;
-	len = normalize_v3(mat[1]);
-	if (len != 0.0f) mat[1][3] /= len;
-	len = normalize_v3(mat[2]);
-	if (len != 0.0f) mat[2][3] /= len;
+	int i;
+	for (i = 0; i < 3; i++) {
+		float len = normalize_v3(mat[i]);
+		if (len != 0.0f) {
+			mat[i][3] /= len;
+		}
+	}
 }
 
+void normalize_m4_m4_ex(float rmat[4][4], float mat[4][4], float r_scale[3])
+{
+	int i;
+	for (i = 0; i < 3; i++) {
+		r_scale[i] = normalize_v3_v3(rmat[i], mat[i]);
+		rmat[i][3] = (r_scale[i] != 0.0f) ? (mat[i][3] / r_scale[i]) : mat[i][3];
+	}
+	copy_v4_v4(rmat[3], mat[3]);
+}
 void normalize_m4_m4(float rmat[4][4], float mat[4][4])
 {
-	copy_m4_m4(rmat, mat);
-	normalize_m4(rmat);
+	int i;
+	for (i = 0; i < 3; i++) {
+		float len = normalize_v3_v3(rmat[i], mat[i]);
+		rmat[i][3] = (len != 0.0f) ? (mat[i][3] / len) : mat[i][3];
+	}
+	copy_v4_v4(rmat[3], mat[3]);
 }
 
 void adjoint_m2_m2(float m1[2][2], float m[2][2])
@@ -1511,7 +1549,7 @@ void mat4_to_loc_quat(float loc[3], float quat[4], float wmat[4][4])
 		negate_m3(mat3_n);
 	}
 
-	mat3_to_quat(quat, mat3_n);
+	mat3_normalized_to_quat(quat, mat3_n);
 	copy_v3_v3(loc, wmat[3]);
 }
 
@@ -1519,7 +1557,7 @@ void mat4_decompose(float loc[3], float quat[4], float size[3], float wmat[4][4]
 {
 	float rot[3][3];
 	mat4_to_loc_rot_size(loc, rot, size, wmat);
-	mat3_to_quat(quat, rot);
+	mat3_normalized_to_quat(quat, rot);
 }
 
 /**
@@ -1531,6 +1569,7 @@ void mat4_decompose(float loc[3], float quat[4], float size[3], float wmat[4][4]
  *
  * See https://en.wikipedia.org/wiki/Polar_decomposition for more.
  */
+#ifndef MATH_STANDALONE
 void mat3_polar_decompose(float mat3[3][3], float r_U[3][3], float r_P[3][3])
 {
 	/* From svd decomposition (M = WSV*), we have:
@@ -1548,7 +1587,7 @@ void mat3_polar_decompose(float mat3[3][3], float r_U[3][3], float r_P[3][3])
 	mul_m3_m3m3(r_U, W, Vt);
 	mul_m3_series(r_P, V, S, Vt);
 }
-
+#endif
 
 void scale_m3_fl(float m[3][3], float scale)
 {
@@ -1654,8 +1693,8 @@ void blend_m3_m3m3(float out[3][3], float dst[3][3], float src[3][3], const floa
 	mat3_to_rot_size(drot, dscale, dst);
 	mat3_to_rot_size(srot, sscale, src);
 
-	mat3_to_quat(dquat, drot);
-	mat3_to_quat(squat, srot);
+	mat3_normalized_to_quat(dquat, drot);
+	mat3_normalized_to_quat(squat, srot);
 
 	/* do blending */
 	interp_qt_qtqt(fquat, dquat, squat, srcweight);
@@ -1677,8 +1716,8 @@ void blend_m4_m4m4(float out[4][4], float dst[4][4], float src[4][4], const floa
 	mat4_to_loc_rot_size(dloc, drot, dscale, dst);
 	mat4_to_loc_rot_size(sloc, srot, sscale, src);
 
-	mat3_to_quat(dquat, drot);
-	mat3_to_quat(squat, srot);
+	mat3_normalized_to_quat(dquat, drot);
+	mat3_normalized_to_quat(squat, srot);
 
 	/* do blending */
 	interp_v3_v3v3(floc, dloc, sloc, srcweight);
@@ -1689,6 +1728,8 @@ void blend_m4_m4m4(float out[4][4], float dst[4][4], float src[4][4], const floa
 	loc_quat_size_to_mat4(out, floc, fquat, fsize);
 }
 
+/* for builds without Eigen */
+#ifndef MATH_STANDALONE
 /**
  * A polar-decomposition-based interpolation between matrix A and matrix B.
  *
@@ -1757,6 +1798,7 @@ void interp_m4_m4m4(float R[4][4], float A[4][4], float B[4][4], const float t)
 	copy_m4_m3(R, R3);
 	copy_v3_v3(R[3], loc);
 }
+#endif  /* MATH_STANDALONE */
 
 bool is_negative_m3(float mat[3][3])
 {

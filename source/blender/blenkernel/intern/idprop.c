@@ -468,13 +468,15 @@ void IDP_init(void)
 	IDP_IDHashTable = BLI_ghash_new(BLI_ghashutil_ptrhash, BLI_ghashutil_ptrcmp, __func__);
 	BLI_spin_init(&HashTableLock);
 }
-
 void IDP_exit(void)
 {
 	BLI_spin_lock(&HashTableLock);
+
 	BLI_ghash_free(IDP_IDHashTable, NULL, free_idhash_value);
 	IDP_IDHashTable = NULL;
+
 	BLI_spin_unlock(&HashTableLock);
+
 	BLI_spin_end(&HashTableLock);
 }
 
@@ -544,13 +546,17 @@ void IDP_ID_Register(IDProperty *prop)
 	case IDP_ID:
 		id = IDP_Id(prop);
 		if (!id) break;
+
 		BLI_spin_trylock(&HashTableLock);
+
 		reflist = find_or_create_reflist(id);
 		BLI_ghash_insert(reflist, prop, prop);
+
 		BLI_spin_unlock(&HashTableLock);
 		break;
 	case IDP_IDPARRAY:
 		BLI_spin_trylock(&HashTableLock);
+
 		for (i = 0; i < prop->totallen; i++) {
 			IDProperty *inner = GETPROP(prop, i);
 			if (inner->type != IDP_ID) continue;
@@ -558,6 +564,7 @@ void IDP_ID_Register(IDProperty *prop)
 			reflist = find_or_create_reflist(IDP_Id(inner));
 			BLI_ghash_insert(reflist, inner, inner);
 		}
+
 		BLI_spin_unlock(&HashTableLock);
 		break;
 	}
@@ -580,14 +587,15 @@ static void IDP_ID_RemoveFromHash(IDProperty *prop)
 
 void IDP_ID_Unregister(IDProperty *prop)
 {
-	GHash *reflist = 0;
 	int i;
 
 	switch(prop->type) {
 	case IDP_ID:
 		if (IDP_Id(prop)) {
 			BLI_spin_trylock(&HashTableLock);
+
 			IDP_ID_RemoveFromHash(prop);
+
 			BLI_spin_unlock(&HashTableLock);
 		}
 		break;
@@ -596,9 +604,8 @@ void IDP_ID_Unregister(IDProperty *prop)
 
 		for (i = 0; i < prop->totallen; i++) {
 			IDProperty *inner = GETPROP(prop, i);
-			if (inner->type != IDP_ID) {
+			if (inner->type != IDP_ID)
 				continue;
-			}
 
 			IDP_ID_RemoveFromHash(inner);
 		}

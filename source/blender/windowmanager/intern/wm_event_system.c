@@ -559,8 +559,8 @@ void WM_event_print(const wmEvent *event)
 		const char *type_id = unknown;
 		const char *val_id = unknown;
 
-		RNA_enum_identifier(event_type_items, event->type, &type_id);
-		RNA_enum_identifier(event_value_items, event->val, &val_id);
+		RNA_enum_identifier(rna_enum_event_type_items, event->type, &type_id);
+		RNA_enum_identifier(rna_enum_event_value_items, event->val, &val_id);
 
 		printf("wmEvent  type:%d / %s, val:%d / %s,\n"
 		       "         shift:%d, ctrl:%d, alt:%d, oskey:%d, keymodifier:%d,\n"
@@ -1538,8 +1538,24 @@ static int wm_eventmatch(wmEvent *winevent, wmKeyMapItem *kmi)
 			if (ISKEYBOARD(winevent->type) && (winevent->ascii || winevent->utf8_buf[0])) return 1; 
 		}
 
-	if (kmitype != KM_ANY)
-		if (winevent->type != kmitype) return 0;
+	if (kmitype != KM_ANY) {
+		if (ELEM(kmitype, TABLET_STYLUS, TABLET_ERASER)) {
+			const wmTabletData *wmtab = winevent->tablet_data;
+			
+			if (wmtab == NULL)
+				return 0;
+			else if (winevent->type != LEFTMOUSE) /* tablet events can occur on hover + keypress */
+				return 0;
+			else if ((kmitype == TABLET_STYLUS) && (wmtab->Active != EVT_TABLET_STYLUS))
+				return 0;
+			else if ((kmitype == TABLET_ERASER) && (wmtab->Active != EVT_TABLET_ERASER))
+				return 0;
+		}
+		else {
+			if (winevent->type != kmitype)
+				return 0;
+		}
+	}
 	
 	if (kmi->val != KM_ANY)
 		if (winevent->val != kmi->val) return 0;
@@ -1849,6 +1865,9 @@ static int wm_handler_fileselect_do(bContext *C, ListBase *handlers, wmEventHand
 					/* XXX - copied from 'wm_operator_finished()' */
 					/* add reports to the global list, otherwise they are not seen */
 					BLI_movelisttolist(&CTX_wm_reports(C)->list, &handler->op->reports->list);
+
+					/* more hacks, since we meddle with reports, banner display doesn't happen automatic */
+					WM_report_banner_show(C);
 
 					CTX_wm_window_set(C, win_prev);
 					CTX_wm_area_set(C, area_prev);

@@ -391,8 +391,8 @@ void GeomMayaHair::initData()
 	//
 	memset(&sd, 0, sizeof(ParticleStrandData));
 
-	if(psmd->dm) {
-		sd.totuv = CustomData_number_of_layers(&psmd->dm->faceData, CD_MTFACE);
+	if(psmd->dm_final) {
+		sd.totuv = CustomData_number_of_layers(&psmd->dm_final->faceData, CD_MTFACE);
 		sd.uvco  = NULL;
 
 		if(sd.totuv) {
@@ -407,17 +407,17 @@ void GeomMayaHair::initData()
 
 						/* get uvco & mcol */
 						if(pset->childtype==PART_CHILD_FACES) {
-							get_particle_uvco_mcol(PART_FROM_FACE, psmd->dm, cpa->fuv, cpa->num, &sd);
+							get_particle_uvco_mcol(PART_FROM_FACE, psmd->dm_final, cpa->fuv, cpa->num, &sd);
 						}
 						else {
 							ParticleData *parent = psys->particles + cpa->parent;
 							int num = parent->num_dmcache;
 
 							if (num == DMCACHE_NOTFOUND)
-								if (parent->num < psmd->dm->getNumTessFaces(psmd->dm))
+								if (parent->num < psmd->dm_final->getNumTessFaces(psmd->dm_final))
 									num = parent->num;
 
-							get_particle_uvco_mcol(pset->from, psmd->dm, parent->fuv, num, &sd);
+							get_particle_uvco_mcol(pset->from, psmd->dm_final, parent->fuv, num, &sd);
 						}
 
 						segment[0] = sd.uvco[0];
@@ -433,10 +433,10 @@ void GeomMayaHair::initData()
 						/* get uvco & mcol */
 						int num = pa->num_dmcache;
 						if(num == DMCACHE_NOTFOUND)
-							if(pa->num < psmd->dm->getNumTessFaces(psmd->dm))
+							if(pa->num < psmd->dm_final->getNumTessFaces(psmd->dm_final))
 								num = pa->num;
 
-						get_particle_uvco_mcol(pset->from, psmd->dm, pa->fuv, num, &sd);
+						get_particle_uvco_mcol(pset->from, psmd->dm_final, pa->fuv, num, &sd);
 
 						segment[0] = sd.uvco[0];
 						segment[1] = sd.uvco[1];

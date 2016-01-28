@@ -65,6 +65,8 @@
 
 #include "uvedit_intern.h"
 
+#include "GPU_basic_shader.h"
+
 /* use editmesh tessface */
 #define USE_EDBM_LOOPTRIS
 
@@ -637,8 +639,8 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 
 					if (tf == activetf) {
 						/* only once */
-						glEnable(GL_POLYGON_STIPPLE);
-						glPolygonStipple(stipple_quarttone);
+						GPU_basic_shader_bind(GPU_SHADER_STIPPLE | GPU_SHADER_USE_COLOR);
+						GPU_basic_shader_stipple(GPU_SHADER_STIPPLE_QUARTTONE);
 						UI_ThemeColor4(TH_EDITMESH_ACTIVE);
 					}
 					else {
@@ -650,7 +652,7 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 					glEnd();
 
 					if (tf == activetf) {
-						glDisable(GL_POLYGON_STIPPLE);
+						GPU_basic_shader_bind(GPU_SHADER_USE_COLOR);
 					}
 				}
 				else {
@@ -713,8 +715,8 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			UI_ThemeColor4(TH_EDITMESH_ACTIVE);
 
-			glEnable(GL_POLYGON_STIPPLE);
-			glPolygonStipple(stipple_quarttone);
+			GPU_basic_shader_bind(GPU_SHADER_STIPPLE | GPU_SHADER_USE_COLOR);
+			GPU_basic_shader_stipple(GPU_SHADER_STIPPLE_QUARTTONE);
 
 			glBegin(GL_POLYGON);
 			BM_ITER_ELEM (l, &liter, activef, BM_LOOPS_OF_FACE) {
@@ -723,7 +725,7 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 			}
 			glEnd();
 
-			glDisable(GL_POLYGON_STIPPLE);
+			GPU_basic_shader_bind(GPU_SHADER_USE_COLOR);
 			glDisable(GL_BLEND);
 		}
 	}
@@ -859,32 +861,32 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 		/* unselected faces */
 		UI_ThemeColor(TH_WIRE);
 
-		bglBegin(GL_POINTS);
+		glBegin(GL_POINTS);
 		BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
 			if (!BM_elem_flag_test(efa, BM_ELEM_TAG))
 				continue;
 
 			if (!uvedit_face_select_test(scene, efa, cd_loop_uv_offset)) {
 				uv_poly_center(efa, cent, cd_loop_uv_offset);
-				bglVertex2fv(cent);
+				glVertex2fv(cent);
 			}
 		}
-		bglEnd();
+		glEnd();
 
 		/* selected faces */
 		UI_ThemeColor(TH_FACE_DOT);
 
-		bglBegin(GL_POINTS);
+		glBegin(GL_POINTS);
 		BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
 			if (!BM_elem_flag_test(efa, BM_ELEM_TAG))
 				continue;
 
 			if (uvedit_face_select_test(scene, efa, cd_loop_uv_offset)) {
 				uv_poly_center(efa, cent, cd_loop_uv_offset);
-				bglVertex2fv(cent);
+				glVertex2fv(cent);
 			}
 		}
-		bglEnd();
+		glEnd();
 	}
 
 	/* 6. draw uv vertices */
@@ -895,7 +897,7 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 		pointsize = UI_GetThemeValuef(TH_VERTEX_SIZE);
 		glPointSize(pointsize);
 	
-		bglBegin(GL_POINTS);
+		glBegin(GL_POINTS);
 		BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
 			if (!BM_elem_flag_test(efa, BM_ELEM_TAG))
 				continue;
@@ -903,17 +905,17 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 			BM_ITER_ELEM (l, &liter, efa, BM_LOOPS_OF_FACE) {
 				luv = BM_ELEM_CD_GET_VOID_P(l, cd_loop_uv_offset);
 				if (!uvedit_uv_select_test(scene, l, cd_loop_uv_offset))
-					bglVertex2fv(luv->uv);
+					glVertex2fv(luv->uv);
 			}
 		}
-		bglEnd();
+		glEnd();
 	
 		/* pinned uvs */
 		/* give odd pointsizes odd pin pointsizes */
 		glPointSize(pointsize * 2 + (((int)pointsize % 2) ? (-1) : 0));
 		cpack(0xFF);
 	
-		bglBegin(GL_POINTS);
+		glBegin(GL_POINTS);
 		BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
 			if (!BM_elem_flag_test(efa, BM_ELEM_TAG))
 				continue;
@@ -922,16 +924,16 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 				luv = BM_ELEM_CD_GET_VOID_P(l, cd_loop_uv_offset);
 
 				if (luv->flag & MLOOPUV_PINNED)
-					bglVertex2fv(luv->uv);
+					glVertex2fv(luv->uv);
 			}
 		}
-		bglEnd();
+		glEnd();
 	
 		/* selected uvs */
 		UI_ThemeColor(TH_VERTEX_SELECT);
 		glPointSize(pointsize);
 	
-		bglBegin(GL_POINTS);
+		glBegin(GL_POINTS);
 		BM_ITER_MESH (efa, &iter, bm, BM_FACES_OF_MESH) {
 			if (!BM_elem_flag_test(efa, BM_ELEM_TAG))
 				continue;
@@ -940,10 +942,10 @@ static void draw_uvs(SpaceImage *sima, Scene *scene, Object *obedit)
 				luv = BM_ELEM_CD_GET_VOID_P(l, cd_loop_uv_offset);
 
 				if (uvedit_uv_select_test(scene, l, cd_loop_uv_offset))
-					bglVertex2fv(luv->uv);
+					glVertex2fv(luv->uv);
 			}
 		}
-		bglEnd();
+		glEnd();
 	}
 
 	glPointSize(1.0);

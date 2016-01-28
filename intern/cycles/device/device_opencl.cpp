@@ -130,7 +130,12 @@ bool opencl_kernel_use_split(const string& platform_name,
                              const cl_device_type device_type)
 {
 	if(getenv("CYCLES_OPENCL_SPLIT_KERNEL_TEST") != NULL) {
+		VLOG(1) << "Forcing split kernel to use.";
 		return true;
+	}
+	if(getenv("CYCLES_OPENCL_MEGA_KERNEL_TEST") != NULL) {
+		VLOG(1) << "Forcing mega kernel to use.";
+		return false;
 	}
 	/* TODO(sergey): Replace string lookups with more enum-like API,
 	 * similar to device/vendor checks blender's gpu.
@@ -224,8 +229,8 @@ bool opencl_device_version_check(cl_device_id device,
 void opencl_get_usable_devices(vector<OpenCLPlatformDevice> *usable_devices)
 {
 	const bool force_all_platforms =
-	        (getenv("CYCLES_OPENCL_TEST") != NULL) ||
-	        (getenv("CYCLES_OPENCL_SPLIT_KERNEL_TEST")) != NULL;
+	        (getenv("CYCLES_OPENCL_MEGA_KERNEL_TEST") != NULL) ||
+	        (getenv("CYCLES_OPENCL_SPLIT_KERNEL_TEST") != NULL);
 	const cl_device_type device_type = opencl_device_type();
 	static bool first_time = true;
 #define FIRST_VLOG(severity) if(first_time) VLOG(severity)
@@ -1110,7 +1115,7 @@ public:
 	{
 		/* this is blocking */
 		size_t size = mem.memory_size();
-		if(size != 0){
+		if(size != 0) {
 			opencl_assert(clEnqueueWriteBuffer(cqCommandQueue,
 			                                   CL_MEM_PTR(mem.device_pointer),
 			                                   CL_TRUE,
@@ -1299,6 +1304,7 @@ public:
 		cl_mem d_data = CL_MEM_PTR(const_mem_map["__data"]->device_pointer);
 		cl_mem d_input = CL_MEM_PTR(task.shader_input);
 		cl_mem d_output = CL_MEM_PTR(task.shader_output);
+		cl_mem d_output_luma = CL_MEM_PTR(task.shader_output_luma);
 		cl_int d_shader_eval_type = task.shader_eval_type;
 		cl_int d_shader_x = task.shader_x;
 		cl_int d_shader_w = task.shader_w;
@@ -1324,6 +1330,12 @@ public:
 				                d_data,
 				                d_input,
 				                d_output);
+
+		if(task.shader_eval_type < SHADER_EVAL_BAKE) {
+			start_arg_index += kernel_set_args(kernel,
+			                                   start_arg_index,
+			                                   d_output_luma);
+		}
 
 #define KERNEL_TEX(type, ttype, name) \
 		set_kernel_arg_mem(kernel, &start_arg_index, #name);
@@ -1380,7 +1392,7 @@ public:
 protected:
 	string kernel_build_options(const string *debug_src = NULL)
 	{
-		string build_options = " -cl-fast-relaxed-math ";
+		string build_options = "-cl-fast-relaxed-math ";
 
 		if(platform_name == "NVIDIA CUDA") {
 			build_options += "-D__KERNEL_OPENCL_NVIDIA__ "
@@ -1543,34 +1555,6 @@ protected:
 		if(program) {
 			clReleaseProgram(program);
 		}
-	}
-
-	string build_options_from_requested_features(
-	        const DeviceRequestedFeatures& requested_features)
-	{
-		string build_options = "";
-		if(requested_features.experimental) {
-			build_options += " -D__KERNEL_EXPERIMENTAL__";
-		}
-		build_options += " -D__NODES_MAX_GROUP__=" +
-			string_printf("%d", requested_features.max_nodes_group);
-		build_options += " -D__NODES_FEATURES__=" +
-			string_printf("%d", requested_features.nodes_features);
-		build_options += string_printf(" -D__MAX_CLOSURE__=%d",
-		                               requested_features.max_closure);
-		if(!requested_features.use_hair) {
-			build_options += " -D__NO_HAIR__";
-		}
-		if(!requested_features.use_object_motion) {
-			build_options += " -D__NO_OBJECT_MOTION__";
-		}
-		if(!requested_features.use_camera_motion) {
-			build_options += " -D__NO_CAMERA_MOTION__";
-		}
-		if(!requested_features.use_baking) {
-			build_options += " -D__NO_BAKING__";
-		}
-		return build_options;
 	}
 
 	/* ** Those guys are for workign around some compiler-specific bugs ** */
@@ -1936,10 +1920,6 @@ public:
 	cl_mem time_sd_DL_shadow;
 	cl_mem ray_length_sd;
 	cl_mem ray_length_sd_DL_shadow;
-	cl_mem ray_depth_sd;
-	cl_mem ray_depth_sd_DL_shadow;
-	cl_mem transparent_depth_sd;
-	cl_mem transparent_depth_sd_DL_shadow;
 
 	/* Ray differentials. */
 	cl_mem dP_sd, dI_sd;
@@ -2089,10 +2069,6 @@ public:
 		time_sd_DL_shadow = NULL;
 		ray_length_sd = NULL;
 		ray_length_sd_DL_shadow = NULL;
-		ray_depth_sd = NULL;
-		ray_depth_sd_DL_shadow = NULL;
-		transparent_depth_sd = NULL;
-		transparent_depth_sd_DL_shadow = NULL;
 
 		/* Ray differentials. */
 		dP_sd = NULL;
@@ -2303,11 +2279,11 @@ public:
 		string clbin;
 		string clsrc, *debug_src = NULL;
 
-		string build_options = "-D__SPLIT_KERNEL__";
+		string build_options = "-D__SPLIT_KERNEL__ ";
 #ifdef __WORK_STEALING__
-		build_options += " -D__WORK_STEALING__";
+		build_options += "-D__WORK_STEALING__ ";
 #endif
-		build_options += build_options_from_requested_features(requested_features);
+		build_options += requested_features.get_build_options();
 
 		/* Set compute device build option. */
 		cl_device_type device_type;
@@ -2433,10 +2409,6 @@ public:
 		release_mem_object_safe(time_sd_DL_shadow);
 		release_mem_object_safe(ray_length_sd);
 		release_mem_object_safe(ray_length_sd_DL_shadow);
-		release_mem_object_safe(ray_depth_sd);
-		release_mem_object_safe(ray_depth_sd_DL_shadow);
-		release_mem_object_safe(transparent_depth_sd);
-		release_mem_object_safe(transparent_depth_sd_DL_shadow);
 
 		/* Ray differentials. */
 		release_mem_object_safe(dP_sd);
@@ -2635,10 +2607,6 @@ public:
 			time_sd_DL_shadow = mem_alloc(num_global_elements * 2 * sizeof(float));
 			ray_length_sd = mem_alloc(num_global_elements * sizeof(float));
 			ray_length_sd_DL_shadow = mem_alloc(num_global_elements * 2 * sizeof(float));
-			ray_depth_sd = mem_alloc(num_global_elements * sizeof(int));
-			ray_depth_sd_DL_shadow = mem_alloc(num_global_elements * 2 * sizeof(int));
-			transparent_depth_sd = mem_alloc(num_global_elements * sizeof(int));
-			transparent_depth_sd_DL_shadow = mem_alloc(num_global_elements * 2 * sizeof(int));
 
 			/* Ray differentials. */
 			dP_sd = mem_alloc(num_global_elements * sizeof(differential3));
@@ -2741,11 +2709,7 @@ public:
 			                time_sd,
 			                time_sd_DL_shadow,
 			                ray_length_sd,
-			                ray_length_sd_DL_shadow,
-			                ray_depth_sd,
-			                ray_depth_sd_DL_shadow,
-			                transparent_depth_sd,
-			                transparent_depth_sd_DL_shadow);
+			                ray_length_sd_DL_shadow);
 
 		/* Ray differentials. */
 		start_arg_index +=
@@ -2802,7 +2766,7 @@ public:
 			                PathState_coop,
 			                ray_state);
 
-/* TODO(segrey): Avoid map lookup here. */
+/* TODO(sergey): Avoid map lookup here. */
 #define KERNEL_TEX(type, ttype, name) \
 	set_kernel_arg_mem(ckPathTraceKernel_data_init, &start_arg_index, #name);
 #include "kernel_textures.h"
@@ -3580,7 +3544,7 @@ protected:
 	string build_options_for_base_program(
 	        const DeviceRequestedFeatures& requested_features)
 	{
-		return build_options_from_requested_features(requested_features);
+		return requested_features.get_build_options();
 	}
 };
 

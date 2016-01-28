@@ -51,9 +51,9 @@
  * The number of elements in the queues is initialized to 0;
  */
 ccl_device void kernel_data_init(
-        ccl_global char *globals,
-        ccl_global char *shader_data_sd,                  /* Arguments related to ShaderData */
-        ccl_global char *shader_data_sd_DL_shadow,        /* Arguments related to ShaderData */
+        KernelGlobals *kg,
+        ShaderData *sd,
+        ShaderData *sd_DL_shadow,
 
         ccl_global float3 *P_sd,
         ccl_global float3 *P_sd_DL_shadow,
@@ -93,12 +93,6 @@ ccl_device void kernel_data_init(
 
         ccl_global float *ray_length_sd,
         ccl_global float *ray_length_sd_DL_shadow,
-
-        ccl_global int *ray_depth_sd,
-        ccl_global int *ray_depth_sd_DL_shadow,
-
-        ccl_global int *transparent_depth_sd,
-        ccl_global int *transparent_depth_sd_DL_shadow,
 
         /* Ray differentials. */
         ccl_global differential3 *dP_sd,
@@ -175,18 +169,10 @@ ccl_device void kernel_data_init(
 #endif
         int parallel_samples)                        /* Number of samples to be processed in parallel */
 {
-
-	/* Load kernel globals structure */
-	KernelGlobals *kg = (KernelGlobals *)globals;
-
 	kg->data = data;
 #define KERNEL_TEX(type, ttype, name) \
 	kg->name = name;
 #include "../kernel_textures.h"
-
-	/* Load ShaderData structure */
-	ShaderData *sd = (ShaderData *)shader_data_sd;
-	ShaderData *sd_DL_shadow = (ShaderData *)shader_data_sd_DL_shadow;
 
 	sd->P = P_sd;
 	sd_DL_shadow->P = P_sd_DL_shadow;
@@ -226,12 +212,6 @@ ccl_device void kernel_data_init(
 
 	sd->ray_length = ray_length_sd;
 	sd_DL_shadow->ray_length = ray_length_sd_DL_shadow;
-
-	sd->ray_depth = ray_depth_sd;
-	sd_DL_shadow->ray_depth = ray_depth_sd_DL_shadow;
-
-	sd->transparent_depth = transparent_depth_sd;
-	sd_DL_shadow->transparent_depth = transparent_depth_sd_DL_shadow;
 
 #ifdef __RAY_DIFFERENTIALS__
 	sd->dP = dP_sd;

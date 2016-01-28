@@ -100,7 +100,7 @@
 static SpinLock image_spin;
 
 /* prototypes */
-static size_t image_num_files(struct Image *ima);
+static int image_num_files(struct Image *ima);
 static ImBuf *image_acquire_ibuf(Image *ima, ImageUser *iuser, void **r_lock);
 static void image_update_views_format(Image *ima, ImageUser *iuser);
 static void image_add_view(Image *ima, const char *viewname, const char *filepath);
@@ -280,14 +280,9 @@ void BKE_image_free_packedfiles(Image *ima)
 	image_free_packedfiles(ima);
 }
 
-static void image_free_views(Image *ima)
-{
-	BLI_freelistN(&ima->views);
-}
-
 void BKE_image_free_views(Image *image)
 {
-	image_free_views(image);
+	BLI_freelistN(&image->views);
 }
 
 static void image_free_anims(Image *ima)
@@ -350,7 +345,7 @@ void BKE_image_free(Image *ima)
 		}
 	}
 
-	image_free_views(ima);
+	BKE_image_free_views(ima);
 	MEM_freeN(ima->stereo3d_format);
 }
 
@@ -557,8 +552,8 @@ void BKE_image_make_local(struct Image *ima)
 			if (tex->id.lib == NULL) {
 				if (tex->ima == ima) {
 					tex->ima = ima_new;
-					ima_new->id.us++;
-					ima->id.us--;
+					id_us_plus(&ima_new->id);
+					id_us_min(&ima->id);
 				}
 			}
 			tex = tex->id.next;
@@ -568,8 +563,8 @@ void BKE_image_make_local(struct Image *ima)
 			if (brush->id.lib == NULL) {
 				if (brush->clone.image == ima) {
 					brush->clone.image = ima_new;
-					ima_new->id.us++;
-					ima->id.us--;
+					id_us_plus(&ima_new->id);
+					id_us_min(&ima->id);
 				}
 			}
 			brush = brush->id.next;
@@ -590,9 +585,7 @@ void BKE_image_make_local(struct Image *ima)
 						for (a = 0; a < me->totface; a++, tface++) {
 							if (tface->tpage == ima) {
 								tface->tpage = ima_new;
-								if (ima_new->id.us == 0) {
-									tface->tpage->id.us = 1;
-								}
+								id_us_ensure_real((ID *)ima_new);
 								id_lib_extern((ID *)ima_new);
 							}
 						}
@@ -611,9 +604,7 @@ void BKE_image_make_local(struct Image *ima)
 						for (a = 0; a < me->totpoly; a++, mtpoly++) {
 							if (mtpoly->tpage == ima) {
 								mtpoly->tpage = ima_new;
-								if (ima_new->id.us == 0) {
-									mtpoly->tpage->id.us = 1;
-								}
+								id_us_ensure_real((ID *)ima_new);
 								id_lib_extern((ID *)ima_new);
 							}
 						}
@@ -749,7 +740,7 @@ Image *BKE_image_load_exists_ex(const char *filepath, bool *r_exists)
 				if ((BKE_image_has_anim(ima) == false) ||
 				    (ima->id.us == 0))
 				{
-					ima->id.us++;  /* officially should not, it doesn't link here! */
+					id_us_plus(&ima->id);  /* officially should not, it doesn't link here! */
 					if (ima->ok == 0)
 						ima->ok = IMA_OK;
 					if (r_exists)
@@ -836,13 +827,15 @@ static ImBuf *add_ibuf_size(unsigned int width, unsigned int height, const char 
 }
 
 /* adds new image block, creates ImBuf and initializes color */
-Image *BKE_image_add_generated(Main *bmain, unsigned int width, unsigned int height, const char *name, int depth, int floatbuf, short gen_type, const float color[4], const bool stereo3d)
+Image *BKE_image_add_generated(
+        Main *bmain, unsigned int width, unsigned int height, const char *name,
+        int depth, int floatbuf, short gen_type, const float color[4], const bool stereo3d)
 {
 	/* on save, type is changed to FILE in editsima.c */
 	Image *ima = image_alloc(bmain, name, IMA_SRC_GENERATED, IMA_TYPE_UV_TEST);
 
 	if (ima) {
-		size_t view_id;
+		int view_id;
 		const char *names[2] = {STEREO_LEFT_NAME, STEREO_RIGHT_NAME};
 
 		/* BLI_strncpy(ima->name, name, FILE_MAX); */ /* don't do this, this writes in ain invalid filepath! */
@@ -866,8 +859,6 @@ Image *BKE_image_add_generated(Main *bmain, unsigned int width, unsigned int hei
 		}
 
 		ima->ok = IMA_OK_LOADED;
-		if (stereo3d)
-			ima->flag |= IMA_IS_STEREO | IMA_IS_MULTIVIEW;
 	}
 
 	return ima;
@@ -902,7 +893,7 @@ Image *BKE_image_add_from_imbuf(ImBuf *ibuf, const char *name)
 static void image_memorypack_multiview(Image *ima)
 {
 	ImageView *iv;
-	size_t i;
+	int i;
 
 	image_free_packedfiles(ima);
 
@@ -957,7 +948,7 @@ void BKE_image_memorypack(Image *ima)
 {
 	ImBuf *ibuf;
 
-	if ((ima->flag & IMA_IS_MULTIVIEW)) {
+	if (BKE_image_is_multiview(ima)) {
 		image_memorypack_multiview(ima);
 		return;
 	}
@@ -1003,7 +994,7 @@ void BKE_image_memorypack(Image *ima)
 
 void BKE_image_packfiles(ReportList *reports, Image *ima, const char *basepath)
 {
-	const size_t totfiles = image_num_files(ima);
+	const int totfiles = image_num_files(ima);
 
 	if (totfiles == 1) {
 		ImagePackedFile *imapf = MEM_mallocN(sizeof(ImagePackedFile), "Image packed file");
@@ -1035,7 +1026,7 @@ void BKE_image_packfiles(ReportList *reports, Image *ima, const char *basepath)
 
 void BKE_image_packfiles_from_mem(ReportList *reports, Image *ima, char *data, const size_t data_len)
 {
-	const size_t totfiles = image_num_files(ima);
+	const int totfiles = image_num_files(ima);
 
 	if (totfiles != 1) {
 		BKE_report(reports, RPT_ERROR, "Cannot pack multiview images from raw data currently...");
@@ -1147,14 +1138,14 @@ void BKE_image_free_all_textures(void)
 #endif
 
 	for (ima = G.main->image.first; ima; ima = ima->id.next)
-		ima->id.flag &= ~LIB_DOIT;
+		ima->id.tag &= ~LIB_TAG_DOIT;
 
 	for (tex = G.main->tex.first; tex; tex = tex->id.next)
 		if (tex->ima)
-			tex->ima->id.flag |= LIB_DOIT;
+			tex->ima->id.tag |= LIB_TAG_DOIT;
 
 	for (ima = G.main->image.first; ima; ima = ima->id.next) {
-		if (ima->cache && (ima->id.flag & LIB_DOIT)) {
+		if (ima->cache && (ima->id.tag & LIB_TAG_DOIT)) {
 #ifdef CHECK_FREED_SIZE
 			uintptr_t old_size = image_mem_size(ima);
 #endif
@@ -1363,6 +1354,7 @@ char BKE_imtype_valid_channels(const char imtype, bool write_file)
 			if (write_file) break;
 			/* fall-through */
 		case R_IMF_IMTYPE_TARGA:
+		case R_IMF_IMTYPE_RAWTGA:
 		case R_IMF_IMTYPE_IRIS:
 		case R_IMF_IMTYPE_PNG:
 		case R_IMF_IMTYPE_RADHDR:
@@ -2102,7 +2094,7 @@ void BKE_render_result_stamp_info(Scene *scene, Object *camera, struct RenderRes
 
 void BKE_stamp_info_callback(void *data, struct StampData *stamp_data, StampCallback callback, bool noskip)
 {
-	if (!callback || !stamp_data) {
+	if ((callback == NULL) || (stamp_data == NULL)) {
 		return;
 	}
 
@@ -2176,7 +2168,7 @@ bool BKE_imbuf_alpha_test(ImBuf *ibuf)
 
 /* note: imf->planes is ignored here, its assumed the image channels
  * are already set */
-void BKE_imbuf_write_prepare(ImBuf *ibuf, ImageFormatData *imf)
+void BKE_imbuf_write_prepare(ImBuf *ibuf, const ImageFormatData *imf)
 {
 	char imtype = imf->imtype;
 	char compress = imf->compress;
@@ -2222,6 +2214,7 @@ void BKE_imbuf_write_prepare(ImBuf *ibuf, ImageFormatData *imf)
 		ibuf->ftype = IMB_FTYPE_OPENEXR;
 		if (imf->depth == R_IMF_CHAN_DEPTH_16)
 			ibuf->foptions.flag |= OPENEXR_HALF;
+		ibuf->foptions.flag &= ~OPENEXR_COMPRESS;
 		ibuf->foptions.flag |= (imf->exr_codec & OPENEXR_COMPRESS);
 
 		if (!(imf->flag & R_IMF_FLAG_ZBUF))
@@ -2307,7 +2300,7 @@ void BKE_imbuf_write_prepare(ImBuf *ibuf, ImageFormatData *imf)
 	}
 }
 
-int BKE_imbuf_write(ImBuf *ibuf, const char *name, ImageFormatData *imf)
+int BKE_imbuf_write(ImBuf *ibuf, const char *name, const ImageFormatData *imf)
 {
 	int ok;
 
@@ -2346,7 +2339,9 @@ int BKE_imbuf_write_as(ImBuf *ibuf, const char *name, ImageFormatData *imf,
 	return ok;
 }
 
-int BKE_imbuf_write_stamp(Scene *scene, struct RenderResult *rr, ImBuf *ibuf, const char *name, struct ImageFormatData *imf)
+int BKE_imbuf_write_stamp(
+        Scene *scene, struct RenderResult *rr, ImBuf *ibuf, const char *name,
+        const struct ImageFormatData *imf)
 {
 	if (scene && scene->r.stamp & R_STAMP_ALL)
 		BKE_imbuf_stamp_info(rr, ibuf);
@@ -2483,15 +2478,8 @@ void BKE_image_verify_viewer_views(const RenderData *rd, Image *ima, ImageUser *
 
 	BLI_lock_thread(LOCK_DRAW_IMAGE);
 
-	if (BKE_scene_multiview_is_stereo3d(rd)) {
-		ima->flag |= IMA_IS_STEREO;
-		ima->flag |= IMA_IS_MULTIVIEW;
-	}
-	else {
-		ima->flag &= ~IMA_IS_STEREO;
-		ima->flag &= ~IMA_IS_MULTIVIEW;
+	if (!BKE_scene_multiview_is_stereo3d(rd))
 		iuser->flag &= ~IMA_SHOW_STEREO;
-	}
 
 	/* see if all scene render views are in the image view list */
 	do_reset = (BKE_scene_multiview_num_views_get(rd) != BLI_listbase_count(&ima->views));
@@ -2678,7 +2666,7 @@ void BKE_image_signal(Image *ima, ImageUser *iuser, int signal)
 		case IMA_SIGNAL_RELOAD:
 			/* try to repack file */
 			if (BKE_image_has_packedfile(ima)) {
-				const size_t totfiles = image_num_files(ima);
+				const int totfiles = image_num_files(ima);
 
 				if (totfiles != BLI_listbase_count_ex(&ima->packedfiles, totfiles + 1)) {
 					/* in case there are new available files to be loaded */
@@ -2832,7 +2820,7 @@ RenderPass *BKE_image_multilayer_index(RenderResult *rr, ImageUser *iuser)
 void BKE_image_multiview_index(Image *ima, ImageUser *iuser)
 {
 	if (iuser) {
-		bool is_stereo = (ima->flag & IMA_IS_STEREO) && (iuser->flag & IMA_SHOW_STEREO);
+		bool is_stereo = BKE_image_is_stereo(ima) && (iuser->flag & IMA_SHOW_STEREO);
 		if (is_stereo) {
 			iuser->multi_index = iuser->multiview_eye;
 		}
@@ -2865,26 +2853,46 @@ bool BKE_image_is_multilayer(Image *ima)
 	return false;
 }
 
-static void image_init_multilayer_multiview_flag(Image *ima, RenderResult *rr)
+bool BKE_image_is_multiview(Image *ima)
 {
-	if (rr) {
-		if (RE_RenderResult_is_stereo(rr)) {
-			ima->flag |= IMA_IS_STEREO;
-			ima->flag |= IMA_IS_MULTIVIEW;
+	return (BLI_listbase_count_ex(&ima->views, 2) > 1);
+}
+
+bool BKE_image_is_stereo(Image *ima)
+{
+	return BKE_image_is_multiview(ima) &&
+	       (BLI_findstring(&ima->views, STEREO_LEFT_NAME, offsetof(ImageView, name)) &&
+            BLI_findstring(&ima->views, STEREO_RIGHT_NAME, offsetof(ImageView, name)));
+}
+
+static void image_init_multilayer_multiview(Image *ima, RenderResult *rr)
+{
+	/* update image views from render views, but only if they actually changed,
+	 * to avoid invalid memory access during render. ideally these should always
+	 * be acquired with a mutex along with the render result, but there are still
+	 * some places with just an image pointer that need to access views */
+	if (rr && BLI_listbase_count(&ima->views) == BLI_listbase_count(&rr->views)) {
+		ImageView *iv = ima->views.first;
+		RenderView *rv = rr->views.first;
+		bool modified = false;
+		for (; rv; rv = rv->next, iv = iv->next) {
+			modified |= !STREQ(rv->name, iv->name);
 		}
-		else {
-			ima->flag &= ~IMA_IS_STEREO;
-			if (BLI_listbase_count_ex(&rr->views, 2) > 1)
-				ima->flag |= IMA_IS_MULTIVIEW;
-			else
-				ima->flag &= ~IMA_IS_MULTIVIEW;
-		}
+		if (!modified)
+			return;
 	}
-	else {
-		ima->flag &= ~IMA_IS_STEREO;
-		ima->flag &= ~IMA_IS_MULTIVIEW;
+
+	BKE_image_free_views(ima);
+
+	if (rr) {
+		for (RenderView *rv = rr->views.first; rv; rv = rv->next) {
+			ImageView *iv = MEM_callocN(sizeof(ImageView), "Viewer Image View");
+			BLI_strncpy(iv->name, rv->name, sizeof(iv->name));
+			BLI_addtail(&ima->views, iv);
+		}
 	}
 }
+
 
 RenderResult *BKE_image_acquire_renderresult(Scene *scene, Image *ima)
 {
@@ -2898,8 +2906,8 @@ RenderResult *BKE_image_acquire_renderresult(Scene *scene, Image *ima)
 		else
 			rr = ima->renders[ima->render_slot];
 
-		/* set proper multiview flag */
-		image_init_multilayer_multiview_flag(ima, rr);
+		/* set proper views */
+		image_init_multilayer_multiview(ima, rr);
 	}
 
 	return rr;
@@ -2928,7 +2936,7 @@ bool BKE_image_is_openexr(struct Image *ima)
 	return false;
 }
 
-void BKE_image_backup_render(Scene *scene, Image *ima)
+void BKE_image_backup_render(Scene *scene, Image *ima, bool free_current_slot)
 {
 	/* called right before rendering, ima->renders contains render
 	 * result pointers for everything but the current render */
@@ -2936,13 +2944,18 @@ void BKE_image_backup_render(Scene *scene, Image *ima)
 	int slot = ima->render_slot, last = ima->last_render_slot;
 
 	if (slot != last) {
-		if (ima->renders[slot]) {
-			RE_FreeRenderResult(ima->renders[slot]);
-			ima->renders[slot] = NULL;
-		}
-
 		ima->renders[last] = NULL;
 		RE_SwapResult(re, &ima->renders[last]);
+
+		if (ima->renders[slot]) {
+			if (free_current_slot) {
+				RE_FreeRenderResult(ima->renders[slot]);
+				ima->renders[slot] = NULL;
+			}
+			else {
+				RE_SwapResult(re, &ima->renders[slot]);
+			}
+		}
 	}
 
 	ima->last_render_slot = slot;
@@ -2950,7 +2963,7 @@ void BKE_image_backup_render(Scene *scene, Image *ima)
 
 /**************************** multiview save openexr *********************************/
 #ifdef WITH_OPENEXR
-static const char *image_get_view_cb(void *base, const size_t view_id)
+static const char *image_get_view_cb(void *base, const int view_id)
 {
 	Image *ima = base;
 	ImageView *iv = BLI_findlink(&ima->views, view_id);
@@ -2959,7 +2972,7 @@ static const char *image_get_view_cb(void *base, const size_t view_id)
 #endif  /* WITH_OPENEXR */
 
 #ifdef WITH_OPENEXR
-static ImBuf *image_get_buffer_cb(void *base, const size_t view_id)
+static ImBuf *image_get_buffer_cb(void *base, const int view_id)
 {
 	Image *ima = base;
 	ImageUser iuser = {0};
@@ -3035,7 +3048,7 @@ static void image_add_view_cb(void *base, const char *str)
 static void image_add_buffer_cb(void *base, const char *str, ImBuf *ibuf, const int frame)
 {
 	Image *ima = base;
-	size_t id;
+	int id;
 	bool predivide = (ima->alpha_mode == IMA_ALPHA_PREMUL);
 	const char *colorspace = ima->colorspace_settings.name;
 	const char *to_colorspace = IMB_colormanagement_role_colorspace_name_get(COLOR_ROLE_SCENE_LINEAR);
@@ -3057,38 +3070,14 @@ static void image_add_buffer_cb(void *base, const char *str, ImBuf *ibuf, const 
 }
 #endif  /* WITH_OPENEXR */
 
-#ifdef WITH_OPENEXR
-static void image_update_multiview_flags(Image *ima)
-{
-	if (BLI_listbase_count_ex(&ima->views, 2) > 1) {
-		ima->flag |= IMA_IS_MULTIVIEW;
-
-		if (BLI_findstring(&ima->views, STEREO_LEFT_NAME, offsetof(ImageView, name)) &&
-		    BLI_findstring(&ima->views, STEREO_RIGHT_NAME, offsetof(ImageView, name)))
-		{
-			ima->flag |= IMA_IS_STEREO;
-		}
-		else {
-			ima->flag &= ~IMA_IS_STEREO;
-		}
-	}
-	else {
-		ima->flag &= ~IMA_IS_STEREO;
-		ima->flag &= ~IMA_IS_MULTIVIEW;
-	}
-}
-#endif  /* WITH_OPENEXR */
-
 /* after imbuf load, openexr type can return with a exrhandle open */
 /* in that case we have to build a render-result */
 #ifdef WITH_OPENEXR
 static void image_create_multiview(Image *ima, ImBuf *ibuf, const int frame)
 {
-	image_free_views(ima);
+	BKE_image_free_views(ima);
 
 	IMB_exr_multiview_convert(ibuf->userdata, ima, image_add_view_cb, image_add_buffer_cb, frame);
-
-	image_update_multiview_flags(ima);
 
 	IMB_exr_close(ibuf->userdata);
 }
@@ -3102,7 +3091,9 @@ static void image_create_multilayer(Image *ima, ImBuf *ibuf, int framenr)
 	const char *colorspace = ima->colorspace_settings.name;
 	bool predivide = (ima->alpha_mode == IMA_ALPHA_PREMUL);
 
-	ima->rr = RE_MultilayerConvert(ibuf->userdata, colorspace, predivide, ibuf->x, ibuf->y);
+	/* only load rr once for multiview */
+	if (!ima->rr)
+		ima->rr = RE_MultilayerConvert(ibuf->userdata, colorspace, predivide, ibuf->x, ibuf->y);
 
 	IMB_exr_close(ibuf->userdata);
 
@@ -3110,8 +3101,8 @@ static void image_create_multilayer(Image *ima, ImBuf *ibuf, int framenr)
 	if (ima->rr)
 		ima->rr->framenr = framenr;
 
-	/* set proper multiview flag */
-	image_init_multilayer_multiview_flag(ima, ima->rr);
+	/* set proper views */
+	image_init_multilayer_multiview(ima, ima->rr);
 }
 #endif  /* WITH_OPENEXR */
 
@@ -3147,9 +3138,9 @@ static int imbuf_alpha_flags_for_image(Image *ima)
 }
 
 /* the number of files will vary according to the stereo format */
-static size_t image_num_files(Image *ima)
+static int image_num_files(Image *ima)
 {
-	const bool is_multiview = (ima->flag & IMA_IS_MULTIVIEW) != 0;
+	const bool is_multiview = BKE_image_is_multiview(ima);
 
 	if (!is_multiview) {
 		return 1;
@@ -3163,7 +3154,7 @@ static size_t image_num_files(Image *ima)
 	}
 }
 
-static ImBuf *load_sequence_single(Image *ima, ImageUser *iuser, int frame, const size_t view_id, bool *r_assign)
+static ImBuf *load_sequence_single(Image *ima, ImageUser *iuser, int frame, const int view_id, bool *r_assign)
 {
 	struct ImBuf *ibuf;
 	char name[FILE_MAX];
@@ -3231,8 +3222,8 @@ static ImBuf *load_sequence_single(Image *ima, ImageUser *iuser, int frame, cons
 static ImBuf *image_load_sequence_file(Image *ima, ImageUser *iuser, int frame)
 {
 	struct ImBuf *ibuf = NULL;
-	const bool is_multiview = (ima->flag & IMA_IS_MULTIVIEW) != 0;
-	const size_t totfiles = image_num_files(ima);
+	const bool is_multiview = BKE_image_is_multiview(ima);
+	const int totfiles = image_num_files(ima);
 	bool assign = false;
 
 	if (!is_multiview) {
@@ -3242,16 +3233,16 @@ static ImBuf *image_load_sequence_file(Image *ima, ImageUser *iuser, int frame)
 		}
 	}
 	else {
-		size_t i;
+		const int totviews = BLI_listbase_count(&ima->views);
+		int i;
 		struct ImBuf **ibuf_arr;
-		const size_t totviews = BLI_listbase_count(&ima->views);
 
 		ibuf_arr = MEM_mallocN(sizeof(ImBuf *) * totviews, "Image Views Imbufs");
 
 		for (i = 0; i < totfiles; i++)
 			ibuf_arr[i] = load_sequence_single(ima, iuser, frame, i, &assign);
 
-		if ((ima->flag & IMA_IS_STEREO) && ima->views_format == R_IMF_VIEWS_STEREO_3D)
+		if (BKE_image_is_stereo(ima) && ima->views_format == R_IMF_VIEWS_STEREO_3D)
 			IMB_ImBufFromStereo3d(ima->stereo3d_format, ibuf_arr[0], &ibuf_arr[0], &ibuf_arr[1]);
 
 		/* return the original requested ImBuf */
@@ -3329,7 +3320,7 @@ static ImBuf *image_load_sequence_multilayer(Image *ima, ImageUser *iuser, int f
 	return ibuf;
 }
 
-static ImBuf *load_movie_single(Image *ima, ImageUser *iuser, int frame, const size_t view_id)
+static ImBuf *load_movie_single(Image *ima, ImageUser *iuser, int frame, const int view_id)
 {
 	struct ImBuf *ibuf = NULL;
 	ImageAnim *ia;
@@ -3388,9 +3379,9 @@ static ImBuf *load_movie_single(Image *ima, ImageUser *iuser, int frame, const s
 static ImBuf *image_load_movie_file(Image *ima, ImageUser *iuser, int frame)
 {
 	struct ImBuf *ibuf = NULL;
-	const bool is_multiview = (ima->flag & IMA_IS_MULTIVIEW) != 0;
-	const size_t totfiles = image_num_files(ima);
-	size_t i;
+	const bool is_multiview = BKE_image_is_multiview(ima);
+	const int totfiles = image_num_files(ima);
+	int i;
 
 	if (totfiles != BLI_listbase_count_ex(&ima->anims, totfiles + 1)) {
 		image_free_anims(ima);
@@ -3408,7 +3399,7 @@ static ImBuf *image_load_movie_file(Image *ima, ImageUser *iuser, int frame)
 	}
 	else {
 		struct ImBuf **ibuf_arr;
-		const size_t totviews = BLI_listbase_count(&ima->views);
+		const int totviews = BLI_listbase_count(&ima->views);
 
 		ibuf_arr = MEM_mallocN(sizeof(ImBuf *) * totviews, "Image Views (movie) Imbufs");
 
@@ -3416,7 +3407,7 @@ static ImBuf *image_load_movie_file(Image *ima, ImageUser *iuser, int frame)
 			ibuf_arr[i] = load_movie_single(ima, iuser, frame, i);
 		}
 
-		if ((ima->flag & IMA_IS_STEREO) && ima->views_format == R_IMF_VIEWS_STEREO_3D)
+		if (BKE_image_is_stereo(ima) && ima->views_format == R_IMF_VIEWS_STEREO_3D)
 			IMB_ImBufFromStereo3d(ima->stereo3d_format, ibuf_arr[0], &ibuf_arr[0], &ibuf_arr[1]);
 
 		for (i = 0; i < totviews; i++) {
@@ -3450,7 +3441,7 @@ static ImBuf *image_load_movie_file(Image *ima, ImageUser *iuser, int frame)
 
 static ImBuf *load_image_single(
         Image *ima, ImageUser *iuser, int cfra,
-        const size_t view_id,
+        const int view_id,
         const bool has_packed,
         bool *r_assign)
 {
@@ -3544,8 +3535,8 @@ static ImBuf *image_load_image_file(Image *ima, ImageUser *iuser, int cfra)
 {
 	struct ImBuf *ibuf = NULL;
 	bool assign = false;
-	const bool is_multiview = (ima->flag & IMA_IS_MULTIVIEW) != 0;
-	const size_t totfiles = image_num_files(ima);
+	const bool is_multiview = BKE_image_is_multiview(ima);
+	const int totfiles = image_num_files(ima);
 	bool has_packed = BKE_image_has_packedfile(ima);
 
 	/* always ensure clean ima */
@@ -3566,9 +3557,9 @@ static ImBuf *image_load_image_file(Image *ima, ImageUser *iuser, int cfra)
 		}
 	}
 	else {
-		size_t i;
 		struct ImBuf **ibuf_arr;
-		const size_t totviews = BLI_listbase_count(&ima->views);
+		const int totviews = BLI_listbase_count(&ima->views);
+		int i;
 		BLI_assert(totviews > 0);
 
 		ibuf_arr = MEM_callocN(sizeof(ImBuf *) * totviews, "Image Views Imbufs");
@@ -3577,7 +3568,7 @@ static ImBuf *image_load_image_file(Image *ima, ImageUser *iuser, int cfra)
 			ibuf_arr[i] = load_image_single(ima, iuser, cfra, i, has_packed, &assign);
 
 		/* multi-views/multi-layers OpenEXR files directly populate ima, and return NULL ibuf... */
-		if ((ima->flag & IMA_IS_STEREO) && ima->views_format == R_IMF_VIEWS_STEREO_3D &&
+		if (BKE_image_is_stereo(ima) && ima->views_format == R_IMF_VIEWS_STEREO_3D &&
 		    ibuf_arr[0] && totfiles == 1 && totviews >= 2)
 		{
 			IMB_ImBufFromStereo3d(ima->stereo3d_format, ibuf_arr[0], &ibuf_arr[0], &ibuf_arr[1]);
@@ -3677,7 +3668,7 @@ static ImBuf *image_get_render_result(Image *ima, ImageUser *iuser, void **r_loc
 	pass = iuser->pass;
 	actview = iuser->view;
 
-	if ((ima->flag & IMA_IS_STEREO) && (iuser->flag & IMA_SHOW_STEREO))
+	if (BKE_image_is_stereo(ima) && (iuser->flag & IMA_SHOW_STEREO))
 		actview = iuser->multiview_eye;
 
 	if (from_render) {
@@ -3841,7 +3832,7 @@ static ImBuf *image_get_render_result(Image *ima, ImageUser *iuser, void **r_loc
 	return ibuf;
 }
 
-static size_t image_get_multiview_index(Image *ima, ImageUser *iuser)
+static int image_get_multiview_index(Image *ima, ImageUser *iuser)
 {
 	const bool is_multilayer = BKE_image_is_multilayer(ima);
 	const bool is_backdrop = (ima->source == IMA_SRC_VIEWER) && (ima->type ==  IMA_TYPE_COMPOSITE) && (iuser == NULL);
@@ -3851,12 +3842,12 @@ static size_t image_get_multiview_index(Image *ima, ImageUser *iuser)
 		return iuser ? iuser->multi_index : index;
 	}
 	else if (is_backdrop) {
-		if ((ima->flag & IMA_IS_STEREO)) {
+		if (BKE_image_is_stereo(ima)) {
 			/* backdrop hackaround (since there is no iuser */
 			return ima->eye;
 		}
 	}
-	else if ((ima->flag & IMA_IS_MULTIVIEW)) {
+	else if (BKE_image_is_multiview(ima)) {
 		return iuser ? iuser->multi_index : index;
 	}
 
@@ -4345,9 +4336,12 @@ void BKE_image_update_frame(const Main *bmain, int cfra)
 
 void BKE_image_user_file_path(ImageUser *iuser, Image *ima, char *filepath)
 {
-	if ((ima->flag & IMA_IS_MULTIVIEW) && (ima->rr == NULL)) {
+	if (BKE_image_is_multiview(ima) && (ima->rr == NULL)) {
 		ImageView *iv = BLI_findlink(&ima->views, iuser->view);
-		BLI_strncpy(filepath, iv->filepath, FILE_MAX);
+		if (iv->filepath[0])
+			BLI_strncpy(filepath, iv->filepath, FILE_MAX);
+		else
+			BLI_strncpy(filepath, ima->name, FILE_MAX);
 	}
 	else {
 		BLI_strncpy(filepath, ima->name, FILE_MAX);
@@ -4477,14 +4471,7 @@ float *BKE_image_get_float_pixels_for_frame(struct Image *image, int frame)
 
 int BKE_image_sequence_guess_offset(Image *image)
 {
-	unsigned short numlen;
-	char head[FILE_MAX], tail[FILE_MAX];
-	char num[FILE_MAX] = {0};
-
-	BLI_stringdec(image->name, head, tail, &numlen);
-	BLI_strncpy(num, image->name + strlen(head), numlen + 1);
-
-	return atoi(num);
+	return BLI_stringdec(image->name, NULL, NULL, NULL);
 }
 
 bool BKE_image_has_anim(Image *ima)
@@ -4642,14 +4629,11 @@ static void image_update_views_format(Image *ima, ImageUser *iuser)
 	BKE_image_free_views(ima);
 
 	if (!is_multiview) {
-		goto monoview;
+		/* nothing to do */
 	}
 	else if (ima->views_format == R_IMF_VIEWS_STEREO_3D) {
-		size_t i;
+		int i;
 		const char *names[2] = {STEREO_LEFT_NAME, STEREO_RIGHT_NAME};
-
-		ima->flag |= IMA_IS_MULTIVIEW;
-		ima->flag |= IMA_IS_STEREO;
 
 		for (i = 0; i < 2; i++) {
 			image_add_view(ima, names[i], ima->name);
@@ -4665,7 +4649,8 @@ static void image_update_views_format(Image *ima, ImageUser *iuser)
 		BKE_scene_multiview_view_prefix_get(scene, name, prefix, &ext);
 
 		if (prefix[0] == '\0') {
-			goto monoview;
+			BKE_image_free_views(ima);
+			return;
 		}
 
 		/* create all the image views */
@@ -4701,15 +4686,7 @@ static void image_update_views_format(Image *ima, ImageUser *iuser)
 		}
 
 		/* all good */
-		if (BLI_listbase_count_ex(&ima->views, 2) > 1) {
-			ima->flag |= IMA_IS_MULTIVIEW;
-			if (BKE_scene_multiview_is_stereo3d(&scene->r))
-				ima->flag |= IMA_IS_STEREO;
-		}
-		else {
-monoview:
-			ima->flag &= ~IMA_IS_STEREO;
-			ima->flag &= ~IMA_IS_MULTIVIEW;
+		if (!BKE_image_is_multiview(ima)) {
 			BKE_image_free_views(ima);
 		}
 	}

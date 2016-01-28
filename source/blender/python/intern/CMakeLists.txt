@@ -46,6 +46,7 @@ set(INC_SYS
 
 set(SRC
 	gpu.c
+	gpu_offscreen.c
 	bpy.c
 	bpy_app.c
 	bpy_app_build_options.c
@@ -68,6 +69,7 @@ set(SRC
 	bpy_rna_anim.c
 	bpy_rna_array.c
 	bpy_rna_callback.c
+	bpy_rna_id_collection.c
 	bpy_traceback.c
 	bpy_util.c
 	bpy_utils_previews.c
@@ -94,6 +96,7 @@ set(SRC
 	bpy_rna.h
 	bpy_rna_anim.h
 	bpy_rna_callback.h
+	bpy_rna_id_collection.h
 	bpy_traceback.h
 	bpy_util.h
 	bpy_utils_previews.h

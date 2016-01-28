@@ -384,6 +384,7 @@ typedef struct bNodeTree {
 	
 	/* callbacks */
 	void (*progress)(void *, float progress);
+	/** \warning may be called by different threads */
 	void (*stats_draw)(void *, const char *str);
 	int (*test_break)(void *);
 	void (*update_draw)(void *);
@@ -777,7 +778,7 @@ typedef struct NodeTexMusgrave {
 typedef struct NodeTexWave {
 	NodeTexBase base;
 	int wave_type;
-	int pad;
+	int wave_profile;
 } NodeTexWave;
 
 typedef struct NodeTexMagic {
@@ -806,6 +807,7 @@ typedef struct NodeShaderTexPointDensity {
 	short interpolation;
 	short color_source;
 	short pad2;
+	PointDensity pd;
 } NodeShaderTexPointDensity;
 
 /* TEX_output */
@@ -970,6 +972,9 @@ typedef struct NodeSunBeams {
 #define SHD_WAVE_BANDS		0
 #define SHD_WAVE_RINGS		1
 
+#define SHD_WAVE_PROFILE_SIN	0
+#define SHD_WAVE_PROFILE_SAW	1
+
 /* sky texture */
 #define SHD_SKY_OLD		0
 #define SHD_SKY_NEW		1
@@ -1108,6 +1113,11 @@ enum {
 /* Plane track deform node */
 enum {
 	CMP_NODEFLAG_PLANETRACKDEFORM_MOTION_BLUR = 1,
+};
+
+/* Stabilization node */
+enum {
+	CMP_NODEFLAG_STABILIZE_INVERSE = 1,
 };
 
 #define CMP_NODE_PLANETRACKDEFORM_MBLUR_SAMPLES_MAX 64

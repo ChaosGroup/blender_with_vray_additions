@@ -647,10 +647,17 @@ std::string VRayNodeExporter::exportDefaultSocket(BL::NodeTree ntree, BL::NodeSo
 
 std::string VRayNodeExporter::exportSocket(BL::NodeTree ntree, BL::NodeSocket socket, VRayNodeContext &context)
 {
-	if(socket.is_linked())
-		return VRayNodeExporter::exportLinkedSocket(ntree, socket, context);
+	int exportLinked = false;
 
-	return VRayNodeExporter::exportDefaultSocket(ntree, socket);
+	if (socket.is_linked()) {
+		BL::Node toNode(VRayNodeExporter::getConnectedNode(ntree, socket, context));
+
+		exportLinked = toNode && !toNode.mute();
+	}
+
+	return exportLinked
+	        ? VRayNodeExporter::exportLinkedSocket(ntree, socket, context)
+	        : VRayNodeExporter::exportDefaultSocket(ntree, socket);
 }
 
 
@@ -853,6 +860,10 @@ std::string VRayNodeExporter::exportVRayNodeAttributes(VRayNodeExportParam, cons
 std::string VRayNodeExporter::exportVRayNode(BL::NodeTree ntree, BL::Node node, BL::NodeSocket fromSocket, VRayNodeContext &context, const AttributeValueMap &manualAttrs)
 {
 	const std::string &nodeClass = node.bl_idname();
+
+	if (node.mute()) {
+		return "NULL";
+	}
 
 	PRINT_INFO("Exporting \"%s\" from tree \"%s\"...",
 			   node.name().c_str(), ntree.name().c_str());
