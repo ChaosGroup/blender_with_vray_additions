@@ -177,6 +177,9 @@ static void gpu_parse_functions_string(GHash *hash, char *code)
 				}
 			}
 
+			if (!type && gpu_str_prefix(code, "samplerCube")) {
+				type = GPU_TEXCUBE;
+			}
 			if (!type && gpu_str_prefix(code, "sampler2DShadow")) {
 				type = GPU_SHADOW2D;
 			}
@@ -315,7 +318,9 @@ static void codegen_convert_datatype(DynStr *ds, int from, int to, const char *t
 		BLI_dynstr_append(ds, name);
 	}
 	else if (to == GPU_FLOAT) {
-		if (from == GPU_VEC4 || from == GPU_VEC3)
+		if (from == GPU_VEC4)
+			BLI_dynstr_appendf(ds, "convert_rgba_to_float(%s)", name);
+		else if (from == GPU_VEC3)
 			BLI_dynstr_appendf(ds, "(%s.r + %s.g + %s.b) / 3.0", name, name, name);
 		else if (from == GPU_VEC2)
 			BLI_dynstr_appendf(ds, "%s.r", name);
@@ -381,6 +386,10 @@ const char *GPU_builtin_name(GPUBuiltin builtin)
 		return "unfinvviewmat";
 	else if (builtin == GPU_INVERSE_OBJECT_MATRIX)
 		return "unfinvobmat";
+	else if (builtin == GPU_LOC_TO_VIEW_MATRIX)
+		return "unflocaltoviewmat";
+	else if (builtin == GPU_INVERSE_LOC_TO_VIEW_MATRIX)
+		return "unfinvlocaltoviewmat";
 	else if (builtin == GPU_VIEW_POSITION)
 		return "varposition";
 	else if (builtin == GPU_VIEW_NORMAL)
@@ -501,8 +510,9 @@ static int codegen_print_uniforms_functions(DynStr *ds, ListBase *nodes)
 				/* create exactly one sampler for each texture */
 				if (codegen_input_has_texture(input) && input->bindtex) {
 					BLI_dynstr_appendf(ds, "uniform %s samp%d;\n",
-					                   (input->textype == GPU_TEX2D) ? "sampler2D" : "sampler2DShadow",
-					                   input->texid);
+						(input->textype == GPU_TEX2D) ? "sampler2D" :
+						(input->textype == GPU_TEXCUBE) ? "samplerCube" : "sampler2DShadow",
+						input->texid);
 				}
 			}
 			else if (input->source == GPU_SOURCE_BUILTIN) {
@@ -1011,7 +1021,7 @@ void GPU_pass_bind(GPUPass *pass, double time, int mipmap)
 	/* create the textures */
 	for (input = inputs->first; input; input = input->next) {
 		if (input->ima)
-			input->tex = GPU_texture_from_blender(input->ima, input->iuser, input->image_isdata, time, mipmap);
+			input->tex = GPU_texture_from_blender(input->ima, input->iuser, input->textarget, input->image_isdata, time, mipmap);
 		else if (input->prv)
 			input->tex = GPU_texture_from_preview(input->prv, mipmap);
 	}
@@ -1188,15 +1198,25 @@ static void gpu_node_input_link(GPUNode *node, GPUNodeLink *link, const GPUType 
 		input->type = GPU_VEC4;
 		input->source = GPU_SOURCE_TEX;
 
-		if (link->image == GPU_NODE_LINK_IMAGE_PREVIEW)
+		if (link->image == GPU_NODE_LINK_IMAGE_PREVIEW) {
 			input->prv = link->ptr1;
-		else {
+			input->textarget = GL_TEXTURE_2D;
+			input->textype = GPU_TEX2D;
+		}
+		else if (link->image == GPU_NODE_LINK_IMAGE_BLENDER) {
 			input->ima = link->ptr1;
 			input->iuser = link->ptr2;
 			input->image_isdata = link->image_isdata;
+			input->textarget = GL_TEXTURE_2D;
+			input->textype = GPU_TEX2D;
 		}
-		input->textarget = GL_TEXTURE_2D;
-		input->textype = GPU_TEX2D;
+		else if (link->image == GPU_NODE_LINK_IMAGE_CUBE_MAP) {
+			input->ima = link->ptr1;
+			input->iuser = link->ptr2;
+			input->image_isdata = link->image_isdata;
+			input->textarget = GL_TEXTURE_CUBE_MAP;
+			input->textype = GPU_TEXCUBE;
+		}
 		MEM_freeN(link);
 	}
 	else if (link->attribtype) {
@@ -1394,6 +1414,18 @@ GPUNodeLink *GPU_image(Image *ima, ImageUser *iuser, bool is_data)
 	GPUNodeLink *link = GPU_node_link_create();
 
 	link->image = GPU_NODE_LINK_IMAGE_BLENDER;
+	link->ptr1 = ima;
+	link->ptr2 = iuser;
+	link->image_isdata = is_data;
+
+	return link;
+}
+
+GPUNodeLink *GPU_cube_map(Image *ima, ImageUser *iuser, bool is_data)
+{
+	GPUNodeLink *link = GPU_node_link_create();
+
+	link->image = GPU_NODE_LINK_IMAGE_CUBE_MAP;
 	link->ptr1 = ima;
 	link->ptr2 = iuser;
 	link->image_isdata = is_data;
@@ -1611,7 +1643,9 @@ static void gpu_nodes_prune(ListBase *nodes, GPUNodeLink *outlink)
 GPUPass *GPU_generate_pass(
         ListBase *nodes, GPUNodeLink *outlink,
         GPUVertexAttribs *attribs, int *builtins,
-        const GPUMatType type, const char *UNUSED(name), const bool use_opensubdiv)
+        const GPUMatType type, const char *UNUSED(name),
+        const bool use_opensubdiv,
+        const bool use_new_shading)
 {
 	GPUShader *shader;
 	GPUPass *pass;
@@ -1634,6 +1668,14 @@ GPUPass *GPU_generate_pass(
 	fragmentcode = code_generate_fragment(nodes, outlink->output);
 	vertexcode = code_generate_vertex(nodes, type);
 	geometrycode = code_generate_geometry(nodes, use_opensubdiv);
+
+	int flags = GPU_SHADER_FLAGS_NONE;
+	if (use_opensubdiv) {
+		flags |= GPU_SHADER_FLAGS_SPECIAL_OPENSUBDIV;
+	}
+	if (use_new_shading) {
+		flags |= GPU_SHADER_FLAGS_NEW_SHADING;
+	}
 	shader = GPU_shader_create_ex(vertexcode,
 	                              fragmentcode,
 	                              geometrycode,
@@ -1642,8 +1684,7 @@ GPUPass *GPU_generate_pass(
 	                              0,
 	                              0,
 	                              0,
-	                              use_opensubdiv ? GPU_SHADER_FLAGS_SPECIAL_OPENSUBDIV
-	                                             : GPU_SHADER_FLAGS_NONE);
+	                              flags);
 
 	/* failed? */
 	if (!shader) {

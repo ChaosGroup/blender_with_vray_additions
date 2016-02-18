@@ -68,7 +68,7 @@ void    BKE_imbuf_stamp_info(struct RenderResult *rr, struct ImBuf *ibuf);
 void    BKE_stamp_info_from_imbuf(struct RenderResult *rr, struct ImBuf *ibuf);
 void    BKE_stamp_info_callback(void *data, struct StampData *stamp_data, StampCallback callback, bool noskip);
 void    BKE_image_stamp_buf(
-        struct Scene *scene, struct Object *camera,
+        struct Scene *scene, struct Object *camera, const struct StampData *stamp_data_template,
         unsigned char *rect, float *rectf, int width, int height, int channels);
 bool    BKE_imbuf_alpha_test(struct ImBuf *ibuf);
 int     BKE_imbuf_write_stamp(
@@ -258,6 +258,9 @@ bool BKE_image_scale(struct Image *image, int width, int height);
 
 /* check if texture has alpha (depth=32) */
 bool BKE_image_has_alpha(struct Image *image);
+
+/* check if texture has gpu texture code */
+bool BKE_image_has_bindcode(struct Image *ima);
 
 void BKE_image_get_size(struct Image *image, struct ImageUser *iuser, int *width, int *height);
 void BKE_image_get_size_fl(struct Image *image, struct ImageUser *iuser, float size[2]);

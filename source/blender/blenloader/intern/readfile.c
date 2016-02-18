@@ -1566,8 +1566,9 @@ void blo_make_image_pointer_map(FileData *fd, Main *oldmain)
 	for (; ima; ima = ima->id.next) {
 		if (ima->cache)
 			oldnewmap_insert(fd->imamap, ima->cache, ima->cache, 0);
-		if (ima->gputexture)
-			oldnewmap_insert(fd->imamap, ima->gputexture, ima->gputexture, 0);
+		for (a = 0; a < TEXTARGET_COUNT; a++)
+			if (ima->gputexture[a])
+				oldnewmap_insert(fd->imamap, ima->gputexture[a], ima->gputexture[a], 0);
 		if (ima->rr)
 			oldnewmap_insert(fd->imamap, ima->rr, ima->rr, 0);
 		for (a=0; a < IMA_MAX_RENDER_SLOT; a++)
@@ -1603,15 +1604,18 @@ void blo_end_image_pointer_map(FileData *fd, Main *oldmain)
 	for (; ima; ima = ima->id.next) {
 		ima->cache = newimaadr(fd, ima->cache);
 		if (ima->cache == NULL) {
-			ima->bindcode = 0;
 			ima->tpageflag &= ~IMA_GLBIND_IS_DATA;
-			ima->gputexture = NULL;
+			for (i = 0; i < TEXTARGET_COUNT; i++) {
+				ima->bindcode[i] = 0;
+				ima->gputexture[i] = NULL;
+			}
 			ima->rr = NULL;
 		}
 		for (i = 0; i < IMA_MAX_RENDER_SLOT; i++)
 			ima->renders[i] = newimaadr(fd, ima->renders[i]);
 		
-		ima->gputexture = newimaadr(fd, ima->gputexture);
+		for (i = 0; i < TEXTARGET_COUNT; i++)
+			ima->gputexture[i] = newimaadr(fd, ima->gputexture[i]);
 		ima->rr = newimaadr(fd, ima->rr);
 	}
 	for (; sce; sce = sce->id.next) {
@@ -1848,11 +1852,12 @@ static void *read_struct(FileData *fd, BHead *bh, const char *blockname)
 		if (bh->SDNAnr && (fd->flags & FD_FLAGS_SWITCH_ENDIAN))
 			switch_endian_structs(fd->filesdna, bh);
 		
-		if (fd->compflags[bh->SDNAnr]) {	/* flag==0: doesn't exist anymore */
-			if (fd->compflags[bh->SDNAnr] == 2) {
+		if (fd->compflags[bh->SDNAnr] != SDNA_CMP_REMOVED) {
+			if (fd->compflags[bh->SDNAnr] == SDNA_CMP_NOT_EQUAL) {
 				temp = DNA_struct_reconstruct(fd->memsdna, fd->filesdna, fd->compflags, bh->SDNAnr, bh->nr, (bh+1));
 			}
 			else {
+				/* SDNA_CMP_EQUAL */
 				temp = MEM_mallocN(bh->len, blockname);
 				memcpy(temp, (bh+1), bh->len);
 			}
@@ -3697,9 +3702,11 @@ static void direct_link_image(FileData *fd, Image *ima)
 
 	/* if not restored, we keep the binded opengl index */
 	if (!ima->cache) {
-		ima->bindcode = 0;
 		ima->tpageflag &= ~IMA_GLBIND_IS_DATA;
-		ima->gputexture = NULL;
+		for (int i = 0; i < TEXTARGET_COUNT; i++) {
+			ima->bindcode[i] = 0;
+			ima->gputexture[i] = NULL;
+		}
 		ima->rr = NULL;
 	}
 
@@ -5551,7 +5558,6 @@ static void lib_link_sequence_modifiers(FileData *fd, Scene *scene, ListBase *lb
 	for (smd = lb->first; smd; smd = smd->next) {
 		if (smd->mask_id)
 			smd->mask_id = newlibadr_us(fd, scene->id.lib, smd->mask_id);
-		smd->scene = scene;
 	}
 }
 
@@ -6108,9 +6114,12 @@ static void direct_link_windowmanager(FileData *fd, wmWindowManager *wm)
 		win->drawfail = 0;
 		win->active = 0;
 
-		win->cursor      = 0;
-		win->lastcursor  = 0;
-		win->modalcursor = 0;
+		win->cursor       = 0;
+		win->lastcursor   = 0;
+		win->modalcursor  = 0;
+		win->grabcursor   = 0;
+		win->addmousemove = true;
+		win->multisamples = 0;
 		win->stereo3d_format = newdataadr(fd, win->stereo3d_format);
 
 		/* multiview always fallback to anaglyph at file opening
@@ -9830,7 +9839,7 @@ static void link_object_postprocess(ID *id, Scene *scene, View3D *v3d, const sho
 /**
  * Simple reader for copy/paste buffers.
  */
-void BLO_library_link_all(Main *mainl, BlendHandle *bh, const short flag, Scene *scene, View3D *v3d)
+void BLO_library_link_copypaste(Main *mainl, BlendHandle *bh)
 {
 	FileData *fd = (FileData *)(bh);
 	BHead *bhead;
@@ -9840,15 +9849,24 @@ void BLO_library_link_all(Main *mainl, BlendHandle *bh, const short flag, Scene 
 
 		if (bhead->code == ENDB)
 			break;
-		if (bhead->code == ID_OB)
+		if (ELEM(bhead->code, ID_OB, ID_GR)) {
 			read_libblock(fd, mainl, bhead, LIB_TAG_TESTIND, &id);
-			
+		}
+
+
 		if (id) {
 			/* sort by name in list */
 			ListBase *lb = which_libbase(mainl, GS(id->name));
 			id_sort_by_name(lb, id);
 
-			link_object_postprocess(id, scene, v3d, flag);
+			if (bhead->code == ID_OB) {
+				/* Instead of instancing Base's directly, postpone until after groups are loaded
+				 * otherwise the base's flag is set incorrectly when groups are used */
+				Object *ob = (Object *)id;
+				ob->mode = OB_MODE_OBJECT;
+				/* ensure give_base_to_objects runs on this object */
+				BLI_assert(id->us == 0);
+			}
 		}
 	}
 }
@@ -9959,7 +9977,7 @@ static Main *library_link_begin(Main *mainvar, FileData **fd, const char *filepa
 	(*fd)->mainlist = MEM_callocN(sizeof(ListBase), "FileData.mainlist");
 	
 	/* clear for group instantiating tag */
-	BKE_main_id_tag_listbase(&(mainvar->group), false);
+	BKE_main_id_tag_listbase(&(mainvar->group), LIB_TAG_DOIT, false);
 
 	/* make mains */
 	blo_split_main((*fd)->mainlist, mainvar);
@@ -10041,7 +10059,7 @@ static void library_link_end(Main *mainl, FileData **fd, const short flag, Scene
 	}
 
 	/* clear group instantiating tag */
-	BKE_main_id_tag_listbase(&(mainvar->group), false);
+	BKE_main_id_tag_listbase(&(mainvar->group), LIB_TAG_DOIT, false);
 
 	/* patch to prevent switch_endian happens twice */
 	if ((*fd)->flags & FD_FLAGS_SWITCH_ENDIAN) {

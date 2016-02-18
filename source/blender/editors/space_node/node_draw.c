@@ -651,7 +651,6 @@ static void node_circle_draw(float x, float y, float size, const float col[4], i
 	glEnd();
 	glDisable(GL_LINE_SMOOTH);
 	glDisable(GL_BLEND);
-	glLineWidth(1.0f);
 }
 
 void node_socket_circle_draw(const bContext *C, bNodeTree *ntree, bNode *node, bNodeSocket *sock, float size, int highlight)
@@ -819,6 +818,8 @@ static void node_draw_basis(const bContext *C, ARegion *ar, SpaceNode *snode, bN
 		}
 	}
 #endif
+
+	glLineWidth(1.0f);
 
 	UI_draw_roundbox_corner_set(UI_CNR_TOP_LEFT | UI_CNR_TOP_RIGHT);
 	UI_draw_roundbox(rct->xmin, rct->ymax - NODE_DY, rct->xmax, rct->ymax, BASIS_RAD);

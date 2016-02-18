@@ -182,6 +182,7 @@ static void wm_window_match_init(bContext *C, ListBase *wmlist)
 static void wm_window_substitute_old(wmWindowManager *wm, wmWindow *oldwin, wmWindow *win)
 {
 	win->ghostwin = oldwin->ghostwin;
+	win->multisamples = oldwin->multisamples;
 	win->active = oldwin->active;
 	if (win->active)
 		wm->winactive = win;
@@ -190,6 +191,7 @@ static void wm_window_substitute_old(wmWindowManager *wm, wmWindow *oldwin, wmWi
 		GHOST_SetWindowUserData(win->ghostwin, win);    /* pointer back */
 
 	oldwin->ghostwin = NULL;
+	oldwin->multisamples = 0;
 
 	win->eventstate = oldwin->eventstate;
 	oldwin->eventstate = NULL;
@@ -429,7 +431,7 @@ void wm_file_read_report(bContext *C)
 
 	if (reports) {
 		if (!G.background) {
-			WM_report_banner_show(C);
+			WM_report_banner_show();
 		}
 	}
 }
@@ -469,6 +471,8 @@ static void wm_file_read_post(bContext *C, bool is_startup_file)
 		BPY_python_reset(C);
 		addons_loaded = true;
 	}
+#else
+	UNUSED_VARS(is_startup_file);
 #endif  /* WITH_PYTHON */
 
 	WM_operatortype_last_properties_clear_all();
@@ -1066,6 +1070,8 @@ int wm_file_write(bContext *C, const char *filepath, int fileflags, ReportList *
 	G.main->recovered = 0;
 	
 	if (BLO_write_file(CTX_data_main(C), filepath, fileflags, reports, thumb)) {
+		const bool do_history = (G.background == false) && (CTX_wm_manager(C)->op_undo_depth == 0);
+
 		if (!(fileflags & G_FILE_SAVE_COPY)) {
 			G.relbase_valid = 1;
 			BLI_strncpy(G.main->name, filepath, sizeof(G.main->name));  /* is guaranteed current file */
@@ -1077,7 +1083,7 @@ int wm_file_write(bContext *C, const char *filepath, int fileflags, ReportList *
 		BKE_BIT_TEST_SET(G.fileflags, fileflags & G_FILE_AUTOPLAY, G_FILE_AUTOPLAY);
 
 		/* prevent background mode scripts from clobbering history */
-		if (!G.background) {
+		if (do_history) {
 			wm_history_file_update();
 		}
 

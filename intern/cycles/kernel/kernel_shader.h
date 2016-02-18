@@ -48,8 +48,10 @@ ccl_device void shader_setup_object_transforms(KernelGlobals *kg, ShaderData *sd
 }
 #endif
 
-ccl_device void shader_setup_from_ray(KernelGlobals *kg, ShaderData *sd,
-	const Intersection *isect, const Ray *ray)
+ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
+                                               ShaderData *sd,
+                                               const Intersection *isect,
+                                               const Ray *ray)
 {
 #ifdef __INSTANCING__
 	ccl_fetch(sd, object) = (isect->object == PRIM_NONE)? kernel_tex_fetch(__prim_object, isect->prim): isect->object;
@@ -223,9 +225,14 @@ ccl_device_inline void shader_setup_from_subsurface(KernelGlobals *kg, ShaderDat
 
 /* ShaderData setup from position sampled on mesh */
 
-ccl_device void shader_setup_from_sample(KernelGlobals *kg, ShaderData *sd,
-	const float3 P, const float3 Ng, const float3 I,
-	int shader, int object, int prim, float u, float v, float t, float time)
+ccl_device void shader_setup_from_sample(KernelGlobals *kg,
+                                         ShaderData *sd,
+                                         const float3 P,
+                                         const float3 Ng,
+                                         const float3 I,
+                                         int shader, int object, int prim,
+                                         float u, float v, float t,
+                                         float time)
 {
 	/* vectors */
 	ccl_fetch(sd, P) = P;

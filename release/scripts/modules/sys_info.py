@@ -40,7 +40,6 @@ def write_sysinfo(filepath):
             r = r[1:-1]
         return r
 
-
     output = open(filepath, 'w', encoding="utf-8")
 
     header = "= Blender %s System Information =\n" % bpy.app.version_string
@@ -150,6 +149,13 @@ def write_sysinfo(filepath):
             output.write("Blender was built without OpenShadingLanguage support in Cycles\n")
     else:
         output.write("Blender was built without Cycles support\n")
+
+    openvdb = bpy.app.openvdb
+    output.write("OpenVDB: ")
+    if openvdb.supported:
+        output.write("%s\n" % openvdb.version_string)
+    else:
+        output.write("Blender was built without OpenVDB support\n")
 
     if not bpy.app.build_options.sdl:
         output.write("SDL: Blender was built without SDL support\n")

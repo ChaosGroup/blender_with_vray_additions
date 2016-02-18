@@ -124,7 +124,7 @@ void free_blender(void)
 	DAG_exit();
 
 	BKE_brush_system_exit();
-	RE_exit_texture_rng();	
+	RE_texture_rng_exit();	
 
 	BLI_callback_global_finalize();
 
@@ -966,7 +966,7 @@ Main *BKE_undo_get_main(Scene **r_scene)
 void BKE_copybuffer_begin(Main *bmain)
 {
 	/* set all id flags to zero; */
-	BKE_main_id_flag_all(bmain, LIB_TAG_NEED_EXPAND | LIB_TAG_DOIT, false);
+	BKE_main_id_tag_all(bmain, LIB_TAG_NEED_EXPAND | LIB_TAG_DOIT, false);
 }
 
 void BKE_copybuffer_tag_ID(ID *id)
@@ -1036,7 +1036,7 @@ int BKE_copybuffer_save(const char *filename, ReportList *reports)
 	MEM_freeN(mainb);
 	
 	/* set id flag to zero; */
-	BKE_main_id_flag_all(G.main, LIB_TAG_NEED_EXPAND | LIB_TAG_DOIT, false);
+	BKE_main_id_tag_all(G.main, LIB_TAG_NEED_EXPAND | LIB_TAG_DOIT, false);
 	
 	if (path_list_backup) {
 		BKE_bpath_list_restore(G.main, path_list_flag, path_list_backup);
@@ -1069,12 +1069,12 @@ int BKE_copybuffer_paste(bContext *C, const char *libname, const short flag, Rep
 	 * its also generally useful to know what is new
 	 *
 	 * take extra care BKE_main_id_flag_all(bmain, LIB_TAG_PRE_EXISTING, false) is called after! */
-	BKE_main_id_flag_all(bmain, LIB_TAG_PRE_EXISTING, true);
+	BKE_main_id_tag_all(bmain, LIB_TAG_PRE_EXISTING, true);
 	
 	/* here appending/linking starts */
 	mainl = BLO_library_link_begin(bmain, &bh, libname);
 	
-	BLO_library_link_all(mainl, bh, flag, scene, v3d);
+	BLO_library_link_copypaste(mainl, bh);
 
 	BLO_library_link_end(mainl, &bh, flag, scene, v3d);
 	
@@ -1088,7 +1088,7 @@ int BKE_copybuffer_paste(bContext *C, const char *libname, const short flag, Rep
 	
 	/* important we unset, otherwise these object wont
 	 * link into other scenes from this blend file */
-	BKE_main_id_flag_all(bmain, LIB_TAG_PRE_EXISTING, false);
+	BKE_main_id_tag_all(bmain, LIB_TAG_PRE_EXISTING, false);
 	
 	/* recreate dependency graph to include new objects */
 	DAG_relations_tag_update(bmain);

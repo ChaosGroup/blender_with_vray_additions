@@ -503,7 +503,8 @@ enum {
 };
 
 enum {
-	CMP_NODEFLAG_BLUR_VARIABLE_SIZE = (1 << 0)
+	CMP_NODEFLAG_BLUR_VARIABLE_SIZE = (1 << 0),
+	CMP_NODEFLAG_BLUR_EXTEND_BOUNDS = (1 << 1),
 };
 
 typedef struct NodeFrame {
@@ -1056,6 +1057,7 @@ enum {
 #endif
 	SHD_SUBSURFACE_CUBIC			= 1,
 	SHD_SUBSURFACE_GAUSSIAN			= 2,
+	SHD_SUBSURFACE_BURLEY			= 3,
 };
 
 /* blur node */

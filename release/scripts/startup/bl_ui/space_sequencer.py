@@ -279,11 +279,11 @@ class SEQUENCER_MT_change(Menu):
             stype = strip.type
 
             if stype == 'IMAGE':
-                prop.filter_image = True;
+                prop.filter_image = True
             elif stype == 'MOVIE':
-                prop.filter_movie = True;
+                prop.filter_movie = True
             elif stype == 'SOUND':
-                prop.filter_sound = True;
+                prop.filter_sound = True
 
 
 class SEQUENCER_MT_frame(Menu):
@@ -666,7 +666,7 @@ class SEQUENCER_PT_effect(SequencerButtonsPanel, Panel):
         elif strip.type == 'GAUSSIAN_BLUR':
             col.prop(strip, "size_x")
             col.prop(strip, "size_y")
- 
+
 
 class SEQUENCER_PT_input(SequencerButtonsPanel, Panel):
     bl_label = "Strip Input"
@@ -1012,7 +1012,7 @@ class SEQUENCER_PT_preview(SequencerButtonsPanel_Output, Panel):
         render = context.scene.render
 
         col = layout.column()
-        col.prop(render, "use_sequencer_gl_preview", text="Open GL Preview")
+        col.prop(render, "use_sequencer_gl_preview", text="OpenGL Preview")
         col = layout.column()
         #col.active = render.use_sequencer_gl_preview
         col.prop(render, "sequencer_gl_preview", text="")
@@ -1112,6 +1112,8 @@ class SEQUENCER_PT_modifiers(SequencerButtonsPanel, Panel):
                     box.prop_search(mod, "input_mask_strip", sequences_object, "sequences", text="Mask")
                 else:
                     box.prop(mod, "input_mask_id")
+                    row = box.row()
+                    row.prop(mod, "mask_time", expand=True)
 
                 if mod.type == 'COLOR_BALANCE':
                     box.prop(mod, "color_multiply")
@@ -1127,6 +1129,19 @@ class SEQUENCER_PT_modifiers(SequencerButtonsPanel, Panel):
                 elif mod.type == 'WHITE_BALANCE':
                     col = box.column()
                     col.prop(mod, "white_value")
+                elif mod.type == 'TONEMAP':
+                    col = box.column()
+                    col.prop(mod, "tonemap_type")
+                    if mod.tonemap_type == 'RD_PHOTORECEPTOR':
+                        col.prop(mod, "intensity")
+                        col.prop(mod, "contrast")
+                        col.prop(mod, "adaptation")
+                        col.prop(mod, "correction")
+                    elif mod.tonemap_type == 'RH_SIMPLE':
+                        col.prop(mod, "key")
+                        col.prop(mod, "offset")
+                        col.prop(mod, "gamma")
+
 
 class SEQUENCER_PT_grease_pencil(GreasePencilDataPanel, SequencerButtonsPanel_Output, Panel):
     bl_space_type = 'SEQUENCE_EDITOR'

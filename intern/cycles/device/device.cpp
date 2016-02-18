@@ -32,6 +32,11 @@
 
 CCL_NAMESPACE_BEGIN
 
+bool Device::need_types_update = true;
+bool Device::need_devices_update = true;
+vector<DeviceType> Device::types;
+vector<DeviceInfo> Device::devices;
+
 /* Device Requested Features */
 
 std::ostream& operator <<(std::ostream &os,
@@ -277,10 +282,8 @@ string Device::string_from_type(DeviceType type)
 
 vector<DeviceType>& Device::available_types()
 {
-	static vector<DeviceType> types;
-	static bool types_init = false;
-
-	if(!types_init) {
+	if(need_types_update) {
+		types.clear();
 		types.push_back(DEVICE_CPU);
 
 #ifdef WITH_CUDA
@@ -300,7 +303,7 @@ vector<DeviceType>& Device::available_types()
 		types.push_back(DEVICE_MULTI);
 #endif
 
-		types_init = true;
+		need_types_update = false;
 	}
 
 	return types;
@@ -308,10 +311,8 @@ vector<DeviceType>& Device::available_types()
 
 vector<DeviceInfo>& Device::available_devices()
 {
-	static vector<DeviceInfo> devices;
-	static bool devices_init = false;
-
-	if(!devices_init) {
+	if(need_devices_update) {
+		devices.clear();
 #ifdef WITH_CUDA
 		if(device_cuda_init())
 			device_cuda_info(devices);
@@ -332,7 +333,7 @@ vector<DeviceInfo>& Device::available_devices()
 		device_network_info(devices);
 #endif
 
-		devices_init = true;
+		need_devices_update = false;
 	}
 
 	return devices;
@@ -357,6 +358,20 @@ string Device::device_capabilities()
 #endif
 
 	return capabilities;
+}
+
+void Device::tag_update()
+{
+	need_types_update = true;
+	need_devices_update = true;
+}
+
+void Device::free_memory()
+{
+	need_types_update = true;
+	need_devices_update = true;
+	types.free_memory();
+	devices.free_memory();
 }
 
 CCL_NAMESPACE_END

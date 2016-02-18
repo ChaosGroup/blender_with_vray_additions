@@ -60,10 +60,6 @@ if(WITH_IMAGE_OPENJPEG AND (NOT WITH_SYSTEM_OPENJPEG))
 	add_subdirectory(libopenjpeg)
 endif()
 
-if(WITH_IMAGE_REDCODE)
-	add_subdirectory(libredcode)
-endif()
-
 if(WITH_LZO AND NOT WITH_SYSTEM_LZO)
 	add_subdirectory(lzo)
 endif()
@@ -74,7 +70,9 @@ endif()
 
 if(WITH_CYCLES OR WITH_COMPOSITOR OR WITH_OPENSUBDIV)
 	add_subdirectory(clew)
-	add_subdirectory(cuew)
+	if(WITH_CUDA_DYNLOAD)
+		add_subdirectory(cuew)
+	endif()
 endif()
 
 if(WITH_MOD_BOOLEAN)

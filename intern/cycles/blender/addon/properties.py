@@ -165,13 +165,13 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 name="Samples",
                 description="Number of samples to render for each pixel",
                 min=1, max=2147483647,
-                default=10,
+                default=128,
                 )
         cls.preview_samples = IntProperty(
                 name="Preview Samples",
                 description="Number of samples to render in the viewport, unlimited if 0",
                 min=0, max=2147483647,
-                default=10,
+                default=32,
                 )
         cls.preview_pause = BoolProperty(
                 name="Pause Preview",
@@ -376,12 +376,24 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 default=False,
                 )
 
+        # Really annoyingly, we have to keep it around for a few releases,
+        # otherwise forward compatibility breaks in really bad manner: CRASH!
+        #
+        # TODO(sergey): Remove this during 2.8x series of Blender.
         cls.filter_type = EnumProperty(
                 name="Filter Type",
                 description="Pixel filter type",
                 items=enum_filter_types,
-                default='GAUSSIAN',
+                default='BLACKMAN_HARRIS',
                 )
+
+        cls.pixel_filter_type = EnumProperty(
+                name="Filter Type",
+                description="Pixel filter type",
+                items=enum_filter_types,
+                default='BLACKMAN_HARRIS',
+                )
+
         cls.filter_width = FloatProperty(
                 name="Filter Width",
                 description="Pixel filter width",
@@ -469,7 +481,7 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 name="Tile Order",
                 description="Tile order for rendering",
                 items=enum_tile_order,
-                default='CENTER',
+                default='HILBERT_SPIRAL',
                 options=set(),  # Not animatable!
                 )
         cls.use_progressive_refine = BoolProperty(
@@ -493,18 +505,10 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 ('UV', "UV", ""),
                 ('EMIT', "Emit", ""),
                 ('ENVIRONMENT', "Environment", ""),
-                ('DIFFUSE_DIRECT', "Diffuse Direct", ""),
-                ('DIFFUSE_INDIRECT', "Diffuse Indirect", ""),
-                ('DIFFUSE_COLOR', "Diffuse Color", ""),
-                ('GLOSSY_DIRECT', "Glossy Direct", ""),
-                ('GLOSSY_INDIRECT', "Glossy Indirect", ""),
-                ('GLOSSY_COLOR', "Glossy Color", ""),
-                ('TRANSMISSION_DIRECT', "Transmission Direct", ""),
-                ('TRANSMISSION_INDIRECT', "Transmission Indirect", ""),
-                ('TRANSMISSION_COLOR', "Transmission Color", ""),
-                ('SUBSURFACE_DIRECT', "Subsurface Direct", ""),
-                ('SUBSURFACE_INDIRECT', "Subsurface Indirect", ""),
-                ('SUBSURFACE_COLOR', "Subsurface Color", ""),
+                ('DIFFUSE', "Diffuse", ""),
+                ('GLOSSY', "Glossy", ""),
+                ('TRANSMISSION', "Transmission", ""),
+                ('SUBSURFACE', "Subsurface", ""),
                 ),
             )
 
@@ -546,9 +550,50 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
         cls.rolling_shutter_duration = FloatProperty(
             name="Rolling Shutter Duration",
             description="Scanline \"exposure\" time for the rolling shutter effect",
-            default = 0.1,
+            default=0.1,
             min=0.0, max=1.0,
             )
+
+        # Various fine-tuning debug flags
+
+        def devices_update_callback(self, context):
+            import _cycles
+            scene = context.scene.as_pointer()
+            return _cycles.debug_flags_update(scene)
+
+        cls.debug_use_cpu_avx2 = BoolProperty(name="AVX2", default=True)
+        cls.debug_use_cpu_avx = BoolProperty(name="AVX", default=True)
+        cls.debug_use_cpu_sse41 = BoolProperty(name="SSE41", default=True)
+        cls.debug_use_cpu_sse3 = BoolProperty(name="SSE3", default=True)
+        cls.debug_use_cpu_sse2 = BoolProperty(name="SSE2", default=True)
+        cls.debug_use_qbvh = BoolProperty(name="QBVH", default=True)
+
+        cls.debug_opencl_kernel_type = EnumProperty(
+            name="OpenCL Kernel Type",
+            default='DEFAULT',
+            items=(
+                ('DEFAULT', "Default", ""),
+                ('MEGA', "Mega", ""),
+                ('SPLIT', "Split", ""),
+                ),
+            update=devices_update_callback
+            )
+
+        cls.debug_opencl_device_type = EnumProperty(
+            name="OpenCL Device Type",
+            default='ALL',
+            items=(
+                ('NONE', "None", ""),
+                ('ALL', "All", ""),
+                ('DEFAULT', "Default", ""),
+                ('CPU', "CPU", ""),
+                ('GPU', "GPU", ""),
+                ('ACCELERATOR', "Accelerator", ""),
+                ),
+            update=devices_update_callback
+            )
+
+        cls.debug_use_opencl_debug = BoolProperty(name="Debug OpenCL", default=False)
 
     @classmethod
     def unregister(cls):
@@ -693,7 +738,7 @@ class CyclesMaterialSettings(bpy.types.PropertyGroup):
                 name="Volume Sampling",
                 description="Sampling method to use for volumes",
                 items=enum_volume_sampling,
-                default='DISTANCE',
+                default='MULTIPLE_IMPORTANCE',
                 )
 
         cls.volume_interpolation = EnumProperty(
@@ -737,7 +782,7 @@ class CyclesLampSettings(bpy.types.PropertyGroup):
                 name="Multiple Importance Sample",
                 description="Use multiple importance sampling for the lamp, "
                             "reduces noise for area lamps and sharp glossy materials",
-                default=False,
+                default=True,
                 )
         cls.is_portal = BoolProperty(
                 name="Is Portal",
@@ -763,20 +808,20 @@ class CyclesWorldSettings(bpy.types.PropertyGroup):
                 name="Multiple Importance Sample",
                 description="Use multiple importance sampling for the environment, "
                             "enabling for non-solid colors is recommended",
-                default=False,
+                default=True,
                 )
         cls.sample_map_resolution = IntProperty(
                 name="Map Resolution",
                 description="Importance map size is resolution x resolution; "
                             "higher values potentially produce less noise, at the cost of memory and speed",
                 min=4, max=8192,
-                default=256,
+                default=1024,
                 )
         cls.samples = IntProperty(
                 name="Samples",
                 description="Number of light samples to render for each AA sample",
                 min=1, max=10000,
-                default=4,
+                default=1,
                 )
         cls.max_bounces = IntProperty(
                 name="Max Bounces",

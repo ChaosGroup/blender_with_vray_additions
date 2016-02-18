@@ -262,7 +262,7 @@ static void ui_block_bounds_calc_text(uiBlock *block, float offset)
 		}
 
 		if (bt->next && bt->rect.xmin < bt->next->rect.xmin) {
-			/* End of this column, and it’s not the last one. */
+			/* End of this column, and it's not the last one. */
 			for (col_bt = init_col_bt; col_bt->prev != bt; col_bt = col_bt->next) {
 				col_bt->rect.xmin = x1addval;
 				col_bt->rect.xmax = x1addval + i + block->bounds;
@@ -735,8 +735,15 @@ static bool ui_but_update_from_old_block(const bContext *C, uiBlock *block, uiBu
 
 		/* copy hardmin for list rows to prevent 'sticking' highlight to mouse position
 		 * when scrolling without moving mouse (see [#28432]) */
-		if (ELEM(oldbut->type, UI_BTYPE_ROW, UI_BTYPE_LISTROW))
+		if (ELEM(oldbut->type, UI_BTYPE_ROW, UI_BTYPE_LISTROW)) {
 			oldbut->hardmax = but->hardmax;
+		}
+
+		/* Selectively copy a1, a2 since their use differs across all button types
+		 * (and we'll probably split these out later) */
+		if (ELEM(oldbut->type, UI_BTYPE_PROGRESS_BAR)) {
+			oldbut->a1 = but->a1;
+		}
 
 		ui_but_update_linklines(block, oldbut, but);
 
@@ -1200,6 +1207,11 @@ void UI_block_update_from_old(const bContext *C, uiBlock *block)
 	for (but = block->buttons.first; but; but = but->next) {
 		if (ui_but_update_from_old_block(C, block, &but, &but_old)) {
 			ui_but_update(but);
+
+			/* redraw dynamic tooltip if we have one open */
+			if (but->tip_func) {
+				UI_but_tooltip_refresh((bContext *)C, but);
+			}
 		}
 	}
 
@@ -2417,7 +2429,7 @@ bool ui_but_string_set(bContext *C, uiBut *but, const char *str)
 		double value;
 
 		if (ui_but_string_set_eval_num(C, but, str, &value) == false) {
-			WM_report_banner_show(C);
+			WM_report_banner_show();
 			return false;
 		}
 
@@ -4322,7 +4334,7 @@ static void operator_enum_search_cb(const struct bContext *C, void *but, const c
 		EnumPropertyItem *item, *item_array;
 		bool do_free;
 
-		RNA_property_enum_items((bContext *)C, ptr, prop, &item_array, NULL, &do_free);
+		RNA_property_enum_items_gettexted((bContext *)C, ptr, prop, &item_array, NULL, &do_free);
 
 		for (item = item_array; item->identifier; item++) {
 			/* note: need to give the index rather than the identifier because the enum can be freed */

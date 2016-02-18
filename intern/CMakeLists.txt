@@ -83,6 +83,10 @@ if(WIN32)
 	add_subdirectory(utfconv)
 endif()
 
+if(WITH_OPENVDB)
+	add_subdirectory(openvdb)
+endif()
+
 if(WITH_VRAY_FOR_BLENDER)
 	add_subdirectory(vray_for_blender)
 endif()

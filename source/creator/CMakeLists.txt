@@ -130,7 +130,7 @@ if(WIN32 AND NOT UNIX)
 
 
 	list(APPEND SRC
-		../icons/winblender.rc
+		${CMAKE_SOURCE_DIR}/release/windows/icons/winblender.rc
 	)
 endif()
 
@@ -506,7 +506,7 @@ if(UNIX AND NOT APPLE)
 		if(WITH_PYTHON_INSTALL)
 
 			install(
-				FILES ${PYTHON_EXECUTABLE}
+				PROGRAMS ${PYTHON_EXECUTABLE}
 				DESTINATION ${TARGETDIR_VER}/python/bin
 			)
 
@@ -528,7 +528,6 @@ if(UNIX AND NOT APPLE)
 			install(
 				DIRECTORY ${PYTHON_LIBPATH}/python${PYTHON_VERSION}
 				DESTINATION ${TARGETDIR_VER}/python/${_target_LIB}
-				PATTERN ".svn" EXCLUDE
 				PATTERN "__pycache__" EXCLUDE               # * any cache *
 				PATTERN "distutils" EXCLUDE                 # ./distutils
 				PATTERN "lib2to3" EXCLUDE                   # ./lib2to3
@@ -625,13 +624,13 @@ elseif(WIN32)
 		# MinGW TODO: This bit of Python configuration diverges from MSVC
 		if(NOT CMAKE_COMPILER_IS_GNUCC)
 			install(
-				FILES ${LIBDIR}/python/lib/python${_PYTHON_VERSION_NO_DOTS}.dll ${LIBDIR}/python/lib/sqlite3.dll
+				FILES ${LIBDIR}/python/lib/python${_PYTHON_VERSION_NO_DOTS}.dll
 				DESTINATION "."
 				CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
 			)
 
 			install(
-				FILES ${LIBDIR}/python/lib/python${_PYTHON_VERSION_NO_DOTS}_d.dll ${LIBDIR}/python/lib/sqlite3_d.dll
+				FILES ${LIBDIR}/python/lib/python${_PYTHON_VERSION_NO_DOTS}_d.dll
 				DESTINATION "."
 				CONFIGURATIONS Debug
 			)
@@ -981,7 +980,7 @@ elseif(APPLE)
 		# copy site-packages files
 		install_dir(
 			${LIBDIR}/release/site-packages
-			${CMAKE_CURRENT_BINARY_DIR}/python/lib/python${PYTHON_VERSION}/site-packages
+			${CMAKE_CURRENT_BINARY_DIR}/python/lib/python${PYTHON_VERSION}
 		)
 
 		install(DIRECTORY ${LIBDIR}/python/bin
@@ -1096,7 +1095,7 @@ setup_liblinks(blender)
 if(WIN32 AND NOT WITH_PYTHON_MODULE)
 	set(LAUNCHER_SRC
 		creator_launch_win.c
-		../icons/winblender.rc
+		${CMAKE_SOURCE_DIR}/release/windows/icons/winblender.rc
 	)
 	add_executable(blender-launcher ${LAUNCHER_SRC})
 	target_link_libraries(blender-launcher bf_intern_utfconv ${PLATFORM_LINKLIBS})

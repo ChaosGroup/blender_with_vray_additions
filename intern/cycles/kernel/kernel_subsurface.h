@@ -16,7 +16,12 @@
 
 CCL_NAMESPACE_BEGIN
 
-/* NEW BSSRDF: See "BSSRDF Importance Sampling", SIGGRAPH 2013 */
+/* BSSRDF using disk based importance sampling.
+ *
+ * BSSRDF Importance Sampling, SIGGRAPH 2013
+ * http://library.imageworks.com/pdfs/imageworks-library-BSSRDF-sampling.pdf
+ *
+ */
 
 /* TODO:
  * - test using power heuristic for combing bssrdfs
@@ -100,8 +105,6 @@ ccl_device float3 subsurface_scatter_eval(ShaderData *sd, ShaderClosure *sc, flo
 	}
 
 	float sample_weight_inv = 1.0f/sample_weight_sum;
-
-	//printf("num closures %d\n", sd->num_closure);
 
 	for(int i = 0; i < sd->num_closure; i++) {
 		sc = &sd->closure[i];
@@ -293,10 +296,30 @@ ccl_device int subsurface_scatter_multi_intersect(
 
 	for(int hit = 0; hit < num_eval_hits; hit++) {
 		/* Quickly retrieve P and Ng without setting up ShaderData. */
-		float3 hit_P = triangle_refine_subsurface(kg,
-		                                          sd,
-		                                          &ss_isect->hits[hit],
-		                                          ray);
+		float3 hit_P;
+		if(ccl_fetch(sd, type) & PRIMITIVE_TRIANGLE) {
+			hit_P = triangle_refine_subsurface(kg,
+			                                   sd,
+			                                   &ss_isect->hits[hit],
+			                                   ray);
+		}
+#ifdef __OBJECT_MOTION__
+		else  if(ccl_fetch(sd, type) & PRIMITIVE_MOTION_TRIANGLE) {
+			float3 verts[3];
+			motion_triangle_vertices(
+			        kg,
+			        ccl_fetch(sd, object),
+			        kernel_tex_fetch(__prim_index, ss_isect->hits[hit].prim),
+			        ccl_fetch(sd, time),
+			        verts);
+			hit_P = motion_triangle_refine_subsurface(kg,
+			                                          sd,
+			                                          &ss_isect->hits[hit],
+			                                          ray,
+			                                          verts);
+		}
+#endif  /* __OBJECT_MOTION__ */
+
 		float3 hit_Ng = ss_isect->Ng[hit];
 		if(ss_isect->hits[hit].object != OBJECT_NONE) {
 			object_normal_transform(kg, sd, &hit_Ng);
