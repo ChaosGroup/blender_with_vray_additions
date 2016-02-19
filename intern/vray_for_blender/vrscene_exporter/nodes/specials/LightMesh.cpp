@@ -58,6 +58,9 @@ std::string VRayNodeExporter::exportVRayNodeLightMesh(BL::NodeTree ntree, BL::No
 			manualAttrs["geometry"]  = VRayNodeExporter::exportLinkedSocket(ntree, geomSock, context);
 			manualAttrs["transform"] = BOOST_FORMAT_TM(transform);
 			manualAttrs["objectID"]  = BOOST_FORMAT_INT(objectID);
+			VRayNodeExporter::getVRayNodeAttributes(manualAttrs, ntree, node, fromSocket, context, manualAttrs);
+
+			manualAttrs["use_tex"] = BOOST_FORMAT_BOOL(manualAttrs.count("tex"));
 
 			plugin = VRayNodeExporter::exportVRayNodeAttributes(ntree, node, fromSocket, context,
 			                                                    /* customAttrs */ manualAttrs,

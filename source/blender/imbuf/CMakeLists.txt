@@ -46,6 +46,7 @@ set(SRC
 	intern/bmp.c
 	intern/cache.c
 	intern/colormanagement.c
+	intern/colormanagement_inline.c
 	intern/divers.c
 	intern/filetype.c
 	intern/filter.c
@@ -122,13 +123,6 @@ if(WITH_IMAGE_OPENJPEG)
 	add_definitions(-DWITH_OPENJPEG ${OPENJPEG_DEFINES})
 endif()
 
-if(WITH_IMAGE_REDCODE)
-	list(APPEND INC_SYS
-		${REDCODE_INC}
-	)
-	add_definitions(-DWITH_REDCODE)
-endif()
-
 if(WITH_CODEC_AVI)
 	list(APPEND INC
 		../avi
@@ -186,5 +180,11 @@ if(WIN32)
 		../../../intern/utfconv
 	)
 endif()
+
+# no need to compile object files for inline headers.
+set_source_files_properties(
+	intern/colormanagement_inline.c
+	PROPERTIES HEADER_FILE_ONLY TRUE
+)
 
 blender_add_lib(bf_imbuf "${SRC}" "${INC}" "${INC_SYS}")

@@ -176,7 +176,7 @@ EnumPropertyItem rna_enum_dt_method_edge_items[] = {
 	{MREMAP_MODE_TOPOLOGY, "TOPOLOGY", 0, "Topology",
 	 "Copy from identical topology meshes"},
 	{MREMAP_MODE_EDGE_VERT_NEAREST, "VERT_NEAREST", 0, "Nearest Vertices",
-	 "Copy from most similar edge (edge which vertices are the closest of destination edge’s ones)"},
+	 "Copy from most similar edge (edge which vertices are the closest of destination edge's ones)"},
 	{MREMAP_MODE_EDGE_NEAREST, "NEAREST", 0, "Nearest Edge",
 	 "Copy from closest edge (using midpoints)"},
 	{MREMAP_MODE_EDGE_POLY_NEAREST, "POLY_NEAREST", 0, "Nearest Face Edge",
@@ -1903,6 +1903,7 @@ static void rna_def_modifier_boolean(BlenderRNA *brna)
 	RNA_def_property_ui_text(prop, "Operation", "");
 	RNA_def_property_update(prop, 0, "rna_Modifier_update");
 
+#if 0  /* WITH_MOD_BOOLEAN */
 	/* BMesh intersection options */
 	prop = RNA_def_property(srna, "use_bmesh", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "bm_flag", eBooleanModifierBMeshFlag_Enabled);
@@ -1930,6 +1931,7 @@ static void rna_def_modifier_boolean(BlenderRNA *brna)
 	RNA_def_property_ui_range(prop, 0, 1, 1, 7);
 	RNA_def_property_ui_text(prop, "Threshold",  "");
 	RNA_def_property_update(prop, 0, "rna_Modifier_update");
+#endif
 }
 
 static void rna_def_modifier_array(BlenderRNA *brna)

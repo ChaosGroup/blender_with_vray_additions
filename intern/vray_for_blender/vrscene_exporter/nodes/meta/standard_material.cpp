@@ -67,6 +67,13 @@ std::string VRayNodeExporter::exportVRayNodeMetaStandardMaterial(VRayNodeExportP
 		materialBrdf = brdfBumpName;
 	}
 
+	const std::string &fromSocketType = fromSocket.rna_type().identifier();
+
+	// If this node is connected as BRDF then skip material plugins export
+	if (fromSocketType == "VRaySocketBRDF") {
+		return materialBrdf;
+	}
+
 	// MtlSingleBRDF
 	//
 	const std::string &mtlSingleBrdfName = "MtlSingleBRDF@" + baseName;

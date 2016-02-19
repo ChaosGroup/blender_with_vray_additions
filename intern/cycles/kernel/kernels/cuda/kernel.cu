@@ -65,6 +65,18 @@
 #define CUDA_KERNEL_MAX_REGISTERS 63
 #define CUDA_KERNEL_BRANCHED_MAX_REGISTERS 63
 
+/* 3.7 */
+#elif __CUDA_ARCH__ == 370
+#define CUDA_MULTIPRESSOR_MAX_REGISTERS 65536
+#define CUDA_MULTIPROCESSOR_MAX_BLOCKS 16
+#define CUDA_BLOCK_MAX_THREADS 1024
+#define CUDA_THREAD_MAX_REGISTERS 255
+
+/* tunable parameters */
+#define CUDA_THREADS_BLOCK_WIDTH 16
+#define CUDA_KERNEL_MAX_REGISTERS 63
+#define CUDA_KERNEL_BRANCHED_MAX_REGISTERS 63
+
 /* 5.0, 5.2 and 5.3 */
 #elif __CUDA_ARCH__ == 500 || __CUDA_ARCH__ == 520 || __CUDA_ARCH__ == 530
 #define CUDA_MULTIPRESSOR_MAX_REGISTERS 65536
@@ -183,12 +195,12 @@ kernel_cuda_shader(uint4 *input,
 
 extern "C" __global__ void
 CUDA_LAUNCH_BOUNDS(CUDA_THREADS_BLOCK_WIDTH, CUDA_KERNEL_MAX_REGISTERS)
-kernel_cuda_bake(uint4 *input, float4 *output, int type, int sx, int sw, int offset, int sample)
+kernel_cuda_bake(uint4 *input, float4 *output, int type, int filter, int sx, int sw, int offset, int sample)
 {
 	int x = sx + blockDim.x*blockIdx.x + threadIdx.x;
 
 	if(x < sx + sw)
-		kernel_bake_evaluate(NULL, input, output, (ShaderEvalType)type, x, offset, sample);
+		kernel_bake_evaluate(NULL, input, output, (ShaderEvalType)type, filter, x, offset, sample);
 }
 
 #endif

@@ -4252,6 +4252,7 @@ static void check_non_flat_quads(ObjectRen *obr)
 				vlr->v2= v3;
 				vlr->v3= v4;
 				vlr->v4= NULL;
+				vlr->flag |= (R_DIVIDE_24 | R_FACE_SPLIT);
 			}
 			else {
 				sub_v3_v3v3(nor, v2->co, v3->co);
@@ -4259,6 +4260,7 @@ static void check_non_flat_quads(ObjectRen *obr)
 					vlr->v2= v3;
 					vlr->v3= v4;
 					vlr->v4= NULL;
+					vlr->flag |= R_FACE_SPLIT;
 				}
 				else {
 					sub_v3_v3v3(nor, v3->co, v4->co);
@@ -5869,11 +5871,7 @@ void RE_Database_Baking(Render *re, Main *bmain, Scene *scene, unsigned int lay,
 	re->lay= lay;
 
 	/* renderdata setup and exceptions */
-	BLI_freelistN(&re->r.layers);
-	BLI_freelistN(&re->r.views);
-	re->r = scene->r;
-	BLI_duplicatelist(&re->r.layers, &scene->r.layers);
-	BLI_duplicatelist(&re->r.views, &scene->r.views);
+	render_copy_renderdata(&re->r, &scene->r);
 
 	RE_init_threadcount(re);
 	

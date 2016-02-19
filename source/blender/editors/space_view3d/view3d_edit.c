@@ -41,6 +41,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_blenlib.h"
+#include "BLI_kdopbvh.h"
 #include "BLI_math.h"
 #include "BLI_utildefines.h"
 
@@ -4004,8 +4005,8 @@ static int vieworbit_exec(bContext *C, wmOperator *op)
 					angle = -angle;
 				}
 
-				/* z-axis */
-				axis_angle_to_quat_single(quat_mul, 'Z', angle);
+				/* View Y-axis */
+				axis_angle_to_quat(quat_mul, rv3d->viewinv[1], angle);
 			}
 			else {
 
@@ -4013,7 +4014,7 @@ static int vieworbit_exec(bContext *C, wmOperator *op)
 					angle = -angle;
 				}
 
-				/* horizontal axis */
+				/* View X-axis */
 				axis_angle_to_quat(quat_mul, rv3d->viewinv[0], angle);
 			}
 
@@ -4170,9 +4171,9 @@ static int viewroll_modal(bContext *C, wmOperator *op, const wmEvent *event)
 }
 
 static EnumPropertyItem prop_view_roll_items[] = {
-	{0, "ROLLANGLE", 0, "Roll Angle", "Roll the view using an angle value"},
-	{V3D_VIEW_STEPLEFT, "ROLLLEFT", 0, "Roll Left", "Roll the view around to the Left"},
-	{V3D_VIEW_STEPRIGHT, "ROLLTRIGHT", 0, "Roll Right", "Roll the view around to the Right"},
+	{0, "ANGLE", 0, "Roll Angle", "Roll the view using an angle value"},
+	{V3D_VIEW_STEPLEFT, "LEFT", 0, "Roll Left", "Roll the view around to the Left"},
+	{V3D_VIEW_STEPRIGHT, "RIGHT", 0, "Roll Right", "Roll the view around to the Right"},
 	{0, NULL, 0, NULL, NULL}
 };
 
@@ -4484,8 +4485,9 @@ void VIEW3D_OT_background_image_add(wmOperatorType *ot)
 	
 	/* properties */
 	RNA_def_string(ot->srna, "name", "Image", MAX_ID_NAME - 2, "Name", "Image name to assign");
-	WM_operator_properties_filesel(ot, FILE_TYPE_FOLDER | FILE_TYPE_IMAGE | FILE_TYPE_MOVIE, FILE_SPECIAL, FILE_OPENFILE,
-	                               WM_FILESEL_FILEPATH | WM_FILESEL_RELPATH, FILE_DEFAULTDISPLAY, FILE_SORT_ALPHA);
+	WM_operator_properties_filesel(
+	        ot, FILE_TYPE_FOLDER | FILE_TYPE_IMAGE | FILE_TYPE_MOVIE, FILE_SPECIAL, FILE_OPENFILE,
+	        WM_FILESEL_FILEPATH | WM_FILESEL_RELPATH, FILE_DEFAULTDISPLAY, FILE_SORT_ALPHA);
 }
 
 
@@ -5183,7 +5185,7 @@ bool ED_view3d_snap_from_ray(
         float r_co[3])
 {
 	float r_no_dummy[3];
-	float ray_dist = TRANSFORM_DIST_MAX_RAY;
+	float ray_dist = BVH_RAYCAST_DIST_MAX;
 	bool ret;
 
 	struct Object *obedit = scene->obedit;
@@ -5223,7 +5225,7 @@ bool ED_view3d_snap_from_region(
         float r_co[3], float r_no[3])
 {
 	float r_no_dummy[3];
-	float ray_dist = TRANSFORM_DIST_MAX_RAY;
+	float ray_dist = BVH_RAYCAST_DIST_MAX;
 	bool is_hit = false;
 	float *r_no_ptr = r_no ? r_no : r_no_dummy;
 
@@ -5236,7 +5238,7 @@ bool ED_view3d_snap_from_region(
 	for (int i = 0; i < 3; i++) {
 		if (elem_test[i] && (is_hit == false || use_depth)) {
 			if (use_depth == false) {
-				ray_dist = TRANSFORM_DIST_MAX_RAY;
+				ray_dist = BVH_RAYCAST_DIST_MAX;
 			}
 			if (snapObjectsEx(
 			        scene, v3d, ar, NULL, obedit,

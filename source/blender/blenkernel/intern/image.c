@@ -657,6 +657,18 @@ bool BKE_image_scale(Image *image, int width, int height)
 	return (ibuf != NULL);
 }
 
+bool BKE_image_has_bindcode(Image *ima)
+{
+	bool has_bindcode = false;
+	for (int i = 0; i < TEXTARGET_COUNT; i++) {
+		if (ima->bindcode[i]) {
+			has_bindcode = true;
+			break;
+		}
+	}
+	return has_bindcode;
+}
+
 static void image_init_color_management(Image *ima)
 {
 	ImBuf *ibuf;
@@ -1623,6 +1635,14 @@ void BKE_imbuf_to_image_format(struct ImageFormatData *im_format, const ImBuf *i
 		im_format->imtype = R_IMF_IMTYPE_TIFF;
 		if (custom_flags & TIF_16BIT)
 			im_format->depth = R_IMF_CHAN_DEPTH_16;
+		if (custom_flags & TIF_COMPRESS_NONE)
+			im_format->tiff_codec = R_IMF_TIFF_CODEC_NONE;
+		if (custom_flags & TIF_COMPRESS_DEFLATE)
+			im_format->tiff_codec = R_IMF_TIFF_CODEC_DEFLATE;
+		if (custom_flags & TIF_COMPRESS_LZW)
+			im_format->tiff_codec = R_IMF_TIFF_CODEC_LZW;
+		if (custom_flags & TIF_COMPRESS_PACKBITS)
+			im_format->tiff_codec = R_IMF_TIFF_CODEC_PACKBITS;
 	}
 #endif
 
@@ -1845,8 +1865,81 @@ static void stampdata(Scene *scene, Object *camera, StampData *stamp_data, int d
 	}
 }
 
+/* Will always add prefix. */
+static void stampdata_from_template(StampData *stamp_data,
+                                    const Scene *scene,
+                                    const StampData *stamp_data_template)
+{
+	if (scene->r.stamp & R_STAMP_FILENAME) {
+		BLI_snprintf(stamp_data->file, sizeof(stamp_data->file), "File %s", stamp_data_template->file);
+	}
+	else {
+		stamp_data->file[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_NOTE) {
+		BLI_snprintf(stamp_data->note, sizeof(stamp_data->note), "%s", stamp_data_template->note);
+	}
+	else {
+		stamp_data->note[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_DATE) {
+		BLI_snprintf(stamp_data->date, sizeof(stamp_data->date), "Date %s", stamp_data_template->date);
+	}
+	else {
+		stamp_data->date[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_MARKER) {
+		BLI_snprintf(stamp_data->marker, sizeof(stamp_data->marker), "Marker %s", stamp_data_template->marker);
+	}
+	else {
+		stamp_data->marker[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_TIME) {
+		BLI_snprintf(stamp_data->time, sizeof(stamp_data->time), "Timecode %s", stamp_data_template->time);
+	}
+	else {
+		stamp_data->time[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_FRAME) {
+		BLI_snprintf(stamp_data->frame, sizeof(stamp_data->frame), "Frame %s", stamp_data_template->frame);
+	}
+	else {
+		stamp_data->frame[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_CAMERA) {
+		BLI_snprintf(stamp_data->camera, sizeof(stamp_data->camera), "Camera %s", stamp_data_template->camera);
+	}
+	else {
+		stamp_data->camera[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_CAMERALENS) {
+		BLI_snprintf(stamp_data->cameralens, sizeof(stamp_data->cameralens), "Lens %s", stamp_data_template->cameralens);
+	}
+	else {
+		stamp_data->cameralens[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_SCENE) {
+		BLI_snprintf(stamp_data->scene, sizeof(stamp_data->scene), "Scene %s", stamp_data_template->scene);
+	}
+	else {
+		stamp_data->scene[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_SEQSTRIP) {
+		BLI_snprintf(stamp_data->strip, sizeof(stamp_data->strip), "Strip %s", stamp_data_template->strip);
+	}
+	else {
+		stamp_data->strip[0] = '\0';
+	}
+	if (scene->r.stamp & R_STAMP_RENDERTIME) {
+		BLI_snprintf(stamp_data->rendertime, sizeof(stamp_data->rendertime), "RenderTime %s", stamp_data_template->rendertime);
+	}
+	else {
+		stamp_data->rendertime[0] = '\0';
+	}
+}
+
 void BKE_image_stamp_buf(
-        Scene *scene, Object *camera,
+        Scene *scene, Object *camera, const StampData *stamp_data_template,
         unsigned char *rect, float *rectf, int width, int height, int channels)
 {
 	struct StampData stamp_data;
@@ -1883,7 +1976,12 @@ void BKE_image_stamp_buf(
 	display_device = scene->display_settings.display_device;
 	display = IMB_colormanagement_display_get_named(display_device);
 
-	stampdata(scene, camera, &stamp_data, 1);
+	if (stamp_data_template == NULL) {
+		stampdata(scene, camera, &stamp_data, 1);
+	}
+	else {
+		stampdata_from_template(&stamp_data, scene, stamp_data_template);
+	}
 
 	/* TODO, do_versions */
 	if (scene->r.stamp_font_id < 8)
@@ -2174,6 +2272,9 @@ void BKE_imbuf_write_prepare(ImBuf *ibuf, const ImageFormatData *imf)
 	char compress = imf->compress;
 	char quality = imf->quality;
 
+	/* initialize all from image format */
+	ibuf->foptions.flag = 0;
+
 	if (imtype == R_IMF_IMTYPE_IRIS) {
 		ibuf->ftype = IMB_FTYPE_IMAGIC;
 	}
@@ -2205,8 +2306,21 @@ void BKE_imbuf_write_prepare(ImBuf *ibuf, const ImageFormatData *imf)
 	else if (imtype == R_IMF_IMTYPE_TIFF) {
 		ibuf->ftype = IMB_FTYPE_TIF;
 
-		if (imf->depth == R_IMF_CHAN_DEPTH_16)
+		if (imf->depth == R_IMF_CHAN_DEPTH_16) {
 			ibuf->foptions.flag |= TIF_16BIT;
+		}
+		if (imf->tiff_codec == R_IMF_TIFF_CODEC_NONE) {
+			ibuf->foptions.flag |= TIF_COMPRESS_NONE;
+		}
+		else if (imf->tiff_codec == R_IMF_TIFF_CODEC_DEFLATE) {
+			ibuf->foptions.flag |= TIF_COMPRESS_DEFLATE;
+		}
+		else if (imf->tiff_codec == R_IMF_TIFF_CODEC_LZW) {
+			ibuf->foptions.flag |= TIF_COMPRESS_LZW;
+		}
+		else if (imf->tiff_codec == R_IMF_TIFF_CODEC_PACKBITS) {
+			ibuf->foptions.flag |= TIF_COMPRESS_PACKBITS;
+		}
 	}
 #endif
 #ifdef WITH_OPENEXR
@@ -2214,7 +2328,6 @@ void BKE_imbuf_write_prepare(ImBuf *ibuf, const ImageFormatData *imf)
 		ibuf->ftype = IMB_FTYPE_OPENEXR;
 		if (imf->depth == R_IMF_CHAN_DEPTH_16)
 			ibuf->foptions.flag |= OPENEXR_HALF;
-		ibuf->foptions.flag &= ~OPENEXR_COMPRESS;
 		ibuf->foptions.flag |= (imf->exr_codec & OPENEXR_COMPRESS);
 
 		if (!(imf->flag & R_IMF_FLAG_ZBUF))
@@ -2334,6 +2447,7 @@ int BKE_imbuf_write_as(ImBuf *ibuf, const char *name, ImageFormatData *imf,
 		/* note that we are not restoring _all_ settings */
 		ibuf->planes = ibuf_back.planes;
 		ibuf->ftype =  ibuf_back.ftype;
+		ibuf->foptions =  ibuf_back.foptions;
 	}
 
 	return ok;
@@ -4385,6 +4499,15 @@ void BKE_image_get_size(Image *image, ImageUser *iuser, int *width, int *height)
 	if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
 		*width = ibuf->x;
 		*height = ibuf->y;
+	}
+	else if (image->type == IMA_TYPE_R_RESULT && iuser != NULL && iuser->scene != NULL) {
+		Scene *scene = iuser->scene;
+		*width = (scene->r.xsch * scene->r.size) / 100;
+		*height = (scene->r.ysch * scene->r.size) / 100;
+		if ((scene->r.mode & R_BORDER) && (scene->r.mode & R_CROP)) {
+			*width *= BLI_rctf_size_x(&scene->r.border);
+			*height *= BLI_rctf_size_y(&scene->r.border);
+		}
 	}
 	else {
 		*width  = IMG_SIZE_FALLBACK;
