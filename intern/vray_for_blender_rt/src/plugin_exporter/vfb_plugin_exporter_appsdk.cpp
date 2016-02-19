@@ -382,7 +382,7 @@ void AppSdkExporter::commit_changes()
 void AppSdkExporter::show_frame_buffer()
 {
 	if (m_vray) {
-		m_vray->showFrameBuffer(true, false);
+		m_vray->vfb.show(true, false);
 	}
 }
 
