@@ -44,6 +44,7 @@ AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &n
 
 	pluginDesc.add("geometry", exportLinkedSocket(ntree, geomSock, context));
 	pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	pluginDesc.add("use_tex", pluginDesc.contains("tex"));
 
 	return m_exporter->export_plugin(pluginDesc);
 }
