@@ -452,6 +452,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 						}
 					}
 
+					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 					m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
 				} else {
 					m_data_exporter.exportObject(ob, check_updated, overrideAttr);

@@ -168,7 +168,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	PointerRNA vrayObject  = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
-	const std::string &pluginName = getNodeName(ob);
+	const std::string &pluginName = "Clipper@" + ob.name();
 	m_id_track.insert(ob, pluginName);
 
 	bool is_updated      = check_updated ? ob.is_updated()      : true;
@@ -186,6 +186,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 		nodeDesc.add("material", material);
 	}
 
+	nodeDesc.add("clip_mesh", AttrPlugin(getNodeName(ob)));
 	nodeDesc.add("enabled", 1);
 	nodeDesc.add("affect_light", RNA_boolean_get(&vrayClipper, "affect_light"));
 	nodeDesc.add("only_camera_rays", RNA_boolean_get(&vrayClipper, "only_camera_rays"));
