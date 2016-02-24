@@ -395,7 +395,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 {
 	bool add = false;
 	if (override) {
-		add = !m_data_exporter.m_id_cache.contains(override.id) && !m_data_exporter.m_id_cache.contains(ob);
+		add = !m_data_exporter.m_id_cache.contains(override.id) && (!override.useInstancer || !m_data_exporter.m_id_cache.contains(ob));
 	} else {
 		add = !m_data_exporter.m_id_cache.contains(ob);
 	}
@@ -432,31 +432,27 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 						  ob.name().c_str());
 #endif
 
-			if (ob.data() && ob.type() == BL::Object::type_MESH) {
-				if (RNA_boolean_get(&vrayClipper, "enabled")) {
+			m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+			if (ob.data() && ob.type() == BL::Object::type_MESH && RNA_boolean_get(&vrayClipper, "enabled")) {
 
-					const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
-					if (NOT(excludeGroupName.empty())) {
-						AttrListPlugin plList;
-						BL::BlendData::groups_iterator grIt;
-						for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
-							BL::Group gr = *grIt;
-							if (gr.name() == excludeGroupName) {
-								BL::Group::objects_iterator grObIt;
-								for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
-									BL::Object ob = *grObIt;
-									sync_object(ob, check_updated);
-								}
-								break;
+				const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
+				if (NOT(excludeGroupName.empty())) {
+					AttrListPlugin plList;
+					BL::BlendData::groups_iterator grIt;
+					for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
+						BL::Group gr = *grIt;
+						if (gr.name() == excludeGroupName) {
+							BL::Group::objects_iterator grObIt;
+							for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
+								BL::Object ob = *grObIt;
+								sync_object(ob, check_updated);
 							}
+							break;
 						}
 					}
-
-					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
-					m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
-				} else {
-					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 				}
+
+				m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
 			}
 			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
 				m_data_exporter.exportLight(ob, check_updated, overrideAttr);
@@ -541,31 +537,42 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 				sync_object(dupOb, check_updated, overrideAttrs);
 			}
-			else if (dupli_use_instancer) {
+			else {
 				ObjectOverridesAttrs overrideAttrs;
 				overrideAttrs.override = true;
 				// If dupli are shown via Instancer we need to hide
 				// original object
 				overrideAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(dupOb);
-				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-				overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
 
-				float inverted[4][4];
-				copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
-				invert_m4(inverted);
+				if (dupli_use_instancer) {
+					overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+					overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
 
-				float tm[4][4];
-				mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
+					float inverted[4][4];
+					copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
+					invert_m4(inverted);
 
-				AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
-				instancer_item.index = persistendID;
+					float tm[4][4];
+					mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
 
-				instancer_item.node = m_data_exporter.getNodeName(dupOb);
-				instancer_item.tm = AttrTransformFromBlTransform(tm);
+					AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+					instancer_item.index = persistendID;
 
-				dupli_instance++;
+					instancer_item.node = m_data_exporter.getNodeName(dupOb);
+					instancer_item.tm = AttrTransformFromBlTransform(tm);
 
-				sync_object(dupOb, check_updated, overrideAttrs);
+					dupli_instance++;
+
+					sync_object(dupOb, check_updated, overrideAttrs);
+				} else {
+					char namePrefix[255] = {0, };
+					snprintf(namePrefix, 250, "Dupli%u@%s", persistendID, ob.name().c_str());
+					overrideAttrs.namePrefix = namePrefix;
+					overrideAttrs.id = persistendID;
+					overrideAttrs.useInstancer = false;
+					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+					sync_object(dupOb, check_updated, overrideAttrs);
+				}
 			}
 		}
 	}

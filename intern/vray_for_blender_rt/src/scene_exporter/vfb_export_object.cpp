@@ -186,7 +186,9 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 		nodeDesc.add("material", material);
 	}
 
-	nodeDesc.add("clip_mesh", AttrPlugin(getNodeName(ob)));
+	if (RNA_boolean_get(&vrayClipper, "use_obj_mesh")) {
+		nodeDesc.add("clip_mesh", AttrPlugin(getNodeName(ob)));
+	}
 	nodeDesc.add("enabled", 1);
 	nodeDesc.add("affect_light", RNA_boolean_get(&vrayClipper, "affect_light"));
 	nodeDesc.add("only_camera_rays", RNA_boolean_get(&vrayClipper, "only_camera_rays"));

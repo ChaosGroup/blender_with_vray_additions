@@ -209,12 +209,14 @@ struct ObjectOverridesAttrs {
 	    , visible(true)
 	    , id(0)
 	    , dupliHolder(PointerRNA_NULL)
+	    , useInstancer(true)
 	{}
 
 	operator bool() const {
 		return override;
 	}
 
+	bool           useInstancer;
 	bool           override;
 	int            visible;
 	AttrTransform  tm;
