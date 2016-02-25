@@ -501,6 +501,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 	BL::Object::dupli_list_iterator dupIt;
 	int dupli_instance = 0;
+	bool dupli_base_synced = false;
 	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
 		if (is_interrupted()) {
 			return;
@@ -571,6 +572,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					overrideAttrs.id = persistendID;
 					overrideAttrs.useInstancer = false;
 					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+					if (!dupli_base_synced && ob_is_duplicator_renderable(dupOb)) {
+						dupli_base_synced = true;
+						sync_object(dupOb, check_updated);
+					}
 					sync_object(dupOb, check_updated, overrideAttrs);
 				}
 			}
