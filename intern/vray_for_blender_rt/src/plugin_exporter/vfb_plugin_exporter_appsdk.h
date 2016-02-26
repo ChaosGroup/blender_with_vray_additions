@@ -83,7 +83,7 @@ public:
 
 	virtual void         export_vrscene(const std::string &filepath) override;
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc) override;
-	virtual int          remove_plugin(const std::string &pluginName) override;
+	virtual int          remove_plugin_impl(const std::string &pluginName) override;
 	virtual void         commit_changes() override;
 
 	virtual RenderImage  get_image() override;

@@ -83,7 +83,7 @@ public:
 	virtual bool        is_aborted() const { return m_IsAborted; }
 
 
-	virtual int         remove_plugin(const std::string&);
+	virtual int         remove_plugin_impl(const std::string&);
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:
 	void                checkZmqClient();

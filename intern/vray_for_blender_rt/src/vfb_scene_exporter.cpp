@@ -563,19 +563,28 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					instancer_item.tm = AttrTransformFromBlTransform(tm);
 
 					dupli_instance++;
-
-					sync_object(dupOb, check_updated, overrideAttrs);
+					if (!dupli_base_synced) {
+						dupli_base_synced = true;
+						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_INSTACER);
+						sync_object(dupOb, check_updated, overrideAttrs);
+					}
 				} else {
-					char namePrefix[255] = {0, };
-					snprintf(namePrefix, 250, "Dupli%u@%s", persistendID, ob.name().c_str());
-					overrideAttrs.namePrefix = namePrefix;
-					overrideAttrs.id = persistendID;
 					overrideAttrs.useInstancer = false;
-					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+
 					if (!dupli_base_synced && ob_is_duplicator_renderable(dupOb)) {
 						dupli_base_synced = true;
-						sync_object(dupOb, check_updated);
+						overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
+						sync_object(dupOb, check_updated, overrideAttrs);
 					}
+
+					char namePrefix[255] = {0, };
+					snprintf(namePrefix, 250, "Dupli%u@%s", persistendID, m_data_exporter.getNodeName(dupOb).c_str());
+					overrideAttrs.namePrefix = namePrefix;
+					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+					overrideAttrs.id = persistendID;
+
+					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
 					sync_object(dupOb, check_updated, overrideAttrs);
 				}
 			}
@@ -583,11 +592,13 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (dupli_use_instancer) {
-		static boost::format InstancerFmt("Dupli@%s");
+		static boost::format InstancerFmt("Instancer@%s");
+		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
 
-		PluginDesc instancerDesc(boost::str(InstancerFmt % m_data_exporter.getNodeName(ob)), "Instancer");
+		PluginDesc instancerDesc(exportName, "Instancer");
 		instancerDesc.add("instances", instances);
 
+		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
 		m_exporter->export_plugin(instancerDesc);
 	}
 }
@@ -625,6 +636,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
 
+			m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(ob));
 			sync_object(ob, check_updated, overAttrs);
 		}
 		else {

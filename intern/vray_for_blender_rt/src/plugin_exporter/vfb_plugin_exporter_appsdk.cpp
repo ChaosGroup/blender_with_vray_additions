@@ -529,7 +529,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 }
 
 
-int AppSdkExporter::remove_plugin(const std::string &pluginName)
+int AppSdkExporter::remove_plugin_impl(const std::string &pluginName)
 {
 	bool res = true;
 

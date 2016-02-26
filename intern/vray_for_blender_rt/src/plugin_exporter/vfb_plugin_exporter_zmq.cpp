@@ -486,11 +486,11 @@ void ZmqExporter::export_vrscene(const std::string &filepath)
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::ExportScene, filepath));
 }
 
-int ZmqExporter::remove_plugin(const std::string &name)
+int ZmqExporter::remove_plugin_impl(const std::string &name)
 {
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(name, VRayMessage::PluginAction::Remove));
-	return PluginExporter::remove_plugin(name);
+	return PluginExporter::remove_plugin_impl(name);
 }
 
 AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)

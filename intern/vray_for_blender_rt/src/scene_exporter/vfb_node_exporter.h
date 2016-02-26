@@ -27,6 +27,7 @@
 
 #include "DNA_ID.h"
 #include <map>
+#include <unordered_map>
 
 using namespace VRayForBlender;
 
@@ -157,22 +158,46 @@ private:
 // Used to track object deletion / creation
 //
 struct IdTrack {
-	struct IdDep {
-		std::set<std::string>  plugins;
-		int                    used;
+
+	enum PluginType {
+		NONE, CLIPPER, DUPLI_INSTACER, DUPLI_NODE
 	};
 
-	int contains(BL::ID id) {
-		return data.find(id.ptr.data) != data.end();
+	struct PluginInfo {
+		bool used;
+		PluginType type;
+	};
+
+	struct IdDep {
+		std::unordered_map<std::string, PluginInfo> plugins;
+		int used;
+	};
+
+	int contains(BL::Object id) {
+		return data.find(id) != data.end();
 	}
 
 	void clear() {
 		data.clear();
 	}
 
-	void insert(BL::ID id, const std::string &plugin) {
-		IdDep &dep = data[id.ptr.data];
-		dep.plugins.insert(plugin);
+	void insert(BL::Object id, const std::string &plugin, PluginType type = PluginType::NONE) {
+		switch (type) {
+		case IdTrack::CLIPPER:
+			PRINT_INFO_EX("IdTrack plugin %s CLIPPER", plugin.c_str());
+			break;
+		case IdTrack::DUPLI_INSTACER:
+			PRINT_INFO_EX("IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
+			break;
+		case IdTrack::DUPLI_NODE:
+			PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
+			break;
+		default:
+			PRINT_INFO_EX("IdTrack plugin %s NONE", plugin.c_str());
+			break;
+		}
+		IdDep &dep = data[id];
+		dep.plugins[plugin] = {true, type};
 		dep.used = true;
 	}
 
@@ -182,11 +207,14 @@ struct IdTrack {
 			ID    *id  = (ID*)dIt.first;
 #endif
 			IdDep &dep = dIt.second;
+			for (auto &pl : dep.plugins) {
+				pl.second.used = false;
+			}
 			dep.used = false;
 		}
 	}
 
-	typedef std::map<void*, IdDep> TrackMap;
+	typedef std::map<BL::Object, IdDep> TrackMap;
 	TrackMap data;
 
 };

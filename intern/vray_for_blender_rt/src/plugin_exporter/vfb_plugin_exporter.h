@@ -83,7 +83,8 @@ public:
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
 	AttrPlugin           export_plugin(const PluginDesc &pluginDesc);
 
-	virtual int          remove_plugin(const std::string&) { return 0; }
+	virtual int          remove_plugin_impl(const std::string&) { return 0; }
+	int                  remove_plugin(const std::string&);
 
 	virtual float        get_last_rendered_frame() const { return last_rendered_frame; }
 	void                 set_current_frame(float val)    { current_scene_frame = val; }

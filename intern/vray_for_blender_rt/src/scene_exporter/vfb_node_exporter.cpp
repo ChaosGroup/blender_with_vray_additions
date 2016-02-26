@@ -109,18 +109,48 @@ void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
 
 void DataExporter::sync()
 {
-	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.end(); ) {
-		const IdTrack::IdDep &dep = dIt->second;
-		if (dep.used) {
-			++dIt;
-		}
-		else {
-			for (const auto &plugin : dep.plugins) {
-				PRINT_ERROR("Removing plugin: %s",
-				            plugin.c_str());
-				m_exporter->remove_plugin(plugin);
+	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.end(); ++dIt) {
+		auto ob = dIt->first;
+		auto &dep = dIt->second;
+
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+
+		for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
+			bool should_remove = false;
+			const char * type = nullptr;
+
+			if (!dep.used) {
+				// object not used at all - remove all plugins
+				should_remove = true;
+			} else if (!plIter->second.used) {
+				// object used, but not this plugin - check if object still has it
+				switch (plIter->second.type) {
+				case IdTrack::CLIPPER:
+					should_remove = !RNA_boolean_get(&vrayClipper, "enabled");
+					type = "DUPLI_CLIPPER";
+					break;
+				case IdTrack::DUPLI_NODE:
+					// we had dupli *without* instancer, now we dont have dupli, or its via instancer
+					should_remove = !ob.is_duplicator() || dupli_use_instancer;
+					type = "DUPLI_NODE";
+					break;
+				case IdTrack::DUPLI_INSTACER:
+					// we had dupli *with* instancer, now we have node based dupli or not at all
+					should_remove = !ob.is_duplicator() || !dupli_use_instancer;
+					type = "DUPLI_INSTACER";
+					break;
+				}
 			}
-			m_id_track.data.erase(dIt++);
+
+			if (should_remove) {
+				PRINT_INFO_EX("Removing plugin: %s, with type: %s", plIter->first.c_str(), type);
+				m_exporter->remove_plugin(plIter->first);
+				plIter = dep.plugins.erase(plIter);
+			} else {
+				++plIter;
+			}
 		}
 	}
 }
