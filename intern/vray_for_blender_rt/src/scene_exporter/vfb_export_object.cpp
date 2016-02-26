@@ -188,6 +188,8 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 
 	if (RNA_boolean_get(&vrayClipper, "use_obj_mesh")) {
 		nodeDesc.add("clip_mesh", AttrPlugin(getNodeName(ob)));
+	} else {
+		nodeDesc.add("clip_mesh", "NULL");
 	}
 	nodeDesc.add("enabled", 1);
 	nodeDesc.add("affect_light", RNA_boolean_get(&vrayClipper, "affect_light"));
