@@ -239,14 +239,16 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 
 AttrValue DataExporter::exportSocket(BL::NodeTree &ntree, BL::NodeSocket &socket, NodeContext &context)
 {
-	AttrValue value;
+	bool doExport = false;
+
 	if (socket.is_linked()) {
-		value = exportLinkedSocket(ntree, socket, context);
+		auto connectedNode = getConnectedNode(ntree, socket, context);
+		doExport = connectedNode && !connectedNode.mute();
 	}
-	else {
-		value = exportDefaultSocket(ntree, socket);
-	}
-	return value;
+
+	return doExport ?
+		exportLinkedSocket(ntree, socket, context) :
+		exportDefaultSocket(ntree, socket);
 }
 
 
@@ -268,9 +270,14 @@ AttrValue DataExporter::exportVRayNodeAuto(BL::NodeTree &ntree, BL::Node &node, 
 
 AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
+	if (node.mute()) {
+		return AttrValue("NULL");
+	}
+
 	AttrValue attrValue;
 
 	const std::string &nodeClass = node.bl_idname();
+
 
 #if 0
 	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"",
