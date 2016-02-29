@@ -109,6 +109,7 @@ protected:
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
 
+	bool                 m_isRunning;
 private:
 	int                  is_physical_view(BL::Object &cameraObject);
 	int                  is_physical_updated(ViewParams &viewParams);

@@ -21,6 +21,8 @@
 #include <thread>
 #include <chrono>
 
+#include <Python.h>
+
 
 void ProductionExporter::create_exporter()
 {
@@ -43,14 +45,46 @@ void ProductionExporter::setup_callbacks()
 bool ProductionExporter::do_export()
 {
 	bool res = true;
+	Py_BEGIN_ALLOW_THREADS
 
 	if (m_settings.settings_animation.use) {
-		res = export_animation();
+		sync(false);
+		m_animationPythonThreadState = _save;
+		m_isAnimationRunning = true;
+		std::thread update(&ProductionExporter::render_start, this);
+
+		while (!m_isRunning) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+
+		const auto restore = m_scene.frame_current();
+		float progress = 0.f, frameProgress = 1.f / ((m_scene.frame_end() - m_scene.frame_start()) / m_scene.frame_step());
+
+		for (auto fr = restore; fr < m_scene.frame_end() && res; fr += m_scene.frame_step()) {
+			Py_BLOCK_THREADS
+				m_scene.frame_set(fr, 0.f);
+				m_engine.update_progress(progress);
+			Py_UNBLOCK_THREADS
+
+			res = export_animation();
+			while (res && !m_renderFinished) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+			progress += frameProgress;
+			PRINT_INFO_EX("Animation progress %d%%", static_cast<int>(progress * 100));
+		}
+
+		m_scene.frame_set(restore, 0.f);
+		m_isAnimationRunning = false;
+		m_renderFinished = true;
+		update.join();
+
 	}
 	else {
 		sync(false);
 	}
 
+	Py_END_ALLOW_THREADS
 	return res;
 }
 
@@ -103,39 +137,47 @@ void ProductionExporter::render_start()
 	}
 
 	if (m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
-		m_renderFinished = false;
-		m_imageDirty = false;
-
 		SceneExporter::render_start();
-		int draws = 0;
+		PyThreadState *_save = m_animationPythonThreadState;
 
-		auto start = std::chrono::high_resolution_clock::now();
-		while (!is_interrupted() && !m_renderFinished) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			auto now = std::chrono::high_resolution_clock::now();
+		do {
+			m_renderFinished = false;
+			m_imageDirty = false;
 
-			if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() > (1000 / 10)) {
-				if (m_imageDirty) {
-					m_imageDirty = false;
-					for (auto & result : m_renderResultsList) {
-						BL::RenderResult::layers_iterator rrlIt;
-						result.layers.begin(rrlIt);
-						if (rrlIt != result.layers.end()) {
-							m_engine.update_result(result);
+			m_isRunning = true;
+			auto start = std::chrono::high_resolution_clock::now();
+			while (!is_interrupted() && !m_renderFinished) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				auto now = std::chrono::high_resolution_clock::now();
+
+				if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() > (1000 / 10)) {
+					if (m_imageDirty) {
+						m_imageDirty = false;
+						Py_BLOCK_THREADS
+						for (auto & result : m_renderResultsList) {
+							BL::RenderResult::layers_iterator rrlIt;
+							result.layers.begin(rrlIt);
+							if (rrlIt != result.layers.end()) {
+								PRINT_INFO_EX("Updating image for layer \"%s\"", rrlIt->name().c_str());
+								m_engine.update_result(result);
+							}
 						}
+						Py_UNBLOCK_THREADS
 					}
+					start = std::chrono::high_resolution_clock::now();
 				}
-				start = std::chrono::high_resolution_clock::now();
 			}
-		}
 
-		for (auto & result : m_renderResultsList) {
-			BL::RenderResult::layers_iterator rrlIt;
-			result.layers.begin(rrlIt);
-			if (rrlIt != result.layers.end()) {
-				m_engine.update_result(result);
+			Py_BLOCK_THREADS
+			for (auto & result : m_renderResultsList) {
+				BL::RenderResult::layers_iterator rrlIt;
+				result.layers.begin(rrlIt);
+				if (rrlIt != result.layers.end()) {
+					m_engine.update_result(result);
+				}
 			}
-		}
+			Py_UNBLOCK_THREADS
+		} while (m_isAnimationRunning);
 
 		{
 			std::lock_guard<std::mutex> l(m_callback_mtx);

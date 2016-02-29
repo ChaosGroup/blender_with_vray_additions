@@ -177,6 +177,7 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 
 		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
 
+		fixImage = false;
 		if (!this->pixels) {
 			PRINT_WARN("Result image not allocated, can't merge bucket!");
 		} else if (this->channels != 4) {
@@ -186,7 +187,6 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 			const float * sourceImage = reinterpret_cast<const float *>(img.data.get());
 
 			updateRegion(reinterpret_cast<const float *>(img.data.get()), img.x, img.y, img.width, img.height);
-			fixImage = false;
 		}
 
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
@@ -373,7 +373,7 @@ void ZmqExporter::init()
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
 
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
-			if (!is_viewport) {
+			if (!is_viewport && !this->animation_settings.use) {
 				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbZdepth)));
 				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
 				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbNormal)));

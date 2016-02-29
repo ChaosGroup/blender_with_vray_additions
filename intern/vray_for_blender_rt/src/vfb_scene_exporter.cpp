@@ -59,6 +59,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_region3d(region3d)
     , m_region(region)
     , m_exporter(nullptr)
+    , m_isRunning(false)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -431,30 +432,31 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 						  ob.is_updated(), ob.is_updated_data(), data_updated, check_updated,
 						  ob.name().c_str());
 #endif
+			if (ob.data() && ob.type() == BL::Object::type_MESH) {
+				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 
-			m_data_exporter.exportObject(ob, check_updated, overrideAttr);
-			if (ob.data() && ob.type() == BL::Object::type_MESH && RNA_boolean_get(&vrayClipper, "enabled")) {
+				if (RNA_boolean_get(&vrayClipper, "enabled")) {
+					const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 
-				const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
-				if (NOT(excludeGroupName.empty())) {
-					AttrListPlugin plList;
-					BL::BlendData::groups_iterator grIt;
-					for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
-						BL::Group gr = *grIt;
-						if (gr.name() == excludeGroupName) {
-							BL::Group::objects_iterator grObIt;
-							for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
-								BL::Object ob = *grObIt;
-								sync_object(ob, check_updated);
+					if (NOT(excludeGroupName.empty())) {
+						AttrListPlugin plList;
+						BL::BlendData::groups_iterator grIt;
+						for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
+							BL::Group gr = *grIt;
+							if (gr.name() == excludeGroupName) {
+								BL::Group::objects_iterator grObIt;
+								for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
+									BL::Object ob = *grObIt;
+									sync_object(ob, check_updated);
+								}
+								break;
 							}
-							break;
 						}
 					}
-				}
 
-				m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
-			}
-			else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
+					m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
+				}
+			} else if(ob.data() && ob.type() == BL::Object::type_LAMP) {
 				m_data_exporter.exportLight(ob, check_updated, overrideAttr);
 			}
 

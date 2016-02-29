@@ -41,6 +41,7 @@ public:
 	    : SceneExporter(context, engine, data, scene)
 	    , m_renderResult(PointerRNA_NULL)
 	    , m_renderFinished(false)
+	    , m_isAnimationRunning(false)
 	{}
 
 	virtual           ~ProductionExporter() override;
@@ -64,6 +65,8 @@ private:
 	int               m_renderFinished;
 	RenderImageMan    m_imageMan;
 	volatile bool     m_imageDirty;
+	bool              m_isAnimationRunning;
+	PyThreadState    *m_animationPythonThreadState;
 
 	std::vector<BL::RenderResult> m_renderResultsList;
 
