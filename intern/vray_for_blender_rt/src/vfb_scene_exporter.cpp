@@ -198,36 +198,45 @@ bool SceneExporter::export_animation()
 	using namespace std;
 	using namespace std::chrono;
 
-	const float frame = m_scene.frame_current();
+	bool frameExported = true;
 
-	m_settings.settings_animation.frame_current = frame;
-	m_exporter->set_current_frame(frame);
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		sync(false);
+	} else {
+		const float frame = m_scene.frame_current();
 
-	PRINT_INFO_EX("Exporting animation frame %d", m_scene.frame_current());
-	m_exporter->stop();
-	sync(false);
-	m_exporter->start();
+		m_settings.settings_animation.frame_current = frame;
+		m_exporter->set_current_frame(frame);
 
-	auto lastTime = high_resolution_clock::now();
-	while (m_exporter->get_last_rendered_frame() < frame) {
-		this_thread::sleep_for(milliseconds(1));
 
-		auto now = high_resolution_clock::now();
-		if (duration_cast<seconds>(now - lastTime).count() > 1) {
-			lastTime = now;
-			PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", frame, m_exporter->get_last_rendered_frame());
-		}
-		if (this->is_interrupted()) {
-			PRINT_INFO_EX("Interrupted - stopping animation rendering!");
-			return false;
-		}
-		if (m_exporter->is_aborted()) {
-			PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
-			return false;
+		PRINT_INFO_EX("Exporting animation frame %d", m_scene.frame_current());
+		m_exporter->stop();
+		sync(false);
+		m_exporter->start();
+
+		auto lastTime = high_resolution_clock::now();
+		while (m_exporter->get_last_rendered_frame() < frame) {
+			this_thread::sleep_for(milliseconds(1));
+
+			auto now = high_resolution_clock::now();
+			if (duration_cast<seconds>(now - lastTime).count() > 1) {
+				lastTime = now;
+				PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", frame, m_exporter->get_last_rendered_frame());
+			}
+			if (this->is_interrupted()) {
+				PRINT_INFO_EX("Interrupted - stopping animation rendering!");
+				frameExported = false;
+				break;
+			}
+			if (m_exporter->is_aborted()) {
+				PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
+				frameExported = false;
+				break;
+			}
 		}
 	}
 
-	return true;
+	return frameExported;
 }
 
 

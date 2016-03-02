@@ -24,7 +24,7 @@
 #include "vfb_params_json.h"
 #include "vfb_export_settings.h"
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 namespace VRayForBlender {
 
@@ -48,7 +48,7 @@ public:
 private:
 
 private:
-	boost::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, boost::hash<int>> m_Writers;
+	std::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> m_Writers;
 
 	ExporterSettings::ExportFormat m_ExportFormat;
 

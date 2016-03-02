@@ -25,8 +25,22 @@ public:
 	bool good() const;
 
 	PyObject *getFile() { return m_file; }
+	void setAnimationFrame(int frame) { animationFrame = frame; }
+	int getAnimationFrame() const { return animationFrame; }
+
+	bool operator==(const PluginWriter &other) const
+	{
+		return m_file == other.m_file;
+	}
+
+	bool operator!=(const PluginWriter &other) const
+	{
+		return !(*this == other);
+	}
+
 
 private:
+	int animationFrame;
 	PyObject *m_file;
 	ExporterSettings::ExportFormat m_format;
 
@@ -34,6 +48,7 @@ private:
 	PluginWriter(const PluginWriter&) = delete;
 	PluginWriter &operator=(const PluginWriter&) = delete;
 };
+
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val);
 PluginWriter &operator<<(PluginWriter &pp, const float &val);
@@ -57,7 +72,11 @@ using KVPair = std::pair<std::string, T>;
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const KVPair<T> &val)
 {
-	return pp << "  " << val.first << "=" << val.second << ";\n";
+	if (pp.getAnimationFrame() == -1) {
+		return pp << "  " << val.first << "=" << val.second << ";\n";
+	} else {
+		return pp << "  " << val.first << "=interpolate((" << pp.getAnimationFrame() << "," << val.second << "));\n";
+	}
 }
 
 template <> inline

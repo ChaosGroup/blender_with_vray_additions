@@ -45,46 +45,63 @@ void ProductionExporter::setup_callbacks()
 bool ProductionExporter::do_export()
 {
 	bool res = true;
-	Py_BEGIN_ALLOW_THREADS
 
 	if (m_settings.settings_animation.use) {
-		sync(false);
-		m_animationPythonThreadState = _save;
-		m_isAnimationRunning = true;
-		std::thread update(&ProductionExporter::render_start, this);
+		if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+			const auto restore = m_scene.frame_current();
+			float progress = 0.f, frameProgress = 1.f / ((m_scene.frame_end() - m_scene.frame_start()) / m_scene.frame_step());
 
-		while (!m_isRunning) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-
-		const auto restore = m_scene.frame_current();
-		float progress = 0.f, frameProgress = 1.f / ((m_scene.frame_end() - m_scene.frame_start()) / m_scene.frame_step());
-
-		for (auto fr = restore; fr < m_scene.frame_end() && res; fr += m_scene.frame_step()) {
-			Py_BLOCK_THREADS
+			for (auto fr = restore; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step()) {
 				m_scene.frame_set(fr, 0.f);
 				m_engine.update_progress(progress);
-			Py_UNBLOCK_THREADS
 
-			res = export_animation();
-			while (res && !m_renderFinished) {
+				res = export_animation();
+				progress += frameProgress;
+				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(progress * 100), fr);
+			}
+
+			m_scene.frame_set(restore, 0.f);
+		} else {
+			Py_BEGIN_ALLOW_THREADS
+
+			sync(false);
+			m_animationPythonThreadState = _save;
+			m_isAnimationRunning = true;
+			std::thread update(&ProductionExporter::render_start, this);
+
+			while (!m_isRunning) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
-			progress += frameProgress;
-			PRINT_INFO_EX("Animation progress %d%%", static_cast<int>(progress * 100));
+
+			const auto restore = m_scene.frame_current();
+			float progress = 0.f, frameProgress = 1.f / ((m_scene.frame_end() - m_scene.frame_start()) / m_scene.frame_step());
+
+			for (auto fr = restore; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step()) {
+				Py_BLOCK_THREADS
+					m_scene.frame_set(fr, 0.f);
+					m_engine.update_progress(progress);
+				Py_UNBLOCK_THREADS
+
+				res = export_animation();
+				while (res && !m_renderFinished && !is_interrupted()) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				}
+				progress += frameProgress;
+				PRINT_INFO_EX("Animation progress %d%%", static_cast<int>(progress * 100));
+			}
+
+			m_scene.frame_set(restore, 0.f);
+			m_isAnimationRunning = false;
+			m_renderFinished = true;
+			update.join();
+
+			Py_END_ALLOW_THREADS
 		}
-
-		m_scene.frame_set(restore, 0.f);
-		m_isAnimationRunning = false;
-		m_renderFinished = true;
-		update.join();
-
 	}
 	else {
 		sync(false);
 	}
 
-	Py_END_ALLOW_THREADS
 	return res;
 }
 

@@ -142,8 +142,16 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	}
 
 	PluginWriter & writer = *writerPtr;
+	bool setFrame = writer != *m_Writers[ParamDesc::PluginSettings];
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
+	if (animation_settings.use) {
+		if (setFrame) {
+			writer.setAnimationFrame(this->current_scene_frame);
+		} else {
+			writer.setAnimationFrame(-1);
+		}
+	}
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
@@ -197,6 +205,10 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			writer << KVPair<AttrMapChannels>(attr.attrName, attr.attrValue.valMapChannels);
 			break;
 		case ValueTypeInstancer:
+			if (animation_settings.use && attr.attrValue.valInstancer.frameNumber != current_scene_frame) {
+				PRINT_WARN("Exporting instancer in frame %d, while it has %d frame", static_cast<int>(current_scene_frame), attr.attrValue.valInstancer.frameNumber);
+				writer.setAnimationFrame(attr.attrValue.valInstancer.frameNumber);
+			}
 			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:

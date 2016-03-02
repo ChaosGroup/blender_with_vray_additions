@@ -34,6 +34,7 @@ struct TraceTransformHex {
 PluginWriter::PluginWriter(PyObject *pyFile, ExporterSettings::ExportFormat format)
     : m_file(pyFile)
     , m_format(format)
+    , animationFrame(-1)
 {
 }
 
