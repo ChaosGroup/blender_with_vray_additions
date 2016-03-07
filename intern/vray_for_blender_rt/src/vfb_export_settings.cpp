@@ -132,6 +132,9 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	zmq_server_port    = RNA_int_get(&m_vrayExporter, "zmq_port");
 	zmq_server_address = RNA_std_string_get(&m_vrayExporter, "zmq_address");
+	if (zmq_server_address.empty()) {
+		zmq_server_address = "127.0.0.1";
+	}
 
 	m_renderMode = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "rendering_mode");
 	if (engine.is_preview()) {
