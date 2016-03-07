@@ -726,6 +726,10 @@ endif()
 TEST_SHARED_PTR_SUPPORT()
 TEST_UNORDERED_MAP_SUPPORT()
 
+if(WITH_STATIC_LIBC)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
 if(WITH_VRAY_FOR_BLENDER)
 	add_definitions(-DWITH_VRAY_FOR_BLENDER)
 
