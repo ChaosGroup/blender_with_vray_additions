@@ -92,9 +92,6 @@ protected:
 	void                 get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject);
 	void                 get_view_from_viewport(ViewParams &viewParams);
 
-public:
-	void                *m_pythonThreadState;
-
 protected:
 	BL::Context          m_context;
 	BL::RenderEngine     m_engine;

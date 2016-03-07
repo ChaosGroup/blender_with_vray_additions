@@ -170,7 +170,9 @@ void ProductionExporter::render_start()
 				if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() > (1000 / 10)) {
 					if (m_imageDirty) {
 						m_imageDirty = false;
-						Py_BLOCK_THREADS
+						if (m_settings.settings_animation.use) {
+							Py_BLOCK_THREADS
+						}
 						for (auto & result : m_renderResultsList) {
 							BL::RenderResult::layers_iterator rrlIt;
 							result.layers.begin(rrlIt);
@@ -179,13 +181,17 @@ void ProductionExporter::render_start()
 								m_engine.update_result(result);
 							}
 						}
-						Py_UNBLOCK_THREADS
+						if (m_settings.settings_animation.use) {
+							Py_UNBLOCK_THREADS
+						}
 					}
 					start = std::chrono::high_resolution_clock::now();
 				}
 			}
 
-			Py_BLOCK_THREADS
+			if (m_settings.settings_animation.use) {
+				Py_BLOCK_THREADS
+			}
 			for (auto & result : m_renderResultsList) {
 				BL::RenderResult::layers_iterator rrlIt;
 				result.layers.begin(rrlIt);
@@ -193,7 +199,9 @@ void ProductionExporter::render_start()
 					m_engine.update_result(result);
 				}
 			}
-			Py_UNBLOCK_THREADS
+			if (m_settings.settings_animation.use) {
+				Py_UNBLOCK_THREADS
+			}
 		} while (m_isAnimationRunning);
 
 		{

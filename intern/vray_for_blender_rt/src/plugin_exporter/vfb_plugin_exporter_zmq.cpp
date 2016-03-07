@@ -267,7 +267,7 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 
 ZmqExporter::ZmqExporter():
 	m_Client(nullptr),
-	m_LastExportedFrame(std::numeric_limits<float>::min()),
+	m_LastExportedFrame(-1000.f),
 	m_IsAborted(false),
 	m_Started(false),
 	m_RenderWidth(0),

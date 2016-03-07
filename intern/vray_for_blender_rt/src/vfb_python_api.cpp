@@ -26,19 +26,6 @@
 #include "vfb_params_json.h"
 
 
-static void python_thread_state_save(void **python_thread_state)
-{
-	*python_thread_state = (void*)PyEval_SaveThread();
-}
-
-
-static void python_thread_state_restore(void **python_thread_state)
-{
-	PyEval_RestoreThread((PyThreadState*)*python_thread_state);
-	*python_thread_state = nullptr;
-}
-
-
 static VRayForBlender::SceneExporter *vfb_cast_exporter(PyObject *value)
 {
 	VRayForBlender::SceneExporter *exporter = nullptr;
@@ -233,12 +220,9 @@ static PyObject* vfb_update(PyObject*, PyObject *value)
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
-		//Py_BEGIN_ALLOW_THREADS
 		if (!exporter->do_export()) {
-			//Py_BLOCK_THREADS
 			Py_RETURN_FALSE;
 		}
-		//Py_END_ALLOW_THREADS
 	}
 
 	Py_RETURN_NONE;
