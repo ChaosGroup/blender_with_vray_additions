@@ -45,6 +45,7 @@ void ProductionExporter::setup_callbacks()
 bool ProductionExporter::do_export()
 {
 	bool res = true;
+	PRINT_INFO_EX("ProductionExporter::do_export()")
 
 	if (m_settings.settings_animation.use) {
 		if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {

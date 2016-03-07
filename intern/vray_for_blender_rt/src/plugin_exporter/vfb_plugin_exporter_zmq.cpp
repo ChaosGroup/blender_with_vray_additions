@@ -351,6 +351,7 @@ void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
 void ZmqExporter::init()
 {
 	try {
+		PRINT_INFO_EX("Initing ZmqExporter");
 		using std::placeholders::_1;
 		using std::placeholders::_2;
 
@@ -365,6 +366,7 @@ void ZmqExporter::init()
 		if (m_Client->connected()) {
 			auto mode = this->animation_settings.use && !this->is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
 			if (mode == VRayMessage::RendererType::Animation || !this->is_viewport) {
+				PRINT_INFO_EX("Setting RenderMode::RenderModeProduction");
 				m_RenderMode = RenderMode::RenderModeProduction;
 			}
 			m_Client->send(VRayMessage::createMessage(mode));

@@ -74,6 +74,7 @@ VrsceneExporter::~VrsceneExporter()
 
 void VrsceneExporter::init()
 {
+	PRINT_INFO_EX("Initting VrsceneExporter");
 }
 
 

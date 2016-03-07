@@ -190,6 +190,8 @@ void SceneExporter::render_start()
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		m_exporter->start();
+	} else {
+		PRINT_INFO_EX("Work mode WorkModeExportOnly, skipping renderer_start");
 	}
 }
 
@@ -199,17 +201,17 @@ bool SceneExporter::export_animation()
 	using namespace std::chrono;
 
 	bool frameExported = true;
+	const float frame = m_scene.frame_current();
 
 	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		PRINT_INFO_EX("Exporting animation frame %d, in file", frame);
 		sync(false);
 	} else {
-		const float frame = m_scene.frame_current();
+		PRINT_INFO_EX("Exporting animation frame %d", frame);
 
 		m_settings.settings_animation.frame_current = frame;
 		m_exporter->set_current_frame(frame);
 
-
-		PRINT_INFO_EX("Exporting animation frame %d", m_scene.frame_current());
 		m_exporter->stop();
 		sync(false);
 		m_exporter->start();
