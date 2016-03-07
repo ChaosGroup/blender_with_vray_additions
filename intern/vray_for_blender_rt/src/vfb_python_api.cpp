@@ -96,9 +96,9 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 	    NULL
 	};
 
-	//                                 012345678911
-	//                                           01
-	static const char kwlistTypes[] = "OOOOOOOOOOO";
+	//                                 0123 45678911
+	//                                            01
+	static const char kwlistTypes[] = "OOOO|OOOOOOO";
 
 	if (PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 	                                /* 0 */ &pyContext,
