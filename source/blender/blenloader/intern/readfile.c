@@ -2113,6 +2113,7 @@ static void _IDP_DirectLinkGroup_OrFree(IDProperty **prop, int switch_endian, Fi
 }
 
 extern void IDP_ID_Register(IDProperty *prop);
+extern void IDP_ID_Unregister(IDProperty *prop);
 
 static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 {
@@ -2129,6 +2130,7 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 		case IDP_ID: /* DatablockProperty */
 			newaddr = newlibadr(fd, NULL, IDP_Id(loop));
 			if (newaddr) {
+				IDP_ID_Unregister(loop);
 				loop->data.pointer = newaddr;
 				IDP_ID_Register(loop);
 			}
@@ -2738,13 +2740,16 @@ static void lib_link_ntree(FileData *fd, ID *id, bNodeTree *ntree)
 	
 	ntree->gpd = newlibadr_us(fd, id->lib, ntree->gpd);
 
-	IDP_LibLinkProperty(ntree->id.properties, fd);
+	if (ntree->id.tag & LIB_TAG_NEED_LINK) {
+		IDP_LibLinkProperty(ntree->id.properties, fd);
+	}
 	
 	for (node = ntree->nodes.first; node; node = node->next) {
 		/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 		 * of library blocks that implement this.*/
-		if (node->prop)
+		if (node->prop && ntree->id.tag & LIB_TAG_NEED_LINK) {
 			IDP_LibLinkProperty(node->prop, fd);
+		}
 
 		node->id= newlibadr_us(fd, id->lib, node->id);
 
@@ -2768,8 +2773,8 @@ static void lib_link_nodetree(FileData *fd, Main *main)
 	/* only link ID pointers */
 	for (ntree = main->nodetree.first; ntree; ntree = ntree->id.next) {
 		if (ntree->id.tag & LIB_TAG_NEED_LINK) {
-			ntree->id.tag &= ~LIB_TAG_NEED_LINK;
 			lib_link_ntree(fd, &ntree->id, ntree);
+			ntree->id.tag &= ~LIB_TAG_NEED_LINK;
 		}
 	}
 }
@@ -3683,8 +3688,6 @@ static void lib_link_image(FileData *fd, Main *main)
 	
 	for (ima = main->image.first; ima; ima = ima->id.next) {
 		if (ima->id.tag & LIB_TAG_NEED_LINK) {
-			IDP_LibLinkProperty(ima->id.properties, fd);
-			
 			ima->id.tag &= ~LIB_TAG_NEED_LINK;
 		}
 	}
@@ -3927,10 +3930,6 @@ static void lib_link_material(FileData *fd, Main *main)
 		if (ma->id.tag & LIB_TAG_NEED_LINK) {
 			lib_link_animdata(fd, &ma->id, ma->adt);
 
-			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
-			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(ma->id.properties, fd);
-			
 			ma->ipo = newlibadr_us(fd, ma->id.lib, ma->ipo);
 			ma->group = newlibadr_us(fd, ma->id.lib, ma->group);
 			
@@ -4380,10 +4379,6 @@ static void lib_link_mesh(FileData *fd, Main *main)
 
 			if (me->adt) lib_link_animdata(fd, &me->id, me->adt);
 
-			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
-			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(me->id.properties, fd);
-
 			/* this check added for python created meshes */
 			if (me->mat) {
 				for (i = 0; i < me->totcol; i++) {
@@ -4711,7 +4706,6 @@ static void lib_link_object(FileData *fd, Main *main)
 	
 	for (ob = main->object.first; ob; ob = ob->id.next) {
 		if (ob->id.tag & LIB_TAG_NEED_LINK) {
-			IDP_LibLinkProperty(ob->id.properties, fd);
 			lib_link_animdata(fd, &ob->id, ob->adt);
 			
 // XXX deprecated - old animation system <<<
@@ -5609,9 +5603,6 @@ static void lib_link_scene(FileData *fd, Main *main)
 	for (sce = main->scene.first; sce; sce = sce->id.next) {
 		if (sce->id.tag & LIB_TAG_NEED_LINK) {
 			if (sce->adt) lib_link_animdata(fd, &sce->id, sce->adt);
-			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
-			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(sce->id.properties, fd);
 
 			lib_link_keyingsets(fd, &sce->id, &sce->keyingsets);
 
@@ -7220,8 +7211,6 @@ static void lib_link_library(FileData *fd, Main *main)
 	Library *lib;
 	for (lib = main->library.first; lib; lib = lib->id.next) {
 		lib->id.us = 1;
-		IDP_LibLinkProperty(lib->id.properties, fd);
-
 		id_us_ensure_real(&lib->id);
 	}
 }
@@ -7591,8 +7580,6 @@ static void lib_link_linestyle(FileData *fd, Main *main)
 			linestyle->id.tag &= ~LIB_TAG_NEED_LINK;
 
 			lib_link_animdata(fd, &linestyle->id, linestyle->adt);
-
-			IDP_LibLinkProperty(linestyle->id.properties, fd);
 
 			for (m = linestyle->color_modifiers.first; m; m = m->next) {
 				switch (m->type) {
@@ -8334,6 +8321,8 @@ static void lib_link_all(FileData *fd, Main *main)
 	lib_link_mesh(fd, main);		/* as last: tpage images with users at zero */
 	
 	lib_link_library(fd, main);		/* only init users */
+
+	IDP_restore_fake_user();
 }
 
 static void direct_link_keymapitem(FileData *fd, wmKeyMapItem *kmi)
