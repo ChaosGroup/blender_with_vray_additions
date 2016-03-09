@@ -26,7 +26,7 @@
 #ifndef __WM_API_H__
 #define __WM_API_H__
 
-/** \file WM_api.h
+/** \file blender/windowmanager/WM_api.h
  *  \ingroup wm
  *
  *  \page wmpage windowmanager
@@ -409,7 +409,6 @@ void		wmOrtho				(float x1, float x2, float y1, float y2, float n, float f);
 void		wmOrtho2			(float x1, float x2, float y1, float y2);
 			/* use for conventions (avoid hard-coded offsets all over) */
 void		wmOrtho2_region_pixelspace(const struct ARegion *ar);
-void		wmOrtho2_region_ui(const struct ARegion *ar);
 void		wmOrtho2_pixelspace(const float x, const float y);
 
 			/* utilities */
