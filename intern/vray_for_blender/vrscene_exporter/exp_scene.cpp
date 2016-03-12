@@ -34,6 +34,7 @@
 
 #include "exp_scene.h"
 #include "exp_nodes.h"
+#include "exp_api.h"
 
 #include "PIL_time.h"
 #include "BLI_string.h"
@@ -1219,8 +1220,29 @@ void VRsceneExporter::exportVRayClipper(BL::Object ob, const NodeAttrs &attrs)
 	pluginAttrs["use_obj_mtl"]      = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "use_obj_mtl"));
 	pluginAttrs["set_material_id"]  = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayClipper, "set_material_id"));
 	pluginAttrs["material_id"]      = BOOST_FORMAT_INT(RNA_int_get(&vrayClipper, "material_id"));
+	pluginAttrs["invert_inside"]    = BOOST_FORMAT_INT(RNA_enum_ext_get(&vrayClipper, "invert_inside"));
 	pluginAttrs["object_id"]        = BOOST_FORMAT_INT(ob.pass_index());
 	pluginAttrs["transform"]        = BOOST_FORMAT_TM(transform);
+
+	if (RNA_boolean_get(&vrayClipper, "use_obj_mesh")) {
+		const std::string &clipperGeomName = pluginName + "@Mesh";
+
+		ExportGeomStaticMesh(ExporterSettings::gSet.m_fileGeom,
+							 ExporterSettings::gSet.m_sce,
+							 (Object*)ob.ptr.data,
+							 ExporterSettings::gSet.m_main,
+							 clipperGeomName.c_str(),
+							 NULL);
+
+		const std::string &clipperGeomNodeName = clipperGeomName + "|Node";
+		AttributeValueMap clipperGeomNode;
+		clipperGeomNode["geometry"]  = clipperGeomName;
+		clipperGeomNode["transform"] = BOOST_FORMAT_TM(transform);
+
+		VRayNodePluginExporter::exportPlugin("NODE", "Node", clipperGeomNodeName, clipperGeomNode);
+
+		pluginAttrs["clip_mesh"] = clipperGeomNodeName;
+	}
 
 	const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 	if (NOT(excludeGroupName.empty())) {
