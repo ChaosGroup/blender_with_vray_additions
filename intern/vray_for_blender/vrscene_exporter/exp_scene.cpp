@@ -572,7 +572,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 									dupliAttrs.tm = dup.matrix();
 								}
 
-								if (is_light) {
+								if (ob_is_light(dop)) {
 									if (dop_is_dup_renderable) {
 										exportLamp(dop, dupliAttrs);
 									}
