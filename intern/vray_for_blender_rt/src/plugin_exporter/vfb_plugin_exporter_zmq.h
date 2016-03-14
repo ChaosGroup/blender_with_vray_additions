@@ -87,7 +87,7 @@ public:
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:
 	void                checkZmqClient();
-	void                zmqCallback(VRayMessage & message, ZmqWrapper * client);
+	void                zmqCallback(const VRayMessage & message, ZmqWrapper * client);
 
 private:
 	RenderMode          m_RenderMode;

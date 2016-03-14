@@ -310,7 +310,7 @@ RenderImage ZmqExporter::get_image() {
 	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
-void ZmqExporter::zmqCallback(VRayMessage & message, ZmqWrapper *) {
+void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
 	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
 
 	const auto msgType = message.getType();
