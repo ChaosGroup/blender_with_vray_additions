@@ -579,7 +579,7 @@ if(APPLE)
 		set(CMAKE_OSX_DEPLOYMENT_TARGET "10.6" CACHE STRING "" FORCE) # 10.6 is our min. target, if you use higher sdk, weak linking happens
 	endif()
 
-	if(${MAC_SYS} GREATER 13)
+	if(OSX_SYSTEM VERSION_GREATER 10.9)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
 	endif()
 
