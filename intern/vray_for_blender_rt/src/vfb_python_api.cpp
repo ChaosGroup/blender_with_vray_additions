@@ -25,6 +25,7 @@
 #include "vfb_scene_exporter_pro.h"
 #include "vfb_params_json.h"
 
+#include "vfb_plugin_exporter_zmq.h"
 
 static VRayForBlender::SceneExporter *vfb_cast_exporter(PyObject *value)
 {
@@ -50,6 +51,8 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 		VRayForBlender::InitPluginDescriptions(jsonDirpath);
 	}
 
+	auto & zmqPool = ZmqWorkerPool::getInstance();
+
 	Py_RETURN_NONE;
 }
 
@@ -57,6 +60,8 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 static PyObject* vfb_unload(PyObject*)
 {
 	PRINT_INFO_EX("vfb_unload()");
+
+	ZmqWorkerPool::getInstance().shutdown();
 
 	Py_RETURN_NONE;
 }

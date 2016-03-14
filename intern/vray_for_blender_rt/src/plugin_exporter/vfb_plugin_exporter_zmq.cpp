@@ -52,6 +52,15 @@ void ZmqWorkerPool::returnClient(ClientPtr cl)
 	m_Clients.push(std::move(cl));
 }
 
+void ZmqWorkerPool::shutdown()
+{
+	while (!m_Clients.empty()) {
+		m_Clients.top()->setFlushOnExit(false);
+		m_Clients.top()->syncStop();
+		m_Clients.pop();
+	}
+}
+
 ZmqWorkerPool::~ZmqWorkerPool()
 {
 	while (!m_Clients.empty()) {

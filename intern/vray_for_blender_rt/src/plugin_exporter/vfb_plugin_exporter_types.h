@@ -15,7 +15,7 @@ struct EnumItem {
 
 static const EnumItem ExporterTypes[] = {
 	{"STD",    "V-Ray Standalone", ""},
-	{"ZMQ", "V-Ray ZMQ Server", ""},
+	{"ZMQ",    "V-Ray ZMQ Server", ""},
 
 #ifdef USE_BLENDER_VRAY_CLOUD
 	{"CLOUD",  "V-Ray Cloud", ""},

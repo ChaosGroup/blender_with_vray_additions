@@ -40,6 +40,8 @@ public:
 	ClientPtr getClient();
 	void returnClient(ClientPtr cl);
 
+	void shutdown();
+
 private:
 	std::stack<ClientPtr, std::vector<ClientPtr>> m_Clients;
 
