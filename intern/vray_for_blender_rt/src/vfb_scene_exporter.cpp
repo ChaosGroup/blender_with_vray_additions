@@ -439,9 +439,9 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 							ob.name().c_str());
 #if 0
 			const int data_updated = RNA_int_get(&vrayObject, "data_updated");
-			PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing \"%s\"...",
+			PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing [%s]\"%s\"...",
 						  ob.is_updated(), ob.is_updated_data(), data_updated, check_updated,
-						  ob.name().c_str());
+						  override.namePrefix.c_str(), ob.name().c_str());
 #endif
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
 				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
@@ -602,7 +602,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
 					overrideAttrs.id = persistendID;
 
-					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
+					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix, IdTrack::DUPLI_NODE);
 					sync_object(dupOb, check_updated, overrideAttrs);
 				}
 			}
