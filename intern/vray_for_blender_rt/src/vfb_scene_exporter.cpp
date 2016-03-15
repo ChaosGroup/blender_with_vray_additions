@@ -597,12 +597,12 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					}
 
 					char namePrefix[255] = {0, };
-					snprintf(namePrefix, 250, "Dupli%u@%s", persistendID, m_data_exporter.getNodeName(dupOb).c_str());
+					snprintf(namePrefix, 250, "Dupli%u@", persistendID);
 					overrideAttrs.namePrefix = namePrefix;
 					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
 					overrideAttrs.id = persistendID;
 
-					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix, IdTrack::DUPLI_NODE);
+					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
 					sync_object(dupOb, check_updated, overrideAttrs);
 				}
 			}
