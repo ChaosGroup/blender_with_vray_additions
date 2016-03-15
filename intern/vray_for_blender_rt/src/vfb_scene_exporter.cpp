@@ -414,7 +414,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 	if (add) {
 		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
-		bool is_hidden = ob.hide() || ob.hide_render() || !is_on_visible_layer;
+		bool is_hidden = ob.hide() || ob.hide_render();
 
 		if (!is_hidden || override) {
 			if (override) {
@@ -512,10 +512,13 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		return;
 	}
 
-	BL::Object::dupli_list_iterator dupIt;
 	int dupli_instance = 0;
 	bool dupli_base_synced = false;
 	bool instancer_visible = true;
+
+	const bool visible_on_layer = layers_intersect(m_scene.layers(), ob.layers());
+
+	BL::Object::dupli_list_iterator dupIt;
 	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
 		if (is_interrupted()) {
 			return;
@@ -524,7 +527,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::DupliObject dupliOb(*dupIt);
 		BL::Object      dupOb(dupliOb.object());
 
-		const bool visible_on_layer = layers_intersect(m_scene.layers(), dupOb.layers());
 		const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
 
 		instancer_visible = instancer_visible && visible_on_layer && !is_hidden;
@@ -559,7 +561,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				overrideAttrs.override = true;
 				// If dupli are shown via Instancer we need to hide
 				// original object
-				overrideAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(dupOb);
+				overrideAttrs.visible = !is_hidden && visible_on_layer && ob_is_duplicator_renderable(dupOb);
 
 				if (dupli_use_instancer) {
 					overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
@@ -581,7 +583,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					dupli_instance++;
 					if (!dupli_base_synced) {
 						dupli_base_synced = true;
-						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_INSTACER);
+						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
 						sync_object(dupOb, check_updated, overrideAttrs);
 					}
 				} else {
@@ -590,7 +592,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					if (!dupli_base_synced && ob_is_duplicator_renderable(dupOb)) {
 						dupli_base_synced = true;
 						overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
+						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
 						sync_object(dupOb, check_updated, overrideAttrs);
 					}
 
