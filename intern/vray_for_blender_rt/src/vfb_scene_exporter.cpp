@@ -633,6 +633,8 @@ void SceneExporter::sync_objects(const int &check_updated)
 		}
 
 		BL::Object ob(*obIt);
+		const auto & nodeName = m_data_exporter.getNodeName(ob);
+		m_data_exporter.m_id_track.insert(ob, nodeName);
 
 		if (ob.is_duplicator()) {
 			const bool is_updated = check_updated ? ob.is_updated() : true;
@@ -653,7 +655,6 @@ void SceneExporter::sync_objects(const int &check_updated)
 			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
 
-			m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(ob));
 			sync_object(ob, check_updated, overAttrs);
 		}
 		else {
