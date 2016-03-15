@@ -515,6 +515,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	BL::Object::dupli_list_iterator dupIt;
 	int dupli_instance = 0;
 	bool dupli_base_synced = false;
+	bool instancer_visible = true;
 	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
 		if (is_interrupted()) {
 			return;
@@ -525,6 +526,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		const bool visible_on_layer = layers_intersect(m_scene.layers(), dupOb.layers());
 		const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
+
+		instancer_visible = instancer_visible && visible_on_layer && !is_hidden;
 
 		const bool is_light = Blender::IsLight(dupOb);
 		const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
@@ -610,6 +613,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		PluginDesc instancerDesc(exportName, "Instancer");
 		instancerDesc.add("instances", instances);
+		instancerDesc.add("visible", instancer_visible && layers_intersect(m_scene.layers(), ob.layers()));
 
 		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
 		m_exporter->export_plugin(instancerDesc);
