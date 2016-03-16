@@ -58,11 +58,16 @@ std::string VRayNodeExporter::exportVRayNodeMetaStandardMaterial(VRayNodeExportP
 		AttributeValueMap bumpPluginAttrs;
 		bumpPluginAttrs["base_brdf"] = brdfVRayMtlName;
 
-		exportVRayNodeAttributes(ntree, node, fromSocket, context,
-		                         bumpPluginAttrs,
-		                         brdfBumpName,
-		                         "BRDFBump",
-		                         "BRDF");
+		VRayNodeExporter::getVRayNodeAttributes(bumpPluginAttrs, ntree, node, fromSocket, context, AttributeValueMap(), "BRDFBump", "BRDF");
+
+		if (sockBump && sockBump.is_linked()) {
+			bumpPluginAttrs.erase("bump_tex_color");
+		}
+		else {
+			bumpPluginAttrs.erase("bump_tex_float");
+		}
+
+		VRayNodePluginExporter::exportPlugin("BRDF", "BRDFBump", brdfBumpName, bumpPluginAttrs);
 
 		materialBrdf = brdfBumpName;
 	}
