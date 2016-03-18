@@ -526,7 +526,7 @@ static void node_area_refresh(const struct bContext *C, ScrArea *sa)
 	
 	snode_set_context(C);
 
-	if (snode->nodetree) {
+	if (snode->nodetree && snode->id) {
 		if (snode->nodetree->type == NTREE_SHADER) {
 			if (GS(snode->id->name) == ID_MA) {
 				Material *ma = (Material *)snode->id;
