@@ -137,6 +137,13 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 
 		setAttrsFromNode(ntree, node, fromSocket, context, brdfBump, "BRDFBump", ParamDesc::PluginBRDF);
 
+		if (sockBump && sockBump.is_linked()) {
+			brdfBump.del("bump_tex_color");
+		}
+		else {
+			brdfBump.del("bump_tex_float");
+		}
+
 		m_exporter->export_plugin(brdfBump);
 
 		materialBrdf = brdfBumpName;
