@@ -77,6 +77,7 @@
 #include "BKE_report.h"
 #include "BKE_sequencer.h"
 #include "BKE_image.h"
+#include "BKE_idprop.h"
 
 #include "BKE_bpath.h"  /* own include */
 
@@ -360,6 +361,38 @@ static bool rewrite_path_fixed(char *path, BPathVisitor visit_cb, const char *ab
 	}
 }
 
+/* Same as rewrite_path_fixed(), but works with IDProperty */
+static bool rewrite_prop_path_fixed(IDProperty *prop, BPathVisitor visit_cb, const char *absbase, void *userdata)
+{
+	char path_src_buf[FILE_MAX];
+	const char *path_src;
+	char path_dst[FILE_MAX];
+
+	BLI_assert(prop->type == IDP_STRING);
+
+	char *path = IDP_String(prop);
+
+	if (absbase) {
+		BLI_strncpy(path_src_buf, path, sizeof(path_src_buf));
+		BLI_path_abs(path_src_buf, absbase);
+		path_src = path_src_buf;
+	}
+	else {
+		path_src = path;
+	}
+
+	/* so functions can check old value */
+	BLI_strncpy(path_dst, path, FILE_MAX);
+
+	if (visit_cb(userdata, path_dst, path_src)) {
+		IDP_AssignString(prop, path_dst, FILE_MAX);
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 static bool rewrite_path_fixed_dirfile(char path_dir[FILE_MAXDIR],
                                        char path_file[FILE_MAXFILE],
                                        BPathVisitor visit_cb,
@@ -417,6 +450,39 @@ static void bpath_traverse_image_user_cb(Image *ima, ImageUser *iuser, void *cus
 {
 	if (ima == customdata)
 		iuser->ok = 1;
+}
+
+/* Run visitor on ID properties */
+static void bpath_traverse_properties(struct IDProperty *group, BPathVisitor visit_cb, const char *absbase, void *bpath_user_data)
+{
+	if (group) {
+		IDProperty *prop = group->data.group.first;
+		while (prop) {
+			switch (prop->type) {
+				case IDP_STRING: {
+					char *propData = IDP_String(prop);
+					if (propData && *propData) {
+						rewrite_prop_path_fixed(prop, visit_cb, absbase, bpath_user_data);
+					}
+					break;
+				}
+				case IDP_GROUP: {
+					bpath_traverse_properties(prop, visit_cb, absbase, bpath_user_data);
+					break;
+				}
+				case IDP_IDPARRAY: {
+					for (int i = 0; i < prop->totallen; ++i) {
+						bpath_traverse_properties(&IDP_IDPArray(prop)[i], visit_cb, absbase, bpath_user_data);
+					}
+					break;
+				}
+				default: {
+					break;
+				}
+			}
+			prop = prop->next;
+		}
+	}
 }
 
 /* Run visitor function 'visit' on all paths contained in 'id'. */
@@ -577,6 +643,12 @@ void BKE_bpath_traverse_id(Main *bmain, ID *id, BPathVisitor visit_cb, const int
 					}
 				}
 			}
+			else if (ntree->type == NTREE_CUSTOM) {
+				for (node = ntree->nodes.first; node; node = node->next) {
+					bpath_traverse_properties(node->prop, visit_cb, absbase, bpath_user_data);
+				}
+			}
+
 			break;
 		}
 		case ID_TE:
@@ -657,6 +729,8 @@ void BKE_bpath_traverse_id(Main *bmain, ID *id, BPathVisitor visit_cb, const int
 			/* Nothing to do for other IDs that don't contain file paths. */
 			break;
 	}
+
+	bpath_traverse_properties(id->properties, visit_cb, absbase, bpath_user_data);
 }
 
 void BKE_bpath_traverse_id_list(Main *bmain, ListBase *lb, BPathVisitor visit_cb, const int flag, void *bpath_user_data)
