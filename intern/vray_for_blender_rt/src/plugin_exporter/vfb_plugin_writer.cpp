@@ -142,7 +142,7 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrMapChannels &val)
 		pp << "List(" << index++ << ",\n";
 		pp << iter->second.vertices << "," << iter->second.faces << ")";
 
-		for (; iter != val.data.cend(); ++iter) {
+		for (++iter; iter != val.data.cend(); ++iter) {
 			pp << ",\nList(" << index++ << ",\n";
 			pp << iter->second.vertices << "," << iter->second.faces << ")";
 		}
