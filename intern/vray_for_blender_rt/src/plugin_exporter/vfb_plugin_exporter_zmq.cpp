@@ -78,7 +78,9 @@ struct JpegErrorManager {
 
 static void jpegErrorExit(j_common_ptr cinfo) {
 	JpegErrorManager * myerr = (JpegErrorManager*)cinfo->err;
-	(*cinfo->err->output_message) (cinfo);
+	char jpegErrMsg[JMSG_LENGTH_MAX + 1];
+	(*cinfo->err->format_message) (cinfo, jpegErrMsg);
+	PRINT_WARN("Error in jpeg decompress [%s]!", jpegErrMsg);
 	longjmp(myerr->setjmp_buffer, 1);
 }
 
@@ -136,6 +138,7 @@ static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 	jpegError.pub.error_exit = jpegErrorExit;
 
 	if (setjmp(jpegError.setjmp_buffer)) {
+		PRINT_WARN("Longjmp after jpeg error!");
 		jpeg_destroy_decompress(&jpegInfo);
 		return nullptr;
 	}
