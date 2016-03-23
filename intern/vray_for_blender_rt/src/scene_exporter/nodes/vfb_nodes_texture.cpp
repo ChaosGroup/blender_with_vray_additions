@@ -417,40 +417,59 @@ AttrValue DataExporter::exportVRayNodeTexSky(BL::NodeTree &ntree, BL::Node &node
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexFalloff(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+BL::NodeSocket DataExporter::getSocketByAttr(BL::Node node, const std::string &attrName)
 {
-#if 0
-	PluginDesc falloffTexAttrs;
+	BL::Node::inputs_iterator sockIt;
+	for(node.inputs.begin(sockIt); sockIt != node.inputs.end(); ++sockIt) {
+		std::string sockAttrName;
+		if(RNA_struct_find_property(&sockIt->ptr, "vray_attr")) {
+			sockAttrName = RNA_std_string_get(&sockIt->ptr, "vray_attr");
+		}
 
-	BL::NodeSocket blendInputSock = NodeExporter::getSocketByAttr(node, "blend_input");
-	BL::Node       blendInputNode = NodeExporter::getConnectedNode(blendInputSock, context);
-	if (blendInputNode && blendInputNode.is_a(&RNA_ShaderNodeVectorCurve)) {
-		const std::string &subFalloffTexName = "SubFalloff@" + NodeExporter::getPluginName(node, ntree, context);
-		PluginDesc  subFalloffTexAttrs(falloffTexAttrs);
-		subFalloffTexAttrs["use_blend_input"] = "0";
-		subFalloffTexAttrs["blend_input"]     = "NULL";
+		if(sockAttrName.empty())
+			continue;
 
-		NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, subFalloffTexAttrs, subFalloffTexName);
-
-		StrVector points;
-		StrVector types;
-		getNodeVectorCurveData(ntree, blendInputNode, points, types);
-
-		const std::string &texBezierCurveName = NodeExporter::getPluginName(blendInputNode, ntree, context);
-		PluginDesc texBezierCurveAttrs;
-		texBezierCurveAttrs["input_float"] = subFalloffTexName + "::blend_output";
-		texBezierCurveAttrs["points"] = BOOST_FORMAT_LIST_FLOAT(points);
-		texBezierCurveAttrs["types"]  = BOOST_FORMAT_LIST_INT(types);
-
-		VRayNodePluginExporter::exportPlugin("TEXTURE", "TexBezierCurve", texBezierCurveName, texBezierCurveAttrs);
-
-		falloffTexAttrs["use_blend_input"] = "1";
-		falloffTexAttrs["blend_input"]     = texBezierCurveName;
+		if(attrName == sockAttrName)
+			return *sockIt;
 	}
 
-	return NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, falloffTexAttrs);
-#endif
-	return AttrValue();
+	return BL::NodeSocket(PointerRNA_NULL);
+}
+
+
+AttrValue DataExporter::exportVRayNodeTexFalloff(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	const std::string &pluginName = GenPluginName(node, ntree, context);
+	PluginDesc pluginDesc(pluginName, "TexFalloff");
+
+	BL::NodeSocket blendInputSock = getSocketByAttr(node, "blend_input");
+	BL::Node       blendInputNode = this->getConnectedNode(ntree, blendInputSock,context);
+	if (blendInputNode && blendInputNode.is_a(&RNA_ShaderNodeVectorCurve)) {
+		const std::string &subFalloffTexName = "SubFalloff@" + GenPluginName(node, ntree, context);
+		PluginDesc subFalloffTexAttrs(subFalloffTexName, "TexFalloff");
+		subFalloffTexAttrs.add("use_blend_input", 0);
+		subFalloffTexAttrs.add("blend_input", AttrPlugin("NULL"));
+
+		auto output = exportVRayNodeAuto(ntree, node, fromSocket, context, subFalloffTexAttrs);
+
+		AttrListFloat points;
+		AttrListInt types;
+		fillNodeVectorCurveData(ntree, blendInputNode, points, types);
+
+		const std::string &texBezierCurveName = GenPluginName(blendInputNode, ntree, context);
+		PluginDesc texBezierCurveAttrs(texBezierCurveName, "TexBezierCurve");
+		texBezierCurveAttrs.add("input_float", output);
+		texBezierCurveAttrs.add("points", points);
+		texBezierCurveAttrs.add("types", types);
+
+		auto plg = m_exporter->export_plugin(texBezierCurveAttrs);
+		plg.output = "blend_output";
+
+		pluginDesc.add("use_blend_input", true);
+		pluginDesc.add("blend_input", plg);
+	}
+
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 
 
