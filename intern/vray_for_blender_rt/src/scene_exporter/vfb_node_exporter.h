@@ -193,7 +193,6 @@ struct IdTrack {
 			PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
 			break;
 		default:
-			PRINT_INFO_EX("IdTrack plugin %s NONE", plugin.c_str());
 			break;
 		}
 		IdDep &dep = data[id];
