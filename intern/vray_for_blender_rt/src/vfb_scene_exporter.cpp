@@ -444,9 +444,14 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 						  override.namePrefix.c_str(), ob.name().c_str());
 #endif
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
-				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
-
 				if (RNA_boolean_get(&vrayClipper, "enabled")) {
+
+					overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					overrideAttr.visible = false;
+					overrideAttr.override = true;
+
+					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+
 					const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 
 					if (NOT(excludeGroupName.empty())) {
@@ -466,6 +471,8 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 					}
 
 					m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
+				} else {
+					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 				}
 			} else if(ob.data() && ob.type() == BL::Object::type_LAMP) {
 				m_data_exporter.exportLight(ob, check_updated, overrideAttr);
