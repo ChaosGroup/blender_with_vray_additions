@@ -70,7 +70,10 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 			const auto &cachedPlugin = m_pluginManager[pluginDesc];
 
 			if (cachedPlugin.pluginID != pluginDesc.pluginID) {
-				this->remove_plugin(cachedPlugin.pluginName);
+				// copy the name, since cachedPlugin is reference from inside the manager
+				// and when we remove it, it will reference invalid memory!
+				auto name = cachedPlugin.pluginName;
+				this->remove_plugin(name);
 				plg = this->export_plugin_impl(pluginDesc);
 			} else {
 				plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
