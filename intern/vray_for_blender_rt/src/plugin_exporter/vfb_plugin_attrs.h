@@ -49,8 +49,8 @@ inline VRayBaseTypes::AttrColor AttrColorFromBlColor(const BlColor &c) {
 	return color;
 }
 
-inline VRayBaseTypes::AttrColor AttrColorFromBlColor(const BlAColor &c) {
-	VRayBaseTypes::AttrColor color;
+inline VRayBaseTypes::AttrAColor AttrAColorFromBlColor(const BlAColor &c) {
+	VRayBaseTypes::AttrAColor color;
 	memcpy(&color, c.data, VectorBytesCount + sizeof(float));
 	return color;
 }
