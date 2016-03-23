@@ -135,6 +135,9 @@ def load_image(imagepath,
 
     def _recursive_search(paths, filename_check):
         for path in paths:
+            if type(path) is bytes:
+                path = str(path)
+
             for dirpath, dirnames, filenames in os.walk(path):
 
                 # skip '.svn'

@@ -102,6 +102,10 @@ endif()
 # Setup the exe sources and buildinfo
 set(SRC
 	creator.c
+	creator_args.c
+	creator_signals.c
+
+	creator_intern.h
 )
 
 # MSVC 2010 gives linking errors with the manifest
@@ -167,38 +171,54 @@ if(WITH_BUILDINFO)
 	# include the output directory, where the buildinfo.h file is generated
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+	option(WITH_MANUAL_BUILDINFO "Build info header will be generated outside CMake" OFF)
+	if(WITH_MANUAL_BUILDINFO)
+		set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/buildinfo.h
+			PROPERTIES GENERATED TRUE
+			HEADER_FILE_ONLY TRUE)
 
-	# XXX, "_buildinfo.h" is used twice here,
-	# because we rely on that file being detected as missing
-	# every build so that the real header "buildinfo.h" is updated.
-	#
-	# Keep this until we find a better way to resolve!
+		set(BUILDINFO_SRC
+			${CMAKE_CURRENT_BINARY_DIR}/buildinfo.h
+			buildinfo.c
+		)
 
-	# a custom target that is always built
-	add_custom_target(buildinfo ALL
-		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/_buildinfo.h)
+		list(APPEND SRC ${BUILDINFO_SRC})
 
-	# creates buildinfo.h using cmake script
-	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_buildinfo.h
-		COMMAND ${CMAKE_COMMAND}
-		-DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-		-P ${CMAKE_SOURCE_DIR}/build_files/cmake/buildinfo.cmake)
+		add_library(buildinfo    OBJECT ${BUILDINFO_SRC})
+		add_library(buildinfoobj OBJECT ${BUILDINFO_SRC})
+	else()
+		# XXX, "_buildinfo.h" is used twice here,
+		# because we rely on that file being detected as missing
+		# every build so that the real header "buildinfo.h" is updated.
+		#
+		# Keep this until we find a better way to resolve!
 
-	# buildinfo.h is a generated file
-	set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/buildinfo.h
-		PROPERTIES GENERATED TRUE
-		HEADER_FILE_ONLY TRUE)
+		# a custom target that is always built
+		add_custom_target(buildinfo ALL
+			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/_buildinfo.h)
 
-	# add deps below, after adding blender
-	# -------------- done with header values.
+		# creates buildinfo.h using cmake script
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_buildinfo.h
+			COMMAND ${CMAKE_COMMAND}
+			-DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+			-P ${CMAKE_SOURCE_DIR}/build_files/cmake/buildinfo.cmake)
 
-	list(APPEND SRC
-		buildinfo.c
-	)
+		# buildinfo.h is a generated file
+		set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/buildinfo.h
+			PROPERTIES GENERATED TRUE
+			HEADER_FILE_ONLY TRUE)
 
-	# make an object library so can load with it in tests
-	add_library(buildinfoobj OBJECT buildinfo.c)
-	add_dependencies(buildinfoobj buildinfo)
+		# add deps below, after adding blender
+		# -------------- done with header values.
+
+		list(APPEND SRC
+			buildinfo.c
+		)
+
+		# make an object library so can load with it in tests
+		add_library(buildinfoobj OBJECT buildinfo.c)
+		add_dependencies(buildinfoobj buildinfo)
+	endif()
 endif()
 
 # message(STATUS "Configuring blender")
@@ -529,10 +549,7 @@ if(UNIX AND NOT APPLE)
 				DIRECTORY ${PYTHON_LIBPATH}/python${PYTHON_VERSION}
 				DESTINATION ${TARGETDIR_VER}/python/${_target_LIB}
 				PATTERN "__pycache__" EXCLUDE               # * any cache *
-				PATTERN "distutils" EXCLUDE                 # ./distutils
 				PATTERN "lib2to3" EXCLUDE                   # ./lib2to3
-				PATTERN "config" EXCLUDE                    # ./config
-				PATTERN "config-*" EXCLUDE                  # ./config-*
 				PATTERN "site-packages/*" EXCLUDE           # ./site-packages/*
 				PATTERN "tkinter" EXCLUDE                   # ./tkinter
 				PATTERN "lib-dynload/_tkinter.*" EXCLUDE    # ./lib-dynload/_tkinter.co
@@ -541,6 +558,15 @@ if(UNIX AND NOT APPLE)
 				PATTERN "turtledemo" EXCLUDE                # ./turtledemo
 				PATTERN "turtle.py" EXCLUDE                 # ./turtle.py
 			)
+
+			# Needed for distutils/pip
+			# get the last part of the include dir, will be 'python{version}{abiflag}',
+			get_filename_component(_py_inc_suffix ${PYTHON_INCLUDE_DIR} NAME)
+			install(
+				FILES ${PYTHON_INCLUDE_DIR}/pyconfig.h
+				DESTINATION ${TARGETDIR_VER}/python/include/${_py_inc_suffix}
+			)
+			unset(_py_inc_suffix)
 
 			# # doesnt work, todo
 			# install(CODE "execute_process(COMMAND find ${CMAKE_INSTALL_PREFIX}/${BLENDER_VERSION}/python/lib/ -name '*.so' -exec strip -s {} '\;')")
@@ -559,7 +585,6 @@ if(UNIX AND NOT APPLE)
 					PATTERN "__pycache__" EXCLUDE           # * any cache *
 					PATTERN "*.pyc" EXCLUDE                 # * any cache *
 					PATTERN "*.pyo" EXCLUDE                 # * any cache *
-					PATTERN "distutils" EXCLUDE             # ./distutils
 					PATTERN "oldnumeric" EXCLUDE            # ./oldnumeric
 					PATTERN "doc" EXCLUDE                   # ./doc
 					PATTERN "tests" EXCLUDE                 # ./tests
@@ -584,7 +609,6 @@ if(UNIX AND NOT APPLE)
 					PATTERN "__pycache__" EXCLUDE           # * any cache *
 					PATTERN "*.pyc" EXCLUDE                 # * any cache *
 					PATTERN "*.pyo" EXCLUDE                 # * any cache *
-					PATTERN "cacert.pem" EXCLUDE            # for now we don't deal with security
 				)
 				# On some platforms requests does have extra dependencies.
 				set(_requests_deps "chardet" "urllib3")

@@ -1627,6 +1627,17 @@ void lamp_falloff_sliders(float lampdist, float ld1, float ld2, float dist, out 
 	visifac *= lampdistkw/(lampdistkw + ld2*dist*dist);
 }
 
+void lamp_falloff_invcoefficients(float coeff_const, float coeff_lin, float coeff_quad, float dist, out float visifac)
+{
+	vec3 coeff = vec3(coeff_const, coeff_lin, coeff_quad);
+	vec3 d_coeff = vec3(1.0, dist, dist*dist);
+	float visifac_r = dot(coeff, d_coeff);
+	if (visifac_r > 0.0)
+		visifac = 1.0 / visifac_r;
+	else
+		visifac = 0.0;
+}
+
 void lamp_falloff_curve(float lampdist, sampler2D curvemap, float dist, out float visifac)
 {
 	visifac = texture2D(curvemap, vec2(dist/lampdist, 0.0)).x;
@@ -2413,29 +2424,27 @@ void node_add_shader(vec4 shader1, vec4 shader2, out vec4 shader)
 
 /* fresnel */
 
-void node_fresnel(float ior, vec3 N, vec3 I, mat4 toworld, out float result)
+void node_fresnel(float ior, vec3 N, vec3 I, out float result)
 {
 	/* handle perspective/orthographic */
 	vec3 I_view = (gl_ProjectionMatrix[3][3] == 0.0)? normalize(I): vec3(0.0, 0.0, -1.0);
-	vec3 normal = (toworld*vec4(N, 0.0)).xyz;
 
 	float eta = max(ior, 0.00001);
-	result = fresnel_dielectric(I_view, normal, (gl_FrontFacing)? eta: 1.0/eta);
+	result = fresnel_dielectric(I_view, N, (gl_FrontFacing)? eta: 1.0/eta);
 }
 
 /* layer_weight */
 
-void node_layer_weight(float blend, vec3 N, vec3 I, mat4 toworld, out float fresnel, out float facing)
+void node_layer_weight(float blend, vec3 N, vec3 I, out float fresnel, out float facing)
 {
 	/* fresnel */
 	float eta = max(1.0 - blend, 0.00001);
 	vec3 I_view = (gl_ProjectionMatrix[3][3] == 0.0)? normalize(I): vec3(0.0, 0.0, -1.0);
-	vec3 normal = (toworld*vec4(N, 0.0)).xyz;
 
-	fresnel = fresnel_dielectric(I_view, normal, (gl_FrontFacing)? 1.0/eta : eta );
+	fresnel = fresnel_dielectric(I_view, N, (gl_FrontFacing)? 1.0/eta : eta );
 
 	/* facing */
-	facing = abs(dot(I_view, normal));
+	facing = abs(dot(I_view, N));
 	if(blend != 0.5) {
 		blend = clamp(blend, 0.0, 0.99999);
 		blend = (blend < 0.5)? 2.0*blend: 0.5/(1.0 - blend);
