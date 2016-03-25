@@ -39,11 +39,12 @@ set(INC
 	src/scene_exporter
 	src/scene_exporter/utils
 
-	${APPSDK_ROOT}/cpp/include
-
-
 	extern/vray-zmq-wrapper/include
 )
+
+if(USE_BLENDER_VRAY_APPSDK)
+	list(APPEND INC ${APPSDK_ROOT}/cpp/include)
+endif()
 
 if(USE_BLENDER_VRAY_ZMQ)
 	list(APPEND INC ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
