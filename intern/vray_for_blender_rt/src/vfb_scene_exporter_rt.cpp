@@ -92,34 +92,52 @@ void InteractiveExporter::draw()
 		glBindTexture(GL_TEXTURE_2D, texid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image.pixels);
 
-		const int glFilter = (m_viewParams.viewport_w == m_viewParams.renderSize.w)
-		                     ? GL_NEAREST
-		                     : GL_LINEAR;
+		if (glGetError() != GL_NO_ERROR) {
+			// for some reason we cant draw 2d textures
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, glFilter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, glFilter);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDisable(GL_TEXTURE_2D);
+			glDeleteTextures(1, &texid);
 
-		glEnable(GL_TEXTURE_2D);
+			glPixelZoom((float)m_viewParams.viewport_w/(float)image.w, (float)m_viewParams.viewport_h/(float)image.h);
+			glRasterPos2f(0.f, 0.f);
 
-		glPushMatrix();
-		glTranslatef(0.0f, 0.0f, 0.0f);
+			// we need to manually flip since we cant do it on the device
+			image.flip();
+			glDrawPixels(image.w, image.h, GL_RGBA, GL_FLOAT, image.pixels);
 
-		glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 1.0f);
-		glVertex2f(0.0f, 0.0f);
-		glTexCoord2f(1.0f, 1.0f);
-		glVertex2f((float)m_viewParams.viewport_w, 0.0f);
-		glTexCoord2f(1.0f, 0.0f);
-		glVertex2f((float)m_viewParams.viewport_w, (float)m_viewParams.viewport_h);
-		glTexCoord2f(0.0f, 0.0f);
-		glVertex2f(0.0f, (float)m_viewParams.viewport_h);
-		glEnd();
+			glPixelZoom(1.0f, 1.0f);
+		}
+		else {
+			const int glFilter = (m_viewParams.viewport_w == m_viewParams.renderSize.w)
+			                     ? GL_NEAREST
+			                     : GL_LINEAR;
 
-		glPopMatrix();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, glFilter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, glFilter);
 
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glDisable(GL_TEXTURE_2D);
-		glDeleteTextures(1, &texid);
+			glEnable(GL_TEXTURE_2D);
+
+			glPushMatrix();
+			glTranslatef(0.0f, 0.0f, 0.0f);
+
+			glBegin(GL_QUADS);
+			glTexCoord2f(0.0f, 1.0f);
+			glVertex2f(0.0f, 0.0f);
+			glTexCoord2f(1.0f, 1.0f);
+			glVertex2f((float)m_viewParams.viewport_w, 0.0f);
+			glTexCoord2f(1.0f, 0.0f);
+			glVertex2f((float)m_viewParams.viewport_w, (float)m_viewParams.viewport_h);
+			glTexCoord2f(0.0f, 0.0f);
+			glVertex2f(0.0f, (float)m_viewParams.viewport_h);
+			glEnd();
+
+			glPopMatrix();
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDisable(GL_TEXTURE_2D);
+			glDeleteTextures(1, &texid);
+		}
 
 		if (transparent) {
 			glDisable(GL_BLEND);
