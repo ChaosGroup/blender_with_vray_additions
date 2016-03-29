@@ -155,7 +155,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 				else {
 					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-					bool hidden = m_exporter->get_is_viewport() && (ob.hide() || !ob.is_visible(m_scene)) || ob.hide_render();
+					bool hidden = m_exporter->get_is_viewport() && ob.hide() || ob.hide_render() || !ob.is_visible(m_scene);
 					nodeDesc.add("visible", !hidden);
 				}
 
