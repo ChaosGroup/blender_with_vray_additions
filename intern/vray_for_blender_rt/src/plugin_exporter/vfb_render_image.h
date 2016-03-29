@@ -52,6 +52,11 @@ struct RenderImage {
 	void   clamp(float max=1.0f, float val=1.0f);
 	void   resetAlpha();
 
+	void   resetUpdated() { updated = 0.f; }
+
+	// will hold % of updated area
+	float  updated;
+
 	float *pixels;
 	int    w;
 	int    h;

@@ -174,6 +174,7 @@ void ProductionExporter::render_start()
 						if (m_settings.settings_animation.use) {
 							Py_BLOCK_THREADS
 						}
+						m_engine.update_progress(m_progress);
 						for (auto & result : m_renderResultsList) {
 							BL::RenderResult::layers_iterator rrlIt;
 							result.layers.begin(rrlIt);
@@ -197,6 +198,7 @@ void ProductionExporter::render_start()
 				result.layers.begin(rrlIt);
 				if (rrlIt != result.layers.end()) {
 					m_engine.update_result(result);
+					m_engine.update_progress(1.f);
 				}
 			}
 			if (m_settings.settings_animation.use) {
@@ -252,7 +254,11 @@ void ProductionExporter::cb_on_rt_image_updated()
 					BL::RenderPass renderPass(*rpIt);
 					if (renderPass) {
 						RenderImage image = m_exporter->get_pass(renderPass.type());
+
 						if (image && image.w == m_viewParams.renderSize.w && image.h == m_viewParams.renderSize.h) {
+							if (renderPass.type() == BL::RenderPass::type_COMBINED) {
+								m_progress = image.updated;
+							}
 							renderPass.rect(image.pixels);
 						}
 					}

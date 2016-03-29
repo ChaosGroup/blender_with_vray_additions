@@ -465,7 +465,8 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 			auto & image = m_LayerImages[RenderChannelType::RenderChannelTypeNone];
 
 			if (!image.pixels || image.w != w || image.h != h || image.channels != 4) {
-			
+
+				image.resetUpdated();
 				image.channels = 4;
 				image.w = w;
 				image.h = h;

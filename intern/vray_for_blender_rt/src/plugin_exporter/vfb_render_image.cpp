@@ -51,7 +51,8 @@ RenderImage::RenderImage(RenderImage && other):
 	pixels(nullptr),
 	w(0),
 	h(0),
-	channels(0)
+	channels(0),
+	updated(0.f)
 {
 	*this = std::move(other);
 }
@@ -59,6 +60,7 @@ RenderImage::RenderImage(RenderImage && other):
 RenderImage & RenderImage::operator=(RenderImage && other)
 {
 	if (this != &other) {
+		std::swap(updated, other.updated);
 		std::swap(pixels, other.pixels);
 		std::swap(w, other.w);
 		std::swap(h, other.h);
@@ -71,6 +73,7 @@ RenderImage RenderImage::deepCopy(const RenderImage &source)
 {
 	RenderImage dest;
 
+	dest.updated = source.updated;
 	dest.w = source.w;
 	dest.h = source.h;
 	dest.channels = source.channels;
@@ -88,6 +91,7 @@ RenderImage::~RenderImage()
 
 void RenderImage::updateRegion(const float *data, int x, int y, int w, int h)
 {
+	updated += (float)(w * h) / std::max((float)(this->w * this->h), 1.f);
 	y = this->h - y;
 
 	for (int c = 0; c < h; ++c) {
