@@ -358,17 +358,6 @@ void SceneExporter::sync_prepass()
 	}
 }
 
-bool SceneExporter::layers_intersect(const BlLayers &left, const BlLayers &right) const
-{
-	for (unsigned int c = 0; c < 20; c++) {
-		if (left.data[c] && right.data[c]) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
 unsigned int SceneExporter::get_layer(BlLayers array)
 {
 	unsigned int layer = 0;
@@ -413,7 +402,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	}
 
 	if (add) {
-		bool is_on_visible_layer = get_layer(ob.layers()) & get_layer(m_scene.layers());
+		bool is_on_visible_layer = layers_intersect(ob.layers(), m_scene.layers());
 		bool is_hidden = m_exporter->get_is_viewport() && ob.hide() || ob.hide_render();
 
 		if (!is_hidden || override) {

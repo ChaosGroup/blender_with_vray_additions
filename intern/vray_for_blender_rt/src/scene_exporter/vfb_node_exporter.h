@@ -422,4 +422,6 @@ private:
 
 };
 
+bool layers_intersect(const BlLayers &left, const BlLayers &right);
+
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H

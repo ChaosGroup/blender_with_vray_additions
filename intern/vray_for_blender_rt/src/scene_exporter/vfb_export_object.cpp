@@ -23,6 +23,16 @@
 
 #include "DNA_object_types.h"
 
+bool layers_intersect(const BlLayers &left, const BlLayers &right)
+{
+	for (unsigned int c = 0; c < 20; c++) {
+		if (left.data[c] && right.data[c]) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {
@@ -155,7 +165,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 				else {
 					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-					bool hidden = m_exporter->get_is_viewport() && ob.hide() || ob.hide_render() || !ob.is_visible(m_scene);
+					bool hidden = m_exporter->get_is_viewport() && ob.hide() || ob.hide_render() || !layers_intersect(ob.layers(), m_scene.layers());
 					nodeDesc.add("visible", !hidden);
 				}
 

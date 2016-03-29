@@ -88,7 +88,6 @@ protected:
 	bool                 export_animation();
 
 	unsigned int         get_layer(BlLayers array);
-	bool                 layers_intersect(const BlLayers &left, const BlLayers &right) const;
 	void                 get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject);
 	void                 get_view_from_viewport(ViewParams &viewParams);
 
