@@ -178,7 +178,6 @@ void ProductionExporter::render_start()
 							BL::RenderResult::layers_iterator rrlIt;
 							result.layers.begin(rrlIt);
 							if (rrlIt != result.layers.end()) {
-								PRINT_INFO_EX("Updating image for layer \"%s\"", rrlIt->name().c_str());
 								m_engine.update_result(result);
 							}
 						}
