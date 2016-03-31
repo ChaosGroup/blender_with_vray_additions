@@ -88,7 +88,7 @@
 		if (_flag & IDWALK_READONLY) { \
 			BLI_assert(*(id_pp) == old_id); \
 		} \
-		if (_flag & IDWALK_RECURSE) { \
+		if (old_id && (_flag & IDWALK_RECURSE)) { \
 			if (!BLI_gset_haskey((_data)->ids_handled, old_id)) { \
 				BLI_gset_add((_data)->ids_handled, old_id); \
 				if (!(callback_return & IDWALK_RET_STOP_RECURSION)) { \
@@ -249,6 +249,7 @@ void BKE_library_foreach_ID_link(ID *id, LibraryIDLinkCallback callback, void *u
 		data.ids_handled = NULL;
 	}
 	data.flag = flag;
+	data.status = 0;
 	data.callback = callback;
 	data.user_data = user_data;
 
