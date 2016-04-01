@@ -464,6 +464,7 @@ static void bpath_traverse_properties(PointerRNA *rna, struct IDProperty *group,
 				case IDP_STRING: {
 					char *propData = IDP_String(prop);
 					if (propData && *propData) {
+						// XXX: Allocate dynamically?
 						static char propertyPath[10 * MAX_IDPROP_NAME] = "";
 						char *propertyPathPtr = propertyPath;
 
