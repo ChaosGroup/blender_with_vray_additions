@@ -23,15 +23,49 @@
 
 #include "DNA_object_types.h"
 
-bool layers_intersect(const BlLayers &left, const BlLayers &right)
-{
-	for (unsigned int c = 0; c < 20; c++) {
-		if (left.data[c] && right.data[c]) {
-			return true;
+uint32_t to_int_layer(const BlLayers & layers) {
+	uint32_t res = 0;
+	for (int c = 0; c < 20; ++c) {
+		res |= layers[c];
+	}
+	return res;
+}
+
+uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers) {
+	const bool is_light = (ob.data() && ob.data().is_a(&RNA_Lamp));
+	uint32_t layer = 0;
+
+	auto ob_layers = ob.layers();
+	auto ob_local_layers = ob.layers_local_view();
+
+	for (int c = 0; c < 20; c++) {
+		if (ob_layers[c]) {
+			layer |= (1 << c);
 		}
 	}
 
-	return false;
+	if (is_light) {
+		/* Consider light is visible if it was visible without layer
+		 * override, which matches behavior of Blender Internal.
+		 */
+		if (layer & scene_layers) {
+			for (int c = 0; c < 8; c++) {
+				layer |= (1 << (20 + c));
+			}
+		}
+	} else {
+		for (int c = 0; c < 8; c++) {
+			if (ob_local_layers[c]) {
+				layer |= (1 << (20 + c));
+			}
+		}
+	}
+
+	if (use_local) {
+		layer >>= 20;
+	}
+
+	return layer;
 }
 
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
@@ -45,6 +79,11 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 
 		bool is_updated      = check_updated ? ob.is_updated()      : true;
 		bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+		// we are syncing dupli, without instancer -> we need to export the node
+		if (override && !override.useInstancer) {
+			is_updated = true;
+		}
 
 		if (!is_updated && ob.parent()) {
 			BL::Object parent(ob.parent());
@@ -165,7 +204,8 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 				else {
 					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-					bool hidden = m_exporter->get_is_viewport() && ob.hide() || ob.hide_render() || !layers_intersect(ob.layers(), m_scene.layers());
+					bool hidden = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
+						!(m_computedLayers & ::get_layer(ob, m_view3d.local_view(), to_int_layer(m_scene.layers())));
 					nodeDesc.add("visible", !hidden);
 				}
 

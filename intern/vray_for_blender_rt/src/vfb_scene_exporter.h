@@ -25,6 +25,7 @@
 #include "vfb_render_view.h"
 #include "vfb_rna.h"
 
+#include <cstdint>
 #include <boost/thread.hpp>
 
 #ifdef USE_BLENDER_VRAY_APPSDK
@@ -104,6 +105,8 @@ protected:
 	DataExporter         m_data_exporter;
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
+
+	uint32_t             m_sceneComputedLayers;
 
 	bool                 m_isRunning;
 private:

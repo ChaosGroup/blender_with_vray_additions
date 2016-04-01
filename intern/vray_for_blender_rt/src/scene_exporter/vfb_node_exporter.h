@@ -275,6 +275,7 @@ public:
 	    , m_scene(PointerRNA_NULL)
 	    , m_engine(PointerRNA_NULL)
 	    , m_context(PointerRNA_NULL)
+	    , m_view3d(PointerRNA_NULL)
 	    , m_exporter(nullptr)
 	{}
 
@@ -311,8 +312,9 @@ public:
 	void              init(PluginExporter *exporter, ExporterSettings settings);
 	void              sync();
 
-	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context);
+	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context, BL::SpaceView3D view3d);
 	void              init_defaults();
+	void              setComputedLayers(uint32_t layers) { m_computedLayers = layers; }
 
 	void              setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
 	void              setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
@@ -412,6 +414,9 @@ private:
 	BL::Scene         m_scene;
 	BL::RenderEngine  m_engine;
 	BL::Context       m_context;
+	BL::SpaceView3D   m_view3d;
+	// should be set on each sync with setComputedLayers
+	uint32_t          m_computedLayers;
 
 	PluginExporter   *m_exporter;
 	ExporterSettings  m_settings;
@@ -422,6 +427,8 @@ private:
 
 };
 
-bool layers_intersect(const BlLayers &left, const BlLayers &right);
+// implemented in vfb_export_object.cpp
+inline uint32_t to_int_layer(const BlLayers & layers);
+inline uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers);
 
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H
