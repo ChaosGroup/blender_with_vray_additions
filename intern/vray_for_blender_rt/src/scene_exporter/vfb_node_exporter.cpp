@@ -156,12 +156,13 @@ void DataExporter::sync()
 }
 
 
-void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context)
+void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context, BL::SpaceView3D view3d)
 {
 	m_data = data;
 	m_scene = scene;
 	m_engine = engine;
 	m_context = context;
+	m_view3d = view3d;
 }
 
 

@@ -113,7 +113,7 @@ void SceneExporter::init() {
 void SceneExporter::init_data()
 {
 	m_data_exporter.init(m_exporter, m_settings);
-	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context);
+	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
 	m_data_exporter.init_defaults();
 }
 
@@ -394,6 +394,7 @@ void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updat
 
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
+	const std::string &obName = ob.name();
 	bool add = false;
 	if (override) {
 		add = !m_data_exporter.m_id_cache.contains(override.id) && (!override.useInstancer || !m_data_exporter.m_id_cache.contains(ob));
@@ -402,10 +403,11 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	}
 
 	if (add) {
-		bool is_on_visible_layer = layers_intersect(ob.layers(), m_scene.layers());
-		bool is_hidden = m_exporter->get_is_viewport() && ob.hide() || ob.hide_render();
+		// check if object is hidden, or we are in local view and the object is not light and not the view-ed one
+		bool skip_export = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
+		                  !(m_sceneComputedLayers & ::get_layer(ob, m_view3d.local_view(), to_int_layer(m_scene.layers())));
 
-		if (!is_hidden || override) {
+		if (!skip_export || override) {
 			if (override) {
 				m_data_exporter.m_id_cache.insert(override.id);
 				m_data_exporter.m_id_cache.insert(ob);
@@ -418,14 +420,14 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			if (!override && ob.modifiers.length()) {
 				overrideAttr.override = true;
 				overrideAttr.visible = ob_is_duplicator_renderable(ob);
-				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
+				overrideAttr.tm = AttrTransformFromBlTransform(ob.
+					matrix_world());
 			}
 
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
-			PRINT_INFO_EX("Syncing: %s...",
-							ob.name().c_str());
+			PRINT_INFO_EX("Syncing: %s...", obName.c_str());
 #if 0
 			const int data_updated = RNA_int_get(&vrayObject, "data_updated");
 			PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing [%s]\"%s\"...",
@@ -511,8 +513,9 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	int dupli_instance = 0;
 	bool dupli_base_synced = false;
 	bool instancer_visible = true;
+	const auto scene_layers = to_int_layer(m_scene.layers());
 
-	const bool visible_on_layer = layers_intersect(m_scene.layers(), ob.layers());
+	//const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers()));
 
 	BL::Object::dupli_list_iterator dupIt;
 	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
@@ -523,9 +526,12 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::DupliObject dupliOb(*dupIt);
 		BL::Object      dupOb(dupliOb.object());
 
-		const bool is_hidden = dupliOb.hide() || dupOb.hide_render();
+		const auto & dupliObName = dupOb.name();
 
-		instancer_visible = instancer_visible && visible_on_layer && !is_hidden;
+		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(dupOb, m_view3d.local_view(), scene_layers);
+
+		//instancer_visible = instancer_visible && !is_hidden;
 
 		const bool is_light = Blender::IsLight(dupOb);
 		const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
@@ -577,26 +583,25 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					instancer_item.tm = AttrTransformFromBlTransform(tm);
 
 					dupli_instance++;
-					if (!dupli_base_synced) {
-						dupli_base_synced = true;
-						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
-						sync_object(dupOb, check_updated, overrideAttrs);
-					}
+
+					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+					sync_object(dupOb, check_updated, overrideAttrs);
+
 				} else {
 					overrideAttrs.useInstancer = false;
 
-					if (!dupli_base_synced && ob_is_duplicator_renderable(dupOb)) {
-						dupli_base_synced = true;
-						overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-						m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
-						sync_object(dupOb, check_updated, overrideAttrs);
-					}
+					// base objects
+					overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+					sync_object(dupOb, check_updated, overrideAttrs);
+
 
 					char namePrefix[255] = {0, };
 					snprintf(namePrefix, 250, "Dupli%u@", persistendID);
 					overrideAttrs.namePrefix = namePrefix;
 					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
 					overrideAttrs.id = persistendID;
+					overrideAttrs.visible = true;
 
 					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
 					sync_object(dupOb, check_updated, overrideAttrs);
@@ -608,10 +613,11 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	if (dupli_use_instancer) {
 		static boost::format InstancerFmt("Instancer@%s");
 		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_view3d.local_view(), scene_layers);
 
 		PluginDesc instancerDesc(exportName, "Instancer");
 		instancerDesc.add("instances", instances);
-		instancerDesc.add("visible", instancer_visible && layers_intersect(m_scene.layers(), ob.layers()));
+		instancerDesc.add("visible", instancer_visible && visible_on_layer);
 
 		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
 		m_exporter->export_plugin(instancerDesc);
@@ -619,11 +625,29 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 }
 
 
-void SceneExporter::sync_objects(const int &check_updated)
-{
-	PRINT_INFO_EX("SceneExporter::sync_objects(%i)",
-	              check_updated);
+void SceneExporter::sync_objects(const int &check_updated) {
+	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
+	// duplicate cycle's logic for layers here
+	m_sceneComputedLayers = 0;
+	auto viewLayers = m_view3d.layers();
+	auto viewLocalLayers = m_view3d.layers_local_view();
+
+	for (int c = 0; c < 20; ++c) {
+		m_sceneComputedLayers |= (!!viewLayers[c] << c);
+	}
+
+	for (int c = 0; c < 8; ++c) {
+		m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
+	}
+
+	// truncate to local view layers
+	if (m_view3d.local_view()) {
+		m_sceneComputedLayers >>= 20;
+	}
+	m_data_exporter.setComputedLayers(m_sceneComputedLayers);
+
+	auto scene_layers = to_int_layer(m_scene.layers());
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 		if (is_interrupted()) {
@@ -636,7 +660,7 @@ void SceneExporter::sync_objects(const int &check_updated)
 
 		if (ob.is_duplicator()) {
 			const bool is_updated = check_updated ? ob.is_updated() : true;
-			const bool visible_on_layer = layers_intersect(ob.layers(), m_scene.layers());
+			const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_view3d.local_view(), scene_layers);
 
 			if (is_updated) {
 				sync_dupli(ob, check_updated);
