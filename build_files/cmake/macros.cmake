@@ -51,7 +51,7 @@ endmacro()
 function(list_assert_duplicates
 	list_id
 	)
-	
+
 	# message(STATUS "list data: ${list_id}")
 
 	list(LENGTH list_id _len_before)
@@ -139,22 +139,6 @@ function(target_link_libraries_debug
 	foreach(_LIB ${LIBS})
 		target_link_libraries(${TARGET} debug "${_LIB}")
 	endforeach()
-endfunction()
-
-function(target_link_libraries_decoupled
-	target
-	libraries_var
-	)
-
-	if(NOT MSVC)
-		target_link_libraries(${target} ${${libraries_var}})
-	else()
-		# For MSVC we link to different libraries depending whether
-		# release or debug target is being built.
-		file_list_suffix(_libraries_debug "${${libraries_var}}" "_d")
-		target_link_libraries_debug(${target} "${_libraries_debug}")
-		target_link_libraries_optimized(${target} "${${libraries_var}}")
-	endif()
 endfunction()
 
 # Nicer makefiles with -I/1/foo/ instead of -I/1/2/3/../../foo/
@@ -256,6 +240,9 @@ endfunction()
 
 function(SETUP_LIBDIRS)
 
+	# NOTE: For all new libraries, use absolute library paths.
+	# This should eventually be phased out.
+
 	link_directories(${JPEG_LIBPATH} ${PNG_LIBPATH} ${ZLIB_LIBPATH} ${FREETYPE_LIBPATH})
 
 	if(WITH_PYTHON)  #  AND NOT WITH_PYTHON_MODULE  # WIN32 needs
@@ -285,12 +272,6 @@ function(SETUP_LIBDIRS)
 	if(WITH_OPENVDB)
 		link_directories(${OPENVDB_LIBPATH})
 	endif()
-	if(WITH_IMAGE_OPENJPEG AND WITH_SYSTEM_OPENJPEG)
-		link_directories(${OPENJPEG_LIBPATH})
-	endif()
-	if(WITH_CODEC_QUICKTIME)
-		link_directories(${QUICKTIME_LIBPATH})
-	endif()
 	if(WITH_OPENAL)
 		link_directories(${OPENAL_LIBPATH})
 	endif()
@@ -305,21 +286,21 @@ function(SETUP_LIBDIRS)
 	endif()
 	if(WITH_OPENCOLLADA)
 		link_directories(${OPENCOLLADA_LIBPATH})
-		link_directories(${PCRE_LIBPATH})
-		link_directories(${EXPAT_LIBPATH})
+		## Never set
+		# link_directories(${PCRE_LIBPATH})
+		# link_directories(${EXPAT_LIBPATH})
 	endif()
 	if(WITH_LLVM)
 		link_directories(${LLVM_LIBPATH})
 	endif()
-	if(WITH_MEM_JEMALLOC)
-		link_directories(${JEMALLOC_LIBPATH})
-	endif()
+
 	if(WITH_VRAY_FOR_BLENDER)
 		link_directories(${APPSDK_ROOT}/bin)
 		link_directories(${APPSDK_PATH}/devel)
 		link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/${CMAKE_BUILD_TYPE})
 		link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/${CMAKE_BUILD_TYPE})
 	endif()
+
 	if(WIN32 AND NOT UNIX)
 		link_directories(${PTHREADS_LIBPATH})
 	endif()
@@ -422,14 +403,7 @@ function(setup_liblinks
 	endif()
 	target_link_libraries(${target} ${JPEG_LIBRARIES})
 	if(WITH_IMAGE_OPENEXR)
-		if(WIN32 AND NOT UNIX AND NOT CMAKE_COMPILER_IS_GNUCC)
-			file_list_suffix(OPENEXR_LIBRARIES_DEBUG "${OPENEXR_LIBRARIES}" "_d")
-			target_link_libraries_debug(${target} "${OPENEXR_LIBRARIES_DEBUG}")
-			target_link_libraries_optimized(${target} "${OPENEXR_LIBRARIES}")
-			unset(OPENEXR_LIBRARIES_DEBUG)
-		else()
-			target_link_libraries(${target} ${OPENEXR_LIBRARIES})
-		endif()
+		target_link_libraries(${target} ${OPENEXR_LIBRARIES})
 	endif()
 	if(WITH_IMAGE_OPENJPEG AND WITH_SYSTEM_OPENJPEG)
 		target_link_libraries(${target} ${OPENJPEG_LIBRARIES})
@@ -710,7 +684,7 @@ function(SETUP_BLENDER_SORTED_LIBS)
 	if(WITH_INPUT_NDOF)
 		list(APPEND BLENDER_SORTED_LIBS bf_intern_ghostndof3dconnexion)
 	endif()
-	
+
 	if(WITH_MOD_BOOLEAN)
 		list(APPEND BLENDER_SORTED_LIBS extern_carve)
 	endif()

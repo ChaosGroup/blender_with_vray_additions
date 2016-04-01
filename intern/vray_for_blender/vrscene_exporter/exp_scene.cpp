@@ -1067,6 +1067,19 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 	else if(ELEM(pluginID, "LightRectangle", "LightSphere", "LightDome")) {
 		pluginAttrs["objectID"] = BOOST_FORMAT_INT(ob.pass_index());
 	}
+	else if(pluginID == "LightOmniMax") {
+		const std::string &shadowRadius = pluginAttrs["shadowRadius"];
+		if (shadowRadius != "0.0") {
+			std::string &shadowRadius1 = pluginAttrs["shadowRadius1"];
+			if (shadowRadius1 == "0") {
+				shadowRadius1 = shadowRadius;
+			}
+			std::string &shadowRadius2 = pluginAttrs["shadowRadius2"];
+			if (shadowRadius2 == "0") {
+				shadowRadius2 = shadowRadius;
+			}
+		}
+	}
 
 	// Now, let's go through "Render Elements" and check if we have to
 	// plug our light somewhere like "Light Select"

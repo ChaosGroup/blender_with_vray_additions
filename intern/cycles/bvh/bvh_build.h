@@ -78,7 +78,7 @@ protected:
 	                                    int start,
 	                                    int nun);
 
-	bool range_within_max_leaf_size(const BVHRange& range);
+	bool range_within_max_leaf_size(const BVHRange& range) const;
 
 	/* threads */
 	enum { THREAD_TASK_SIZE = 4096 };
@@ -114,8 +114,7 @@ protected:
 
 	/* spatial splitting */
 	float spatial_min_overlap;
-	vector<BoundBox> spatial_right_bounds;
-	BVHSpatialBin spatial_bins[3][BVHParams::NUM_SPATIAL_BINS];
+	vector<BVHSpatialStorage> spatial_storage;
 
 	/* threads */
 	TaskPool task_pool;

@@ -221,72 +221,11 @@ static bool gp_brush_smooth_apply(tGP_BrushEditData *gso, bGPDstroke *gps, int i
                                   const int radius, const int co[2])
 {
 	GP_EditBrush_Data *brush = gso->brush;
-	bGPDspoint *pt = &gps->points[i];
 	float inf = gp_brush_influence_calc(gso, radius, co);
-	float pressure = 0.0f;
-	float sco[3] = {0.0f};
+	bool affect_pressure = (brush->flag & GP_EDITBRUSH_FLAG_SMOOTH_PRESSURE) != 0;
 	
-	/* Do nothing if not enough points to smooth out */
-	if (gps->totpoints <= 2) {
-		return false;
-	}
-	
-	/* Only affect endpoints by a fraction of the normal strength,
-	 * to prevent the stroke from shrinking too much
-	 */
-	if ((i == 0) || (i == gps->totpoints - 1)) {
-		inf *= 0.1f;
-	}
-	
-	/* Compute smoothed coordinate by taking the ones nearby */
-	/* XXX: This is potentially slow, and suffers from accumulation error as earlier points are handled before later ones */
-	{	
-		// XXX: this is hardcoded to look at 2 points on either side of the current one (i.e. 5 items total)
-		const int   steps = 2;
-		const float average_fac = 1.0f / (float)(steps * 2 + 1);
-		int step;
-		
-		/* add the point itself */
-		madd_v3_v3fl(sco, &pt->x, average_fac);
-		
-		if (brush->flag & GP_EDITBRUSH_FLAG_SMOOTH_PRESSURE) {
-			pressure += pt->pressure * average_fac;
-		}
-		
-		/* n-steps before/after current point */
-		// XXX: review how the endpoints are treated by this algorithm
-		// XXX: falloff measures should also introduce some weighting variations, so that further-out points get less weight
-		for (step = 1; step <= steps; step++) {
-			bGPDspoint *pt1, *pt2;
-			int before = i - step;
-			int after  = i + step;
-			
-			CLAMP_MIN(before, 0);
-			CLAMP_MAX(after, gps->totpoints - 1);
-			
-			pt1 = &gps->points[before];
-			pt2 = &gps->points[after];
-			
-			/* add both these points to the average-sum (s += p[i]/n) */
-			madd_v3_v3fl(sco, &pt1->x, average_fac);
-			madd_v3_v3fl(sco, &pt2->x, average_fac);
-			
-			/* do pressure too? */
-			if (brush->flag & GP_EDITBRUSH_FLAG_SMOOTH_PRESSURE) {
-				pressure += pt1->pressure * average_fac;
-				pressure += pt2->pressure * average_fac;
-			}
-		}
-	}
-	
-	/* Based on influence factor, blend between original and optimal smoothed coordinate */
-	interp_v3_v3v3(&pt->x, &pt->x, sco, inf);
-	
-	if (brush->flag & GP_EDITBRUSH_FLAG_SMOOTH_PRESSURE) {
-		pt->pressure = pressure;
-	}
-	
-	return true;
+	/* perform smoothing */
+	return gp_smooth_stroke(gps, i, inf, affect_pressure);
 }
 
 /* ----------------------------------------------- */
@@ -1537,6 +1476,7 @@ static int gpsculpt_brush_modal(bContext *C, wmOperator *op, const wmEvent *even
 	tGP_BrushEditData *gso = op->customdata;
 	const bool is_modal = RNA_boolean_get(op->ptr, "wait_for_input");
 	bool redraw_region = false;
+	bool redraw_toolsettings = false;
 	
 	/* The operator can be in 2 states: Painting and Idling */
 	if (gso->is_painting) {
@@ -1575,8 +1515,9 @@ static int gpsculpt_brush_modal(bContext *C, wmOperator *op, const wmEvent *even
 					gso->brush->size += 3;
 					CLAMP_MAX(gso->brush->size, 300);
 				}
-					
+				
 				redraw_region = true;
+				redraw_toolsettings = true;
 				break;
 			
 			case WHEELDOWNMOUSE: 
@@ -1591,8 +1532,9 @@ static int gpsculpt_brush_modal(bContext *C, wmOperator *op, const wmEvent *even
 					gso->brush->size -= 3;
 					CLAMP_MIN(gso->brush->size, 1);
 				}
-					
+				
 				redraw_region = true;
+				redraw_toolsettings = true;
 				break;
 			
 			/* Painting mbut release = Stop painting (back to idle) */
@@ -1664,8 +1606,9 @@ static int gpsculpt_brush_modal(bContext *C, wmOperator *op, const wmEvent *even
 					gso->brush->size += 3;
 					CLAMP_MAX(gso->brush->size, 300);
 				}
-					
+				
 				redraw_region = true;
+				redraw_toolsettings = true;
 				break;
 			
 			case WHEELDOWNMOUSE: 
@@ -1680,8 +1623,9 @@ static int gpsculpt_brush_modal(bContext *C, wmOperator *op, const wmEvent *even
 					gso->brush->size -= 3;
 					CLAMP_MIN(gso->brush->size, 1);
 				}
-					
+				
 				redraw_region = true;
+				redraw_toolsettings = true;
 				break;
 			
 			/* Change Frame - Allowed */
@@ -1701,6 +1645,11 @@ static int gpsculpt_brush_modal(bContext *C, wmOperator *op, const wmEvent *even
 	if (redraw_region) {
 		ARegion *ar = CTX_wm_region(C);
 		ED_region_tag_redraw(ar);
+	}
+	
+	/* Redraw toolsettings (brush settings)? */
+	if (redraw_toolsettings) {
+		WM_event_add_notifier(C, NC_SCENE | ND_TOOLSETTINGS, NULL);
 	}
 	
 	return OPERATOR_RUNNING_MODAL;

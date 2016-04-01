@@ -961,6 +961,11 @@ static void node_shader_buts_tex_pointdensity(uiLayout *layout, bContext *UNUSED
 {
 	bNode *node = ptr->data;
 	NodeShaderTexPointDensity *shader_point_density = node->storage;
+	Object *ob = (Object *)node->id;
+	PointerRNA ob_ptr, obdata_ptr;
+
+	RNA_id_pointer_create((ID *)ob, &ob_ptr);
+	RNA_id_pointer_create(ob ? (ID *)ob->data : NULL, &obdata_ptr);
 
 	uiItemR(layout, ptr, "point_source", UI_ITEM_R_EXPAND, NULL, ICON_NONE);
 	uiItemR(layout, ptr, "object", 0, NULL, ICON_NONE);
@@ -976,7 +981,18 @@ static void node_shader_buts_tex_pointdensity(uiLayout *layout, bContext *UNUSED
 	uiItemR(layout, ptr, "interpolation", 0, NULL, ICON_NONE);
 	uiItemR(layout, ptr, "resolution", 0, NULL, ICON_NONE);
 	if (shader_point_density->point_source == SHD_POINTDENSITY_SOURCE_PSYS) {
-		uiItemR(layout, ptr, "color_source", 0, NULL, ICON_NONE);
+		uiItemR(layout, ptr, "particle_color_source", 0, NULL, ICON_NONE);
+	}
+	else {
+		uiItemR(layout, ptr, "vertex_color_source", 0, NULL, ICON_NONE);
+		if (shader_point_density->ob_color_source == SHD_POINTDENSITY_COLOR_VERTWEIGHT) {
+			if (ob_ptr.data)
+				uiItemPointerR(layout, ptr, "vertex_attribute_name", &ob_ptr, "vertex_groups", "", ICON_NONE);
+		}
+		if (shader_point_density->ob_color_source == SHD_POINTDENSITY_COLOR_VERTCOL) {
+			if (obdata_ptr.data)
+				uiItemPointerR(layout, ptr, "vertex_attribute_name", &obdata_ptr, "vertex_colors", "", ICON_NONE);
+		}
 	}
 }
 
@@ -3237,9 +3253,9 @@ void draw_nodespace_back_pix(const bContext *C, ARegion *ar, SpaceNode *snode, b
 				display_buffer = IMB_display_buffer_acquire_ctx(C, ibuf, &cache_handle);
 				
 #ifdef __BIG_ENDIAN__
-				if      (snode->flag & SNODE_SHOW_R) ofs = 2;
+				if      (snode->flag & SNODE_SHOW_R) ofs = 0;
 				else if (snode->flag & SNODE_SHOW_G) ofs = 1;
-				else                                 ofs = 0;
+				else                                 ofs = 2;
 #else
 				if      (snode->flag & SNODE_SHOW_R) ofs = 1;
 				else if (snode->flag & SNODE_SHOW_G) ofs = 2;
@@ -3250,7 +3266,7 @@ void draw_nodespace_back_pix(const bContext *C, ARegion *ar, SpaceNode *snode, b
 				/* swap bytes, so alpha is most significant one, then just draw it as luminance int */
 				
 				glaDrawPixelsSafe(x, y, ibuf->x, ibuf->y, ibuf->x, GL_LUMINANCE, GL_UNSIGNED_INT,
-				                  display_buffer + ofs);
+				                  display_buffer - (4 - ofs));
 				
 				glPixelZoom(1.0f, 1.0f);
 			}
