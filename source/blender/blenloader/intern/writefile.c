@@ -920,6 +920,9 @@ static void write_nodetree(WriteData *wd, bNodeTree *ntree)
 				if (ELEM(node->type, SH_NODE_CURVE_VEC, SH_NODE_CURVE_RGB)) {
 					write_curvemapping(wd, node->storage);
 				}
+				else if (node->type == NODE_FRAME) {
+					writestruct(wd, DATA, node->typeinfo->storagename, 1, node->storage);
+				}
 			}
 			else
 				writestruct(wd, DATA, node->typeinfo->storagename, 1, node->storage);
