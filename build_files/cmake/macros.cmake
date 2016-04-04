@@ -296,6 +296,7 @@ function(SETUP_LIBDIRS)
 
 	if(WITH_VRAY_FOR_BLENDER)
 		link_directories(${APPSDK_ROOT}/bin)
+		link_directories(${APPSDK_ROOT}/lib)
 		link_directories(${APPSDK_PATH}/devel)
 		link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/${CMAKE_BUILD_TYPE})
 		link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/${CMAKE_BUILD_TYPE})

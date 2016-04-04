@@ -339,14 +339,14 @@ void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 		VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
 		if (plugin) {
 			PRINT_WARN("Setting camera plugin to: %s",
-			           plugin.getName().c_str());
+			           plugin.getName());
 
 			m_vray->setCamera(plugin);
 
 			VRay::Error err = m_vray->getLastError();
 			if (err != VRay::SUCCESS) {
 				PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
-				            plugin.getName().c_str(), err.toString().c_str());
+				            plugin.getName(), err.toString());
 			}
 		}
 	}
@@ -546,7 +546,7 @@ int AppSdkExporter::remove_plugin_impl(const std::string &pluginName)
 			VRay::Error err = m_vray->getLastError();
 			if (err != VRay::SUCCESS) {
 				PRINT_ERROR("Error removing plugin \"%s\" [%s]!",
-				            plugin.getName().c_str(), err.toString().c_str());
+				            plugin.getName(), err.toString());
 			}
 		}
 	}
@@ -571,7 +571,7 @@ void AppSdkExporter::export_vrscene(const std::string &filepath)
 	VRay::Error err = m_vray->getLastError();
 	if (err != VRay::SUCCESS) {
 		PRINT_ERROR("Error: %s",
-		            err.toString().c_str());
+		            err.toString());
 	}
 }
 
