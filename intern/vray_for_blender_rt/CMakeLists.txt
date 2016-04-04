@@ -50,7 +50,7 @@ if(USE_BLENDER_VRAY_ZMQ)
 	list(APPEND INC ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
 	list(APPEND INC extern/vray-zmq-wrapper/extern/cppzmq)
 
-	file(GLOB_RECURSE HEADERS "*.h")
+	file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 	file(GLOB_RECURSE SOURCES "*.cpp")
 else()
 	file(GLOB_RECURSE HEADERS "src/*.h")
