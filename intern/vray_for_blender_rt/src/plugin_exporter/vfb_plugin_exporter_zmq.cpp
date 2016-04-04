@@ -481,6 +481,12 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Resize, w, h));
 }
 
+void ZmqExporter::set_camera_plugin(const std::string &pluginName)
+{
+	checkZmqClient();
+	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
+}
+
 void ZmqExporter::start()
 {
 	checkZmqClient();
