@@ -428,7 +428,7 @@ private:
 };
 
 // implemented in vfb_export_object.cpp
-inline uint32_t to_int_layer(const BlLayers & layers);
-inline uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers);
+uint32_t to_int_layer(const BlLayers & layers);
+uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers);
 
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H

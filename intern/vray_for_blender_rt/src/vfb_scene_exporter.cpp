@@ -24,6 +24,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
+#include "vfb_node_exporter.h"
 
 #include "DNA_ID.h"
 #include "DNA_object_types.h"
