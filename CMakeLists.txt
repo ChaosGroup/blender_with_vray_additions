@@ -744,13 +744,13 @@ if(WITH_VRAY_FOR_BLENDER)
 
 		find_library(VRAY_APPSDK_LIB
 			NAMES VRaySDKLibrary
-			PATHS ${APPSDK_ROOT}/bin
+			PATHS ${APPSDK_ROOT}/lib  ${APPSDK_ROOT}/bin
 		)
 
 		if(NOT VRAY_APPSDK_LIB)
-			message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${APPSDK_ROOT}/bin)")
+			message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${APPSDK_ROOT}/lib)")
 		else()
-			message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
+			message(STATUS "Using V-Ray AppSDK: ${VRAY_APPSDK_LIB}")
 		endif()
 
 		add_definitions(-DUSE_BLENDER_VRAY_APPSDK)
