@@ -487,6 +487,12 @@ void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 }
 
+void ZmqExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
+{
+	checkZmqClient();
+	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+}
+
 void ZmqExporter::start()
 {
 	checkZmqClient();

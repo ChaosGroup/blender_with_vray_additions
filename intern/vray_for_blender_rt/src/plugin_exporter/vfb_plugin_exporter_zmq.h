@@ -82,6 +82,7 @@ public:
 	virtual RenderImage get_render_channel(RenderChannelType channelType);
 	virtual void        set_render_size(const int &w, const int &h);
 	virtual void        set_camera_plugin(const std::string &pluginName);
+	virtual void        set_commit_state(VRayBaseTypes::CommitAction ca);
 
 	virtual void        set_viewport_quality(int quality);
 	virtual bool        is_aborted() const { return m_IsAborted; }

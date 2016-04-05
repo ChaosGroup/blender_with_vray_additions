@@ -106,7 +106,8 @@ public:
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
 	virtual void         set_camera_plugin(const std::string &pluginName) {}
-	virtual void         commit_changes() {}
+	virtual void         commit_changes() { set_commit_state(VRayBaseTypes::CommitAction::CommitNow); }
+	virtual void         set_commit_state(VRayBaseTypes::CommitAction ca) {};
 
 	virtual void         set_export_file(VRayForBlender::ParamDesc::PluginType, PyObject *) {}
 
