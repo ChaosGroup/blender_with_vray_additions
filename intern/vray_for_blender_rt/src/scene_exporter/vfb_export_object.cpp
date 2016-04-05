@@ -204,8 +204,8 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 				else {
 					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-					bool hidden = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
-						!(m_computedLayers & ::get_layer(ob, m_view3d.local_view(), to_int_layer(m_scene.layers())));
+					bool hidden = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render());// ||
+						//!(m_computedLayers & ::get_layer(ob, m_view3d && m_view3d.local_view(), to_int_layer(m_scene.layers())));
 					nodeDesc.add("visible", !hidden);
 				}
 

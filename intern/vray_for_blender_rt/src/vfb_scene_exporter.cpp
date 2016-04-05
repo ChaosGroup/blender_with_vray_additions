@@ -61,6 +61,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_region(region)
     , m_exporter(nullptr)
     , m_isRunning(false)
+    , m_isLocalView(false)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -406,7 +407,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	if (add) {
 		// check if object is hidden, or we are in local view and the object is not light and not the view-ed one
 		bool skip_export = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
-		                  !(m_sceneComputedLayers & ::get_layer(ob, m_view3d.local_view(), to_int_layer(m_scene.layers())));
+		                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers())));
 
 		if (!skip_export || override) {
 			if (override) {
@@ -516,8 +517,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	bool instancer_visible = true;
 	const auto scene_layers = to_int_layer(m_scene.layers());
 
-	//const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers()));
-
 	BL::Object::dupli_list_iterator dupIt;
 	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
 		if (is_interrupted()) {
@@ -530,7 +529,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		const auto & dupliObName = dupOb.name();
 
 		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
-		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(dupOb, m_view3d.local_view(), scene_layers);
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(dupOb, m_isLocalView, scene_layers);
 
 		//instancer_visible = instancer_visible && !is_hidden;
 
@@ -614,7 +613,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	if (dupli_use_instancer) {
 		static boost::format InstancerFmt("Instancer@%s");
 		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
-		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_view3d.local_view(), scene_layers);
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
 		PluginDesc instancerDesc(exportName, "Instancer");
 		instancerDesc.add("instances", instances);
@@ -631,21 +630,24 @@ void SceneExporter::sync_objects(const int &check_updated) {
 
 	// duplicate cycle's logic for layers here
 	m_sceneComputedLayers = 0;
-	auto viewLayers = m_view3d.layers();
-	auto viewLocalLayers = m_view3d.layers_local_view();
+	m_isLocalView = m_view3d && m_view3d.local_view();
+
+	auto viewLayers = m_isLocalView ? m_view3d.layers() : m_scene.layers();
 
 	for (int c = 0; c < 20; ++c) {
 		m_sceneComputedLayers |= (!!viewLayers[c] << c);
 	}
 
-	for (int c = 0; c < 8; ++c) {
-		m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
-	}
+	if (m_isLocalView) {
+		auto viewLocalLayers = m_view3d.layers_local_view();
+		for (int c = 0; c < 8; ++c) {
+			m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
+		}
 
-	// truncate to local view layers
-	if (m_view3d.local_view()) {
+		// truncate to local view layers
 		m_sceneComputedLayers >>= 20;
 	}
+
 	m_data_exporter.setComputedLayers(m_sceneComputedLayers);
 
 	auto scene_layers = to_int_layer(m_scene.layers());
@@ -661,7 +663,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 
 		if (ob.is_duplicator()) {
 			const bool is_updated = check_updated ? ob.is_updated() : true;
-			const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_view3d.local_view(), scene_layers);
+			const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
 			if (is_updated) {
 				sync_dupli(ob, check_updated);

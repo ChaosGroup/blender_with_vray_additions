@@ -106,6 +106,7 @@ protected:
 	ExporterSettings     m_settings;
 	ViewParams           m_viewParams;
 
+	bool                 m_isLocalView;
 	uint32_t             m_sceneComputedLayers;
 
 	bool                 m_isRunning;
