@@ -344,7 +344,8 @@ public:
 	AttrPlugin        exportRenderView(const ViewParams &viewParams);
 	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
-	AttrPlugin        exportCameraDefault(ViewParams &viewParams);
+	AttrPlugin        exportCameraDefault(const ViewParams &viewParams);
+	AttrPlugin        exportCameraSettings(ViewParams &viewParams);
 
 	void              exportLinkedSocketEx(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
 	                                       ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin);

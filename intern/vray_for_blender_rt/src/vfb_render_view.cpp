@@ -35,6 +35,7 @@ const std::string VRayForBlender::ViewParams::renderViewPluginName("renderView")
 const std::string VRayForBlender::ViewParams::physicalCameraPluginName("cameraPhysical");
 const std::string VRayForBlender::ViewParams::defaultCameraPluginName("cameraDefault");
 const std::string VRayForBlender::ViewParams::settingsCameraDofPluginName("settingsCameraDof");
+const std::string VRayForBlender::ViewParams::settingsCameraPluginName("settingsCamera");
 
 
 static float GetLensShift(BL::Object &ob)
@@ -108,7 +109,7 @@ AttrPlugin DataExporter::exportRenderView(const ViewParams &viewParams)
 }
 
 
-AttrPlugin DataExporter::exportCameraDefault(ViewParams &viewParams)
+AttrPlugin DataExporter::exportCameraDefault(const ViewParams &viewParams)
 {
 	PluginDesc defCamDesc(ViewParams::defaultCameraPluginName, "CameraDefault");
 	defCamDesc.add("orthographic", viewParams.renderView.ortho);
@@ -203,6 +204,24 @@ AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
 	fillPhysicalCamera(viewParams, physCamDesc);
 
 	return m_exporter->export_plugin(physCamDesc);
+}
+
+
+AttrPlugin DataExporter::exportCameraSettings(ViewParams &viewParams)
+{
+	PluginDesc settingsCameraDesc(ViewParams::settingsCameraPluginName, "SettingsCamera");
+
+	if (viewParams.cameraObject && viewParams.cameraObject.data()) {
+		BL::Camera cameraData(viewParams.cameraObject.data());
+
+		PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+
+		PointerRNA settingsCamera = RNA_pointer_get(&vrayCamera, "SettingsCamera");
+		setAttrsFromPropGroupAuto(settingsCameraDesc, &settingsCamera, "SettingsCamera");
+		m_exporter->export_plugin(settingsCameraDesc);
+	}
+
+	return m_exporter->export_plugin(settingsCameraDesc);
 }
 
 
@@ -369,6 +388,8 @@ void SceneExporter::sync_view(int check_updated)
 {
 	ViewParams viewParams;
 
+	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
+
 	if (m_view3d) {
 		get_view_from_viewport(viewParams);
 
@@ -398,10 +419,12 @@ void SceneExporter::sync_view(int check_updated)
 			return;
 		}
 
+		m_exporter->remove_plugin(ViewParams::settingsCameraPluginName);
 		m_exporter->remove_plugin(ViewParams::settingsCameraDofPluginName);
-		m_exporter->remove_plugin(ViewParams::renderViewPluginName);
-		m_exporter->remove_plugin(ViewParams::defaultCameraPluginName);
 		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
+		m_exporter->remove_plugin(ViewParams::defaultCameraPluginName);
+
+		m_data_exporter.exportCameraSettings(viewParams);
 	}
 
 	AttrPlugin renView;
@@ -416,9 +439,11 @@ void SceneExporter::sync_view(int check_updated)
 
 	if (viewParams.usePhysicalCamera) {
 		physCam = m_data_exporter.exportCameraPhysical(viewParams);
+		m_exporter->set_camera_plugin(physCam.plugin);
 	}
 	else {
 		defCam = m_data_exporter.exportCameraDefault(viewParams);
+		m_exporter->set_camera_plugin(defCam.plugin);
 	}
 
 	const bool paramsChanged = m_viewParams.changedParams(viewParams);
@@ -427,16 +452,6 @@ void SceneExporter::sync_view(int check_updated)
 	}
 
 	if (needReset) {
-		// Commit camera plugin removal / creation
-		m_exporter->commit_changes();
-
-		if (physCam) {
-			m_exporter->set_camera_plugin(physCam.plugin);
-		}
-		else if (defCam) {
-			m_exporter->set_camera_plugin(defCam.plugin);
-		}
-
 		m_viewLock.unlock();
 	}
 
@@ -451,8 +466,6 @@ void SceneExporter::sync_view(int check_updated)
 	// Store new params
 	m_viewParams = viewParams;
 
-	// Or use "autocommit"
-	if (paramsChanged) {
-		m_exporter->commit_changes();
-	}
+	m_exporter->set_commit_state(VRayBaseTypes::CommitNow);
+	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOn);
 }

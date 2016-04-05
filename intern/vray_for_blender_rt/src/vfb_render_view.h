@@ -82,6 +82,8 @@ struct ViewParams {
 	static const std::string physicalCameraPluginName;
 	static const std::string defaultCameraPluginName;
 	static const std::string settingsCameraDofPluginName;
+	static const std::string settingsCameraPluginName;
+
 
 	ViewParams()
 	    : usePhysicalCamera(false)
