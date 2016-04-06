@@ -388,8 +388,6 @@ void SceneExporter::sync_view(int check_updated)
 {
 	ViewParams viewParams;
 
-	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
-
 	if (m_view3d) {
 		get_view_from_viewport(viewParams);
 
@@ -419,6 +417,7 @@ void SceneExporter::sync_view(int check_updated)
 			return;
 		}
 
+		m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
 		m_exporter->remove_plugin(ViewParams::settingsCameraPluginName);
 		m_exporter->remove_plugin(ViewParams::settingsCameraDofPluginName);
 		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
@@ -465,7 +464,8 @@ void SceneExporter::sync_view(int check_updated)
 
 	// Store new params
 	m_viewParams = viewParams;
-
-	m_exporter->set_commit_state(VRayBaseTypes::CommitNow);
-	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOn);
+	if (needReset) {
+		m_exporter->set_commit_state(VRayBaseTypes::CommitNow);
+		m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOn);
+	}
 }
