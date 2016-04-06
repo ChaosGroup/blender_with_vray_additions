@@ -167,10 +167,25 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 					bool use_dome_tex = (dome_tex && dome_tex->attrValue.type == ValueTypePlugin);
 					pluginDesc.add("use_dome_tex", use_dome_tex);
 				}
-				else if (pluginID == "LightSpotMax") {
-					BL::SpotLamp spotLamp(lamp);
+				else if (ELEM(pluginID, "LightOmniMax", "LightSpotMax")) {
+					if (pluginID == "LightSpotMax") {
+						BL::SpotLamp spotLamp(lamp);
+						pluginDesc.add("fallsize", spotLamp.spot_size());
+					}
 
-					pluginDesc.add("fallsize", spotLamp.spot_size());
+					const auto shadowRadius = pluginDesc.get("shadowRadius");
+					if (shadowRadius && shadowRadius->attrValue.valFloat != 0.f) {
+						const auto sr1 = pluginDesc.get("shadowRadius1");
+						const auto sr2 = pluginDesc.get("shadowRadius2");
+
+						if (sr1 && sr1->attrValue.valFloat == 0.f) {
+							pluginDesc.add("shadowRadius1", shadowRadius->attrValue.valFloat);
+						}
+
+						if (sr2 && sr2->attrValue.valFloat == 0.f) {
+							pluginDesc.add("shadowRadius2", shadowRadius->attrValue.valFloat);
+						}
+					}
 				}
 				else if (ELEM(pluginID, "LightRectangle", "LightSphere", "LightDome")) {
 					pluginDesc.add("objectID", ob.pass_index());
