@@ -1067,9 +1067,10 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 	else if(ELEM(pluginID, "LightRectangle", "LightSphere", "LightDome")) {
 		pluginAttrs["objectID"] = BOOST_FORMAT_INT(ob.pass_index());
 	}
-	else if(pluginID == "LightOmniMax") {
+
+	if (ELEM(pluginID, "LightOmniMax", "LightSpotMax")) {
 		const std::string &shadowRadius = pluginAttrs["shadowRadius"];
-		if (shadowRadius != "0.0") {
+		if (shadowRadius != "0") {
 			std::string &shadowRadius1 = pluginAttrs["shadowRadius1"];
 			if (shadowRadius1 == "0") {
 				shadowRadius1 = shadowRadius;
