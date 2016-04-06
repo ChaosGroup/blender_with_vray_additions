@@ -150,7 +150,7 @@ static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 		return nullptr;
 	}
 
-	jpegInfo.out_color_space = JCS_EXT_RGBA;
+	jpegInfo.out_color_space = JCS_EXT_RGBX;
 
 	if (!jpeg_start_decompress(&jpegInfo)) {
 		return nullptr;
@@ -169,7 +169,11 @@ static float * jpegToPixelData(unsigned char * data, int size, int &channels) {
 		unsigned char * source = buffer[0];
 
 		for (int r = 0; r < jpegInfo.image_width * jpegInfo.output_components; ++r) {
-			dest[r] = source[r] / 255.f;
+			if ((r + 1) % 4 == 0) {
+				dest[r] = 1.f;
+			} else {
+				dest[r] = source[r] / 255.f;
+			}
 		}
 
 		++c;
