@@ -37,18 +37,19 @@ public:
 	BoundBox right_bounds;
 
 	BVHObjectSplit() {}
-	BVHObjectSplit(const BVHBuild& builder,
+	BVHObjectSplit(BVHBuild *builder,
 	               BVHSpatialStorage *storage,
 	               const BVHRange& range,
+	               vector<BVHReference> *references,
 	               float nodeSAH);
 
-	void split(BVHBuild *builder,
-	           BVHRange& left,
+	void split(BVHRange& left,
 	           BVHRange& right,
 	           const BVHRange& range);
 
 protected:
 	BVHSpatialStorage *storage_;
+	vector<BVHReference> *references_;
 };
 
 /* Spatial Split */
@@ -60,13 +61,22 @@ public:
 	int dim;
 	float pos;
 
-	BVHSpatialSplit() : sah(FLT_MAX), dim(0), pos(0.0f) {}
+	BVHSpatialSplit() : sah(FLT_MAX),
+	                    dim(0),
+	                    pos(0.0f),
+	                    storage_(NULL),
+	                    references_(NULL) {}
 	BVHSpatialSplit(const BVHBuild& builder,
 	                BVHSpatialStorage *storage,
 	                const BVHRange& range,
+	                vector<BVHReference> *references,
 	                float nodeSAH);
 
-	void split(BVHBuild *builder, BVHRange& left, BVHRange& right, const BVHRange& range);
+	void split(BVHBuild *builder,
+	           BVHRange& left,
+	           BVHRange& right,
+	           const BVHRange& range);
+
 	void split_reference(const BVHBuild& builder,
 	                     BVHReference& left,
 	                     BVHReference& right,
@@ -76,6 +86,7 @@ public:
 
 protected:
 	BVHSpatialStorage *storage_;
+	vector<BVHReference> *references_;
 
 	/* Lower-level functions which calculates boundaries of left and right nodes
 	 * needed for spatial split.
@@ -137,30 +148,37 @@ public:
 
 	bool no_split;
 
-	__forceinline BVHMixedSplit(const BVHBuild& builder,
+	__forceinline BVHMixedSplit(BVHBuild *builder,
 	                            BVHSpatialStorage *storage,
 	                            const BVHRange& range,
+	                            vector<BVHReference> *references,
 	                            int level)
 	{
 		/* find split candidates. */
 		float area = range.bounds().safe_area();
 
-		leafSAH = area * builder.params.primitive_cost(range.size());
-		nodeSAH = area * builder.params.node_cost(2);
+		leafSAH = area * builder->params.primitive_cost(range.size());
+		nodeSAH = area * builder->params.node_cost(2);
 
-		object = BVHObjectSplit(builder, storage, range, nodeSAH);
+		object = BVHObjectSplit(builder, storage, range, references, nodeSAH);
 
-		if(builder.params.use_spatial_split && level < BVHParams::MAX_SPATIAL_DEPTH) {
+		if(builder->params.use_spatial_split && level < BVHParams::MAX_SPATIAL_DEPTH) {
 			BoundBox overlap = object.left_bounds;
 			overlap.intersect(object.right_bounds);
 
-			if(overlap.safe_area() >= builder.spatial_min_overlap)
-				spatial = BVHSpatialSplit(builder, storage, range, nodeSAH);
+			if(overlap.safe_area() >= builder->spatial_min_overlap) {
+				spatial = BVHSpatialSplit(*builder,
+				                          storage,
+				                          range,
+				                          references,
+				                          nodeSAH);
+			}
 		}
 
 		/* leaf SAH is the lowest => create leaf. */
 		minSAH = min(min(leafSAH, object.sah), spatial.sah);
-		no_split = (minSAH == leafSAH && builder.range_within_max_leaf_size(range));
+		no_split = (minSAH == leafSAH &&
+		            builder->range_within_max_leaf_size(range, *references));
 	}
 
 	__forceinline void split(BVHBuild *builder, BVHRange& left, BVHRange& right, const BVHRange& range)
@@ -168,7 +186,7 @@ public:
 		if(builder->params.use_spatial_split && minSAH == spatial.sah)
 			spatial.split(builder, left, right, range);
 		if(!left.size() || !right.size())
-			object.split(builder, left, right, range);
+			object.split(left, right, range);
 	}
 };
 
