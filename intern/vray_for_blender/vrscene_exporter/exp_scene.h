@@ -183,6 +183,8 @@ private:
 	void                    exportVRayAsset(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportVRayClipper(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
+	void                    exportDupliFromArray(BL::Object ob, BL::ArrayModifier arrayModifier);
+
 	void                    initDupli();
 	void                    exportDupli();
 

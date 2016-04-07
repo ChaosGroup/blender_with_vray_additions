@@ -652,13 +652,60 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 			Node::WriteHair(ob);
 
 			if (ob_is_duplicator_renderable(ob)) {
-				exportObject(ob);
+				NodeAttrs nodeAttrs;
+
+				// Check if last modifier is Array and disable it - we'll handle it manually
+				BL::ArrayModifier modArray(PointerRNA_NULL);
+				if (ob.modifiers.length()) {
+					BL::Modifier mod = ob.modifiers[ob.modifiers.length()-1];
+					if (mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY) {
+						// Store modifier
+						modArray = BL::ArrayModifier(mod);
+
+						// We could have some heavy array, better use "dynamic_geometry"
+						nodeAttrs.dynamic_geometry = true;
+
+						// Disable for render so that object is exported without Array modifier
+						modArray.show_render(false);
+					}
+				}
+
+				exportObject(ob, nodeAttrs);
+
+				if (modArray) {
+					// Restore Array modifier settings
+					modArray.show_render(true);
+
+					// Export array data
+					exportDupliFromArray(ob, modArray);
+				}
 			}
 		}
 	}
 
 	// Reset update flag
 	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
+}
+
+
+void VRsceneExporter::exportDupliFromArray(BL::Object ob, BL::ArrayModifier modArray)
+{
+	Object            &object  = *(Object*)ob.ptr.data;
+	ArrayModifierData &amd     = *(ArrayModifierData*)(modArray.ptr.data);
+
+	InstancerSystem   &instSys = *m_psys.get(ob);
+
+	for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
+		float *dupliTm = amd.dupliTms + dupliIdx * 16;
+
+		// Array dupli tm to world space
+		float dupliTmWorld[4][4];
+		copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
+		mul_m4_m4m4(dupliTmWorld, dupliTmWorld, object.obmat);
+
+		// TODO: Investigate if we need unique "dupliIdx"
+		instSys.add(GetIDName(ob), dupliIdx, object.obmat, dupliTmWorld);
+	}
 }
 
 
