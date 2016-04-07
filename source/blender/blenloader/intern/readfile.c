@@ -4924,6 +4924,13 @@ static void lib_link_object(FileData *fd, Main *main)
 				}
 			}
 			
+			{
+				ArrayModifierData *amd = (ArrayModifierData *)modifiers_findByType(ob, eModifierType_Array);
+				if (amd) {
+					amd->dupliTms = NULL;
+				}
+			}
+
 			/* texture field */
 			if (ob->pd)
 				lib_link_partdeflect(fd, &ob->id, ob->pd);
