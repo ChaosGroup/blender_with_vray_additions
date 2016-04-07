@@ -90,7 +90,7 @@ public:
 	int             isObjectDataUpdated();
 
 	void            init(const std::string &mtlOverrideName="");
-	int             preInitGeometry();
+	int             preInitGeometry(int dynamic_geometry);
 	void            initGeometry();
 
 	void            freeData();

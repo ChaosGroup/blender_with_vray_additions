@@ -61,7 +61,7 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 				                 ? ob.data()
 				                 : ob;
 
-				if (could_instance && Node::sMeshCache.count(dataKey)) {
+				if (Node::sMeshCache.count(dataKey)) {
 					pluginName = Node::sMeshCache[dataKey];
 				}
 				else {
@@ -69,6 +69,10 @@ std::string VRayNodeExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree n
 					geomStaticMesh->init();
 					geomStaticMesh->initName(pluginName);
 					geomStaticMesh->initAttributes(&node.ptr);
+
+					if (could_instance || context.obCtx.nodeAttrs.dynamic_geometry) {
+						geomStaticMesh->setDynamicGeometry(true);
+					}
 
 					int toDelete = geomStaticMesh->write(ExporterSettings::gSet.m_fileGeom, ExporterSettings::gSet.m_frameCurrent);
 					if(toDelete) {

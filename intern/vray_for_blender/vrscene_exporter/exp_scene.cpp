@@ -566,6 +566,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 								dupliAttrs.visible  = NOT(useInstancer);
 								dupliAttrs.objectID = overrideObjectID;
 								dupliAttrs.dupliHolder = ob;
+								dupliAttrs.dynamic_geometry = true;
 
 								if (NOT(useInstancer) || is_light) {
 									dupliAttrs.namePrefix = dupliNamePrefix;
@@ -730,7 +731,7 @@ void VRsceneExporter::exportNode(Object *ob, const NodeAttrs &attrs)
 	node->initHash();
 
 	// This will also check if object's mesh is valid
-	if(NOT(node->preInitGeometry())) {
+	if(NOT(node->preInitGeometry(attrs.dynamic_geometry))) {
 		delete node;
 		return;
 	}
