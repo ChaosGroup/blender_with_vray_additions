@@ -617,10 +617,10 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 										dupliAttrs.tm = dop.matrix_world();
 
 										if (dop_is_dup_renderable) {
-											m_psys.get(dupliBaseName)->add(GetIDName(&dupliOb->ob->id),
-											                               persistendID,
-											                               dupliOb->ob->obmat,
-											                               dupliOb->mat);
+											m_psys.get(dop)->add(GetIDName(&dupliOb->ob->id),
+																 persistendID,
+																 dupliOb->ob->obmat,
+																 dupliOb->mat);
 
 											exportObject(dop, dupliAttrs);
 										}
@@ -631,10 +631,10 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 											Node::WriteHair(dop, dupliAttrs, &hairNodes);
 
 											for (StrSet::const_iterator hIt = hairNodes.begin(); hIt != hairNodes.end(); ++hIt) {
-												m_psys.get(dupliBaseName)->add(*hIt,
-												                               persistendID,
-												                               dupliOb->ob->obmat,
-												                               dupliOb->mat);
+												m_psys.get(dop)->add(*hIt,
+																	 persistendID,
+																	 dupliOb->ob->obmat,
+																	 dupliOb->mat);
 											}
 										}
 									}
@@ -1303,15 +1303,14 @@ void VRsceneExporter::initDupli()
 				if (psys) {
 					BL::ParticleSettings pset = psys.settings();
 					if (pset && !IS_PSYS_HAIR(pset)) {
-						const std::string instancerName = ob.name() + psys.name() + pset.name();
-						m_psys.get(instancerName);
+						m_psys.get(ob);
 					}
 				}
 			}
 
 			// From dupli
 			if (ob.dupli_type() != BL::Object::dupli_type_NONE) {
-				m_psys.get(ob.name());
+				m_psys.get(ob);
 			}
 		}
 	}
@@ -1349,11 +1348,15 @@ void VRsceneExporter::exportDupli()
 
 	VRayExportable::initInterpolate(ExporterSettings::gSet.m_frameCurrent);
 
-	for(MyPartSystems::const_iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
-		const std::string   psysName = sysIt->first;
-		const InstancerSystem *parts    = sysIt->second;
+	for(MyPartSystems::iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
+		static boost::format InstancerFmt("Dulpi@%s");
 
-		PYTHON_PRINTF(out, "\nInstancer Dulpi%s {", StripString(psysName).c_str());
+		BL::ID instancedObject = sysIt->first;
+
+		const InstancerSystem *parts = sysIt->second;
+		const std::string &psysName = boost::str(InstancerFmt % instancedObject.name());
+
+		PYTHON_PRINTF(out, "\nInstancer %s {", StripString(psysName).c_str());
 		PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");

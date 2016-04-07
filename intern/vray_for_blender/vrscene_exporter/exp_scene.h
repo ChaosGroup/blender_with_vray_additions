@@ -115,7 +115,7 @@ public:
 		return m_instances.size();
 	}
 };
-typedef std::map<std::string, InstancerSystem*> MyPartSystems;
+typedef std::map<BL::ID, InstancerSystem*> MyPartSystems;
 
 
 class MyParticles {
@@ -124,20 +124,31 @@ public:
 		clear();
 	}
 
-	InstancerSystem* get(const std::string &name) {
-		if(NOT(m_systems.count(name)))
-			m_systems[name] = new InstancerSystem();
-		return m_systems[name];
+	InstancerSystem *get(BL::ID ob) {
+		InstancerSystem *myPsys = NULL;
+
+		MyPartSystems::iterator it = m_systems.find(ob);
+		if (it != m_systems.end()) {
+			myPsys = it->second;
+		}
+		else {
+			myPsys = new InstancerSystem();
+			m_systems.insert(std::make_pair(ob, myPsys));
+		}
+
+		return myPsys;
 	}
 
 	void clear() {
-		for(MyPartSystems::const_iterator sysIt = m_systems.begin(); sysIt != m_systems.end(); ++sysIt)
-			sysIt->second->clear();
+		for (MyPartSystems::iterator sysIt = m_systems.begin(); sysIt != m_systems.end(); ++sysIt) {
+			InstancerSystem *myPsys = sysIt->second;
+			myPsys->clear();
+			delete myPsys;
+		}
 		m_systems.clear();
 	}
 
 	MyPartSystems m_systems;
-
 };
 
 typedef std::set<BL::Object> ObjectSet;

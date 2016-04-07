@@ -134,13 +134,13 @@ struct NodeAttrs {
 	};
 
 	NodeAttrs()
-		: dupliHolder(PointerRNA_NULL)
-		, override(false)
+		: override(false)
 		, objectID(0)
 		, visible(true)
 		, primary_visibility(true)
 		, nsamples(0)
 		, dynamic_geometry(NodeAttrsDefaultDynamicGeometry)
+		, dupliHolder(PointerRNA_NULL)
 	{}
 
 	int  override;
