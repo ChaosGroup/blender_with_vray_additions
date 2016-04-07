@@ -701,7 +701,7 @@ void VRsceneExporter::exportDupliFromArray(BL::Object ob, BL::ArrayModifier modA
 		// Array dupli tm to world space
 		float dupliTmWorld[4][4];
 		copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
-		mul_m4_m4m4(dupliTmWorld, dupliTmWorld, object.obmat);
+		mul_m4_m4m4(dupliTmWorld, object.obmat, dupliTmWorld);
 
 		// TODO: Investigate if we need unique "dupliIdx"
 		instSys.add(GetIDName(ob), dupliIdx, object.obmat, dupliTmWorld);
