@@ -300,7 +300,7 @@ ZmqExporter::~ZmqExporter()
 
 	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
 
-	m_Client->setCallback(ZmqWrapper::ZmqWrapperCallback_t());
+	m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
 	ZmqWorkerPool::getInstance().returnClient(std::move(m_Client));
 }
 
