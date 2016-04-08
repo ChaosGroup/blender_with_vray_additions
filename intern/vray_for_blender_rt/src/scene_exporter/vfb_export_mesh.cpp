@@ -20,7 +20,7 @@
 #include "vfb_utils_mesh.h"
 
 
-AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
+AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs & oattrs)
 {
 	AttrValue geom;
 
@@ -36,7 +36,8 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob)
 	options.mode = m_evalMode;
 	options.force_dynamic_geometry = (renderMode == RenderModeRtGpuOpenCL) ||
 	                                 (renderMode == RenderModeRtGpuCUDA) ||
-	                                 (renderMode == RenderModeRtGpu);
+	                                 (renderMode == RenderModeRtGpu) ||
+	                                 (oattrs && oattrs.useInstancer);
 
 	int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 	if (!err) {

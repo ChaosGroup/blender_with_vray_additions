@@ -339,7 +339,7 @@ public:
 
 	AttrValue         exportSingleMaterial(BL::Object &ob);
 	AttrValue         exportMtlMulti(BL::Object ob);
-	AttrValue         exportGeomStaticMesh(BL::Object ob);
+	AttrValue         exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs &);
 	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
 	AttrPlugin        exportRenderView(const ViewParams &viewParams);
 	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);

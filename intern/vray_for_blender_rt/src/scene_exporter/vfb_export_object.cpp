@@ -110,7 +110,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				geom = AttrPlugin(getMeshName(ob));
 			}
 			else {
-				geom = exportGeomStaticMesh(ob);
+				geom = exportGeomStaticMesh(ob, override);
 				if (!geom) {
 					PRINT_ERROR("Object: %s => Incorrect geometry!",
 						ob.name().c_str());
