@@ -45,6 +45,7 @@ public:
 
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 	virtual void        set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file);
+	virtual void        set_settings(const ExporterSettings &st);
 private:
 
 private:
