@@ -580,7 +580,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					instancer_item.index = persistendID;
 
 					instancer_item.node = m_data_exporter.getNodeName(dupOb);
-					instancer_item.tm = AttrTransformFromBlTransform(tm);
+					instancer_item.tm = AttrTransformFromBlTransform(dupliOb.matrix());
 
 					dupli_instance++;
 
@@ -611,16 +611,27 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (dupli_use_instancer) {
-		static boost::format InstancerFmt("Instancer@%s");
+		static boost::format InstancerFmt("Instancer2@%s");
 		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
 		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
-		PluginDesc instancerDesc(exportName, "Instancer");
+		PluginDesc instancerDesc(exportName, "Instancer2");
 		instancerDesc.add("instances", instances);
 		instancerDesc.add("visible", instancer_visible && visible_on_layer);
+		instancerDesc.add("use_time_instancing", false);
 
 		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
-		m_exporter->export_plugin(instancerDesc);
+		auto inst = m_exporter->export_plugin(instancerDesc);
+
+		PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
+
+		nodeWrapper.add("geometry", inst);
+		nodeWrapper.add("visible", true);
+		nodeWrapper.add("objectID", ob.pass_index());
+		nodeWrapper.add("material", m_data_exporter.getDefaultMaterial());
+		nodeWrapper.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+
+		m_exporter->export_plugin(nodeWrapper);
 	}
 }
 
