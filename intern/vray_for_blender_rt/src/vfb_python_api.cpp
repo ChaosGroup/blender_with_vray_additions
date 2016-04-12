@@ -48,7 +48,11 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 		PRINT_ERROR("PyArg_ParseTuple");
 	}
 	else {
-		VRayForBlender::InitPluginDescriptions(jsonDirpath);
+		try {
+			VRayForBlender::InitPluginDescriptions(jsonDirpath);
+		} catch (std::exception &ex) {
+			PRINT_ERROR("Exception: %s", ex.what());
+		}
 	}
 
 	auto & zmqPool = ZmqWorkerPool::getInstance();
