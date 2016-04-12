@@ -758,6 +758,12 @@ if(WITH_VRAY_FOR_BLENDER)
 
 	set(LIBS_ROOT "" CACHE PATH "ZMQ lib location")
 
+	if (UNIX AND NOT APPLE)
+		set(JPEG ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
+		set(JPEG_INCLUDE_DIR "${JPEG}/include")
+		set(JPEG_LIBPATH ${JPEG}/lib/Release)
+	endif()
+
 	add_definitions(-DSODIUM_STATIC)
 	add_definitions(-DZMQ_STATIC)
 
