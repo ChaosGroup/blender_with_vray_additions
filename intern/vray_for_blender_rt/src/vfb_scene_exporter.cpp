@@ -486,9 +486,20 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	const int dupli_override_id   = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
 	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
 
+
+	const auto & obName = ob.name();
+	bool skip_export = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
+	                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers())));
+
+	if (skip_export) {
+		PRINT_INFO_EX("Skipping duplication empty %s", obName.c_str());
+		return;
+	}
+
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
 	if (dupli_use_instancer) {
+
 		int num_instances = 0;
 
 		BL::Object::dupli_list_iterator dupIt;
