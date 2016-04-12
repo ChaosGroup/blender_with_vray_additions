@@ -47,6 +47,7 @@ if(USE_BLENDER_VRAY_APPSDK)
 endif()
 
 if(USE_BLENDER_VRAY_ZMQ)
+	list(APPEND INC ${JPEG_INCLUDE_DIR})
 	list(APPEND INC ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
 	list(APPEND INC extern/vray-zmq-wrapper/extern/cppzmq)
 

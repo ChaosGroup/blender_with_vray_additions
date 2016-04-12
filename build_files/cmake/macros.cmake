@@ -472,9 +472,14 @@ function(setup_liblinks
 	endif()
 
 	if(WITH_VRAY_FOR_BLENDER)
+		if(USE_BLENDER_VRAY_ZMQ)
+			target_link_libraries(${target} ${JPEG_TURBO_LIB})
+		endif()
+
 		if(USE_BLENDER_VRAY_APPSDK)
 			target_link_libraries(${target} VRaySDKLibrary)
 		endif()
+
 		if(UNIX)
 			target_link_libraries(${target}
 				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a

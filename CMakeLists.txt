@@ -756,21 +756,24 @@ if(WITH_VRAY_FOR_BLENDER)
 		add_definitions(-DUSE_BLENDER_VRAY_APPSDK)
 	endif()
 
-	set(LIBS_ROOT "" CACHE PATH "ZMQ lib location")
+	if(USE_BLENDER_VRAY_ZMQ)
+		set(LIBS_ROOT "" CACHE PATH "ZMQ lib location")
 
-	if (UNIX AND NOT APPLE)
-		set(JPEG ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
-		set(JPEG_INCLUDE_DIR "${JPEG}/include")
-		set(JPEG_LIBPATH ${JPEG}/lib/Release)
+		if (UNIX AND NOT APPLE)
+			set(JPEG ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
+			set(JPEG_INCLUDE_DIR "${JPEG}/include")
+			set(JPEG_LIBPATH ${JPEG}/lib/Release)
+			set(JPEG_NAMES jpeg-turbo)
+			find_library_static(JPEG_TURBO_LIB REQUIRED PATHS ${JPEG_LIBPATH} NAMES ${JPEG_NAMES})
+		endif()
+
+		add_definitions(-DSODIUM_STATIC)
+		add_definitions(-DZMQ_STATIC)
+
+		if(NOT LIBS_ROOT)
+			message(FATAL_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
+		endif()
 	endif()
-
-	add_definitions(-DSODIUM_STATIC)
-	add_definitions(-DZMQ_STATIC)
-
-	if(NOT LIBS_ROOT)
-		message(FATAL_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
-	endif()
-
 endif()
 
 if(WITH_AUDASPACE)
@@ -919,7 +922,9 @@ if(UNIX AND NOT APPLE)
 		endif()
 	endmacro()
 
-	find_package_wrapper(JPEG REQUIRED)
+	if(NOT USE_BLENDER_VRAY_ZMQ)
+		find_package_wrapper(JPEG REQUIRED)
+	endif()
 	find_package_wrapper(PNG REQUIRED)
 	find_package_wrapper(ZLIB REQUIRED)
 	find_package_wrapper(Freetype REQUIRED)
