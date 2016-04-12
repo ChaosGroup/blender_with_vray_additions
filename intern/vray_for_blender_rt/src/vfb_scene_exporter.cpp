@@ -506,7 +506,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		}
 
 		instances.data.resize(num_instances);
+
+		memset(*instances.data, 0, num_instances * sizeof(AttrInstancer::Item));
 	}
+
 
 	if (is_interrupted()) {
 		return;
@@ -580,7 +583,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					instancer_item.index = persistendID;
 
 					instancer_item.node = m_data_exporter.getNodeName(dupOb);
-					instancer_item.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+					instancer_item.tm = AttrTransformFromBlTransform(tm);
 
 					dupli_instance++;
 
@@ -629,7 +632,12 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		nodeWrapper.add("visible", true);
 		nodeWrapper.add("objectID", ob.pass_index());
 		nodeWrapper.add("material", m_data_exporter.getDefaultMaterial());
-		nodeWrapper.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+		VRayBaseTypes::AttrTransform tm;
+		memset(&tm, 0, sizeof(tm));
+		tm.m.v0.x = 1.f;
+		tm.m.v1.y = 1.f;
+		tm.m.v2.z = 1.f;
+		nodeWrapper.add("transform", tm);
 
 		m_exporter->export_plugin(nodeWrapper);
 	}
