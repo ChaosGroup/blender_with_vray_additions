@@ -113,9 +113,15 @@ void DataExporter::sync()
 		auto ob = dIt->first;
 		auto &dep = dIt->second;
 
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+		PointerRNA vrayObject = PointerRNA_NULL;
+		PointerRNA vrayClipper = PointerRNA_NULL;
+		bool dupli_use_instancer = false;
+
+		if (dep.used) {
+			vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+			vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+			dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+		}
 
 		for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
 			bool should_remove = false;
