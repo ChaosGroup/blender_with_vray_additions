@@ -359,6 +359,12 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
 		if (message.getRendererAction() == VRayMessage::RendererAction::SetRendererStatus) {
 			if (!(m_IsAborted = (message.getRendererStatus() == VRayMessage::RendererStatus::Abort))) {
 				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+
+				// reset updated% on all images
+				std::unique_lock<std::mutex> lock(m_ImgMutex);
+				for (auto & iter : m_LayerImages) {
+					iter.second.updated = 0.f;
+				}
 			}
 		}
 	}

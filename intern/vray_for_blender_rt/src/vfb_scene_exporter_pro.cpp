@@ -48,19 +48,19 @@ bool ProductionExporter::do_export()
 	PRINT_INFO_EX("ProductionExporter::do_export()")
 
 	if (m_settings.settings_animation.use) {
+		const float export_frames_steps = (float)(m_scene.frame_end() - m_scene.frame_start()) / (float)m_scene.frame_step();
+		const auto restore = m_scene.frame_current();
+		m_animationProgress = 0.f;
+
 		if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
-			const auto restore = m_scene.frame_current();
-			float progress = 0.f, frameProgress = 1.f / ((m_scene.frame_end() - m_scene.frame_start()) / m_scene.frame_step());
-
-			for (auto fr = restore; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step()) {
+			for (int fr = restore, c = 0; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step(), ++c) {
 				m_scene.frame_set(fr, 0.f);
-				m_engine.update_progress(progress);
+				m_animationProgress = (float)c / export_frames_steps;
+				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), fr);
 
+				m_engine.update_progress(m_animationProgress);
 				res = export_animation();
-				progress += frameProgress;
-				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(progress * 100), fr);
 			}
-
 			m_scene.frame_set(restore, 0.f);
 		} else {
 			Py_BEGIN_ALLOW_THREADS
@@ -74,21 +74,19 @@ bool ProductionExporter::do_export()
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
 
-			const auto restore = m_scene.frame_current();
-			float progress = 0.f, frameProgress = 1.f / ((m_scene.frame_end() - m_scene.frame_start()) / m_scene.frame_step());
+			for (int fr = restore, c = 0; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step(), ++c) {
+				m_animationProgress = (float)c / export_frames_steps;
+				PRINT_INFO_EX("Animation progress %d%%", static_cast<int>(m_animationProgress * 100));
 
-			for (auto fr = restore; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step()) {
 				Py_BLOCK_THREADS
 					m_scene.frame_set(fr, 0.f);
-					m_engine.update_progress(progress);
+					m_engine.update_progress(m_animationProgress);
 				Py_UNBLOCK_THREADS
 
 				res = export_animation();
 				while (res && !m_renderFinished && !is_interrupted()) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}
-				progress += frameProgress;
-				PRINT_INFO_EX("Animation progress %d%%", static_cast<int>(progress * 100));
 			}
 
 			m_scene.frame_set(restore, 0.f);
@@ -171,10 +169,18 @@ void ProductionExporter::render_start()
 				if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() > (1000 / 10)) {
 					if (m_imageDirty) {
 						m_imageDirty = false;
+						float progress = 0.f;
 						if (m_settings.settings_animation.use) {
 							Py_BLOCK_THREADS
+							// for animation add frames progress + current image progress * frame contribution
+							float frame_contrib = 1.f / ((float)(m_scene.frame_end() - m_scene.frame_start()) / (float)m_scene.frame_step());
+							progress = m_animationProgress + m_progress * frame_contrib;
+						} else {
+							// for singe frame - get progress from image
+							progress = m_progress;
 						}
-						m_engine.update_progress(m_progress);
+
+						m_engine.update_progress(progress);
 						for (auto & result : m_renderResultsList) {
 							BL::RenderResult::layers_iterator rrlIt;
 							result.layers.begin(rrlIt);
@@ -192,13 +198,16 @@ void ProductionExporter::render_start()
 
 			if (m_settings.settings_animation.use) {
 				Py_BLOCK_THREADS
+				// progress will be set from animation export loop
+			} else {
+				// single frame export - done
+				m_engine.update_progress(1.f);
 			}
 			for (auto & result : m_renderResultsList) {
 				BL::RenderResult::layers_iterator rrlIt;
 				result.layers.begin(rrlIt);
 				if (rrlIt != result.layers.end()) {
 					m_engine.update_result(result);
-					m_engine.update_progress(1.f);
 				}
 			}
 			if (m_settings.settings_animation.use) {

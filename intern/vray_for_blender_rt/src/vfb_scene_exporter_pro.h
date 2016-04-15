@@ -43,6 +43,7 @@ public:
 	    , m_renderFinished(false)
 	    , m_isAnimationRunning(false)
 	    , m_progress(0.f)
+	    , m_animationProgress(0.f)
 	{}
 
 	virtual           ~ProductionExporter() override;
@@ -69,6 +70,7 @@ private:
 	bool              m_isAnimationRunning;
 	PyThreadState    *m_animationPythonThreadState;
 	float             m_progress;
+	float             m_animationProgress;
 
 	std::vector<BL::RenderResult> m_renderResultsList;
 
