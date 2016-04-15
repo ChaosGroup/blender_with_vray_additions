@@ -517,8 +517,9 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		}
 
 		instances.data.resize(num_instances);
-
-		memset(*instances.data, 0, num_instances * sizeof(AttrInstancer::Item));
+		if (num_instances) {
+			memset(*instances.data, 0, num_instances * sizeof(AttrInstancer::Item));
+		}
 	}
 
 
