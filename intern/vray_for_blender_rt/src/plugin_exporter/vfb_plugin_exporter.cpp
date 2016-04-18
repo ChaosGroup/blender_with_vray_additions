@@ -134,6 +134,8 @@ RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
 		// case BL::RenderPass::type_SUBSURFACE_DIRECT: image = get_render_channel(RenderChannelType); break;
 		// case BL::RenderPass::type_SUBSURFACE_INDIRECT: image = get_render_channel(RenderChannelType); break;
 		// case BL::RenderPass::type_SUBSURFACE_COLOR: image = get_render_channel(RenderChannelType); break;
+		default:
+			break;
 	}
 
 	return image;

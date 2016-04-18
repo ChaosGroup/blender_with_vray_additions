@@ -98,6 +98,8 @@ bool compare(const AttrValue & left, const AttrValue & right) {
 					}
 				}
 				return true;
+			default:
+				break;
 		}
 	}
 	return false;

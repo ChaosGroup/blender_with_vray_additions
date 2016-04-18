@@ -408,7 +408,7 @@ void SceneExporter::sync_view(int check_updated)
 
 	bool needReset = m_viewParams.needReset(viewParams);
 	if (!needReset && viewParams.usePhysicalCamera) {
-		needReset |= is_physical_updated(viewParams);
+		needReset = needReset || is_physical_updated(viewParams);
 	}
 
 	if (needReset) {

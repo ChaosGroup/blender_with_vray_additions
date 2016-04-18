@@ -147,6 +147,8 @@ void DataExporter::sync()
 					should_remove = !ob.is_duplicator() || !dupli_use_instancer;
 					type = "DUPLI_INSTACER";
 					break;
+				default:
+					break;
 				}
 			}
 
