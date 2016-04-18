@@ -380,11 +380,9 @@ void ZmqExporter::init()
 		m_Client->setCallback(std::bind(&ZmqExporter::zmqCallback, this, _1, _2));
 
 		if (!m_Client->connected()) {
-			m_Client->connect("tcp://" + this->m_ServerAddress, this->m_ServerPort);
-		} else if (m_Client->getPort() != this->m_ServerPort) {
-			m_Client.release();
-			m_Client = ZmqWorkerPool::getInstance().getClient();
-			m_Client->connect("tcp://" + this->m_ServerAddress, this->m_ServerPort);
+			char portStr[32];
+			snprintf(portStr, 32, ":%d", this->m_ServerPort);
+			m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
 		}
 
 		if (m_Client->connected()) {

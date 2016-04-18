@@ -487,11 +487,12 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
 
 
+	const auto & obName = ob.name();
 	bool skip_export = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
 	                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers())));
 
 	if (skip_export) {
-		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
+		PRINT_INFO_EX("Skipping duplication empty %s", obName.c_str());
 		return;
 	}
 
@@ -592,9 +593,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 					AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
 					instancer_item.index = persistendID;
-					PRINT_INFO_EX("Instancer Node %d", persistendID);
+
 					instancer_item.node = m_data_exporter.getNodeName(dupOb);
-					PRINT_INFO_EX("\t---> Name %s", instancer_item.node.plugin.c_str());
 					instancer_item.tm = AttrTransformFromBlTransform(tm);
 
 					dupli_instance++;
@@ -626,11 +626,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (dupli_use_instancer) {
-		PRINT_INFO_EX("Syncing instancer...");
-		PRINT_INFO_EX("\t--> %s", ob.name().c_str());
 		static boost::format InstancerFmt("Instancer2@%s");
 		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
-		PRINT_INFO_EX("exportName = %s", exportName.c_str());
 		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
 		PluginDesc instancerDesc(exportName, "Instancer2");
@@ -640,7 +637,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
 		auto inst = m_exporter->export_plugin(instancerDesc);
-		PRINT_INFO_EX("Instancer plugin %s", inst.plugin.c_str());
 
 		PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
 
@@ -655,8 +651,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		tm.m.v2.z = 1.f;
 		nodeWrapper.add("transform", tm);
 
-		auto wrapper = m_exporter->export_plugin(nodeWrapper);
-		PRINT_INFO_EX("Wrapper %s ", wrapper.plugin.c_str());
+		m_exporter->export_plugin(nodeWrapper);
 	}
 }
 
@@ -694,7 +689,6 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		}
 
 		BL::Object ob(*obIt);
-		PRINT_INFO_EX("Object %s", ob.name().c_str());
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
 		m_data_exporter.m_id_track.insert(ob, nodeName);
 
