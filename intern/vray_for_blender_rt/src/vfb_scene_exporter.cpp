@@ -483,7 +483,6 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-	const int dupli_override_id   = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
 	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
 
 
@@ -528,7 +527,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	int dupli_instance = 0;
-	bool dupli_base_synced = false;
 	bool instancer_visible = true;
 	const auto scene_layers = to_int_layer(m_scene.layers());
 
@@ -540,8 +538,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		BL::DupliObject dupliOb(*dupIt);
 		BL::Object      dupOb(dupliOb.object());
-
-		const auto & dupliObName = dupOb.name();
 
 		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
 		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(dupOb, m_isLocalView, scene_layers);
