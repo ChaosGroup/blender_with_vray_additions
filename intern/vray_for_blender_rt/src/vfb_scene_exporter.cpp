@@ -515,9 +515,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		}
 
 		instances.data.resize(num_instances);
-		if (num_instances) {
-			memset(*instances.data, 0, num_instances * sizeof(AttrInstancer::Item));
-		}
 	}
 
 
@@ -588,10 +585,9 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 					AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
 					instancer_item.index = persistendID;
-					PRINT_INFO_EX("Instancer Node %d -> %d", persistendID, (int)!!dupOb);
-					instancer_item.node = "Node@" + dupOb.name(); // m_data_exporter.getNodeName(dupOb);
-					PRINT_INFO_EX("\t---> Name %s", instancer_item.node.plugin.c_str());
+					instancer_item.node = m_data_exporter.getNodeName(dupOb);
 					instancer_item.tm = AttrTransformFromBlTransform(tm);
+					memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 
 					dupli_instance++;
 
@@ -622,11 +618,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (dupli_use_instancer) {
-		PRINT_INFO_EX("Syncing instancer...");
-		PRINT_INFO_EX("\t--> %s", ob.name().c_str());
 		static boost::format InstancerFmt("Instancer2@%s");
 		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
-		PRINT_INFO_EX("exportName = %s", exportName.c_str());
 		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
 		PluginDesc instancerDesc(exportName, "Instancer2");
@@ -636,7 +629,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
 		auto inst = m_exporter->export_plugin(instancerDesc);
-		PRINT_INFO_EX("Instancer plugin %s", inst.plugin.c_str());
 
 		PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
 
@@ -652,7 +644,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		nodeWrapper.add("transform", tm);
 
 		auto wrapper = m_exporter->export_plugin(nodeWrapper);
-		PRINT_INFO_EX("Wrapper %s ", wrapper.plugin.c_str());
 	}
 }
 
@@ -690,7 +681,6 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		}
 
 		BL::Object ob(*obIt);
-		PRINT_INFO_EX("Object %s", ob.name().c_str());
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
 		m_data_exporter.m_id_track.insert(ob, nodeName);
 
