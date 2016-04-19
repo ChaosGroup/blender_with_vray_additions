@@ -4925,9 +4925,13 @@ static void lib_link_object(FileData *fd, Main *main)
 			}
 			
 			{
-				ArrayModifierData *amd = (ArrayModifierData *)modifiers_findByType(ob, eModifierType_Array);
-				if (amd) {
-					amd->dupliTms = NULL;
+				ModifierData *mdIter = ob->modifiers.first;
+
+				for (; mdIter; mdIter = mdIter->next) {
+					if (mdIter->type == eModifierType_Array) {
+						ArrayModifierData *amd = (ArrayModifierData *)mdIter;
+						amd->dupliTms = NULL;
+					}
 				}
 			}
 
