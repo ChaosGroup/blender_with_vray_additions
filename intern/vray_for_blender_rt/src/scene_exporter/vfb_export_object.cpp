@@ -332,3 +332,33 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 		}
 	}
 }
+
+
+AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer)
+{
+	const auto exportName = "Instancer2@" + getNodeName(ob);
+	const bool visible_on_layer = m_computedLayers & ::get_layer(ob, m_view3d && m_view3d.local_view(), to_int_layer(m_scene.layers()));
+
+	PluginDesc instancerDesc(exportName, "Instancer2");
+	instancerDesc.add("instances", instacer);
+	instancerDesc.add("visible", visible_on_layer);
+	instancerDesc.add("use_time_instancing", false);
+
+	m_id_track.insert(ob, exportName, IdTrack::DUPLI_MODIFIER);
+	auto inst = m_exporter->export_plugin(instancerDesc);
+
+	PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
+
+	nodeWrapper.add("geometry", inst);
+	nodeWrapper.add("visible", true);
+	nodeWrapper.add("objectID", ob.pass_index());
+	nodeWrapper.add("material", getDefaultMaterial());
+	VRayBaseTypes::AttrTransform tm;
+	memset(&tm, 0, sizeof(tm));
+	tm.m.v0.x = 1.f;
+	tm.m.v1.y = 1.f;
+	tm.m.v2.z = 1.f;
+	nodeWrapper.add("transform", tm);
+
+	return m_exporter->export_plugin(nodeWrapper);
+}

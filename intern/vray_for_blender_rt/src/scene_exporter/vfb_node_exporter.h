@@ -160,7 +160,7 @@ private:
 struct IdTrack {
 
 	enum PluginType {
-		NONE, CLIPPER, DUPLI_INSTACER, DUPLI_NODE
+		NONE, CLIPPER, DUPLI_INSTACER, DUPLI_NODE, DUPLI_MODIFIER
 	};
 
 	struct PluginInfo {
@@ -335,6 +335,7 @@ public:
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
+	AttrValue         exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer);
 	void              exportEnvironment(NodeContext &context);
 
 	AttrValue         exportSingleMaterial(BL::Object &ob);

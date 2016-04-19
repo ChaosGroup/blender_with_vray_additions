@@ -28,6 +28,7 @@
 
 #include "DNA_ID.h"
 #include "DNA_object_types.h"
+#include "DNA_modifier_types.h"
 
 extern "C" {
 #include "BKE_idprop.h"
@@ -42,7 +43,8 @@ extern "C" {
 #include <ctime>
 #include <chrono>
 #include <thread>
-
+#include <random>
+#include <limits>
 
 using namespace VRayForBlender;
 
@@ -422,8 +424,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			if (!override && ob.modifiers.length()) {
 				overrideAttr.override = true;
 				overrideAttr.visible = ob_is_duplicator_renderable(ob);
-				overrideAttr.tm = AttrTransformFromBlTransform(ob.
-					matrix_world());
+				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			}
 
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
@@ -618,32 +619,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (dupli_use_instancer) {
-		static boost::format InstancerFmt("Instancer2@%s");
-		auto exportName = boost::str(InstancerFmt % m_data_exporter.getNodeName(ob));
-		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
-
-		PluginDesc instancerDesc(exportName, "Instancer2");
-		instancerDesc.add("instances", instances);
-		instancerDesc.add("visible", instancer_visible && visible_on_layer);
-		instancerDesc.add("use_time_instancing", false);
-
-		m_data_exporter.m_id_track.insert(ob, exportName, IdTrack::DUPLI_INSTACER);
-		auto inst = m_exporter->export_plugin(instancerDesc);
-
-		PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
-
-		nodeWrapper.add("geometry", inst);
-		nodeWrapper.add("visible", true);
-		nodeWrapper.add("objectID", ob.pass_index());
-		nodeWrapper.add("material", m_data_exporter.getDefaultMaterial());
-		VRayBaseTypes::AttrTransform tm;
-		memset(&tm, 0, sizeof(tm));
-		tm.m.v0.x = 1.f;
-		tm.m.v1.y = 1.f;
-		tm.m.v2.z = 1.f;
-		nodeWrapper.add("transform", tm);
-
-		auto wrapper = m_exporter->export_plugin(nodeWrapper);
+		m_data_exporter.exportVrayInstacer2(ob, instances);
 	}
 }
 
@@ -683,10 +659,10 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		BL::Object ob(*obIt);
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
 		m_data_exporter.m_id_track.insert(ob, nodeName);
+		const bool is_updated = check_updated ? ob.is_updated() : true;
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
 		if (ob.is_duplicator()) {
-			const bool is_updated = check_updated ? ob.is_updated() : true;
-			const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
 
 			if (is_updated) {
 				sync_dupli(ob, check_updated);
@@ -704,6 +680,56 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
 
 			sync_object(ob, check_updated, overAttrs);
+		}
+		else if (ob.modifiers.length()) {
+			BL::ArrayModifier modArray(PointerRNA_NULL);
+			BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
+			ObjectOverridesAttrs overrideAttrs;
+
+			if (mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY) {
+				// Store modifier
+				modArray = BL::ArrayModifier(mod);
+
+				// We could have some heavy array, better use "dynamic_geometry"
+				overrideAttrs.useInstancer = true;
+				overrideAttrs.override = true;
+				overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+				overrideAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
+
+				// Disable for render so that object is exported without Array modifier
+				modArray.show_render(false);
+				modArray.show_viewport(false);
+			}
+
+			sync_object(ob, check_updated, overrideAttrs);
+
+			if (modArray) {
+				if (is_updated) {
+					ArrayModifierData &amd = *(ArrayModifierData*)(modArray.ptr.data);
+					AttrInstancer instances;
+					instances.frameNumber = m_scene.frame_current();
+					instances.data.resize(amd.count - 1);
+
+					std::default_random_engine randomEng((int)(intptr_t)ob.ptr.data);
+					std::uniform_int_distribution<int> dist(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+
+					for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
+						float *dupliTm = amd.dupliTms + dupliIdx * 16;
+
+						AttrInstancer::Item &instancer_item = (*instances.data)[dupliIdx];
+						instancer_item.index = dist(randomEng);
+						instancer_item.node = nodeName;
+						instancer_item.tm = AttrTransformFromBlTransform((float (*)[4])dupliTm);
+						memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+					}
+
+					m_data_exporter.exportVrayInstacer2(ob, instances);
+				}
+
+				// Restore Array modifier settings
+				modArray.show_render(true);
+				modArray.show_viewport(true);
+			}
 		}
 		else {
 			sync_object(ob, check_updated);

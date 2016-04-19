@@ -147,6 +147,16 @@ void DataExporter::sync()
 					should_remove = !ob.is_duplicator() || !dupli_use_instancer;
 					type = "DUPLI_INSTACER";
 					break;
+				case IdTrack::DUPLI_MODIFIER:
+					// we had dupli with array modifier, now it changed (hidden or removed mod)
+					if (ob.modifiers.length()) {
+						BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
+						should_remove = !mod || !mod.show_render() || mod.type() != BL::Modifier::type_ARRAY;
+					} else {
+						should_remove = true;
+					}
+					type = "DUPLI_MODIFIER";
+					break;
 				default:
 					break;
 				}
