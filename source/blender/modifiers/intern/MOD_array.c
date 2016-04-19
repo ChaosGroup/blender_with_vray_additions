@@ -93,11 +93,21 @@ static void freeData(ModifierData *md)
 
 static void copyData(ModifierData *md, ModifierData *target)
 {
-#if 0
+	modifier_copyData_generic(md, target);
+
 	ArrayModifierData *amd = (ArrayModifierData *) md;
 	ArrayModifierData *tamd = (ArrayModifierData *) target;
-#endif
-	modifier_copyData_generic(md, target);
+	if (tamd->dupliTms) {
+		MEM_freeN(amd->dupliTms);
+		amd->dupliTms = NULL;
+	}
+
+	if (amd->dupliTms) {
+		tamd->dupliTms = (float*)MEM_mallocN(amd->count * sizeof(float[4][4]), "amd->dupliTms");
+		if (tamd->dupliTms) {
+			memcpy(tamd->dupliTms, amd->dupliTms, amd->count * sizeof(float[4][4]));
+		}
+	}
 }
 
 static void foreachObjectLink(
