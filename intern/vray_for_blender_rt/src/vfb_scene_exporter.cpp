@@ -588,8 +588,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 					AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
 					instancer_item.index = persistendID;
-					PRINT_INFO_EX("Instancer Node %d", persistendID);
-					instancer_item.node = m_data_exporter.getNodeName(dupOb);
+					PRINT_INFO_EX("Instancer Node %d -> %d", persistendID, (int)!!dupOb);
+					instancer_item.node = "Node@" + dupOb.name(); // m_data_exporter.getNodeName(dupOb);
 					PRINT_INFO_EX("\t---> Name %s", instancer_item.node.plugin.c_str());
 					instancer_item.tm = AttrTransformFromBlTransform(tm);
 
