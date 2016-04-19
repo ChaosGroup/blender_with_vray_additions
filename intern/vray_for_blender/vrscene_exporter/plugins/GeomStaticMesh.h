@@ -82,6 +82,8 @@ public:
 	int           getMapChannelCount() const { return map_channels.size(); }
 	const MChan*  getMapChannel(const int i) const;
 
+	void          setDynamicGeometry(int dynamic) { dynamic_geometry = dynamic; }
+
 private:
 	void          initVertices();
 	void          initFaces();

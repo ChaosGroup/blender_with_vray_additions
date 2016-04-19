@@ -247,6 +247,8 @@ typedef struct ArrayModifierData {
 	int flags;
 	/* the number of duplicates to generate for MOD_ARR_FIXEDCOUNT */
 	int count;
+	/* holds transformation matrixes of the duplicates */
+	float *dupliTms;
 } ArrayModifierData;
 
 /* ArrayModifierData->fit_type */

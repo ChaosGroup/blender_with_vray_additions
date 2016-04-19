@@ -566,6 +566,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 								dupliAttrs.visible  = NOT(useInstancer);
 								dupliAttrs.objectID = overrideObjectID;
 								dupliAttrs.dupliHolder = ob;
+								dupliAttrs.dynamic_geometry = true;
 
 								if (NOT(useInstancer) || is_light) {
 									dupliAttrs.namePrefix = dupliNamePrefix;
@@ -616,10 +617,10 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 										dupliAttrs.tm = dop.matrix_world();
 
 										if (dop_is_dup_renderable) {
-											m_psys.get(dupliBaseName)->add(GetIDName(&dupliOb->ob->id),
-											                               persistendID,
-											                               dupliOb->ob->obmat,
-											                               dupliOb->mat);
+											m_psys.get(dop)->add(GetIDName(&dupliOb->ob->id),
+																 persistendID,
+																 dupliOb->ob->obmat,
+																 dupliOb->mat);
 
 											exportObject(dop, dupliAttrs);
 										}
@@ -630,10 +631,10 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 											Node::WriteHair(dop, dupliAttrs, &hairNodes);
 
 											for (StrSet::const_iterator hIt = hairNodes.begin(); hIt != hairNodes.end(); ++hIt) {
-												m_psys.get(dupliBaseName)->add(*hIt,
-												                               persistendID,
-												                               dupliOb->ob->obmat,
-												                               dupliOb->mat);
+												m_psys.get(dop)->add(*hIt,
+																	 persistendID,
+																	 dupliOb->ob->obmat,
+																	 dupliOb->mat);
 											}
 										}
 									}
@@ -651,13 +652,60 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 			Node::WriteHair(ob);
 
 			if (ob_is_duplicator_renderable(ob)) {
-				exportObject(ob);
+				NodeAttrs nodeAttrs;
+
+				// Check if last modifier is Array and disable it - we'll handle it manually
+				BL::ArrayModifier modArray(PointerRNA_NULL);
+				if (ob.modifiers.length()) {
+					BL::Modifier mod = ob.modifiers[ob.modifiers.length()-1];
+					if (mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY) {
+						// Store modifier
+						modArray = BL::ArrayModifier(mod);
+
+						// We could have some heavy array, better use "dynamic_geometry"
+						nodeAttrs.dynamic_geometry = true;
+
+						// Disable for render so that object is exported without Array modifier
+						modArray.show_render(false);
+					}
+				}
+
+				exportObject(ob, nodeAttrs);
+
+				if (modArray) {
+					// Restore Array modifier settings
+					modArray.show_render(true);
+
+					// Export array data
+					exportDupliFromArray(ob, modArray);
+				}
 			}
 		}
 	}
 
 	// Reset update flag
 	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
+}
+
+
+void VRsceneExporter::exportDupliFromArray(BL::Object ob, BL::ArrayModifier modArray)
+{
+	Object            &object  = *(Object*)ob.ptr.data;
+	ArrayModifierData &amd     = *(ArrayModifierData*)(modArray.ptr.data);
+
+	InstancerSystem   &instSys = *m_psys.get(ob);
+
+	for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
+		float *dupliTm = amd.dupliTms + dupliIdx * 16;
+
+		// Array dupli tm to world space
+		float dupliTmWorld[4][4];
+		copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
+		mul_m4_m4m4(dupliTmWorld, object.obmat, dupliTmWorld);
+
+		// TODO: Investigate if we need unique "dupliIdx"
+		instSys.add(GetIDName(ob), dupliIdx, object.obmat, dupliTmWorld);
+	}
 }
 
 
@@ -730,7 +778,7 @@ void VRsceneExporter::exportNode(Object *ob, const NodeAttrs &attrs)
 	node->initHash();
 
 	// This will also check if object's mesh is valid
-	if(NOT(node->preInitGeometry())) {
+	if(NOT(node->preInitGeometry(attrs.dynamic_geometry))) {
 		delete node;
 		return;
 	}
@@ -1302,15 +1350,14 @@ void VRsceneExporter::initDupli()
 				if (psys) {
 					BL::ParticleSettings pset = psys.settings();
 					if (pset && !IS_PSYS_HAIR(pset)) {
-						const std::string instancerName = ob.name() + psys.name() + pset.name();
-						m_psys.get(instancerName);
+						m_psys.get(ob);
 					}
 				}
 			}
 
 			// From dupli
 			if (ob.dupli_type() != BL::Object::dupli_type_NONE) {
-				m_psys.get(ob.name());
+				m_psys.get(ob);
 			}
 		}
 	}
@@ -1348,11 +1395,15 @@ void VRsceneExporter::exportDupli()
 
 	VRayExportable::initInterpolate(ExporterSettings::gSet.m_frameCurrent);
 
-	for(MyPartSystems::const_iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
-		const std::string   psysName = sysIt->first;
-		const InstancerSystem *parts    = sysIt->second;
+	for(MyPartSystems::iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
+		static boost::format InstancerFmt("Dulpi@%s");
 
-		PYTHON_PRINTF(out, "\nInstancer Dulpi%s {", StripString(psysName).c_str());
+		BL::ID instancedObject = sysIt->first;
+
+		const InstancerSystem *parts = sysIt->second;
+		const std::string &psysName = boost::str(InstancerFmt % instancedObject.name());
+
+		PYTHON_PRINTF(out, "\nInstancer %s {", StripString(psysName).c_str());
 		PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
 		if(parts->size()) {
 			PYTHON_PRINT(out, ",");

@@ -129,17 +129,19 @@ enum WriteFlag {
 
 
 struct NodeAttrs {
-	NodeAttrs():dupliHolder(PointerRNA_NULL)
-	{
-		override = false;
+	enum NodeAttrsDefaults {
+		NodeAttrsDefaultDynamicGeometry = 0,
+	};
 
-		objectID = 0;
-		visible  = true;
-		primary_visibility = true;
-		nsamples = 0;
-
-		namePrefix = "";
-	}
+	NodeAttrs()
+		: override(false)
+		, objectID(0)
+		, visible(true)
+		, primary_visibility(true)
+		, nsamples(0)
+		, dynamic_geometry(NodeAttrsDefaultDynamicGeometry)
+		, dupliHolder(PointerRNA_NULL)
+	{}
 
 	int  override;
 
@@ -147,12 +149,12 @@ struct NodeAttrs {
 	int  visible;
 	int  primary_visibility;
 	int  nsamples;
+	int  dynamic_geometry;
 
 	// For DupliGroup without Instancer
 	std::string  namePrefix;
 	BL::Object   dupliHolder;
 	BLTransform  tm;
-
 };
 
 

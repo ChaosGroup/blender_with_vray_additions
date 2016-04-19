@@ -121,7 +121,7 @@ void VRayScene::Node::initName(const std::string &name)
 }
 
 
-int VRayScene::Node::preInitGeometry()
+int VRayScene::Node::preInitGeometry(int dynamic_geometry)
 {
 	int res = 0;
 
@@ -142,13 +142,17 @@ int VRayScene::Node::preInitGeometry()
 			                 ? ob.data()
 			                 : ob;
 
-			if (could_instance && Node::sMeshCache.count(dataKey)) {
+			if (Node::sMeshCache.count(dataKey)) {
 				m_geometryCached = true;
 				m_geometryName   = Node::sMeshCache[dataKey];
 			}
 			else {
 				m_geometry = new GeomStaticMesh(m_sce, m_main, m_ob);
 				m_geometry->preInit();
+
+				if (could_instance || dynamic_geometry) {
+					(static_cast<GeomStaticMesh&>(*m_geometry)).setDynamicGeometry(true);
+				}
 
 				// We will delete geometry as soon as possible,
 				// so store name here

@@ -78,6 +78,17 @@ static void initData(ModifierData *md)
 	amd->fit_type = MOD_ARR_FIXEDCOUNT;
 	amd->offset_type = MOD_ARR_OFF_RELATIVE;
 	amd->flags = 0;
+	amd->dupliTms = NULL;
+}
+
+static void freeData(ModifierData *md)
+{
+	ArrayModifierData *amd = (ArrayModifierData *) md;
+
+	if (amd->dupliTms) {
+		MEM_freeN(amd->dupliTms);
+		amd->dupliTms = NULL;
+	}
 }
 
 static void copyData(ModifierData *md, ModifierData *target)
@@ -533,6 +544,13 @@ static DerivedMesh *arrayModifier_doArray(
 	if (count < 1)
 		count = 1;
 
+	if (amd->dupliTms) {
+		MEM_freeN(amd->dupliTms);
+		amd->dupliTms = NULL;
+	}
+
+	amd->dupliTms = (float*)MEM_mallocN(count * sizeof(float[4][4]), "amd->dupliTms");
+
 	/* The number of verts, edges, loops, polys, before eventually merging doubles */
 	result_nverts = chunk_nverts * count + start_cap_nverts + end_cap_nverts;
 	result_nedges = chunk_nedges * count + start_cap_nedges + end_cap_nedges;
@@ -600,6 +618,8 @@ static DerivedMesh *arrayModifier_doArray(
 				normal_float_to_short_v3(mv->no, no);
 			}
 		}
+
+		memcpy(amd->dupliTms + (c-1) * 16, current_offset, sizeof(float[4][4]));
 
 		/* adjust edge vertex indices */
 		me = CDDM_get_edges(result) + c * chunk_nedges;
@@ -795,7 +815,7 @@ ModifierTypeInfo modifierType_Array = {
 	/* applyModifierEM */   NULL,
 	/* initData */          initData,
 	/* requiredDataMask */  NULL,
-	/* freeData */          NULL,
+	/* freeData */          freeData,
 	/* isDisabled */        NULL,
 	/* updateDepgraph */    updateDepgraph,
 	/* updateDepsgraph */   updateDepsgraph,
