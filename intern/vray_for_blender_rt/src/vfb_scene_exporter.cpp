@@ -716,14 +716,20 @@ void SceneExporter::sync_objects(const int &check_updated) {
 					for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
 						float *dupliTm = amd.dupliTms + dupliIdx * 16;
 
+						// move dupli to local space and let vray move it to world space from wrapper's tm
+						float inverted[4][4];
+						copy_m4_m4(inverted, ((Object*)ob.ptr.data)->obmat);
+						invert_m4(inverted);
+						mul_m4_m4m4(inverted, (float (*)[4])dupliTm, inverted);
+
 						AttrInstancer::Item &instancer_item = (*instances.data)[dupliIdx];
 						instancer_item.index = dist(randomEng);
 						instancer_item.node = nodeName;
-						instancer_item.tm = AttrTransformFromBlTransform((float (*)[4])dupliTm);
+						instancer_item.tm = AttrTransformFromBlTransform(inverted);
 						memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 					}
 
-					m_data_exporter.exportVrayInstacer2(ob, instances);
+					m_data_exporter.exportVrayInstacer2(ob, instances, true);
 				}
 
 				// Restore Array modifier settings

@@ -334,7 +334,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 }
 
 
-AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer)
+AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, bool exportObTm)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
 	const bool visible_on_layer = m_computedLayers & ::get_layer(ob, m_view3d && m_view3d.local_view(), to_int_layer(m_scene.layers()));
@@ -353,12 +353,16 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	nodeWrapper.add("visible", true);
 	nodeWrapper.add("objectID", ob.pass_index());
 	nodeWrapper.add("material", getDefaultMaterial());
-	VRayBaseTypes::AttrTransform tm;
-	memset(&tm, 0, sizeof(tm));
-	tm.m.v0.x = 1.f;
-	tm.m.v1.y = 1.f;
-	tm.m.v2.z = 1.f;
-	nodeWrapper.add("transform", tm);
+	if (exportObTm) {
+		nodeWrapper.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	} else {
+		VRayBaseTypes::AttrTransform tm;
+		memset(&tm, 0, sizeof(tm));
+		tm.m.v0.x = 1.f;
+		tm.m.v1.y = 1.f;
+		tm.m.v2.z = 1.f;
+		nodeWrapper.add("transform", tm);
+	}
 
 	return m_exporter->export_plugin(nodeWrapper);
 }
