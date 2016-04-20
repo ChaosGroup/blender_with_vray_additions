@@ -46,6 +46,12 @@ enum_displacement_methods = (
     ('BOTH', "Both", "Combination of displacement and bump mapping"),
     )
 
+enum_subdivision_types = (
+    ('NONE', "None", "No subdivision"),
+    ('LINEAR', "Linear", "Use linear subdivision"),
+    ('CATMULL_CLARK', "Catmull–Clark", "Use Catmull-Clark subdivision"),
+    )
+
 enum_bvh_types = (
     ('DYNAMIC_BVH', "Dynamic BVH", "Objects can be individually updated, at the cost of slower render time"),
     ('STATIC_BVH', "Static BVH", "Any object modification requires a complete BVH rebuild, but renders faster"),
@@ -362,6 +368,26 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                             "to avoid extremely long render times with big objects or small step sizes",
                 default=1024,
                 min=2, max=65536
+                )
+
+        cls.dicing_rate = FloatProperty(
+                name="Dicing Rate",
+                description="Size of a micropolygon in pixels",
+                min=0.1, max=1000.0,
+                default=1.0,
+                )
+        cls.preview_dicing_rate = FloatProperty(
+                name="Preview Dicing Rate",
+                description="Size of a micropolygon in pixels during preview render",
+                min=0.1, max=1000.0,
+                default=8.0,
+                )
+
+        cls.max_subdivisions = IntProperty(
+                name="Max Subdivisions",
+                description="Stop subdividing when this level is reached even if the dice rate would produce finer tessellation",
+                min=0, max=16,
+                default=12,
                 )
 
         cls.film_exposure = FloatProperty(
@@ -931,15 +957,16 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 items=enum_displacement_methods,
                 default='BUMP',
                 )
-        cls.use_subdivision = BoolProperty(
-                name="Use Subdivision",
-                description="Subdivide mesh for rendering",
-                default=False,
+        cls.subdivision_type = EnumProperty(
+                name="Subdivision Type",
+                description="Type of subdivision to use",
+                items=enum_subdivision_types,
+                default='NONE',
                 )
         cls.dicing_rate = FloatProperty(
                 name="Dicing Rate",
-                description="",
-                min=0.001, max=1000.0,
+                description="Multiplier for scene dicing rate",
+                min=0.1, max=1000.0,
                 default=1.0,
                 )
 
