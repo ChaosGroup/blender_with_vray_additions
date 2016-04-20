@@ -40,7 +40,9 @@ struct SubdParams {
 	int test_steps;
 	int split_threshold;
 	float dicing_rate;
+	int max_level;
 	Camera *camera;
+	Transform objecttoworld;
 
 	SubdParams(Mesh *mesh_, int shader_, bool smooth_ = true, bool ptex_ = false)
 	{
@@ -52,6 +54,7 @@ struct SubdParams {
 		test_steps = 3;
 		split_threshold = 1;
 		dicing_rate = 0.1f;
+		max_level = 12;
 		camera = NULL;
 	}
 
