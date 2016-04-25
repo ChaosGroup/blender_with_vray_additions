@@ -318,7 +318,7 @@ int main(
 
 	BLI_threadapi_init();
 
-	initglobals();  /* blender.c */
+	BKE_blender_globals_init();  /* blender.c */
 
 	IDP_init();
 	IMB_init();
