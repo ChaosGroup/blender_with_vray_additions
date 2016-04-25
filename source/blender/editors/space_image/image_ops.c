@@ -3140,7 +3140,7 @@ static int image_record_composite_apply(bContext *C, wmOperator *op)
 	
 	WM_cursor_time(CTX_wm_window(C), scene->r.cfra);
 
-	// XXX scene->nodetree->test_break = blender_test_break;
+	// XXX scene->nodetree->test_break = BKE_blender_test_break;
 	// XXX scene->nodetree->test_break = NULL;
 	
 	BKE_image_all_free_anim_ibufs(scene->r.cfra);
@@ -3554,7 +3554,7 @@ static int clear_render_border_exec(bContext *C, wmOperator *UNUSED(op))
 void IMAGE_OT_clear_render_border(wmOperatorType *ot)
 {
 	/* identifiers */
-	ot->name = "Render Border";
+	ot->name = "Clear Render Border";
 	ot->description = "Clear the boundaries of the border render and disable border render";
 	ot->idname = "IMAGE_OT_clear_render_border";
 
