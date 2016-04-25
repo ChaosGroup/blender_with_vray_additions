@@ -45,6 +45,7 @@ extern "C" {
 #include <thread>
 #include <random>
 #include <limits>
+#include <mutex>
 
 using namespace VRayForBlender;
 
@@ -64,6 +65,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_exporter(nullptr)
     , m_isRunning(false)
     , m_isLocalView(false)
+    , m_python_thread_state(nullptr)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -96,6 +98,21 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 SceneExporter::~SceneExporter()
 {
 	free();
+}
+
+
+void SceneExporter::python_thread_state_save()
+{
+	assert(!m_python_thread_state && "Will overrite python thread state, recursive saves are not permitted.");
+	m_python_thread_state = (void*)PyEval_SaveThread();
+	assert(m_python_thread_state && "PyEval_SaveThread returned NULL.");
+}
+
+void SceneExporter::python_thread_state_restore()
+{
+	assert(m_python_thread_state && "Restoring null python state!");
+	PyEval_RestoreThread((PyThreadState*)m_python_thread_state);
+	m_python_thread_state = nullptr;
 }
 
 

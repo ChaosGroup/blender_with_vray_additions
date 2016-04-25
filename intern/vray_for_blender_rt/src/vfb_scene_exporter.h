@@ -26,6 +26,7 @@
 #include "vfb_rna.h"
 
 #include <cstdint>
+#include <mutex>
 #include <boost/thread.hpp>
 
 #ifdef USE_BLENDER_VRAY_APPSDK
@@ -79,10 +80,15 @@ public:
 	virtual void         render_start();
 	void                 render_stop();
 
-	int                  is_interrupted();
+	virtual int          is_interrupted();
 	int                  is_viewport() { return !!m_view3d; }
 	int                  is_preview();
 
+	// allows python threads to resume running
+	void                 python_thread_state_save();
+
+	// blocks python threads and allows changes to python data
+	void                 python_thread_state_restore();
 protected:
 	virtual void         create_exporter();
 
@@ -100,6 +106,13 @@ protected:
 	BL::SpaceView3D      m_view3d;
 	BL::RegionView3D     m_region3d;
 	BL::Region           m_region;
+
+	// will store the python thread state when this exporter must change python data
+	void                *m_python_thread_state;
+	// only used if m_isAnimationRunning is true, since there are 2 threads
+	// lock before python_thread_state_restore and unlock after python_thread_state_save
+	std::mutex           m_python_state_lock;
+protected:
 
 	PluginExporter      *m_exporter;
 	DataExporter         m_data_exporter;

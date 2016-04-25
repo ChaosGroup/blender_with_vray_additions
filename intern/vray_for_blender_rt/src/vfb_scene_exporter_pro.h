@@ -57,6 +57,7 @@ public:
 	virtual void      render_start() override;
 
 	virtual void      setup_callbacks() override;
+	virtual int	      is_interrupted() override;
 
 public:
 	void              cb_on_image_ready();
@@ -64,11 +65,11 @@ public:
 
 private:
 	BL::RenderResult  m_renderResult;
+	// used to signal a frame has been rendered
 	int               m_renderFinished;
 	RenderImageMan    m_imageMan;
 	volatile bool     m_imageDirty;
 	bool              m_isAnimationRunning;
-	PyThreadState    *m_animationPythonThreadState;
 	float             m_progress;
 	float             m_animationProgress;
 

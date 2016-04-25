@@ -197,10 +197,10 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 		exporter->init();
 		exporter->init_data();
 
-		Py_BEGIN_ALLOW_THREADS
+		exporter->python_thread_state_save();
 		exporter->sync(false);
 		exporter->render_start();
-		Py_END_ALLOW_THREADS
+		exporter->python_thread_state_restore();
 	} else {
 		PRINT_ERROR("Failed to initialize RT exporter!");
 	}
@@ -229,7 +229,10 @@ static PyObject* vfb_update(PyObject*, PyObject *value)
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
-		if (!exporter->do_export()) {
+		exporter->python_thread_state_save();
+		bool result = exporter->do_export();
+		exporter->python_thread_state_restore();
+		if (!result) {
 			Py_RETURN_FALSE;
 		}
 	}
@@ -244,9 +247,9 @@ static PyObject* vfb_view_update(PyObject*, PyObject *value)
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
-		Py_BEGIN_ALLOW_THREADS
+		exporter->python_thread_state_save();
 		exporter->sync(true);
-		Py_END_ALLOW_THREADS
+		exporter->python_thread_state_restore();
 	}
 	Py_RETURN_NONE;
 }
@@ -271,9 +274,9 @@ static PyObject* vfb_render(PyObject*, PyObject *value)
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
-		Py_BEGIN_ALLOW_THREADS
+		exporter->python_thread_state_save();
 		exporter->render_start();
-		Py_END_ALLOW_THREADS
+		exporter->python_thread_state_restore();
 	}
 
 	Py_RETURN_NONE;

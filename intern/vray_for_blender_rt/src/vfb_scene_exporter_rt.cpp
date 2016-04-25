@@ -64,7 +64,9 @@ void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 void InteractiveExporter::draw()
 {
+	python_thread_state_save();
 	sync_view(true);
+	python_thread_state_restore();
 
 	RenderImage image = m_exporter->get_image();
 	if (!image) {

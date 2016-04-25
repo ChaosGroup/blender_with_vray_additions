@@ -41,6 +41,11 @@ void ProductionExporter::setup_callbacks()
 	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&ProductionExporter::cb_on_rt_image_updated, this)));
 }
 
+int	ProductionExporter::is_interrupted()
+{
+	return SceneExporter::is_interrupted() || m_settings.settings_animation.use && !m_isAnimationRunning;
+}
+
 
 bool ProductionExporter::do_export()
 {
@@ -48,26 +53,29 @@ bool ProductionExporter::do_export()
 	PRINT_INFO_EX("ProductionExporter::do_export()")
 
 	if (m_settings.settings_animation.use) {
-		const float export_frames_steps = (float)(m_scene.frame_end() - m_scene.frame_start()) / (float)m_scene.frame_step();
+		m_isAnimationRunning = true;
+
+		const float export_frames_steps = (float)(m_scene.frame_end() - m_scene.frame_current()) / (float)m_scene.frame_step();
 		const auto restore = m_scene.frame_current();
 		m_animationProgress = 0.f;
 
 		if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
 			for (int fr = restore, c = 0; fr < m_scene.frame_end() && res && !is_interrupted(); fr += m_scene.frame_step(), ++c) {
-				m_scene.frame_set(fr, 0.f);
 				m_animationProgress = (float)c / export_frames_steps;
+
+				python_thread_state_restore();
+				m_scene.frame_set(fr, 0.f);
+				m_engine.update_progress(m_animationProgress);
+				python_thread_state_save();
+
 				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), fr);
 
-				m_engine.update_progress(m_animationProgress);
 				res = export_animation();
 			}
 			m_scene.frame_set(restore, 0.f);
 		} else {
-			Py_BEGIN_ALLOW_THREADS
 
 			sync(false);
-			m_animationPythonThreadState = _save;
-			m_isAnimationRunning = true;
 			std::thread update(&ProductionExporter::render_start, this);
 
 			while (!m_isRunning) {
@@ -78,10 +86,16 @@ bool ProductionExporter::do_export()
 				m_animationProgress = (float)c / export_frames_steps;
 				PRINT_INFO_EX("Animation progress %d%%", static_cast<int>(m_animationProgress * 100));
 
-				Py_BLOCK_THREADS
-					m_scene.frame_set(fr, 0.f);
-					m_engine.update_progress(m_animationProgress);
-				Py_UNBLOCK_THREADS
+				{
+					std::lock_guard<std::mutex> l(m_python_state_lock);
+					if (is_interrupted()) {
+						break;
+					}
+					python_thread_state_restore();
+						m_scene.frame_set(fr, 0.f);
+						m_engine.update_progress(m_animationProgress);
+					python_thread_state_save();
+				}
 
 				res = export_animation();
 				while (res && !m_renderFinished && !is_interrupted()) {
@@ -89,12 +103,13 @@ bool ProductionExporter::do_export()
 				}
 			}
 
-			m_scene.frame_set(restore, 0.f);
 			m_isAnimationRunning = false;
 			m_renderFinished = true;
 			update.join();
 
-			Py_END_ALLOW_THREADS
+			python_thread_state_restore();
+			m_scene.frame_set(restore, 0.f);
+			python_thread_state_save();
 		}
 	}
 	else {
@@ -154,50 +169,66 @@ void ProductionExporter::render_start()
 
 	if (m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
 		SceneExporter::render_start();
-		PyThreadState *_save = m_animationPythonThreadState;
 
+		// thi will loop once for each animation frame, or once for final render
 		do {
 			m_renderFinished = false;
 			m_imageDirty = false;
 
 			m_isRunning = true;
 			auto start = std::chrono::high_resolution_clock::now();
-			while (!is_interrupted() && !m_renderFinished) {
+			std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock_t());
+
+			// updates the output at 10 FPS
+			while (!is_interrupted()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				auto now = std::chrono::high_resolution_clock::now();
 
-				if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() > (1000 / 10)) {
-					if (m_imageDirty) {
-						m_imageDirty = false;
-						float progress = 0.f;
-						if (m_settings.settings_animation.use) {
-							Py_BLOCK_THREADS
-							// for animation add frames progress + current image progress * frame contribution
-							float frame_contrib = 1.f / ((float)(m_scene.frame_end() - m_scene.frame_start()) / (float)m_scene.frame_step());
-							progress = m_animationProgress + m_progress * frame_contrib;
-						} else {
-							// for singe frame - get progress from image
-							progress = m_progress;
-						}
+				if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() < (1000 / 10)) {
+					continue;
+				}
 
-						m_engine.update_progress(progress);
-						for (auto & result : m_renderResultsList) {
-							BL::RenderResult::layers_iterator rrlIt;
-							result.layers.begin(rrlIt);
-							if (rrlIt != result.layers.end()) {
-								m_engine.update_result(result);
-							}
+				if (m_imageDirty) {
+					m_imageDirty = false;
+					float progress = 0.f;
+					if (m_settings.settings_animation.use) {
+						uLock.lock();
+						if (is_interrupted()) {
+							break;
 						}
-						if (m_settings.settings_animation.use) {
-							Py_UNBLOCK_THREADS
+						python_thread_state_restore();
+
+						// for animation add frames progress + current image progress * frame contribution
+						float frame_contrib = 1.f / ((float)(m_scene.frame_end() - m_scene.frame_current()) / (float)m_scene.frame_step());
+						progress = m_animationProgress + m_progress * frame_contrib;
+					} else {
+						// for singe frame - get progress from image
+						progress = m_progress;
+					}
+
+					m_engine.update_progress(progress);
+					for (auto & result : m_renderResultsList) {
+						BL::RenderResult::layers_iterator rrlIt;
+						result.layers.begin(rrlIt);
+						if (rrlIt != result.layers.end()) {
+							m_engine.update_result(result);
 						}
 					}
-					start = std::chrono::high_resolution_clock::now();
+
+					if (m_settings.settings_animation.use) {
+						python_thread_state_save();
+						uLock.unlock();
+					}
 				}
+				start = std::chrono::high_resolution_clock::now();
 			}
 
 			if (m_settings.settings_animation.use) {
-				Py_BLOCK_THREADS
+				uLock.lock();
+				if (is_interrupted()) {
+					break;
+				}
+				python_thread_state_restore();
 				// progress will be set from animation export loop
 			} else {
 				// single frame export - done
@@ -211,7 +242,8 @@ void ProductionExporter::render_start()
 				}
 			}
 			if (m_settings.settings_animation.use) {
-				Py_UNBLOCK_THREADS
+				python_thread_state_save();
+				uLock.unlock();
 			}
 		} while (m_isAnimationRunning);
 
@@ -225,30 +257,40 @@ void ProductionExporter::render_start()
 	}
 
 
+	python_thread_state_restore();
 	for (auto & result : m_renderResultsList) {
 		m_engine.end_result(result, false, true);
 	}
+	python_thread_state_save();
 }
 
 ProductionExporter::~ProductionExporter()
 {
-	std::lock_guard<std::mutex> l(m_callback_mtx);
-	delete m_exporter;
-	m_exporter = nullptr;
+	{
+		std::lock_guard<std::mutex> l(m_python_state_lock);
+		if (m_settings.settings_animation.use) {
+			m_isAnimationRunning = false;
+		}
+		if (m_python_thread_state) {
+			python_thread_state_restore();
+		}
+	}
+	{
+		std::lock_guard<std::mutex> l(m_callback_mtx);
+		delete m_exporter;
+		m_exporter = nullptr;
+	}
 }
 
 
 void ProductionExporter::cb_on_image_ready()
 {
-	// PRINT_INFO_EX("ProductionExporter::cb_on_image_ready()");
-
 	std::lock_guard<std::mutex> l(m_callback_mtx);
 	m_renderFinished = true;
 }
 
 void ProductionExporter::cb_on_rt_image_updated()
 {
-	// PRINT_INFO_EX("ProductionExporter::cb_on_rt_image_updated()");
 	std::lock_guard<std::mutex> l(m_callback_mtx);
 	m_imageDirty = true;
 
@@ -274,7 +316,9 @@ void ProductionExporter::cb_on_rt_image_updated()
 				}
 
 				if (is_preview()) {
+					python_thread_state_restore();
 					m_engine.update_result(result);
+					python_thread_state_save();
 				}
 			}
 		}
