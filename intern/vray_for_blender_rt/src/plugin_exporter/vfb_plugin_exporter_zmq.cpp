@@ -54,11 +54,13 @@ ClientPtr ZmqWorkerPool::getClient()
 
 void ZmqWorkerPool::returnClient(ClientPtr cl)
 {
+	if (cl) {
+		cl->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
+	}
 #if USE_ZMQ_WORKER_POOL
-	cl->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
 	m_Clients.push(std::move(cl));
 #else
-	cl.release();
+	cl.reset();
 #endif
 }
 
