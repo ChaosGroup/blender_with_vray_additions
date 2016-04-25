@@ -25,6 +25,8 @@
 
 using namespace VRayForBlender;
 
+#define USE_ZMQ_WORKER_POOL 0
+
 ZmqWorkerPool::ZmqWorkerPool()
 {
 }
@@ -37,6 +39,7 @@ ZmqWorkerPool & ZmqWorkerPool::getInstance()
 
 ClientPtr ZmqWorkerPool::getClient()
 {
+#if USE_ZMQ_WORKER_POOL
 	if (m_Clients.empty()) {
 		m_Clients.push(ClientPtr(new ZmqClient()));
 	}
@@ -44,30 +47,41 @@ ClientPtr ZmqWorkerPool::getClient()
 	auto cl = std::move(m_Clients.top());
 	m_Clients.pop();
 	return cl;
+#else
+	return std::make_unique<ZmqClient>();
+#endif
 }
 
 void ZmqWorkerPool::returnClient(ClientPtr cl)
 {
+#if USE_ZMQ_WORKER_POOL
 	cl->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
 	m_Clients.push(std::move(cl));
+#else
+	cl.release();
+#endif
 }
 
 void ZmqWorkerPool::shutdown()
 {
+#if USE_ZMQ_WORKER_POOL
 	while (!m_Clients.empty()) {
 		m_Clients.top()->setFlushOnExit(false);
 		m_Clients.top()->syncStop();
 		m_Clients.pop();
 	}
+#endif
 }
 
 ZmqWorkerPool::~ZmqWorkerPool()
 {
+#if USE_ZMQ_WORKER_POOL
 	while (!m_Clients.empty()) {
 		m_Clients.top()->setFlushOnExit(false);
 		m_Clients.top()->forceFree();
 		m_Clients.pop();
 	}
+#endif
 }
 
 

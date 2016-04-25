@@ -101,6 +101,7 @@ private:
 	std::string         m_ServerAddress;
 	ClientPtr           m_Client;
 
+	// ensures the image is not changed while it is read
 	std::mutex          m_ImgMutex;
 	std::mutex          m_ZmqClientMutex;
 	ZmqRenderImage      m_CurrentImage;
