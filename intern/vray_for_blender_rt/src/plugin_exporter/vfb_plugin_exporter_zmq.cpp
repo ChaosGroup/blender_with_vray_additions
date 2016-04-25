@@ -48,7 +48,7 @@ ClientPtr ZmqWorkerPool::getClient()
 	m_Clients.pop();
 	return cl;
 #else
-	return std::make_unique<ZmqClient>();
+	return ClientPtr(new ZmqClient());
 #endif
 }
 
