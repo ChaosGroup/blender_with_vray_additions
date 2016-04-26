@@ -50,7 +50,10 @@ int	ProductionExporter::is_interrupted()
 bool ProductionExporter::do_export()
 {
 	bool res = true;
-	PRINT_INFO_EX("ProductionExporter::do_export()")
+	PRINT_INFO_EX("ProductionExporter::do_export()");
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		python_thread_state_restore();
+	}
 
 	if (m_settings.settings_animation.use) {
 		m_isAnimationRunning = true;
@@ -114,6 +117,10 @@ bool ProductionExporter::do_export()
 	}
 	else {
 		sync(false);
+	}
+
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		python_thread_state_save();
 	}
 
 	return res;
