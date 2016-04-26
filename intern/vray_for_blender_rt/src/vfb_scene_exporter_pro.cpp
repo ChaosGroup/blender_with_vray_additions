@@ -43,7 +43,15 @@ void ProductionExporter::setup_callbacks()
 
 int	ProductionExporter::is_interrupted()
 {
-	return SceneExporter::is_interrupted() || m_settings.settings_animation.use && !m_isAnimationRunning;
+	bool is_interrupted = SceneExporter::is_interrupted();
+
+	if (m_settings.settings_animation.use) {
+		is_interrupted = is_interrupted || !m_isAnimationRunning;
+	} else {
+		is_interrupted = is_interrupted || m_renderFinished;
+	}
+
+	return is_interrupted;
 }
 
 
