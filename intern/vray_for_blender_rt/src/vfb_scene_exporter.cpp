@@ -712,6 +712,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				overrideAttrs.override = true;
 				overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
 				overrideAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
+				overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
 
 				// Disable for render so that object is exported without Array modifier
 				modArray.show_render(false);
