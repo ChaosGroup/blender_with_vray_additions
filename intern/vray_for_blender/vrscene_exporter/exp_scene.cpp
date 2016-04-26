@@ -651,7 +651,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 		if (!is_interrupted()) {
 			Node::WriteHair(ob);
 
-			if (ob_is_duplicator_renderable(ob)) {
+			if (ob_is_duplicator_renderable(ob) && ob_on_visible_layer(ob)) {
 				NodeAttrs nodeAttrs;
 
 				// Check if last modifier is Array and disable it - we'll handle it manually
@@ -693,18 +693,24 @@ void VRsceneExporter::exportDupliFromArray(BL::Object ob, BL::ArrayModifier modA
 	Object            &object  = *(Object*)ob.ptr.data;
 	ArrayModifierData &amd     = *(ArrayModifierData*)(modArray.ptr.data);
 
-	InstancerSystem   &instSys = *m_psys.get(ob);
+	if (!amd.dupliTms) {
+		PRINT_ERROR("Object: %s Modifier: %s: dupliTms is NULL",
+					ob.name().c_str(), modArray.name().c_str());
+	}
+	else {
+		InstancerSystem &instSys = *m_psys.get(ob);
 
-	for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
-		float *dupliTm = amd.dupliTms + dupliIdx * 16;
+		for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
+			float *dupliTm = amd.dupliTms + dupliIdx * 16;
 
-		// Array dupli tm to world space
-		float dupliTmWorld[4][4];
-		copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
-		mul_m4_m4m4(dupliTmWorld, object.obmat, dupliTmWorld);
+			// Array dupli tm to world space
+			float dupliTmWorld[4][4];
+			copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
+			mul_m4_m4m4(dupliTmWorld, object.obmat, dupliTmWorld);
 
-		// TODO: Investigate if we need unique "dupliIdx"
-		instSys.add(GetIDName(ob), dupliIdx, object.obmat, dupliTmWorld);
+			// TODO: Investigate if we need unique "dupliIdx"
+			instSys.add(GetIDName(ob), dupliIdx, object.obmat, dupliTmWorld);
+		}
 	}
 }
 
