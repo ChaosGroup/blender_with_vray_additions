@@ -698,7 +698,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 
 			sync_object(ob, check_updated, overAttrs);
 		}
-		else if (ob.modifiers.length()) {
+		else if (ob.modifiers.length() && visible_on_layer) {
 			BL::ArrayModifier modArray(PointerRNA_NULL);
 			BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
 			ObjectOverridesAttrs overrideAttrs;
@@ -722,8 +722,12 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			sync_object(ob, check_updated, overrideAttrs);
 
 			if (modArray) {
-				if (is_updated) {
-					ArrayModifierData &amd = *(ArrayModifierData*)(modArray.ptr.data);
+				ArrayModifierData &amd = *(ArrayModifierData*)(modArray.ptr.data);
+				if (!amd.dupliTms) {
+					PRINT_ERROR("ArrayModifier dupliTms is null!");
+				}
+
+				if (is_updated && amd.dupliTms) {
 					AttrInstancer instances;
 					instances.frameNumber = m_scene.frame_current();
 					instances.data.resize(amd.count - 1);
