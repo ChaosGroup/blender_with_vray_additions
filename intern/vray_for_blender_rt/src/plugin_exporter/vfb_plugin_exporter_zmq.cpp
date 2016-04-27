@@ -41,14 +41,14 @@ ClientPtr ZmqWorkerPool::getClient()
 {
 #if USE_ZMQ_WORKER_POOL
 	if (m_Clients.empty()) {
-		m_Clients.push(ClientPtr(new ZmqClient()));
+		m_Clients.push(ClientPtr(new ZmqWrapper()));
 	}
 
 	auto cl = std::move(m_Clients.top());
 	m_Clients.pop();
 	return cl;
 #else
-	return ClientPtr(new ZmqClient());
+	return ClientPtr(new ZmqWrapper());
 #endif
 }
 

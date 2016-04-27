@@ -27,6 +27,59 @@
 
 #include "vfb_plugin_exporter_zmq.h"
 
+#include "zmq_wrapper.h"
+ZmqWrapper * heartbeatClient = nullptr;
+std::mutex heartbeatLock;
+
+static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)
+{
+	const char * conn_str = nullptr;
+
+	if (PyArg_ParseTuple(args, "s", &conn_str)) {
+		std::lock_guard<std::mutex> l(heartbeatLock);
+		if (!heartbeatClient) {
+			PRINT_INFO_EX("Starting hearbeat client for %s", conn_str);
+			heartbeatClient = new ZmqWrapper(true);
+			heartbeatClient->connect(conn_str);
+			if (heartbeatClient->connected()) {
+				Py_RETURN_TRUE;
+			}
+		} else {
+			PRINT_ERROR("Heartbeat client already running...");
+			// return true as we are running good.
+			if (heartbeatClient->good() && heartbeatClient->connected()) {
+				Py_RETURN_TRUE;
+			}
+		}
+	} else {
+		PRINT_ERROR("Failed to get connection string");
+	}
+	Py_RETURN_FALSE;
+}
+
+static PyObject* vfb_zmq_heartbeat_stop(PyObject*)
+{
+	std::lock_guard<std::mutex> l(heartbeatLock);
+	if (heartbeatClient) {
+		PRINT_INFO_EX("Stopping hearbeat client");
+		delete heartbeatClient;
+		heartbeatClient = nullptr;
+	} else {
+		PRINT_ERROR("No zmq heartbeat client running...");
+	}
+
+	Py_RETURN_NONE;
+}
+
+static PyObject* vfb_zmq_heartbeat_check(PyObject *)
+{
+	std::lock_guard<std::mutex> l(heartbeatLock);
+	if (heartbeatClient && heartbeatClient->good() && heartbeatClient->connected()) {
+		Py_RETURN_TRUE;
+	}
+	Py_RETURN_FALSE;
+}
+
 static VRayForBlender::SceneExporter *vfb_cast_exporter(PyObject *value)
 {
 	VRayForBlender::SceneExporter *exporter = nullptr;
@@ -66,6 +119,7 @@ static PyObject* vfb_unload(PyObject*)
 	PRINT_INFO_EX("vfb_unload()");
 
 	ZmqWorkerPool::getInstance().shutdown();
+	vfb_zmq_heartbeat_stop(nullptr);
 
 	Py_RETURN_NONE;
 }
@@ -313,6 +367,10 @@ static PyMethodDef methods[] = {
     { "render",      vfb_render,      METH_O, "" },
     { "view_update", vfb_view_update, METH_O, "" },
     { "view_draw",   vfb_view_draw,   METH_O, "" },
+
+	{ "zmq_heartbeat_start",              vfb_zmq_heartbeat_start, METH_VARARGS, ""},
+	{ "zmq_heartbeat_stop",  (PyCFunction)vfb_zmq_heartbeat_stop,  METH_NOARGS,  ""},
+	{ "zmq_heartbeat_check", (PyCFunction)vfb_zmq_heartbeat_check, METH_NOARGS,  ""},
 
     { "getExporterTypes", vfb_get_exporter_types, METH_NOARGS, "" },
 
