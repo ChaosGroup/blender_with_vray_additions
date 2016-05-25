@@ -609,7 +609,7 @@ static PyObject* mSetHideFromView(PyObject *self, PyObject *args)
 					while(_PySet_NextEntry(hideSet, &pos, &item, &hash)) {
 						PyObject *value = PyNumber_Long(item);
 						if(PyNumber_Long(value))
-							exporter->addToHideFromViewList(key, (void*)PyLong_AsLong(value));
+							exporter->addToHideFromViewList(key, PyLong_AsVoidPtr(value));
 						Py_DecRef(item);
 					}
 				}
