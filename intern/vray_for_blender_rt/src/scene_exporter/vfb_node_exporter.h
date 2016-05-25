@@ -290,6 +290,8 @@ public:
 
 	static void                   tag_ntree(BL::NodeTree ntree, bool updated=true);
 
+	std::vector<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
+
 	// Generate data name
 	std::string       getNodeName(BL::Object ob);
 	std::string       getMeshName(BL::Object ob);
@@ -364,6 +366,10 @@ public:
 
 	void              clearMaterialCache();
 
+	// TODO: make this camera dependent
+	void              refreshHideLists();
+	bool              isObjectInHideList(BL::Object ob, const std::string listName) const;
+
 private:
 	BL::Object        exportVRayNodeSelectObject(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	BL::Group         exportVRayNodeSelectGroup(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
@@ -419,6 +425,7 @@ private:
 	BL::SpaceView3D   m_view3d;
 	// should be set on each sync with setComputedLayers
 	uint32_t          m_computedLayers;
+	std::unordered_map<std::string, std::vector<BL::Object>> m_hide_lists;
 
 	PluginExporter   *m_exporter;
 	ExporterSettings  m_settings;
@@ -432,5 +439,4 @@ private:
 // implemented in vfb_export_object.cpp
 uint32_t to_int_layer(const BlLayers & layers);
 uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers);
-
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H

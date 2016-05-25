@@ -68,6 +68,96 @@ uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers) {
 	return layer;
 }
 
+std::vector<BL::Object> DataExporter::getObjectList(const std::string ob_name, const std::string group_name)
+{
+	std::vector<BL::Object> objects, additional;
+
+	BL::Scene::objects_iterator obIt;
+	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+		BL::Object ob(*obIt);
+		if (ob.name() == ob_name) {
+			objects.push_back(ob);
+			break;
+		}
+	}
+
+	BL::BlendData::groups_iterator grIt;
+	for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
+		BL::Group gr(*grIt);
+		if (gr.name() == group_name) {
+			BL::Group::objects_iterator grObIt;
+			for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
+				BL::Object ob = *grObIt;
+				objects.push_back(ob);
+			}
+			break;
+		}
+	}
+
+	// check an object is a group instance and hide the group members
+	for (auto & ob : objects) {
+		if (ob.dupli_type() == BL::Object::dupli_type_GROUP) {
+			BL::Group group = ob.dupli_group();
+
+			BL::Group::objects_iterator grObIt;
+			for (group.objects.begin(grObIt); grObIt != group.objects.end(); ++grObIt) {
+				additional.push_back(*grObIt);
+			}
+		}
+	}
+
+	// merge objects
+	objects.insert(objects.end(), additional.begin(), additional.end());
+
+	return objects;
+}
+
+void DataExporter::refreshHideLists()
+{
+	m_hide_lists.clear();
+
+	auto camera = m_scene.camera();
+	if (!camera) {
+		return;
+	}
+
+	BL::Camera cameraData(camera.data());
+	PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+	if (!RNA_boolean_get(&vrayCamera, "hide_from_view")) {
+		return;
+	}
+
+	static const std::string typeNames[] = {"camera", "gi", "reflect", "refract", "shadows"};
+	std::vector<BL::Object> autoObjects;
+	bool autoObjectsInit = false;
+
+	for (const auto & type : typeNames) {
+		if (!RNA_boolean_get(&vrayCamera, ("hf_" + type).c_str())) {
+			continue;
+		}
+
+		if (RNA_boolean_get(&vrayCamera, ("hf_" + type + "_auto").c_str())) {
+			if (!autoObjectsInit) {
+				autoObjectsInit = true;
+				autoObjects = getObjectList("", "hf_" + camera.name());
+			}
+			m_hide_lists[type] = autoObjects;
+		} else {
+			m_hide_lists[type] = getObjectList(RNA_std_string_get(&vrayCamera, "hf_" + type + "_objects"), RNA_std_string_get(&vrayCamera, "hf_" + type + "_groups"));
+		}
+	}
+}
+
+
+bool DataExporter::isObjectInHideList(BL::Object ob, const std::string listName) const
+{
+	auto list = m_hide_lists.find(listName);
+	if (list != m_hide_lists.end()) {
+		return list->second.end() != std::find(list->second.begin(), list->second.end(), ob);
+	}
+	return false;
+}
+
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {
 	AttrPlugin  node;
@@ -204,8 +294,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 				else {
 					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-					bool hidden = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render());// ||
-						//!(m_computedLayers & ::get_layer(ob, m_view3d && m_view3d.local_view(), to_int_layer(m_scene.layers())));
+					bool hidden = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) || isObjectInHideList(ob, "camera");
 					nodeDesc.add("visible", !hidden);
 				}
 

@@ -345,6 +345,7 @@ void SceneExporter::sync_prepass()
 	m_data_exporter.m_id_cache.clear();
 	m_data_exporter.m_id_track.reset_usage();
 	m_data_exporter.clearMaterialCache();
+	m_data_exporter.refreshHideLists();
 
 	BL::BlendData::node_groups_iterator nIt;
 	for (m_data.node_groups.begin(nIt); nIt != m_data.node_groups.end(); ++nIt) {
@@ -505,7 +506,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 
 	bool skip_export = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
-	                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers())));
+	                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers()))) ||
+	                  m_data_exporter.isObjectInHideList(ob, "camera");
 
 	if (skip_export) {
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
@@ -677,7 +679,8 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
 		m_data_exporter.m_id_track.insert(ob, nodeName);
 		const bool is_updated = check_updated ? ob.is_updated() : true;
-		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers);
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, scene_layers) &&
+		                              !m_data_exporter.isObjectInHideList(ob, "camera");
 
 		if (ob.is_duplicator()) {
 
