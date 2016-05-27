@@ -66,7 +66,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_isRunning(false)
     , m_isLocalView(false)
     , m_python_thread_state(nullptr)
-    , m_active_camera(m_scene.camera() ? m_scene.camera() : view3d.camera())
+    , m_active_camera(view3d ? view3d.camera() : scene.camera())
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
