@@ -54,6 +54,51 @@ int	ProductionExporter::is_interrupted()
 	return is_interrupted;
 }
 
+bool ProductionExporter::export_animation_frame()
+{
+	using namespace std;
+	using namespace std::chrono;
+
+	bool frameExported = true;
+	const float frame = m_scene.frame_current();
+
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		PRINT_INFO_EX("Exporting animation frame %d, in file", frame);
+		sync(false);
+	} else {
+		PRINT_INFO_EX("Exporting animation frame %d", frame);
+
+		m_settings.settings_animation.frame_current = frame;
+		m_exporter->set_current_frame(frame);
+
+		m_exporter->stop();
+		sync(false);
+		m_exporter->start();
+
+		auto lastTime = high_resolution_clock::now();
+		while (m_exporter->get_last_rendered_frame() < frame) {
+			this_thread::sleep_for(milliseconds(1));
+
+			auto now = high_resolution_clock::now();
+			if (duration_cast<seconds>(now - lastTime).count() > 1) {
+				lastTime = now;
+				PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", frame, m_exporter->get_last_rendered_frame());
+			}
+			if (this->is_interrupted()) {
+				PRINT_INFO_EX("Interrupted - stopping animation rendering!");
+				frameExported = false;
+				break;
+			}
+			if (m_exporter->is_aborted()) {
+				PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
+				frameExported = false;
+				break;
+			}
+		}
+	}
+
+	return frameExported;
+}
 
 bool ProductionExporter::do_export()
 {
@@ -81,7 +126,7 @@ bool ProductionExporter::do_export()
 
 				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), fr);
 
-				res = export_animation();
+				res = export_animation_frame();
 			}
 			m_scene.frame_set(restore, 0.f);
 		} else {
@@ -108,7 +153,7 @@ bool ProductionExporter::do_export()
 					python_thread_state_save();
 				}
 
-				res = export_animation();
+				res = export_animation_frame();
 				while (res && !m_renderFinished && !is_interrupted()) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}

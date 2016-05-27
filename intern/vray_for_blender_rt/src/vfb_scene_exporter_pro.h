@@ -50,6 +50,8 @@ public:
 
 	virtual void      create_exporter() override;
 
+	bool              export_animation_frame();
+
 	virtual bool      do_export() override;
 	virtual void      sync_dupli(BL::Object ob, const int &check_updated=false) override;
 	virtual void      sync_object_modiefiers(BL::Object ob, const int &check_updated);

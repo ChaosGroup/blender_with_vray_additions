@@ -216,53 +216,6 @@ void SceneExporter::render_start()
 	}
 }
 
-bool SceneExporter::export_animation()
-{
-	using namespace std;
-	using namespace std::chrono;
-
-	bool frameExported = true;
-	const float frame = m_scene.frame_current();
-
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
-		PRINT_INFO_EX("Exporting animation frame %d, in file", frame);
-		sync(false);
-	} else {
-		PRINT_INFO_EX("Exporting animation frame %d", frame);
-
-		m_settings.settings_animation.frame_current = frame;
-		m_exporter->set_current_frame(frame);
-
-		m_exporter->stop();
-		sync(false);
-		m_exporter->start();
-
-		auto lastTime = high_resolution_clock::now();
-		while (m_exporter->get_last_rendered_frame() < frame) {
-			this_thread::sleep_for(milliseconds(1));
-
-			auto now = high_resolution_clock::now();
-			if (duration_cast<seconds>(now - lastTime).count() > 1) {
-				lastTime = now;
-				PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", frame, m_exporter->get_last_rendered_frame());
-			}
-			if (this->is_interrupted()) {
-				PRINT_INFO_EX("Interrupted - stopping animation rendering!");
-				frameExported = false;
-				break;
-			}
-			if (m_exporter->is_aborted()) {
-				PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
-				frameExported = false;
-				break;
-			}
-		}
-	}
-
-	return frameExported;
-}
-
-
 void SceneExporter::sync(const int &check_updated)
 {
 	if (!m_syncLock.try_lock()) {
