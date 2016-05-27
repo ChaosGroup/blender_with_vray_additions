@@ -54,7 +54,7 @@ int	ProductionExporter::is_interrupted()
 	return is_interrupted;
 }
 
-bool ProductionExporter::export_animation_frame()
+bool ProductionExporter::export_animation_frame(const int &check_updated)
 {
 	using namespace std;
 	using namespace std::chrono;
@@ -64,7 +64,7 @@ bool ProductionExporter::export_animation_frame()
 
 	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
 		PRINT_INFO_EX("Exporting animation frame %d, in file", frame);
-		sync(false);
+		sync(check_updated);
 	} else {
 		PRINT_INFO_EX("Exporting animation frame %d", frame);
 
@@ -72,7 +72,7 @@ bool ProductionExporter::export_animation_frame()
 		m_exporter->set_current_frame(frame);
 
 		m_exporter->stop();
-		sync(false);
+		sync(check_updated);
 		m_exporter->start();
 
 		auto lastTime = high_resolution_clock::now();
@@ -126,7 +126,7 @@ bool ProductionExporter::do_export()
 
 				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), fr);
 
-				res = export_animation_frame();
+				res = export_animation_frame(false);
 			}
 			m_scene.frame_set(restore, 0.f);
 		} else {
@@ -153,7 +153,7 @@ bool ProductionExporter::do_export()
 					python_thread_state_save();
 				}
 
-				res = export_animation_frame();
+				res = export_animation_frame(false);
 				while (res && !m_renderFinished && !is_interrupted()) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}
