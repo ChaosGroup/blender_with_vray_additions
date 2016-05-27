@@ -226,6 +226,9 @@ void SceneExporter::sync(const int &check_updated)
 		PRINT_INFO_EX("SceneExporter::sync(%i)",
 		              check_updated);
 
+		const bool onlyCamera = m_settings.settings_animation.use &&
+		                        m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
+
 		m_settings.update(m_context, m_engine, m_data, m_scene);
 
 		VRayBaseTypes::RenderMode renderMode = m_view3d
@@ -240,7 +243,7 @@ void SceneExporter::sync(const int &check_updated)
 		sync_prepass();
 
 		// Export once per viewport session
-		if (!check_updated) {
+		if (!check_updated && !onlyCamera) {
 			sync_render_settings();
 
 			if (!is_viewport()) {
@@ -250,13 +253,15 @@ void SceneExporter::sync(const int &check_updated)
 
 		// First materials sync is done from "sync_objects"
 		// so run it only in update call
-		if (check_updated) {
+		if (check_updated && !onlyCamera) {
 			sync_materials();
 		}
 
 		sync_view(check_updated);
-		sync_objects(check_updated);
-		sync_effects(check_updated);
+		if (!onlyCamera) {
+			sync_objects(check_updated);
+			sync_effects(check_updated);
+		}
 
 		// Sync data (will remove deleted objects)
 		m_data_exporter.sync();
