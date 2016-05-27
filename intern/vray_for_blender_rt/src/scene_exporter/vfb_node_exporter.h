@@ -269,6 +269,7 @@ public:
 	};
 
 	typedef std::map<BL::Material, AttrValue> MaterialCache;
+	typedef std::unordered_map<std::string, std::vector<BL::Object>> ObjectHideMap;
 
 	DataExporter()
 	    : m_data(PointerRNA_NULL)
@@ -277,6 +278,7 @@ public:
 	    , m_context(PointerRNA_NULL)
 	    , m_view3d(PointerRNA_NULL)
 	    , m_exporter(nullptr)
+	    , m_active_camera(PointerRNA_NULL)
 	{}
 
 	// Generate unique plugin name from node
@@ -366,7 +368,7 @@ public:
 
 	void              clearMaterialCache();
 
-	// TODO: make this camera dependent
+	void              setActiveCamera(BL::Camera camera);
 	void              refreshHideLists();
 	bool              isObjectInHideList(BL::Object ob, const std::string listName) const;
 
@@ -423,9 +425,11 @@ private:
 	BL::RenderEngine  m_engine;
 	BL::Context       m_context;
 	BL::SpaceView3D   m_view3d;
+
+	BL::Camera        m_active_camera;
 	// should be set on each sync with setComputedLayers
 	uint32_t          m_computedLayers;
-	std::unordered_map<std::string, std::vector<BL::Object>> m_hide_lists;
+	ObjectHideMap     m_hide_lists;
 
 	PluginExporter   *m_exporter;
 	ExporterSettings  m_settings;

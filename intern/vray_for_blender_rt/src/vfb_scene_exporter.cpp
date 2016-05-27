@@ -66,6 +66,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_isRunning(false)
     , m_isLocalView(false)
     , m_python_thread_state(nullptr)
+    , m_active_camera(m_scene.camera() ? m_scene.camera() : view3d.camera())
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -298,6 +299,7 @@ void SceneExporter::sync_prepass()
 	m_data_exporter.m_id_cache.clear();
 	m_data_exporter.m_id_track.reset_usage();
 	m_data_exporter.clearMaterialCache();
+	m_data_exporter.setActiveCamera(m_active_camera);
 	m_data_exporter.refreshHideLists();
 
 	BL::BlendData::node_groups_iterator nIt;

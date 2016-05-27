@@ -181,6 +181,7 @@ void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngi
 	m_engine = engine;
 	m_context = context;
 	m_view3d = view3d;
+	m_active_camera = BL::Camera(scene.camera() ? scene.camera() : view3d.camera());
 }
 
 

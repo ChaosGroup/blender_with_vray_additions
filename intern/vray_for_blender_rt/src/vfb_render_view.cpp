@@ -229,7 +229,7 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 {
 	if (m_region3d.view_perspective() == BL::RegionView3D::view_perspective_CAMERA) {
 		BL::Object cameraObject = m_view3d.lock_camera_and_layers()
-		                          ? m_scene.camera()
+		                          ? BL::Object(m_active_camera)
 		                          : m_view3d.camera();
 
 		if (!(cameraObject && cameraObject.data())) {
@@ -395,7 +395,7 @@ void SceneExporter::sync_view(int check_updated)
 		viewParams.renderSize.h *= m_settings.getViewportResolutionPercentage();
 	}
 	else {
-		BL::Object sceneCamera(m_scene.camera());
+		BL::Object sceneCamera(m_active_camera);
 		if (!sceneCamera) {
 			PRINT_ERROR("Active scene camera is not set!")
 		}

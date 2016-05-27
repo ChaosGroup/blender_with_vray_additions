@@ -114,17 +114,21 @@ std::vector<BL::Object> DataExporter::getObjectList(const std::string ob_name, c
 	return objects;
 }
 
+void DataExporter::setActiveCamera(BL::Camera camera)
+{
+	m_active_camera = camera;
+}
+
 void DataExporter::refreshHideLists()
 {
 	m_hide_lists.clear();
 
-	auto camera = m_scene.camera();
-	if (!camera) {
+	if (!m_active_camera) {
+		PRINT_WARN("No active camera set in DataExporter!");
 		return;
 	}
 
-	BL::Camera cameraData(camera.data());
-	PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+	PointerRNA vrayCamera = RNA_pointer_get(&m_active_camera.ptr, "vray");
 	if (!RNA_boolean_get(&vrayCamera, "hide_from_view")) {
 		return;
 	}
@@ -141,7 +145,7 @@ void DataExporter::refreshHideLists()
 		if (RNA_boolean_get(&vrayCamera, ("hf_" + type + "_auto").c_str())) {
 			if (!autoObjectsInit) {
 				autoObjectsInit = true;
-				autoObjects = getObjectList("", "hf_" + camera.name());
+				autoObjects = getObjectList("", "hf_" + m_active_camera.name());
 			}
 			m_hide_lists[type] = autoObjects;
 		} else {

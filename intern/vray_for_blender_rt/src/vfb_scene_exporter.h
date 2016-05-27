@@ -105,6 +105,10 @@ protected:
 	BL::RegionView3D     m_region3d;
 	BL::Region           m_region;
 
+	// this is the camera that should be used for exporting
+	// as it can be controlled by the exporter, by default it is m_scene.camera()
+	BL::Camera           m_active_camera;
+
 	// will store the python thread state when this exporter must change python data
 	void                *m_python_thread_state;
 	// only used if m_isAnimationRunning is true, since there are 2 threads
