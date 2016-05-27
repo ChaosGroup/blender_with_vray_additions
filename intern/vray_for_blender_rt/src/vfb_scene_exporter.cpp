@@ -441,7 +441,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 			if (!override && ob.modifiers.length()) {
 				overrideAttr.override = true;
-				overrideAttr.visible = ob_is_duplicator_renderable(ob);
+				overrideAttr.visible = ob_is_duplicator_renderable(ob) && !m_data_exporter.isObjectInHideList(ob, "camera");
 				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			}
 
@@ -506,13 +506,14 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 
 	bool skip_export = (m_exporter->get_is_viewport() ? ob.hide() : ob.hide_render()) ||
-	                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers()))) ||
-	                  m_data_exporter.isObjectInHideList(ob, "camera");
+	                  !(m_sceneComputedLayers & ::get_layer(ob, m_isLocalView, to_int_layer(m_scene.layers())));
 
 	if (skip_export) {
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
 		return;
 	}
+
+	const bool hideFromCamera = m_data_exporter.isObjectInHideList(ob, "camera");
 
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
@@ -556,7 +557,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::Object      dupOb(dupliOb.object());
 
 		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
-		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(dupOb, m_isLocalView, scene_layers);
+		const bool visible_on_layer = m_sceneComputedLayers & ::get_layer(dupOb, m_isLocalView, scene_layers) && !hideFromCamera;
 
 		//instancer_visible = instancer_visible && !is_hidden;
 
@@ -571,7 +572,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				ObjectOverridesAttrs overrideAttrs;
 
 				overrideAttrs.override = true;
-				overrideAttrs.visible = true;
+				overrideAttrs.visible = true && !hideFromCamera;
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
 				overrideAttrs.id = persistendID;
 
@@ -701,7 +702,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 
 			sync_object(ob, check_updated, overAttrs);
 		}
-		else if (ob.modifiers.length() && visible_on_layer) {
+		else if (ob.modifiers.length()) {
 			BL::ArrayModifier modArray(PointerRNA_NULL);
 			BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
 			ObjectOverridesAttrs overrideAttrs;
@@ -720,6 +721,8 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				// Disable for render so that object is exported without Array modifier
 				modArray.show_render(false);
 				modArray.show_viewport(false);
+			} else {
+				overrideAttrs.override = false;
 			}
 
 			sync_object(ob, check_updated, overrideAttrs);
