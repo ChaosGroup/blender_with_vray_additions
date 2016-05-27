@@ -68,6 +68,7 @@
 #include "ED_object.h"
 #include "ED_screen.h"
 #include "ED_transform.h"
+#include "ED_transform_snap_object_context.h"
 #include "ED_uvedit.h"
 #include "ED_view3d.h"
 
@@ -3011,7 +3012,7 @@ static Base *mesh_separate_tagged(Main *bmain, Scene *scene, Base *base_old, BMe
 
 	BM_mesh_normals_update(bm_new);
 
-	BM_mesh_bm_to_me(bm_new, base_new->object->data, false);
+	BM_mesh_bm_to_me(bm_new, base_new->object->data, (&(struct BMeshToMeshParams){0}));
 
 	BM_mesh_free(bm_new);
 	((Mesh *)base_new->object->data)->edit_btmesh = NULL;
@@ -3294,7 +3295,7 @@ static int edbm_separate_exec(bContext *C, wmOperator *op)
 
 					bm_old = BM_mesh_create(&bm_mesh_allocsize_default);
 
-					BM_mesh_bm_from_me(bm_old, me, false, false, 0);
+					BM_mesh_bm_from_me(bm_old, me, (&(struct BMeshFromMeshParams){0}));
 
 					switch (type) {
 						case MESH_SEPARATE_MATERIAL:
@@ -3309,7 +3310,7 @@ static int edbm_separate_exec(bContext *C, wmOperator *op)
 					}
 
 					if (retval_iter) {
-						BM_mesh_bm_to_me(bm_old, me, false);
+						BM_mesh_bm_to_me(bm_old, me, (&(struct BMeshToMeshParams){0}));
 
 						DAG_id_tag_update(&me->id, OB_RECALC_DATA);
 						WM_event_add_notifier(C, NC_GEOM | ND_DATA, me);
@@ -5124,6 +5125,17 @@ static int edbm_bridge_edge_loops_exec(bContext *C, wmOperator *op)
 	             "bridge_loops edges=%he use_pairs=%b use_cyclic=%b use_merge=%b merge_factor=%f twist_offset=%i",
 	             edge_hflag, use_pairs, use_cyclic, use_merge, merge_factor, twist_offset);
 
+	if (use_faces && totface_del) {
+		int i;
+		BM_mesh_elem_hflag_disable_all(em->bm, BM_FACE, BM_ELEM_TAG, false);
+		for (i = 0; i < totface_del; i++) {
+			BM_elem_flag_enable(totface_del_arr[i], BM_ELEM_TAG);
+		}
+		BMO_op_callf(em->bm, BMO_FLAG_DEFAULTS,
+		             "delete geom=%hf context=%i",
+		             BM_ELEM_TAG, DEL_FACES_KEEP_BOUNDARY);
+	}
+
 	BMO_op_exec(em->bm, &bmop);
 
 	if (!BMO_error_occurred(em->bm)) {
@@ -5131,17 +5143,6 @@ static int edbm_bridge_edge_loops_exec(bContext *C, wmOperator *op)
 		if (use_merge == false) {
 			EDBM_flag_disable_all(em, BM_ELEM_SELECT);
 			BMO_slot_buffer_hflag_enable(em->bm, bmop.slots_out, "faces.out", BM_FACE, BM_ELEM_SELECT, true);
-		}
-
-		if (use_faces && totface_del) {
-			int i;
-			BM_mesh_elem_hflag_disable_all(em->bm, BM_FACE, BM_ELEM_TAG, false);
-			for (i = 0; i < totface_del; i++) {
-				BM_elem_flag_enable(totface_del_arr[i], BM_ELEM_TAG);
-			}
-			BMO_op_callf(em->bm, BMO_FLAG_DEFAULTS,
-			             "delete geom=%hf context=%i",
-			             BM_ELEM_TAG, DEL_FACES);
 		}
 
 		if (use_merge == false) {

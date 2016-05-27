@@ -193,57 +193,57 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
         cls.aa_samples = IntProperty(
                 name="AA Samples",
                 description="Number of antialiasing samples to render for each pixel",
-                min=1, max=10000,
+                min=1, max=2097151,
                 default=4,
                 )
         cls.preview_aa_samples = IntProperty(
                 name="AA Samples",
                 description="Number of antialiasing samples to render in the viewport, unlimited if 0",
-                min=0, max=10000,
+                min=0, max=2097151,
                 default=4,
                 )
         cls.diffuse_samples = IntProperty(
                 name="Diffuse Samples",
                 description="Number of diffuse bounce samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
         cls.glossy_samples = IntProperty(
                 name="Glossy Samples",
                 description="Number of glossy bounce samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
         cls.transmission_samples = IntProperty(
                 name="Transmission Samples",
                 description="Number of transmission bounce samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
         cls.ao_samples = IntProperty(
                 name="Ambient Occlusion Samples",
                 description="Number of ambient occlusion samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
         cls.mesh_light_samples = IntProperty(
                 name="Mesh Light Samples",
                 description="Number of mesh emission light samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
 
         cls.subsurface_samples = IntProperty(
                 name="Subsurface Samples",
                 description="Number of subsurface scattering samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
 
         cls.volume_samples = IntProperty(
                 name="Volume Samples",
                 description="Number of volume scattering samples to render for each AA sample",
-                min=1, max=10000,
+                min=1, max=1024,
                 default=1,
                 )
 
@@ -359,7 +359,7 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 description="Distance between volume shader samples when rendering the volume "
                             "(lower values give more accurate and detailed results, but also increased render time)",
                 default=0.1,
-                min=0.0000001, max=100000.0, soft_min=0.01, soft_max=1.0
+                min=0.0000001, max=100000.0, soft_min=0.01, soft_max=1.0, precision=4
                 )
 
         cls.volume_max_steps = IntProperty(
@@ -593,6 +593,8 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
         cls.debug_use_cpu_sse3 = BoolProperty(name="SSE3", default=True)
         cls.debug_use_cpu_sse2 = BoolProperty(name="SSE2", default=True)
         cls.debug_use_qbvh = BoolProperty(name="QBVH", default=True)
+
+        cls.debug_use_cuda_adaptive_compile = BoolProperty(name="Adaptive Compile", default=False)
 
         cls.debug_opencl_kernel_type = EnumProperty(
             name="OpenCL Kernel Type",

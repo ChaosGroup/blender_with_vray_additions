@@ -32,23 +32,18 @@ CCL_NAMESPACE_BEGIN
 
 typedef map<void*, ShaderInput*> PtrInputMap;
 typedef map<void*, ShaderOutput*> PtrOutputMap;
-typedef map<std::string, ProxyNode*> ProxyMap;
+typedef map<std::string, ConvertNode*> ProxyMap;
 
 /* Find */
 
 void BlenderSync::find_shader(BL::ID& id,
-                              vector<uint>& used_shaders,
-                              int default_shader)
+                              vector<Shader*>& used_shaders,
+                              Shader *default_shader)
 {
-	Shader *shader = (id)? shader_map.find(id): scene->shaders[default_shader];
+	Shader *shader = (id)? shader_map.find(id): default_shader;
 
-	for(size_t i = 0; i < scene->shaders.size(); i++) {
-		if(scene->shaders[i] == shader) {
-			used_shaders.push_back(i);
-			scene->shaders[i]->tag_used(scene);
-			break;
-		}
-	}
+	used_shaders.push_back(shader);
+	shader->tag_used(scene);
 }
 
 /* RNA translation utilities */
@@ -291,7 +286,7 @@ static ShaderNode *add_node(Scene *scene,
 		RGBRampNode *ramp = new RGBRampNode();
 		BL::ShaderNodeValToRGB b_ramp_node(b_node);
 		BL::ColorRamp b_color_ramp(b_ramp_node.color_ramp());
-		colorramp_to_array(b_color_ramp, ramp->ramp, RAMP_TABLE_SIZE);
+		colorramp_to_array(b_color_ramp, ramp->ramp, ramp->ramp_alpha, RAMP_TABLE_SIZE);
 		ramp->interpolate = b_color_ramp.interpolation() != BL::ColorRamp::interpolation_CONSTANT;
 		node = ramp;
 	}
@@ -321,10 +316,6 @@ static ShaderNode *add_node(Scene *scene,
 		BL::ShaderNodeMixRGB b_mix_node(b_node);
 		MixNode *mix = new MixNode();
 		mix->type = MixNode::type_enum[b_mix_node.blend_type()];
-		/* Tag if it's Mix */
-		if(b_mix_node.blend_type() == 0) 
-			mix->special_type = SHADER_SPECIAL_TYPE_MIX_RGB;
-
 		mix->use_clamp = b_mix_node.use_clamp();
 		node = mix;
 	}
@@ -602,12 +593,14 @@ static ShaderNode *add_node(Scene *scene,
 			 * input/output type info needed for proper node construction.
 			 */
 			OSL::OSLQuery query;
+			string absolute_filepath;
 
 			if(!bytecode_hash.empty()) {
 				query.open_bytecode(b_script_node.bytecode());
 			}
 			else {
-				OSLShaderManager::osl_query(query, b_script_node.filepath());
+				absolute_filepath = blender_absolute_path(b_data, b_ntree, b_script_node.filepath());
+				OSLShaderManager::osl_query(query, absolute_filepath);
 			}
 			/* TODO(sergey): Add proper query info error parsing. */
 
@@ -617,12 +610,11 @@ static ShaderNode *add_node(Scene *scene,
 			 * so the names match those of the corresponding parameters exactly.
 			 *
 			 * Note 2: ShaderInput/ShaderOutput store shallow string copies only!
-			 * Socket names must be stored in the extra lists instead. */
+			 * So we register them as ustring to ensure the pointer stays valid. */
 			BL::Node::inputs_iterator b_input;
 
 			for(b_script_node.inputs.begin(b_input); b_input != b_script_node.inputs.end(); ++b_input) {
-				script_node->input_names.push_back(ustring(b_input->name()));
-				ShaderInput *input = script_node->add_input(script_node->input_names.back().c_str(),
+				ShaderInput *input = script_node->add_input(ustring(b_input->name()).c_str(),
 				                                            convert_osl_socket_type(query, *b_input));
 				set_default_value(input, *b_input, b_data, b_ntree);
 			}
@@ -630,8 +622,7 @@ static ShaderNode *add_node(Scene *scene,
 			BL::Node::outputs_iterator b_output;
 
 			for(b_script_node.outputs.begin(b_output); b_output != b_script_node.outputs.end(); ++b_output) {
-				script_node->output_names.push_back(ustring(b_output->name()));
-				script_node->add_output(script_node->output_names.back().c_str(),
+				script_node->add_output(ustring(b_output->name()).c_str(),
 				                        convert_osl_socket_type(query, *b_output));
 			}
 
@@ -645,7 +636,7 @@ static ShaderNode *add_node(Scene *scene,
 			}
 			else {
 				/* set filepath */
-				script_node->filepath = blender_absolute_path(b_data, b_ntree, b_script_node.filepath());
+				script_node->filepath = absolute_filepath;
 			}
 
 			node = script_node;
@@ -732,10 +723,10 @@ static ShaderNode *add_node(Scene *scene,
 				env->filename = image_user_file_path(b_image_user,
 				                                     b_image,
 				                                     b_scene.frame_current());
-				env->animated = b_env_node.image_user().use_auto_refresh();
 				env->builtin_data = NULL;
 			}
 
+			env->animated = b_env_node.image_user().use_auto_refresh();
 			env->use_alpha = b_image.use_alpha();
 
 			/* TODO(sergey): Does not work properly when we change builtin type. */
@@ -1029,7 +1020,8 @@ static void add_nodes(Scene *scene,
 			BL::Node::internal_links_iterator b_link;
 			for(b_node->internal_links.begin(b_link); b_link != b_node->internal_links.end(); ++b_link) {
 				BL::NodeSocket to_socket(b_link->to_socket());
-				ProxyNode *proxy = new ProxyNode(convert_socket_type(to_socket));
+				ShaderSocketType to_socket_type = convert_socket_type(to_socket);
+				ConvertNode *proxy = new ConvertNode(to_socket_type, to_socket_type, true);
 
 				input_map[b_link->from_socket().ptr.data] = proxy->inputs[0];
 				output_map[b_link->to_socket().ptr.data] = proxy->outputs[0];
@@ -1051,7 +1043,8 @@ static void add_nodes(Scene *scene,
 			 * so that links have something to connect to and assert won't fail.
 			 */
 			for(b_node->inputs.begin(b_input); b_input != b_node->inputs.end(); ++b_input) {
-				ProxyNode *proxy = new ProxyNode(convert_socket_type(*b_input));
+				ShaderSocketType input_type = convert_socket_type(*b_input);
+				ConvertNode *proxy = new ConvertNode(input_type, input_type, true);
 				graph->add(proxy);
 
 				/* register the proxy node for internal binding */
@@ -1062,7 +1055,8 @@ static void add_nodes(Scene *scene,
 				set_default_value(proxy->inputs[0], *b_input, b_data, b_ntree);
 			}
 			for(b_node->outputs.begin(b_output); b_output != b_node->outputs.end(); ++b_output) {
-				ProxyNode *proxy = new ProxyNode(convert_socket_type(*b_output));
+				ShaderSocketType output_type = convert_socket_type(*b_output);
+				ConvertNode *proxy = new ConvertNode(output_type, output_type, true);
 				graph->add(proxy);
 
 				/* register the proxy node for internal binding */
@@ -1088,7 +1082,7 @@ static void add_nodes(Scene *scene,
 			for(b_node->outputs.begin(b_output); b_output != b_node->outputs.end(); ++b_output) {
 				ProxyMap::const_iterator proxy_it = proxy_input_map.find(b_output->identifier());
 				if(proxy_it != proxy_input_map.end()) {
-					ProxyNode *proxy = proxy_it->second;
+					ConvertNode *proxy = proxy_it->second;
 
 					output_map[b_output->ptr.data] = proxy->outputs[0];
 				}
@@ -1102,7 +1096,7 @@ static void add_nodes(Scene *scene,
 				for(b_node->inputs.begin(b_input); b_input != b_node->inputs.end(); ++b_input) {
 					ProxyMap::const_iterator proxy_it = proxy_output_map.find(b_input->identifier());
 					if(proxy_it != proxy_output_map.end()) {
-						ProxyNode *proxy = proxy_it->second;
+						ConvertNode *proxy = proxy_it->second;
 
 						input_map[b_input->ptr.data] = proxy->inputs[0];
 
@@ -1208,7 +1202,7 @@ static void add_nodes(Scene *scene,
 
 void BlenderSync::sync_materials(bool update_all)
 {
-	shader_map.set_default(scene->shaders[scene->default_surface]);
+	shader_map.set_default(scene->default_surface);
 
 	/* material loop */
 	BL::BlendData::materials_iterator b_mat;
@@ -1263,7 +1257,7 @@ void BlenderSync::sync_world(bool update_all)
 	BL::World b_world = b_scene.world();
 
 	if(world_recalc || update_all || b_world.ptr.data != world_map) {
-		Shader *shader = scene->shaders[scene->default_background];
+		Shader *shader = scene->default_background;
 		ShaderGraph *graph = new ShaderGraph();
 
 		/* create nodes */
@@ -1343,7 +1337,7 @@ void BlenderSync::sync_world(bool update_all)
 
 void BlenderSync::sync_lamps(bool update_all)
 {
-	shader_map.set_default(scene->shaders[scene->default_light]);
+	shader_map.set_default(scene->default_light);
 
 	/* lamp loop */
 	BL::BlendData::lamps_iterator b_lamp;
