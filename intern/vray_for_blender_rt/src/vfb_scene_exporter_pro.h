@@ -57,6 +57,9 @@ public:
 	virtual void      sync_object_modiefiers(BL::Object ob, const int &check_updated);
 
 	virtual void      render_start() override;
+	void              render_end();
+	void              render_frame();
+	void              render_loop();
 
 	virtual void      setup_callbacks() override;
 	virtual int	      is_interrupted() override;
@@ -70,10 +73,15 @@ private:
 	// used to signal a frame has been rendered
 	int               m_renderFinished;
 	RenderImageMan    m_imageMan;
-	volatile bool     m_imageDirty;
+	bool              m_imageDirty;
+
 	bool              m_isAnimationRunning;
 	float             m_progress;
 	float             m_animationProgress;
+	int               m_frameCurrent;
+	int               m_frameStep;
+	int               m_frameCount;
+	bool              m_isFirstFrame;
 
 	std::vector<BL::RenderResult> m_renderResultsList;
 
