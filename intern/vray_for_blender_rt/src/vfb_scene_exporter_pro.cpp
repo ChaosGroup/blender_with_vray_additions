@@ -251,11 +251,11 @@ void ProductionExporter::render_frame()
 	if (!m_isRunning) {
 		return;
 	}
-	m_imageDirty = true;
+
 	const float frame_contrib = 1.f / m_frameCount;
 	PRINT_INFO_EX("Rendering progress: this frame[%d%%], total[%d%%]", (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
 
-	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock_t());
+	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 
 	if (m_imageDirty) {
 		m_imageDirty = false;
