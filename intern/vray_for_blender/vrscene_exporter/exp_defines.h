@@ -83,7 +83,7 @@ if(curHash != prevHash) { \
 
 #define PYTHON_PRINT_DATA(output, attr, type, curData, curHash, prevPtr, prevData, prevHash) \
 if(NOT(prevPtr)) { \
-	PYTHON_PRINTF(output, "\n\t"attr"=%s"type"(\"", m_interpStart); \
+	PYTHON_PRINTF(output, "\n\t" attr "=%s" type "(\"", m_interpStart); \
 	PYTHON_PRINT(output, curData); \
 	PYTHON_PRINTF(output, "\")%s;", m_interpEnd); \
 } \
