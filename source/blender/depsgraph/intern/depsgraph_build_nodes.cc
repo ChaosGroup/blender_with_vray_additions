@@ -248,6 +248,13 @@ void DepsgraphNodeBuilder::build_scene(Main *bmain, Scene *scene)
 	 * needed.
 	 */
 	BKE_main_id_tag_all(bmain, LIB_TAG_DOIT, false);
+	/* XXX nested node trees are not included in tag-clearing above,
+	 * so we need to do this manually.
+	 */
+	FOREACH_NODETREE(bmain, nodetree, id) {
+		if (id != (ID *)nodetree)
+			nodetree->id.tag &= ~LIB_TAG_DOIT;
+	} FOREACH_NODETREE_END
 
 	/* scene ID block */
 	add_id_node(&scene->id);
@@ -374,10 +381,10 @@ void DepsgraphNodeBuilder::build_object(Scene *scene, Base *base, Object *ob)
 
 	IDDepsNode *id_node = add_id_node(&ob->id);
 	id_node->layers = base->lay;
+	ob->customdata_mask = 0;
 
 	/* standard components */
 	build_object_transform(scene, ob);
-
 
 	/* object data */
 	if (ob->data) {

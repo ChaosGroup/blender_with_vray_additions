@@ -55,6 +55,7 @@ extern "C" {
 #include "depsnode_operation.h"
 #include "depsnode_component.h"
 #include "depsgraph_intern.h"
+#include "depsgraph_util_foreach.h"
 
 static DEG_EditorUpdateIDCb deg_editor_update_id_cb = NULL;
 static DEG_EditorUpdateSceneCb deg_editor_update_scene_cb = NULL;
@@ -295,11 +296,7 @@ void Depsgraph::remove_subgraph_node(SubgraphDepsNode *subgraph_node)
 
 void Depsgraph::clear_subgraph_nodes()
 {
-	for (Subgraphs::iterator it = subgraphs.begin();
-	     it != subgraphs.end();
-	     ++it)
-	{
-		SubgraphDepsNode *subgraph_node = *it;
+	foreach (SubgraphDepsNode *subgraph_node, subgraphs) {
 		OBJECT_GUARDED_DELETE(subgraph_node, SubgraphDepsNode);
 	}
 	subgraphs.clear();
@@ -413,18 +410,28 @@ DepsRelation::DepsRelation(DepsNode *from,
 */
 #endif
 
-	/* Hook it up to the nodes which use it. */
-	from->outlinks.insert(this);
-	to->inlinks.insert(this);
+	/* Hook it up to the nodes which use it.
+	 *
+	 * NOTE: We register relation in the nodes which this link connects to here
+	 * in constructor but we don't unregister it in the destructor.
+	 *
+	 * Reasoning:
+	 *
+	 * - Destructor is currently used on global graph destruction, so there's no
+	 *   real need in avoiding dangling pointers, all the memory is to be freed
+	 *   anyway.
+	 *
+	 * - Unregistering relation is not a cheap operation, so better to have it
+	 *   as an explicit call if we need this.
+	 */
+	from->outlinks.push_back(this);
+	to->inlinks.push_back(this);
 }
 
 DepsRelation::~DepsRelation()
 {
 	/* Sanity check. */
 	BLI_assert(this->from && this->to);
-	/* Remove it from the nodes that use it. */
-	this->from->outlinks.erase(this);
-	this->to->inlinks.erase(this);
 }
 
 /* Low level tagging -------------------------------------- */

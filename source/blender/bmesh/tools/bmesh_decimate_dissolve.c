@@ -226,6 +226,12 @@ static bool  bm_vert_collapse_is_degenerate(BMVert *v)
 	BMVert *v_pair[2];
 
 	if (BM_vert_edge_pair(v, &e_pair[0], &e_pair[1])) {
+
+		/* allow wire edges */
+		if (BM_edge_is_wire(e_pair[0]) || BM_edge_is_wire(e_pair[1])) {
+			return false;
+		}
+
 		v_pair[0] = BM_edge_other_vert(e_pair[0], v);
 		v_pair[1] = BM_edge_other_vert(e_pair[1], v);
 
@@ -290,7 +296,6 @@ void BM_mesh_decimate_dissolve_ex(
 
 		/* --- setup heap --- */
 		eheap = BLI_heap_new_ex(einput_len);
-		eheap_table = _heap_table;
 
 		/* wire -> tag */
 		BM_ITER_MESH (e_iter, &iter, bm, BM_EDGES_OF_MESH) {

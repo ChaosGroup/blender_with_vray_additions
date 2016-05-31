@@ -46,6 +46,7 @@ extern "C" {
 #include "depsnode_component.h"
 #include "depsnode_operation.h"
 #include "depsgraph_intern.h"
+#include "depsgraph_util_foreach.h"
 
 /* *************** */
 /* Node Management */
@@ -71,17 +72,12 @@ DepsNode::DepsNode()
 
 DepsNode::~DepsNode()
 {
-	/* free links
-	 * note: deleting relations will remove them from the node relations set,
-	 * but only touch the same position as we are using here, which is safe.
+	/* Free links. */
+	/* NOTE: We only free incoming links. This is to avoid double-free of links
+	 * when we're trying to free same link from both it's sides. We don't have
+	 * dangling links so this is not a problem from memory leaks point of view.
 	 */
 	DEPSNODE_RELATIONS_ITER_BEGIN(this->inlinks, rel)
-	{
-		OBJECT_GUARDED_DELETE(rel, DepsRelation);
-	}
-	DEPSNODE_RELATIONS_ITER_END;
-
-	DEPSNODE_RELATIONS_ITER_BEGIN(this->outlinks, rel)
 	{
 		OBJECT_GUARDED_DELETE(rel, DepsRelation);
 	}
@@ -105,11 +101,7 @@ string DepsNode::identifier() const
 
 void TimeSourceDepsNode::tag_update(Depsgraph *graph)
 {
-	for (DepsNode::Relations::const_iterator it = outlinks.begin();
-	     it != outlinks.end();
-	     ++it)
-	{
-		DepsRelation *rel = *it;
+	foreach (DepsRelation *rel, outlinks) {
 		DepsNode *node = rel->to;
 		node->tag_update(graph);
 	}

@@ -332,7 +332,7 @@ install(
 
 if(WITH_PYTHON)
 	# install(CODE "message(\"copying blender scripts...\")")
-	
+
 	# exclude addons_contrib if release
 	if("${BLENDER_VERSION_CYCLE}" STREQUAL "release")
 		set(ADDON_EXCLUDE_CONDITIONAL "addons_contrib/*")
@@ -355,7 +355,7 @@ if(WITH_PYTHON)
 		PATTERN "${ADDON_EXCLUDE_CONDITIONAL}" EXCLUDE
 		PATTERN "${FREESTYLE_EXCLUDE_CONDITIONAL}" EXCLUDE
 	)
-	
+
 	unset(ADDON_EXCLUDE_CONDITIONAL)
 	unset(FREESTYLE_EXCLUDE_CONDITIONAL)
 endif()
@@ -421,7 +421,8 @@ if("${CMAKE_GENERATOR}" MATCHES ".*Makefiles.*")
 	# message after building.
 	add_custom_command(
 		TARGET blender POST_BUILD MAIN_DEPENDENCY blender
-		COMMAND ${CMAKE_COMMAND} -E echo 'now run: \"make install\" to copy runtime files and scripts to ${TARGETDIR_VER}'
+		COMMAND ${CMAKE_COMMAND} -E
+		        echo 'now run: \"make install\" to copy runtime files and scripts to ${TARGETDIR_VER}'
 	)
 endif()
 
@@ -569,9 +570,6 @@ if(UNIX AND NOT APPLE)
 			)
 			unset(_py_inc_suffix)
 
-			# # doesnt work, todo
-			# install(CODE "execute_process(COMMAND find ${CMAKE_INSTALL_PREFIX}/${BLENDER_VERSION}/python/lib/ -name '*.so' -exec strip -s {} '\;')")
-
 			if(WITH_PYTHON_INSTALL_NUMPY)
 				# Install to the same directory as the source, so debian-like
 				# distros are happy with their policy.
@@ -589,7 +587,7 @@ if(UNIX AND NOT APPLE)
 					PATTERN "oldnumeric" EXCLUDE            # ./oldnumeric
 					PATTERN "doc" EXCLUDE                   # ./doc
 					PATTERN "tests" EXCLUDE                 # ./tests
-					PATTERN "f2py" EXCLUDE                  # ./f2py - fortran/python interface code, not fun for blender devs.
+					PATTERN "f2py" EXCLUDE                  # ./f2py - fortran/python interface code, not for blender.
 					PATTERN "include" EXCLUDE               # include dirs all over, we wont use NumPy/CAPI
 					PATTERN "*.h" EXCLUDE                   # some includes are not in include dirs
 					PATTERN "*.a" EXCLUDE                   # ./core/lib/libnpymath.a - for linking, we dont need.
@@ -630,13 +628,13 @@ if(UNIX AND NOT APPLE)
 						FILES ${PYTHON_REQUESTS_PATH}/six.py
 						DESTINATION ${TARGETDIR_VER}/python/${_target_LIB}/python${PYTHON_VERSION}/${_suffix}
 					)
-					endif()
+				endif()
 				unset(_requests_dep)
 				unset(_requests_deps)
 				unset(_suffix)
 			endif()
 			unset(_target_LIB)
-			
+
 		endif()
 	endif()
 elseif(WIN32)
@@ -708,16 +706,26 @@ elseif(WIN32)
 
 			if(WITH_PYTHON_INSTALL_NUMPY)
 				add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages
-					COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages)
+					COMMAND ${CMAKE_COMMAND} -E
+					        make_directory ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages)
 
-				add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
-					COMMAND ${CMAKE_COMMAND} -E tar xzvf "${LIBDIR}/release/python${_PYTHON_VERSION_NO_DOTS}_numpy_1.9.tar.gz"
-					DEPENDS ${LIBDIR}/release/python${_PYTHON_VERSION_NO_DOTS}_numpy_1.9.tar.gz
+				add_custom_command(
+					OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
+					COMMAND ${CMAKE_COMMAND} -E
+					        tar xzvf "${LIBDIR}/release/python${_PYTHON_VERSION_NO_DOTS}_numpy_1.9.tar.gz"
+					DEPENDS
+						${LIBDIR}/release/python${_PYTHON_VERSION_NO_DOTS}_numpy_1.9.tar.gz
 						${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages
-					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages)
-				add_custom_target(python_numpy ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy)
-				install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
-						DESTINATION ${BLENDER_VERSION}/python/lib/site-packages)
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages
+				)
+				add_custom_target(
+					python_numpy ALL
+					DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
+				)
+				install(
+					DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages/numpy
+					DESTINATION ${BLENDER_VERSION}/python/lib/site-packages
+				)
 			endif()
 
 
@@ -777,16 +785,16 @@ elseif(WIN32)
 			)
 		elseif(WITH_MINGW64)
 			install(
-				FILES 
+				FILES
 					${LIBDIR}/binaries/libgcc_s_sjlj-1.dll
 					${LIBDIR}/binaries/libwinpthread-1.dll
 					${LIBDIR}/binaries/libstdc++-6.dll
 				DESTINATION "."
 			)
-			
+
 			if(WITH_OPENMP)
 				install(
-					FILES 
+					FILES
 					${LIBDIR}/binaries/libgomp-1.dll
 					DESTINATION "."
 				)
@@ -858,7 +866,7 @@ elseif(WIN32)
 			)
 		endif()
 	endif()
-	
+
 	if(WITH_SYSTEM_AUDASPACE)
 		install(
 			FILES
@@ -875,7 +883,7 @@ elseif(WIN32)
 			DESTINATION "."
 		)
 	endif()
-		
+
 	install( # x86 builds can run on x64 Windows, so this is required at all times
 		FILES ${LIBDIR}/thumbhandler/lib/BlendThumb64.dll
 		DESTINATION "."
@@ -936,7 +944,8 @@ elseif(APPLE)
 	OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 	# Give the bundle actual creation/modification date
-	execute_process(COMMAND SetFile -d ${SETFILE_DATE} -m ${SETFILE_DATE} ${EXECUTABLE_OUTPUT_PATH}/blender.app)
+	execute_process(COMMAND SetFile -d ${SETFILE_DATE} -m ${SETFILE_DATE}
+	                ${EXECUTABLE_OUTPUT_PATH}/blender.app)
 
 	install(
 		TARGETS blender
@@ -1012,8 +1021,17 @@ elseif(APPLE)
 			DESTINATION ${TARGETDIR_VER}/python
 			USE_SOURCE_PERMISSIONS
 		)
+
+		# Needed for distutils/pip
+		# get the last part of the include dir, will be 'python{version}{abiflag}',
+		get_filename_component(_py_inc_suffix ${PYTHON_INCLUDE_DIR} NAME)
+		install(
+			FILES ${PYTHON_INCLUDE_DIR}/pyconfig.h
+			DESTINATION ${TARGETDIR_VER}/python/include/${_py_inc_suffix}
+		)
+		unset(_py_inc_suffix)
 	endif()
-	
+
 	# install blenderplayer bundle - copy of blender.app above. re-using macros et al
 	# note we are using OSX Bundle as base and copying Blender dummy bundle on top of it
 	if(WITH_GAMEENGINE AND WITH_PLAYER)
@@ -1029,7 +1047,8 @@ elseif(APPLE)
 		)
 
 		# Give the bundle actual creation/modification date
-		execute_process(COMMAND SetFile -d ${SETFILE_DATE} -m ${SETFILE_DATE} ${EXECUTABLE_OUTPUT_PATH}/blenderplayer.app)
+		execute_process(COMMAND SetFile -d ${SETFILE_DATE} -m ${SETFILE_DATE}
+		                ${EXECUTABLE_OUTPUT_PATH}/blenderplayer.app)
 
 		install(
 			FILES ${OSX_APP_PLAYER_SOURCEDIR}/Contents/PkgInfo
@@ -1042,10 +1061,10 @@ elseif(APPLE)
 		)
 
 		if(WITH_OPENMP AND CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} VERSION_LESS '3.4')
-		install(
-		FILES ${LIBDIR}/openmp/lib/libiomp5.dylib
-		DESTINATION blenderplayer.app/Contents/Resources/lib/
-		)
+			install(
+				FILES ${LIBDIR}/openmp/lib/libiomp5.dylib
+				DESTINATION blenderplayer.app/Contents/Resources/lib/
+			)
 		endif()
 
 
@@ -1118,9 +1137,11 @@ setup_liblinks(blender)
 # Setup launcher
 
 if(WIN32 AND NOT WITH_PYTHON_MODULE)
-	install(TARGETS blender
-			COMPONENT Blender
-			DESTINATION ".")
+	install(
+		TARGETS blender
+		COMPONENT Blender
+		DESTINATION "."
+	)
 
 	if(MSVC12_REDIST_DIR)
 		if(CMAKE_CL_64)
@@ -1129,13 +1150,16 @@ if(WIN32 AND NOT WITH_PYTHON_MODULE)
 			set(_WIN_PLATFORM x86)
 		endif()
 		install(
-			FILES ${MSVC12_REDIST_DIR}/${_WIN_PLATFORM}/Microsoft.VC120.CRT/msvcp120.dll
-				  ${MSVC12_REDIST_DIR}/${_WIN_PLATFORM}/Microsoft.VC120.CRT/msvcr120.dll
-		DESTINATION ".")
+			FILES
+				${MSVC12_REDIST_DIR}/${_WIN_PLATFORM}/Microsoft.VC120.CRT/msvcp120.dll
+				${MSVC12_REDIST_DIR}/${_WIN_PLATFORM}/Microsoft.VC120.CRT/msvcr120.dll
+			DESTINATION "."
+		)
 		if(WITH_OPENMP)
 			install(
 				FILES ${MSVC12_REDIST_DIR}/${_WIN_PLATFORM}/Microsoft.VC120.OpenMP/vcomp120.dll
-				DESTINATION ".")
+				DESTINATION "."
+			)
 		endif()
 	endif()
 endif()
