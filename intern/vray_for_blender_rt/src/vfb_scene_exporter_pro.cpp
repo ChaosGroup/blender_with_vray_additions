@@ -164,7 +164,7 @@ bool ProductionExporter::do_export()
 				m_frameStep = 1;
 				m_frameCurrent = 0;
 			}
-			m_exporter->stop();
+
 			for (int c = 0; c < m_frameCount && res && !is_interrupted(); ++c) {
 				if (is_camera_loop) {
 					m_active_camera = loop_cameras[c];
@@ -337,11 +337,11 @@ void ProductionExporter::render_start()
 		m_exporter->show_frame_buffer();
 	}
 
-	SceneExporter::render_start();
 
 	m_isRunning = true;
 
 	if (!m_settings.settings_animation.use) {
+		SceneExporter::render_start();
 		render_loop();
 		render_end();
 	}
