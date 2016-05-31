@@ -152,7 +152,11 @@ bool ProductionExporter::do_export()
 				for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 					BL::Object ob(*obIt);
 					if (ob.type() == BL::Object::type_CAMERA) {
-						loop_cameras.push_back(BL::Camera(ob));
+						auto dataPtr = ob.data().ptr;
+						PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
+						if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+							loop_cameras.push_back(BL::Camera(ob));
+						}
 					}
 				}
 
