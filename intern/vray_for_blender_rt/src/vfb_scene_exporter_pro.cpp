@@ -175,6 +175,7 @@ bool ProductionExporter::do_export()
 				}
 				m_isFirstFrame = c == 0;
 				m_frameCurrent = m_frameStep * c;
+				m_animationProgress = (float)c / m_frameCount;
 
 				{
 					std::lock_guard<std::mutex> l(m_python_state_lock);
@@ -185,7 +186,6 @@ bool ProductionExporter::do_export()
 						if (!is_camera_loop) {
 							m_scene.frame_set(m_frameCurrent, 0.f);
 						}
-						m_engine.update_progress(m_animationProgress);
 					python_thread_state_save();
 				}
 
@@ -252,6 +252,10 @@ void ProductionExporter::render_frame()
 		return;
 	}
 	m_imageDirty = true;
+	const float frame_contrib = 1.f / m_frameCount;
+	if (m_settings.settings_animation.use) {
+		PRINT_INFO_EX("Animation progress: this frame[%d%%], total[%d%%]", (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
+	}
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock_t());
 
@@ -266,7 +270,6 @@ void ProductionExporter::render_frame()
 			python_thread_state_restore();
 
 			// for animation add frames progress + current image progress * frame contribution
-			float frame_contrib = 1.f / ((float)(m_scene.frame_end() - m_scene.frame_current()) / (float)m_scene.frame_step());
 			progress = m_animationProgress + m_progress * frame_contrib;
 		} else {
 			// for singe frame - get progress from image
@@ -295,7 +298,7 @@ void ProductionExporter::render_frame()
 			return;
 		}
 		python_thread_state_restore();
-		// progress will be set from animation export loop
+		m_engine.update_progress(m_animationProgress);
 	} else {
 		// single frame export - done
 		m_engine.update_progress(1.f);
