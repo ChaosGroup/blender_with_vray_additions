@@ -128,7 +128,8 @@ void DataExporter::refreshHideLists()
 		return;
 	}
 
-	PointerRNA vrayCamera = RNA_pointer_get(&m_active_camera.ptr, "vray");
+	auto cameraData = BL::Object(m_active_camera).data().ptr;
+	PointerRNA vrayCamera = RNA_pointer_get(&cameraData, "vray");
 	if (!RNA_boolean_get(&vrayCamera, "hide_from_view")) {
 		return;
 	}
