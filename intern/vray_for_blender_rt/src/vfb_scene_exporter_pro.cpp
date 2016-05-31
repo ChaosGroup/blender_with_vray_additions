@@ -253,9 +253,7 @@ void ProductionExporter::render_frame()
 	}
 	m_imageDirty = true;
 	const float frame_contrib = 1.f / m_frameCount;
-	if (m_settings.settings_animation.use) {
-		PRINT_INFO_EX("Animation progress: this frame[%d%%], total[%d%%]", (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
-	}
+	PRINT_INFO_EX("Rendering progress: this frame[%d%%], total[%d%%]", (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock_t());
 
@@ -289,30 +287,6 @@ void ProductionExporter::render_frame()
 			python_thread_state_save();
 			uLock.unlock();
 		}
-	}
-
-
-	if (m_settings.settings_animation.use) {
-		uLock.lock();
-		if (is_interrupted()) {
-			return;
-		}
-		python_thread_state_restore();
-		m_engine.update_progress(m_animationProgress);
-	} else {
-		// single frame export - done
-		m_engine.update_progress(1.f);
-	}
-	for (auto & result : m_renderResultsList) {
-		BL::RenderResult::layers_iterator rrlIt;
-		result.layers.begin(rrlIt);
-		if (rrlIt != result.layers.end()) {
-			m_engine.update_result(result);
-		}
-	}
-	if (m_settings.settings_animation.use) {
-		python_thread_state_save();
-		uLock.unlock();
 	}
 }
 
