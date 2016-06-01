@@ -96,22 +96,22 @@ PluginWriter &operator<<(PluginWriter &pp, const std::string &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrColor &val)
 {
-	PyPrintf(pp, "Color(%g, %g, %g)", val.r, val.g, val.b);
+	PyPrintf(pp, "Color(%g,%g,%g)", val.r, val.g, val.b);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrAColor &val)
 {
-	PyPrintf(pp, "AColor(%g, %g, %g, %g)", val.color.r, val.color.g, val.color.b, val.alpha);
+	PyPrintf(pp, "AColor(%g,%g,%g,%g)", val.color.r, val.color.g, val.color.b, val.alpha);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrVector &val)
 {
-	PyPrintf(pp, "Vector(%g, %g, %g)", val.x, val.y, val.z);
+	PyPrintf(pp, "Vector(%g,%g,%g)", val.x, val.y, val.z);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrVector2 &val)
 {
-	PyPrintf(pp, "Vector2(%g, %g)", val.x, val.y);
+	PyPrintf(pp, "Vector(%g,%g,0)", val.x, val.y);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrMatrix &val)
