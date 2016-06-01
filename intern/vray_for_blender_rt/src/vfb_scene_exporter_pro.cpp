@@ -253,7 +253,7 @@ void ProductionExporter::render_frame()
 	}
 
 	const float frame_contrib = 1.f / m_frameCount;
-	PRINT_INFO_EX("Rendering progress: this frame[%d%%], total[%d%%]", (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
+	PRINT_INFO_EX("Rendering progress: this frame %d [%d%%], total[%d%%]", m_frameCurrent, (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 
@@ -323,6 +323,7 @@ void ProductionExporter::render_start()
 
 	if (!m_settings.settings_animation.use) {
 		SceneExporter::render_start();
+		m_frameCount = m_frameCurrent = m_frameStep = 1;
 		render_loop();
 		render_end();
 	}
