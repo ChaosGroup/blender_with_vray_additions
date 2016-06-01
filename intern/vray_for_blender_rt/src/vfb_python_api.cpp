@@ -143,6 +143,7 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 	PyObject *lightsFile = nullptr;
 	PyObject *materialFile = nullptr;
 	PyObject *textureFile = nullptr;
+	PyObject *cameraFile = nullptr;
 
 	static char *kwlist[] = {
 	    /* 0 */ _C("context"),
@@ -156,12 +157,13 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 8 */ _C("lightsFile"),
 	    /* 9 */ _C("materialFile"),
 	    /* 10 */_C("textureFile"),
+	    /* 11 */_C("cameraFile"),
 	    NULL
 	};
 
-	//                                 0123 45678911
-	//                                            01
-	static const char kwlistTypes[] = "OOOO|OOOOOOO";
+	//                                 0123 456789111
+	//                                            012
+	static const char kwlistTypes[] = "OOOO|OOOOOOOO";
 
 	if (PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 	                                /* 0 */ &pyContext,
@@ -174,7 +176,8 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 	                                /* 7 */ &geometryFile,
 	                                /* 8 */ &lightsFile,
 	                                /* 9 */ &materialFile,
-	                                /* 10 */&textureFile))
+	                                /* 10 */&textureFile,
+	                                /* 11 */&cameraFile))
 	{
 		PointerRNA contextPtr;
 		PointerRNA enginePtr;
@@ -198,6 +201,7 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 			pluginExporter->set_export_file(PluginType::PluginLight, lightsFile);
 			pluginExporter->set_export_file(PluginType::PluginMaterial, materialFile);
 			pluginExporter->set_export_file(PluginType::PluginTexture, textureFile);
+			pluginExporter->set_export_file(PluginType::PluginCamera, cameraFile);
 		}
 		exporter->init_data();
 	} else {
