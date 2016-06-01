@@ -128,14 +128,12 @@ bool ProductionExporter::do_export()
 
 		if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
 			for (int c = 0; c < m_frameCount && res && !is_interrupted(); ++c) {
-				m_animationProgress = (float)c / m_frameStep;
+				m_animationProgress = (float)c / m_frameCount;
 				m_frameCurrent = c * m_frameStep;
 				m_isFirstFrame = c == 0;
 
-				python_thread_state_restore();
-					m_scene.frame_set(m_frameCurrent, 0.f);
-					m_engine.update_progress(m_animationProgress);
-				python_thread_state_save();
+				m_scene.frame_set(m_frameCurrent, 0.f);
+				m_engine.update_progress(m_animationProgress);
 
 				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), m_frameCurrent);
 
@@ -300,6 +298,10 @@ void ProductionExporter::render_loop()
 
 void ProductionExporter::render_start()
 {
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		return SceneExporter::render_start();
+	}
+
 	BL::RenderSettings renderSettings = m_scene.render();
 
 	BL::RenderSettings::layers_iterator rslIt;
