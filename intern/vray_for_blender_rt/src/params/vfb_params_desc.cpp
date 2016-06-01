@@ -50,6 +50,9 @@ VRayForBlender::ParamDesc::PluginType VRayForBlender::ParamDesc::GetPluginTypeFr
 	else if (typeString == "SETTINGS") {
 		pluginType = ParamDesc::PluginSettings;
 	}
+	else if (typeString == "CAMERA") {
+		pluginType = ParamDesc::PluginCamera;
+	}
 
 	return pluginType;
 }
