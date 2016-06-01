@@ -51,17 +51,26 @@ std::string VRayNodeExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree ntree
 
 	int displace_type = RNA_enum_get(&geomDisplacedMesh, "type");
 
-	if(displace_type == 1) {
+	if(displace_type == 0) {
 		manualAttrs["displace_2d"]         = "0";
 		manualAttrs["vector_displacement"] = "0";
 	}
-	else if(displace_type == 0) {
+	else if(displace_type == 1) {
 		manualAttrs["displace_2d"]         = "1";
 		manualAttrs["vector_displacement"] = "0";
 	}
-	else if(displace_type == 2) {
-		manualAttrs["displace_2d"]         = "0";
-		manualAttrs["vector_displacement"] = "1";
+	else {
+		manualAttrs["displace_2d"] = "0";
+
+		if (displace_type == 2) {
+			manualAttrs["vector_displacement"] = "1";
+		}
+		else if (displace_type == 3) {
+			manualAttrs["vector_displacement"] = "2";
+		}
+		else if (displace_type == 4) {
+			manualAttrs["vector_displacement"] = "3";
+		}
 	}
 
 	if(displace_type == 2) {
