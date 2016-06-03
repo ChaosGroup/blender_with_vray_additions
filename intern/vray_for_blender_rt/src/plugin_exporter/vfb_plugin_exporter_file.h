@@ -53,6 +53,7 @@ private:
 
 	ExporterSettings::ExportFormat m_ExportFormat;
 
+	bool                          m_SeparateFiles;
 	bool                          m_ReexportMeshes;
 	bool                          m_Synced;
 	bool                          m_SplitFiles;

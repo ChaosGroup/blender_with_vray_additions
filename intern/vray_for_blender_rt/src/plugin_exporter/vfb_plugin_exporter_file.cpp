@@ -30,8 +30,10 @@ namespace fs = boost::filesystem;
 using namespace VRayForBlender;
 
 
-VrsceneExporter::VrsceneExporter():
-	m_Synced(false)
+VrsceneExporter::VrsceneExporter()
+    : m_ExportFormat(ExporterSettings::ExportFormatHEX)
+    , m_SeparateFiles(false)
+    , m_Synced(false)
 {
 
 }
@@ -69,6 +71,8 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 void VrsceneExporter::set_settings(const ExporterSettings &st)
 {
 	m_ExportFormat = st.export_file_format;
+	animation_settings = st.settings_animation;
+	m_SeparateFiles = st.settings_files.use_separate;
 }
 
 
@@ -148,7 +152,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	}
 
 	PluginWriter & writer = *writerPtr;
-	bool setFrame = writer != *m_Writers[ParamDesc::PluginSettings];
+	bool setFrame = !m_SeparateFiles || writer != *m_Writers[ParamDesc::PluginSettings];
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
 	if (animation_settings.use) {
