@@ -163,7 +163,8 @@ bool ProductionExporter::do_export()
 				m_active_camera = loop_cameras[c];
 			}
 			m_isFirstFrame = c == 0;
-			m_frameCurrent = m_frameStep * c;
+			// make first frame for camera loop be 1
+			m_frameCurrent = m_frameStep * (c + is_camera_loop);
 			m_animationProgress = (float)c / m_frameCount;
 
 			if (!is_file_export) {
