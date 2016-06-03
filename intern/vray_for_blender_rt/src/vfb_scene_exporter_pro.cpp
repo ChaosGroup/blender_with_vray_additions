@@ -64,14 +64,14 @@ bool ProductionExporter::export_animation_frame(const int &check_updated)
 	const bool onlyCamera = m_settings.settings_animation.use &&
 		                    m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
 
+	m_settings.settings_animation.frame_current = m_frameCurrent;
+	m_exporter->set_current_frame(m_frameCurrent);
+
 	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
 		PRINT_INFO_EX("Exporting animation frame %d, in file", m_frameCurrent);
 		sync(check_updated);
 	} else {
 		PRINT_INFO_EX("Exporting animation frame %d", m_frameCurrent);
-
-		m_settings.settings_animation.frame_current = m_frameCurrent;
-		m_exporter->set_current_frame(m_frameCurrent);
 
 		m_exporter->stop();
 		sync(check_updated);
@@ -108,9 +108,11 @@ bool ProductionExporter::export_animation_frame(const int &check_updated)
 
 bool ProductionExporter::do_export()
 {
-	bool res = true;
 	PRINT_INFO_EX("ProductionExporter::do_export()");
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+	bool res = true;
+	const bool is_file_export = m_settings.exporter_type == ExpoterType::ExpoterTypeFile;
+
+	if (is_file_export) {
 		python_thread_state_restore();
 	}
 
@@ -119,97 +121,93 @@ bool ProductionExporter::do_export()
 
 		const bool is_camera_loop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
 
-		m_frameCurrent = m_scene.frame_start();
-		m_frameStep = m_scene.frame_step();
-		m_frameCount = (m_scene.frame_end() - m_scene.frame_start()) / m_frameStep;
+		std::vector<BL::Camera> loop_cameras;
+
+		if (is_camera_loop) {
+			BL::Scene::objects_iterator obIt;
+			for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+				BL::Object ob(*obIt);
+				if (ob.type() == BL::Object::type_CAMERA) {
+					auto dataPtr = ob.data().ptr;
+					PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
+					if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+						loop_cameras.push_back(BL::Camera(ob));
+					}
+				}
+			}
+
+			std::sort(loop_cameras.begin(), loop_cameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
+				return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
+			});
+
+			m_frameCount = loop_cameras.size();
+			m_frameStep = 1;
+			m_frameCurrent = 0;
+		} else {
+			m_frameCurrent = m_scene.frame_start();
+			m_frameStep = m_scene.frame_step();
+			m_frameCount = (m_scene.frame_end() - m_scene.frame_start()) / m_frameStep;
+		}
 
 		const auto restore = m_scene.frame_current();
 		m_animationProgress = 0.f;
 
-		if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
-			for (int c = 0; c < m_frameCount && res && !is_interrupted(); ++c) {
-				m_animationProgress = (float)c / m_frameCount;
-				m_frameCurrent = c * m_frameStep;
-				m_isFirstFrame = c == 0;
 
-				m_scene.frame_set(m_frameCurrent, 0.f);
-				m_engine.update_progress(m_animationProgress);
+		std::thread runner;
+		if (!is_file_export) {
+			runner = std::thread(&ProductionExporter::render_loop, this);
+		}
 
-				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), m_frameCurrent);
-
-				res = export_animation_frame(false);
+		for (int c = 0; c < m_frameCount && res && !is_interrupted(); ++c) {
+			if (is_camera_loop) {
+				m_active_camera = loop_cameras[c];
 			}
+			m_isFirstFrame = c == 0;
+			m_frameCurrent = m_frameStep * c;
+			m_animationProgress = (float)c / m_frameCount;
+
+			if (!is_file_export) {
+				std::lock_guard<std::mutex> l(m_python_state_lock);
+				if (is_interrupted()) {
+					break;
+				}
+				python_thread_state_restore();
+				if (!is_camera_loop) {
+					m_scene.frame_set(m_frameCurrent, 0.f);
+				}
+				python_thread_state_save();
+			} else {
+				if (!is_camera_loop) {
+					m_scene.frame_set(m_frameCurrent, 0.f);
+				}
+				m_engine.update_progress(m_animationProgress);
+				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), m_frameCurrent);
+			}
+
+			res = export_animation_frame(false);
+			while (!is_file_export && res && !m_renderFinished && !is_interrupted()) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+		}
+
+		m_isAnimationRunning = false;
+		m_renderFinished = true;
+
+		if (is_file_export) {
 			m_scene.frame_set(restore, 0.f);
 		} else {
-
-			std::thread runner(&ProductionExporter::render_loop, this);
-			std::vector<BL::Camera> loop_cameras;
-
-			if (is_camera_loop) {
-				BL::Scene::objects_iterator obIt;
-				for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-					BL::Object ob(*obIt);
-					if (ob.type() == BL::Object::type_CAMERA) {
-						auto dataPtr = ob.data().ptr;
-						PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
-						if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-							loop_cameras.push_back(BL::Camera(ob));
-						}
-					}
-				}
-
-				std::sort(loop_cameras.begin(), loop_cameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
-					return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
-				});
-
-				m_frameCount = loop_cameras.size();
-				m_frameStep = 1;
-				m_frameCurrent = 0;
-			}
-
-			for (int c = 0; c < m_frameCount && res && !is_interrupted(); ++c) {
-				if (is_camera_loop) {
-					m_active_camera = loop_cameras[c];
-				}
-				m_isFirstFrame = c == 0;
-				m_frameCurrent = m_frameStep * c;
-				m_animationProgress = (float)c / m_frameCount;
-
-				{
-					std::lock_guard<std::mutex> l(m_python_state_lock);
-					if (is_interrupted()) {
-						break;
-					}
-					python_thread_state_restore();
-						if (!is_camera_loop) {
-							m_scene.frame_set(m_frameCurrent, 0.f);
-						}
-					python_thread_state_save();
-				}
-
-				res = export_animation_frame(false);
-				while (res && !m_renderFinished && !is_interrupted()) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				}
-			}
-
-
-			m_isAnimationRunning = false;
-			m_renderFinished = true;
 			runner.join();
-
 			python_thread_state_restore();
 			m_scene.frame_set(restore, 0.f);
 			python_thread_state_save();
 			render_end();
-
 		}
 	}
 	else {
 		sync(false);
 	}
 
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+	if (is_file_export) {
 		python_thread_state_save();
 	}
 
