@@ -71,6 +71,9 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 void VrsceneExporter::set_settings(const ExporterSettings &st)
 {
 	m_ExportFormat = st.export_file_format;
+	for (auto & w : m_Writers) {
+		w.second->setFormat(m_ExportFormat);
+	}
 	animation_settings = st.settings_animation;
 	m_SeparateFiles = st.settings_files.use_separate;
 }
