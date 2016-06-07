@@ -70,7 +70,7 @@ const char * PluginWriter::indentation()
 	case 2: return VRSCENE_INDENT VRSCENE_INDENT;
 	case 3: return VRSCENE_INDENT VRSCENE_INDENT VRSCENE_INDENT;
 	case 4: return VRSCENE_INDENT VRSCENE_INDENT VRSCENE_INDENT VRSCENE_INDENT;
-	default: return "++++";
+	default: return "";
 	}
 }
 
