@@ -301,6 +301,10 @@ void ProductionExporter::render_start()
 		return SceneExporter::render_start();
 	}
 
+	if (m_settings.settings_animation.use && !m_isAnimationRunning) {
+		return;
+	}
+
 	BL::RenderSettings renderSettings = m_scene.render();
 
 	BL::RenderSettings::layers_iterator rslIt;
