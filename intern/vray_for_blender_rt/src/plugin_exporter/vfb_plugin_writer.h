@@ -14,19 +14,21 @@
 
 namespace VRayForBlender {
 
+#define VRSCENE_INDENT "    "
 class PluginWriter {
 public:
 	PluginWriter(PyObject *pyFile, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
 
 	PluginWriter &writeStr(const char *str);
 
+	void setFormat(ExporterSettings::ExportFormat fm) { m_format = fm; }
 	ExporterSettings::ExportFormat format() const { return m_format; }
 
 	bool good() const;
 
 	PyObject *getFile() { return m_file; }
-	void setAnimationFrame(int frame) { animationFrame = frame; }
-	int getAnimationFrame() const { return animationFrame; }
+	void setAnimationFrame(int frame) { m_animationFrame = frame; }
+	int getAnimationFrame() const { return m_animationFrame; }
 
 	bool operator==(const PluginWriter &other) const
 	{
@@ -38,9 +40,14 @@ public:
 		return !(*this == other);
 	}
 
+	const char * indent() { ++m_depth; return indentation(); }
+	const char * unindent() { --m_depth; return ""; }
 
+	const char * indentation();
 private:
-	int animationFrame;
+
+	int m_depth;
+	int m_animationFrame;
 	PyObject *m_file;
 	ExporterSettings::ExportFormat m_format;
 
@@ -73,16 +80,16 @@ template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const KVPair<T> &val)
 {
 	if (pp.getAnimationFrame() == -1) {
-		return pp << "  " << val.first << "=" << val.second << ";\n";
+		return pp << pp.indent() << val.first << "=" << val.second << ";\n" << pp.unindent();
 	} else {
-		return pp << "  " << val.first << "=interpolate((" << pp.getAnimationFrame() << "," << val.second << "));\n";
+		return pp << pp.indent() << val.first << "=interpolate((" << pp.getAnimationFrame() << "," << val.second << "));\n" << pp.unindent();
 	}
 }
 
 template <> inline
 PluginWriter &operator<<(PluginWriter &pp, const KVPair<std::string> &val)
 {
-	return pp << "  " << val.first << "=\"" << val.second << "\";\n";
+	return pp << pp.indent() << val.first << "=\"" << val.second << "\";\n" << pp.unindent();
 }
 
 template <typename T>
@@ -97,11 +104,18 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 	if (!val.empty()) {
 		pp << "List" << listName;
 		if (listName[0] == '\0' || pp.format() == ExporterSettings::ExportFormatASCII) {
-			pp << "(\n    " << (*val)[0];
+			pp << "(\n" << pp.indent() << (*val)[0];
 			for (int c = 1; c < val.getCount(); c++) {
-				pp << "," << (newLine ? "\n    " : "    ") << (*val)[c];
+				pp << ",";
+				if (newLine) {
+					pp << "\n" << pp.indentation();
+				} else {
+					pp << " ";
+				}
+				pp << (*val)[c];
 			}
-			pp << "  \n)";
+			pp.unindent();
+			pp << "\n" << pp.indentation() << ")";
 		} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
 			char * hexData = GetStringZip(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
 			pp << "Hex(\"" << hexData << "\")";
@@ -120,11 +134,18 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 {
 	if (!val.empty()) {
 		pp << "List" << listName;
-		pp << "(\n    \"" << StripString((*val)[0]) << "\"";
+		pp << "(\n" << pp.indent() << "\"" << StripString((*val)[0]) << "\"";
 		for (int c = 1; c < val.getCount(); c++) {
-			pp << "," << (newLine ? "\n    " : "    ") << "\"" << StripString((*val)[c]) << "\"";
+			pp << ",";
+			if (newLine) {
+				pp << "\n" << pp.indentation();
+			} else {
+				pp << " ";
+			}
+			pp <<"\"" << StripString((*val)[c]) << "\"";
 		}
-		pp << "  \n)";
+		pp.unindent();
+		pp << "\n" << pp.indentation() << ")";
 	}
 	return pp;
 }

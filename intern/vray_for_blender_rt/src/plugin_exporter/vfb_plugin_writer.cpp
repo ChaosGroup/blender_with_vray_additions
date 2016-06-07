@@ -34,7 +34,8 @@ struct TraceTransformHex {
 PluginWriter::PluginWriter(PyObject *pyFile, ExporterSettings::ExportFormat format)
     : m_file(pyFile)
     , m_format(format)
-    , animationFrame(-1)
+    , m_animationFrame(-1)
+    , m_depth(1)
 {
 }
 
@@ -59,6 +60,18 @@ PluginWriter &PluginWriter::writeStr(const char *str)
 		PyObject_CallMethod(m_file, _C("write"), _C("s"), str);
 	}
 	return *this;
+}
+
+const char * PluginWriter::indentation()
+{
+	switch (m_depth) {
+	case 0: return "";
+	case 1: return VRSCENE_INDENT;
+	case 2: return VRSCENE_INDENT VRSCENE_INDENT;
+	case 3: return VRSCENE_INDENT VRSCENE_INDENT VRSCENE_INDENT;
+	case 4: return VRSCENE_INDENT VRSCENE_INDENT VRSCENE_INDENT VRSCENE_INDENT;
+	default: return "++++";
+	}
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val)
@@ -156,14 +169,16 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrInstancer &val)
 	pp << "List(" << val.frameNumber;
 
 	if (!val.data.empty()) {
-		pp << ",\n    List(" << (*val.data)[0].index << ", " << (*val.data)[0].tm << ", " << (*val.data)[0].vel << "," << (*val.data)[0].node << ")";
+		pp << ",\n" << pp.indent() << "List(" << (*val.data)[0].index << ", " << (*val.data)[0].tm << ", " << (*val.data)[0].vel << "," << (*val.data)[0].node << ")";
 		for (int c = 1; c < val.data.getCount(); c++) {
 			const auto &item = (*val.data)[c];
-			pp << ",\n    List(" << item.index << ", " << item.tm << ", " << item.vel << "," << item.node << ")";
+			pp << ",\n" << pp.indentation() << "List(" << item.index << ", " << item.tm << ", " << item.vel << "," << item.node << ")";
 		}
+		pp.unindent();
+		pp << pp.indentation();
 	}
 
-	return pp << "\n)";
+	return pp << "\n" << pp.indentation() << ")";
 }
 
 } // VRayForBlender
