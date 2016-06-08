@@ -745,7 +745,7 @@ void SceneExporter::sync_materials()
 		if (ntree) {
 			const bool updated = ma.is_updated() || ma.is_updated_data() || ntree.is_updated();
 			if (updated) {
-				m_data_exporter.exportMaterial(ma);
+				m_data_exporter.exportMaterial(ma, PointerRNA_NULL);
 			}
 		}
 	}

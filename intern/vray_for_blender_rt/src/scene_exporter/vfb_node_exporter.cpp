@@ -182,6 +182,8 @@ void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngi
 	m_context = context;
 	m_view3d = view3d;
 	m_active_camera = BL::Camera(scene.camera() ? scene.camera() : view3d.camera());
+	m_is_preview = engine.is_preview();
+	m_is_export_selected = true;
 }
 
 
@@ -286,7 +288,7 @@ AttrValue DataExporter::exportVRayNodeAuto(BL::NodeTree &ntree, BL::Node &node, 
 
 	return m_exporter->export_plugin(pluginDesc);
 }
-
+#include "DNA_node_types.h"
 
 AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
@@ -295,9 +297,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	}
 
 	AttrValue attrValue;
-
 	const std::string &nodeClass = node.bl_idname();
-
 
 #if 0
 	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"",

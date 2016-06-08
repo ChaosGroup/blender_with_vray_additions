@@ -410,7 +410,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 		if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
 			BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
 			if (hair_material) {
-				hair_mtl = exportMaterial(hair_material);
+				hair_mtl = exportMaterial(hair_material, ob);
 			}
 		}
 		if (!hair_mtl) {

@@ -36,7 +36,7 @@ AttrValue DataExporter::getDefaultMaterial()
 }
 
 
-AttrValue DataExporter::exportMaterial(BL::Material ma)
+AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 {
 	AttrValue material = getDefaultMaterial();
 
@@ -54,8 +54,30 @@ AttrValue DataExporter::exportMaterial(BL::Material ma)
 					if (!use_override) {
 						BL::NodeSocket materialSock(Nodes::GetInputSocketByName(output, "Material"));
 						if (materialSock && materialSock.is_linked()) {
-							NodeContext ctx;
-							material = exportLinkedSocket(ntree, materialSock, ctx);
+							NodeContext ctx(PointerRNA_NULL, PointerRNA_NULL, ob);
+
+							bool needExport = true;
+							if (m_is_export_selected && m_is_preview) {
+								BL::Node selected = getNtreeSelectedNode(ntree);
+								if (selected && ob.name().find("preview_") != std::string::npos) {
+									BL::Node  conNode(PointerRNA_NULL);
+									AttrValue val;
+									const auto nodeClass = selected.bl_idname();
+									exportLinkedSocketEx2(ntree, materialSock, ctx, DataExporter::ExpModePlugin, conNode, val, selected);
+
+									static const std::vector<std::string> matTypes = {"VRayNodeMetaStandardMaterial", "VRayNodeBRDFLayered", "VRayNodeBRDFVRayMtl", "VRayNodeMtlMulti"};
+									if (std::find(matTypes.begin(), matTypes.end(), nodeClass) != matTypes.end()) {
+										PRINT_INFO_EX("Exporting selected node only %s", nodeClass.c_str());
+										material = val;
+										needExport = false;
+									} else {
+										PRINT_INFO_EX("Selected node is of unsupported type!");
+									}
+								}
+							}
+							if (needExport) {
+								material = exportLinkedSocket(ntree, materialSock, ctx);
+							}
 
 							// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
 							if (material.type == ValueTypePlugin && material.valPlugin && material.valPlugin.plugin.find("Mtl") == std::string::npos) {
@@ -102,7 +124,7 @@ void DataExporter::fillMtlMulti(BL::Object ob, PluginDesc &mtlMultiDesc)
 		BL::Material ma((*slotIt).material());
 		if (ma) {
 			(*ids_list)[maIdx]  = slotIdx;
-			(*mtls_list)[maIdx] = exportMaterial(ma);
+			(*mtls_list)[maIdx] = exportMaterial(ma, ob);
 			maIdx++;
 		}
 	}
@@ -120,7 +142,7 @@ AttrValue DataExporter::exportSingleMaterial(BL::Object &ob)
 	for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt) {
 		BL::Material ma((*slotIt).material());
 		if (ma) {
-			mtl = exportMaterial(ma);
+			mtl = exportMaterial(ma, ob);
 			break;
 		}
 	}

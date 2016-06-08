@@ -334,7 +334,7 @@ public:
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
 
-	AttrValue         exportMaterial(BL::Material ma);
+	AttrValue         exportMaterial(BL::Material ma, BL::Object ob);
 	AttrValue         exportVRayClipper(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
@@ -352,6 +352,10 @@ public:
 	AttrPlugin        exportCameraDefault(const ViewParams &viewParams);
 	AttrPlugin        exportCameraSettings(ViewParams &viewParams);
 
+	BL::Node          getNtreeSelectedNode(BL::NodeTree &ntree);
+
+	void              exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
+	                                        ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin, BL::Node toNode);
 	void              exportLinkedSocketEx(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
 	                                       ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin);
 	AttrValue         exportLinkedSocket(BL::NodeTree &ntree, BL::NodeSocket &socket, NodeContext &context);
@@ -425,6 +429,9 @@ private:
 	BL::RenderEngine  m_engine;
 	BL::Context       m_context;
 	BL::SpaceView3D   m_view3d;
+
+	bool              m_is_preview;
+	bool              m_is_export_selected;
 
 	BL::Camera        m_active_camera;
 	// should be set on each sync with setComputedLayers
