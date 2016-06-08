@@ -71,7 +71,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
-	settings_animation.use  = settings_animation.mode != SettingsAnimation::AnimationMode::AnimationModeNone;
+	settings_animation.use  = settings_animation.mode != SettingsAnimation::AnimationMode::AnimationModeNone && !engine.is_preview();
 	if (settings_animation.use) {
 		settings_animation.frame_start   = scene.frame_start();
 		settings_animation.frame_current = scene.frame_current();
@@ -128,6 +128,9 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 #endif
 
 	exporter_type = (ExpoterType)RNA_enum_get(&m_vrayExporter, "backend");
+	if (engine.is_preview()) {
+		exporter_type = ExpoterTypeZMQ;
+	}
 	work_mode     = (WorkMode)RNA_enum_get(&m_vrayExporter, "work_mode");
 
 	zmq_server_port    = RNA_int_get(&m_vrayExporter, "zmq_port");
