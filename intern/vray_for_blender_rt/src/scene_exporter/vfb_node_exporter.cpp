@@ -52,16 +52,18 @@ using namespace VRayForBlender::Nodes;
 
 std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context)
 {
-	std::string pluginName = Blender::GetIDName(ntree, "NT") + "N" + node.name();
+	std::string pluginName;
+	pluginName.reserve(512);
+	pluginName = "NT" + ntree.name() + "|" + node.name();
 
-	BL::NodeTree parent(context.getNodeTree());
+	BL::NodeTree  parent(context.getNodeTree());
 	if (parent) {
-		pluginName += Blender::GetIDName(parent, "NP");
+		pluginName += "|" + parent.name();
 	}
 
 	BL::NodeGroup group(context.getGroupNode());
 	if (group) {
-		pluginName += Blender::GetIDName(parent, "GR");
+		pluginName += "@" + group.name();
 	}
 
 	return pluginName;
