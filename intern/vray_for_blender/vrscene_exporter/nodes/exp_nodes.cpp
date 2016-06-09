@@ -58,15 +58,18 @@ static std::string GetUniqueChannelName(const std::string &baseName)
 
 std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext &context)
 {
-	std::string pluginName = GetIDName(ntree) + "N" + node.name();
+	std::string pluginName;
+	pluginName.reserve(512);
+	pluginName = "NT" + ntree.name() + "|" + node.name();
 
-	if(context) {
-		BL::NodeTree  parent = context.getNodeTree();
-		BL::NodeGroup group  = context.getGroupNode();
-		if(parent)
-			pluginName += GetIDName(parent);
-		if(group)
-			pluginName += GetIDName(parent);
+	BL::NodeTree  parent = context.getNodeTree();
+	if (parent) {
+		pluginName += "|" + parent.name();
+	}
+
+	BL::NodeGroup group  = context.getGroupNode();
+	if (group) {
+		pluginName += "@" + group.name();
 	}
 
 	return StripString(pluginName);
