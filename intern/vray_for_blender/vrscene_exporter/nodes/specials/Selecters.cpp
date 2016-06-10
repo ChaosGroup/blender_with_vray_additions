@@ -108,3 +108,55 @@ void VRayNodeExporter::getNodeSelectObjects(BL::Node node, ObList &obList)
 		}
 	}
 }
+
+static void getDuplicatorNames(BL::Object & ob, StrSet & obNames)
+{
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+	const int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
+	const int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
+
+
+	ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
+	BL::Object::dupli_list_iterator b_dup;
+	for (ob.dupli_list.begin(b_dup); b_dup != ob.dupli_list.end(); ++b_dup) {
+		BL::DupliObject dup(*b_dup);
+		BL::Object      dop(dup.object());
+
+		MHash persistendID;
+		MurmurHash3_x86_32((const void*)dup.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+
+		const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + ob.name());
+		obNames.insert(dupliNamePrefix + GetIDName(ob));
+	}
+	ob.dupli_list_clear();
+}
+
+void VRayNodeExporter::getNodeSelectLightsNames(BL::Node node, StrSet &obNames)
+{
+	VRayNodeContext ctx;
+	if(node.bl_idname() == "VRayNodeSelectObject") {
+		BL::Object ob = VRayNodeExporter::exportVRayNodeSelectObject(PointerRNA_NULL, node, PointerRNA_NULL, ctx);
+		if(ob) {
+			if (ob.is_duplicator()) {
+				getDuplicatorNames(ob, obNames);
+			}
+			obNames.insert(GetIDName(ob));
+		}
+	}
+	else if(node.bl_idname() == "VRayNodeSelectGroup") {
+		BL::Group group = VRayNodeExporter::exportVRayNodeSelectGroup(PointerRNA_NULL, node, PointerRNA_NULL, ctx);
+		if(group) {
+			BL::Group::objects_iterator obIt;
+			for(group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
+				BL::Object ob = *obIt;
+				if (ob) {
+					if (ob.is_duplicator()) {
+						getDuplicatorNames(ob, obNames);
+					} else {
+						obNames.insert(GetIDName(ob));
+					}
+				}
+			}
+		}
+	}
+}

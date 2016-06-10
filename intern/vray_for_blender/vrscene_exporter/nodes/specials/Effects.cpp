@@ -141,15 +141,11 @@ static std::string ExportSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Obje
 	if (lightsSock && lightsSock.is_linked()) {
 		BL::Node lightsSelector = VRayNodeExporter::getConnectedNode(ntree, lightsSock, context);
 		if (lightsSelector) {
-			ObList lights;
-			VRayNodeExporter::getNodeSelectObjects(lightsSelector, lights);
+			StrSet lights;
+			VRayNodeExporter::getNodeSelectLightsNames(lightsSelector, lights);
 
 			if (lights.size()) {
-				StrSet lightsList;
-				for (ObList::const_iterator obIt = lights.begin(); obIt != lights.end(); ++obIt) {
-					lightsList.insert(GetIDName(*obIt));
-				}
-				attr_lights = BOOST_FORMAT_LIST(lightsList);
+				attr_lights = BOOST_FORMAT_LIST(lights);
 			}
 		}
 	}
