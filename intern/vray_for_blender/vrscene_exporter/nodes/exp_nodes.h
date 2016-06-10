@@ -60,7 +60,6 @@ const char* const EnvironmentMappingType[] = {
 
 typedef std::vector<BL::Object> ObList;
 
-
 struct AttrValue {
 	float        frame;
 	std::string  value;
@@ -245,6 +244,7 @@ public:
 	static std::string      getObjectNameList(BL::Group group);
 	static std::string      getObjectName(BL::Object group);
 	static void             getNodeSelectObjects(BL::Node node, ObList &obList);
+	static void             getNodeSelectLightsNames(BL::Node node, StrSet &obNames);
 
 	static int              isObjectVisible(BL::Object b_ob);
 
