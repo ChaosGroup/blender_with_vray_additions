@@ -473,9 +473,9 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
+	int num_instances = 0;
 	if (dupli_use_instancer) {
 
-		int num_instances = 0;
 
 		BL::Object::dupli_list_iterator dupIt;
 		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
@@ -595,7 +595,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		}
 	}
 
-	if (dupli_use_instancer) {
+	if (dupli_use_instancer && num_instances) {
 		m_data_exporter.exportVrayInstacer2(ob, instances);
 	}
 }
