@@ -650,14 +650,17 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				break;
 			}
 
-			ObjectOverridesAttrs overAttrs;
+			// As in old exporter - dont sync base if its light dupli
+			if (!Blender::IsLight(ob)) {
+				ObjectOverridesAttrs overAttrs;
 
-			overAttrs.override = true;
-			overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-			overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
+				overAttrs.override = true;
+				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+				overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
 
-			sync_object(ob, check_updated, overAttrs);
+				sync_object(ob, check_updated, overAttrs);
+			}
 		}
 		else if (ob.modifiers.length()) {
 			BL::ArrayModifier modArray(PointerRNA_NULL);
