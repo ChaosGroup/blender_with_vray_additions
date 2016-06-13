@@ -530,6 +530,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				overrideAttrs.override = true;
 				overrideAttrs.visible = true && !hideFromCamera;
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+				overrideAttrs.useInstancer = false;
 				overrideAttrs.id = persistendID;
 
 				char namePrefix[255] = {0, };
