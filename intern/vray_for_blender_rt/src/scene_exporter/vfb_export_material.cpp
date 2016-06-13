@@ -19,6 +19,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
+#include "vfb_params_json.h"
 #include "utils/cgr_string.h"
 
 
@@ -65,10 +66,18 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 									const auto nodeClass = selected.bl_idname();
 									exportLinkedSocketEx2(ntree, materialSock, ctx, DataExporter::ExpModePlugin, conNode, val, selected);
 
-									static const std::vector<std::string> matTypes = {"VRayNodeMetaStandardMaterial", "VRayNodeBRDFLayered", "VRayNodeBRDFVRayMtl", "VRayNodeMtlMulti"};
-									if (std::find(matTypes.begin(), matTypes.end(), nodeClass) != matTypes.end()) {
-										PRINT_INFO_EX("Exporting selected node only %s", nodeClass.c_str());
+									auto pluginType = GetNodePluginType(selected);
+									using PT = ParamDesc::PluginType;
+
+									if (pluginType == PT::PluginBRDF || pluginType == PT::PluginMaterial) {
+										PRINT_INFO_EX("Exporting selected material node only %s", nodeClass.c_str());
 										material = val;
+										needExport = false;
+									} else if (pluginType == PT::PluginTexture) {
+										PRINT_INFO_EX("Exporting selected texture node only %s", nodeClass.c_str());
+										PluginDesc brdfLightWrapper("BRDFLightWrapper@" + val.valPlugin.plugin, "BRDFLight");
+										brdfLightWrapper.add("color", val);
+										material = m_exporter->export_plugin(brdfLightWrapper);
 										needExport = false;
 									} else {
 										PRINT_INFO_EX("Selected node is of unsupported type!");
