@@ -57,6 +57,9 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 						if (materialSock && materialSock.is_linked()) {
 							NodeContext ctx(PointerRNA_NULL, PointerRNA_NULL, ob);
 
+							using PT = ParamDesc::PluginType;
+							auto pluginType = PT::PluginUnknown;
+
 							bool needExport = true;
 							if (m_is_export_selected && m_is_preview) {
 								BL::Node selected = getNtreeSelectedNode(ntree);
@@ -66,8 +69,8 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 									const auto nodeClass = selected.bl_idname();
 									exportLinkedSocketEx2(ntree, materialSock, ctx, DataExporter::ExpModePlugin, conNode, val, selected);
 
-									auto pluginType = GetNodePluginType(selected);
-									using PT = ParamDesc::PluginType;
+									// override plugin type
+									pluginType = GetNodePluginType(selected);
 
 									if (pluginType == PT::PluginBRDF || pluginType == PT::PluginMaterial) {
 										PRINT_INFO_EX("Exporting selected material node only %s", nodeClass.c_str());
@@ -86,10 +89,18 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 							}
 							if (needExport) {
 								material = exportLinkedSocket(ntree, materialSock, ctx);
+
+								BL::NodeSocket toSocket(Nodes::GetConnectedSocket(materialSock));
+								if (toSocket) {
+									BL::Node toNode(toSocket.node());
+									if (toNode) {
+										pluginType = GetNodePluginType(toNode);
+									}
+								}
 							}
 
 							// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
-							if (material.type == ValueTypePlugin && material.valPlugin && material.valPlugin.plugin.find("Mtl") == std::string::npos) {
+							if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial && pluginType != PT::PluginBRDF) {
 
 								const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.valPlugin.plugin);
 								PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
