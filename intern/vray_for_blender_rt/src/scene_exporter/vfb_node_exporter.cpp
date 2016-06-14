@@ -539,23 +539,78 @@ std::string DataExporter::GetConnectedNodePluginID(BL::NodeSocket fromSocket)
 	return pluginID;
 }
 
+bool DataExporter::hasDupli(BL::Object ob) {
+	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
+}
 
-int DataExporter::isObjectVisible(BL::Object ob)
+bool DataExporter::isDupliVisible(BL::Object ob) {
+	bool is_renderable = true;
+
+	// Dulpi
+	if (hasDupli(ob)) {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
+	}
+
+	// Particles
+	// Particle system "Show / Hide Emitter" has priority over dupli
+	if (ob.particle_systems.length()) {
+		is_renderable = true;
+
+		BL::Object::modifiers_iterator mdIt;
+		for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
+			BL::Modifier md(*mdIt);
+			if (md.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+				BL::ParticleSystemModifier pmod(md);
+				BL::ParticleSystem psys(pmod.particle_system());
+				if (psys) {
+					BL::ParticleSettings pset(psys.settings());
+					if (pset) {
+						if (!pset.use_render_emitter()) {
+							is_renderable = false;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return is_renderable;
+}
+
+bool DataExporter::isObjectVisible(BL::Object ob)
 {
-	int visible = true;
-
 	if (!ob) {
-		visible = false;
-	}
-	else if (ob.hide_render()) {
-		// TODO: Check "Render Hidden" setting
-		visible = false;
-	}
-	else {
-		// TODO: Check visible layers settings
+		return false;
 	}
 
-	return visible;
+	// object is duplicator and is hidden from dupli options/psys
+	if (!isDupliVisible(ob)) {
+		return true;
+	}
+
+	// hidden for current camra
+	if (isObjectInHideList(ob, "camera")) {
+		return false;
+	}
+
+	// hidden from viewport rendering
+	if (m_exporter->get_is_viewport() && ob.hide()) {
+		return false;
+	}
+
+	// hidden from rendering
+	if (!m_exporter->get_is_viewport() && ob.hide_render()) {
+		return false;
+	}
+
+	// object is on another layer
+	if ( !(m_computedLayers & ::get_layer(ob, m_is_local_view, to_int_layer(m_scene.layers()))) ) {
+		return false;
+	}
+
+	return true;
 }
 
 

@@ -368,7 +368,9 @@ public:
 
 	AttrValue         getDefaultMaterial();
 
-	int               isObjectVisible(BL::Object ob);
+	bool              hasDupli(BL::Object ob);
+	bool              isDupliVisible(BL::Object ob);
+	bool              isObjectVisible(BL::Object ob);
 
 	void              clearMaterialCache();
 
@@ -423,6 +425,7 @@ public:
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
 
+	bool              m_is_local_view;
 private:
 	BL::BlendData     m_data;
 	BL::Scene         m_scene;

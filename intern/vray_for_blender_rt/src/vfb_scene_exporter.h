@@ -92,7 +92,6 @@ public:
 protected:
 	virtual void         create_exporter();
 
-	unsigned int         get_layer(BlLayers array);
 	void                 get_view_from_camera(ViewParams &viewParams, BL::Object &cameraObject);
 	void                 get_view_from_viewport(ViewParams &viewParams);
 
