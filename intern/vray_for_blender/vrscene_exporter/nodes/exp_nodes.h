@@ -180,13 +180,14 @@ public:
 		return true;
 	}
 
-private:
 	// If we are exporting group node we have to treat
 	// group ntree's nodes as nodes of the current tree
 	// to prevent plugin overriding.
 	//
-	std::vector<BL::NodeTree>  parent;
-	std::vector<BL::Node>      group;
+	typedef std::vector<BL::NodeTree> NodeTreeVector;
+	typedef std::vector<BL::Node>     NodeVector;
+	NodeTreeVector  parent;
+	NodeVector      group;
 };
 
 
