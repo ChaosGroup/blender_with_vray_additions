@@ -62,6 +62,10 @@ int PluginExporter::remove_plugin(const std::string &name) {
 
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 {
+	if (is_prepass) {
+		return AttrPlugin(pluginDesc.pluginName);
+	}
+
 	bool inCache = m_pluginManager.inCache(pluginDesc);
 	bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;
 	AttrPlugin plg(pluginDesc.pluginName);

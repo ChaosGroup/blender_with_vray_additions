@@ -279,6 +279,7 @@ public:
 	    , m_view3d(PointerRNA_NULL)
 	    , m_exporter(nullptr)
 	    , m_active_camera(PointerRNA_NULL)
+	    , m_is_local_view(false)
 	{}
 
 	// Generate unique plugin name from node
@@ -330,6 +331,7 @@ public:
 	BL::Node          getConnectedNode(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         getConnectedNodePluginName(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
 
+	void              getSelectorObjectNames(BL::Node node, AttrListPlugin & names);
 	void              getSelectorObjectList(BL::Node node, ObList &obList);
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);

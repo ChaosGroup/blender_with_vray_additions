@@ -67,6 +67,59 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 	return pluginList;
 }
 
+void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugins)
+{
+	static BL::NodeTree   ntree(PointerRNA_NULL);
+	static BL::NodeSocket fromSocket(PointerRNA_NULL);
+
+	if (node.bl_idname() == "VRayNodeSelectObject") {
+		NodeContext ctx;
+		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, ctx);
+		if (ob) {
+			plugins.append(Blender::GetIDName(ob));
+		}
+	}
+	else if (node.bl_idname() == "VRayNodeSelectGroup") {
+		NodeContext ctx;
+		BL::Group group = exportVRayNodeSelectGroup(ntree, node, fromSocket, ctx);
+		if (group) {
+			BL::Group::objects_iterator obIt;
+			for (group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
+				BL::Object ob(*obIt);
+				if (ob) {
+					if (ob.is_duplicator()) {
+						ob.dupli_list_create(m_scene, EvalMode::EvalModeRender);
+
+						BL::Object::dupli_list_iterator dupIt;
+						for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
+
+							BL::DupliObject dupliOb(*dupIt);
+							BL::Object      dupOb(dupliOb.object());
+
+							const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
+							if (Blender::IsLight(dupOb)) {
+								MHash persistendID;
+								MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+
+								char namePrefix[255] = {0, };
+								namePrefix[0] = 'D';
+								snprintf(namePrefix + 1, 250, "%u", persistendID);
+								strcat(namePrefix, "@");
+								strcat(namePrefix, ob.name().c_str());
+
+								plugins.append(std::string(namePrefix));
+							}
+						}
+
+						ob.dupli_list_clear();
+					} else {
+						plugins.append(Blender::GetIDName(ob));
+					}
+				}
+			}
+		}
+	}
+}
 
 void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 {

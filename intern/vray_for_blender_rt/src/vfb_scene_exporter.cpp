@@ -357,6 +357,10 @@ void SceneExporter::sync_prepass()
 			}
 		}
 	}
+
+	m_exporter->set_prepass(true);
+	sync_effects(false);
+	m_exporter->set_prepass(false);
 }
 
 void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updated)
@@ -391,7 +395,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	}
 
 	if (add) {
-		bool skip_export = !m_data_exporter.isObjectVisible(ob);
+		bool skip_export = !m_data_exporter.isObjectVisible(ob) || m_data_exporter.isObjectInHideList(ob, "export");
 
 		if (!skip_export || override) {
 			if (override) {
@@ -405,6 +409,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 			if (!override && ob.modifiers.length()) {
 				overrideAttr.override = true;
+				// TODO: m_data_exporter.isObjectVisible(ob)
 				overrideAttr.visible = ob_is_duplicator_renderable(ob) && !m_data_exporter.isObjectInHideList(ob, "camera");
 				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			}

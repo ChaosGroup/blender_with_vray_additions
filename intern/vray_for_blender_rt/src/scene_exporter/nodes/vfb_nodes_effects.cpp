@@ -139,16 +139,11 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 	if(lightsSock && lightsSock.is_linked()) {
 		BL::Node lightsNode = Nodes::GetConnectedNode(lightsSock);
 		if(lightsNode) {
-			if(lightsNode.bl_idname() == "VRayNodeSelectObject" || lightsNode.bl_idname() == "VRayNodeSelectGroup") {
+			AttrListPlugin lights;
+			getSelectorObjectNames(lightsNode, lights);
+			if (!lights.empty()) {
 				hasLights = true;
-				lightsList = exportVRayNode(ntree, lightsNode, lightsSock, context);
-
-				// NOTE: Attribute expects list even only one object is selected
-				if(lightsNode.bl_idname() == "VRayNodeSelectObject") {
-					AttrListPlugin list(1);
-					(*list)[0] = lightsList;
-					lightsList = list;
-				}
+				lightsList = lights;
 			}
 		}
 	}
@@ -215,7 +210,7 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 	}
 
 	// Exclude object from Node creation
-	//ExporterSettings::gSet.m_exporter->addSkipObject(domainOb.ptr.data);
+	m_hide_lists["export"].push_back(domainOb);
 
 	return smoke;
 }
@@ -236,7 +231,7 @@ AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::N
 			for(ObList::const_iterator obIt = domainObList.begin(); obIt != domainObList.end(); ++obIt) {
 				BL::Object domainOb(*obIt);
 				if (isObjectVisible(domainOb)) {
-					// domains.append(ExportSmokeDomain(ntree, node, domainOb, context));
+					domains.append(exportVRayNodeSmokeDomain(ntree, node, domainOb, context).valPlugin);
 				}
 			}
 		}

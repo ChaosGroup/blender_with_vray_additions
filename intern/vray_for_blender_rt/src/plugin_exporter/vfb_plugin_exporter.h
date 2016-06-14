@@ -62,8 +62,9 @@ class PluginExporter
 public:
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
 
-	PluginExporter():
-		is_viewport(false)
+	PluginExporter()
+	    : is_viewport(false)
+	    , is_prepass(false)
 	{}
 
 	virtual             ~PluginExporter()=0;
@@ -114,9 +115,14 @@ public:
 	void                 set_is_viewport(bool flag)  { is_viewport = flag; }
 	bool                 get_is_viewport() const { return is_viewport; }
 
+	// if prepass is true - no exporting is done
+	void                 set_prepass(bool flag) { is_prepass = flag; }
+	bool                 get_is_prepass() const { return is_prepass; }
+
 	PluginManager       &getPluginManager() { return m_pluginManager; }
 
 protected:
+	bool                 is_prepass;
 
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
