@@ -166,47 +166,6 @@ void SceneExporter::resize(int w, int h)
 	m_exporter->set_render_size(w, h);
 }
 
-static int ob_has_dupli(BL::Object ob) {
-	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
-}
-
-static int ob_is_duplicator_renderable(BL::Object ob) {
-	bool is_renderable = true;
-
-	// Dulpi
-	if (ob_has_dupli(ob)) {
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
-	}
-
-	// Particles
-	// Particle system "Show / Hide Emitter" has priority over dupli
-	if (ob.particle_systems.length()) {
-		is_renderable = true;
-
-		BL::Object::modifiers_iterator mdIt;
-		for (ob.modifiers.begin(mdIt); mdIt != ob.modifiers.end(); ++mdIt) {
-			BL::Modifier md(*mdIt);
-			if (md.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-				BL::ParticleSystemModifier pmod(md);
-				BL::ParticleSystem psys(pmod.particle_system());
-				if (psys) {
-					BL::ParticleSettings pset(psys.settings());
-					if (pset) {
-						if (!pset.use_render_emitter()) {
-							is_renderable = false;
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return is_renderable;
-}
-
-
 void SceneExporter::render_start()
 {
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
@@ -409,8 +368,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 			if (!override && ob.modifiers.length()) {
 				overrideAttr.override = true;
-				// TODO: m_data_exporter.isObjectVisible(ob)
-				overrideAttr.visible = ob_is_duplicator_renderable(ob) && !m_data_exporter.isObjectInHideList(ob, "camera");
+				overrideAttr.visible = m_data_exporter.isObjectVisible(ob);
 				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			}
 
@@ -623,7 +581,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
 		m_data_exporter.m_id_track.insert(ob, nodeName);
 		const bool is_updated = check_updated ? ob.is_updated() : true;
-		const bool visible_on_layer = m_data_exporter.isObjectVisible(ob);
+		const bool visible = m_data_exporter.isObjectVisible(ob);
 
 		if (ob.is_duplicator()) {
 
@@ -642,7 +600,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				overAttrs.override = true;
 				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
 				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
+				overAttrs.visible = visible;
 
 				sync_object(ob, check_updated, overAttrs);
 			}
@@ -660,7 +618,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				overrideAttrs.useInstancer = true;
 				overrideAttrs.override = true;
 				overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overrideAttrs.visible = visible_on_layer && ob_is_duplicator_renderable(ob);
+				overrideAttrs.visible = visible;
 				overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
 
 				// Disable for render so that object is exported without Array modifier
