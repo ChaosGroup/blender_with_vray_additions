@@ -436,7 +436,6 @@ private:
 	BL::SpaceView3D   m_view3d;
 
 	bool              m_is_preview;
-	bool              m_is_export_selected;
 
 	BL::Camera        m_active_camera;
 	// should be set on each sync with setComputedLayers

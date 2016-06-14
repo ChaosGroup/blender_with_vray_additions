@@ -61,7 +61,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 							auto pluginType = PT::PluginUnknown;
 
 							bool needExport = true;
-							if (m_is_export_selected && m_is_preview) {
+							if (m_settings.use_select_preview && m_is_preview) {
 								BL::Node selected = getNtreeSelectedNode(ntree);
 								if (selected && ob.name().find("preview_") != std::string::npos) {
 									BL::Node  conNode(PointerRNA_NULL);

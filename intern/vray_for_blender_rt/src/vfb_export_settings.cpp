@@ -42,6 +42,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	export_hair         = RNA_boolean_get(&m_vrayExporter, "use_hair");
 	export_fluids       = RNA_boolean_get(&m_vrayExporter, "use_smoke");
 	use_displace_subdiv = RNA_boolean_get(&m_vrayExporter, "use_displace");
+	use_select_preview  = RNA_boolean_get(&m_vrayExporter, "select_node_preview");
 	use_subsurf_to_osd  = RNA_boolean_get(&m_vrayExporter, "subsurf_to_osd");
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&m_vrayExporter, "default_mapping");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&m_vrayExporter, "data_format");

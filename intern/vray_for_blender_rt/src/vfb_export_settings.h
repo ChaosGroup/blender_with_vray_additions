@@ -158,6 +158,7 @@ struct ExporterSettings {
 
 	int               use_hide_from_view;
 	int               use_displace_subdiv;
+	int               use_select_preview;
 	int               use_subsurf_to_osd;
 
 	int               viewportQuality;
