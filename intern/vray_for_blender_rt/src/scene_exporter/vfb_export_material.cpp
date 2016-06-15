@@ -100,7 +100,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 							}
 
 							// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
-							if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial && pluginType != PT::PluginBRDF) {
+							if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial) {
 
 								const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.valPlugin.plugin);
 								PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
