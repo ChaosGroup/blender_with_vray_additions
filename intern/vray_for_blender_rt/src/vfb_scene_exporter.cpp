@@ -563,7 +563,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (dupli_use_instancer && num_instances) {
-		m_data_exporter.exportVrayInstacer2(ob, instances);
+		m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
 
@@ -660,7 +660,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 						memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 					}
 
-					m_data_exporter.exportVrayInstacer2(ob, instances, true);
+					m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
 				}
 
 				// Restore Array modifier settings

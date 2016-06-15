@@ -429,7 +429,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 }
 
 
-AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, bool exportObTm)
+AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
 	const bool visible = isObjectVisible(ob);
@@ -439,7 +439,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	instancerDesc.add("visible", visible);
 	instancerDesc.add("use_time_instancing", false);
 
-	m_id_track.insert(ob, exportName, IdTrack::DUPLI_MODIFIER);
+	m_id_track.insert(ob, exportName, dupliType);
 	auto inst = m_exporter->export_plugin(instancerDesc);
 
 	PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
