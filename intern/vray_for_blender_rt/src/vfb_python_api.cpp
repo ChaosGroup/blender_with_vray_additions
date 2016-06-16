@@ -62,6 +62,7 @@ static PyObject* vfb_zmq_heartbeat_stop(PyObject*)
 	std::lock_guard<std::mutex> l(heartbeatLock);
 	if (heartbeatClient) {
 		PRINT_INFO_EX("Stopping hearbeat client");
+		heartbeatClient->syncStop();
 		delete heartbeatClient;
 		heartbeatClient = nullptr;
 	} else {
