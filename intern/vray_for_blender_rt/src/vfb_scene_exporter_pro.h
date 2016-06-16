@@ -83,6 +83,10 @@ private:
 	int               m_frameCount;
 	bool              m_isFirstFrame;
 
+	typedef std::chrono::high_resolution_clock::time_point time_point;
+
+	time_point        m_lastReportTime;
+
 	std::vector<BL::RenderResult> m_renderResultsList;
 
 	std::mutex        m_callback_mtx;

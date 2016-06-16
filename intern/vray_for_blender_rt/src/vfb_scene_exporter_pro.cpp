@@ -79,7 +79,7 @@ bool ProductionExporter::export_animation_frame(const int &check_updated)
 			render_start();
 		}
 		m_exporter->start();
-		PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", m_frameCurrent, m_exporter->get_last_rendered_frame());
+		PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameCurrent, m_exporter->get_last_rendered_frame());
 
 		auto lastTime = high_resolution_clock::now();
 		while (m_exporter->get_last_rendered_frame() < m_frameCurrent) {
@@ -88,7 +88,7 @@ bool ProductionExporter::export_animation_frame(const int &check_updated)
 			auto now = high_resolution_clock::now();
 			if (duration_cast<seconds>(now - lastTime).count() > 1) {
 				lastTime = now;
-				PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", m_frameCurrent, m_exporter->get_last_rendered_frame());
+				PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameCurrent, m_exporter->get_last_rendered_frame());
 			}
 			if (this->is_interrupted()) {
 				PRINT_INFO_EX("Interrupted - stopping animation rendering!");
@@ -249,8 +249,15 @@ void ProductionExporter::render_frame()
 		return;
 	}
 
+	using namespace std::chrono;
+
 	const float frame_contrib = 1.f / m_frameCount;
-	PRINT_INFO_EX("Rendering progress: this frame %d [%d%%], total[%d%%]", m_frameCurrent, (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
+
+	auto now = high_resolution_clock::now();
+	if (duration_cast<milliseconds>(now - m_lastReportTime).count() > 1000) {
+		m_lastReportTime = now;
+		PRINT_INFO_EX("Rendering progress: this frame %d [%d%%], total[%d%%]", m_frameCurrent, (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
+	}
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 
@@ -289,6 +296,7 @@ void ProductionExporter::render_frame()
 
 void ProductionExporter::render_loop()
 {
+	m_lastReportTime = std::chrono::high_resolution_clock::now();
 	while (!is_interrupted()) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		render_frame();

@@ -43,12 +43,7 @@ PluginExporter::~PluginExporter() {}
 void PluginExporter::set_settings(const ExporterSettings &st)
 {
 	this->animation_settings = st.settings_animation;
-	if (this->animation_settings.use) {
-		this->current_scene_frame = st.settings_animation.frame_current;
-		this->last_rendered_frame = this->animation_settings.frame_start - 1;
-	} else {
-		this->last_rendered_frame = 0;
-	}
+	this->current_scene_frame = this->last_rendered_frame = -1000;
 }
 
 int PluginExporter::remove_plugin(const std::string &name) {
