@@ -581,6 +581,8 @@ if(APPLE)
 
 	message(STATUS "Detected OS X ${OSX_SYSTEM} and Xcode ${XCODE_VERSION} at ${XCODE_BUNDLE}")
 
+#	set(OSX_SYSTEM "10.11")
+
 	if(${XCODE_VERSION} VERSION_LESS 4.3)
 		# use guaranteed existing sdk
 		set(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk CACHE PATH "" FORCE)
@@ -609,7 +611,7 @@ if(APPLE)
 	endif()
 
 	if(OSX_SYSTEM VERSION_GREATER 10.9)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++11")
 	endif()
 
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode")
@@ -784,12 +786,12 @@ if(WITH_VRAY_FOR_BLENDER)
 	if(USE_BLENDER_VRAY_ZMQ)
 		set(LIBS_ROOT "" CACHE PATH "ZMQ lib location")
 
-		if (UNIX AND NOT APPLE)
+		if (UNIX)
 			set(JPEG ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
 			set(JPEG_INCLUDE_DIR "${JPEG}/include")
 			set(JPEG_LIBPATH ${JPEG}/lib/Release)
-			set(JPEG_NAMES jpeg-turbo)
-			find_library_static(JPEG_TURBO_LIB REQUIRED PATHS ${JPEG_LIBPATH} NAMES ${JPEG_NAMES})
+			set(JPEG_NAMES jpeg-turbo jpeg)
+			find_library(JPEG_TURBO_LIB REQUIRED PATHS ${JPEG_LIBPATH} NAMES ${JPEG_NAMES})
 		endif()
 
 		add_definitions(-DSODIUM_STATIC)
@@ -2152,7 +2154,7 @@ elseif(APPLE)
 	endif()
 
 	set(PNG_LIBRARIES png)
-	set(JPEG_LIBRARIES jpeg)
+#	set(JPEG_LIBRARIES jpeg)
 
 	set(ZLIB /usr)
 	set(ZLIB_INCLUDE_DIRS "${ZLIB}/include")
@@ -2265,9 +2267,9 @@ elseif(APPLE)
 	set(PNG_INCLUDE_DIRS "${PNG}/include")
 	set(PNG_LIBPATH ${PNG}/lib)
 
-	set(JPEG "${LIBDIR}/jpeg")
-	set(JPEG_INCLUDE_DIR "${JPEG}/include")
-	set(JPEG_LIBPATH ${JPEG}/lib)
+#	set(JPEG "${LIBDIR}/jpeg")
+#	set(JPEG_INCLUDE_DIR "${JPEG}/include")
+#	set(JPEG_LIBPATH ${JPEG}/lib)
 
 	if(WITH_IMAGE_TIFF)
 		set(TIFF ${LIBDIR}/tiff)

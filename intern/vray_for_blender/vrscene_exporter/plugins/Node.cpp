@@ -89,7 +89,7 @@ void VRayScene::Node::init(const std::string &mtlOverrideName)
 
 void VRayScene::Node::freeData()
 {
-	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED"Node::freeData("COLOR_YELLOW"%s"COLOR_RED")"COLOR_DEFAULT, m_name.c_str());
+	DEBUG_PRINT(CGR_USE_DESTR_DEBUG, COLOR_RED "Node::freeData(" COLOR_YELLOW "%s" COLOR_RED ")" COLOR_DEFAULT, m_name.c_str());
 
 	if(NOT(ExporterSettings::gSet.m_isAnimation)) {
 		if(m_geometry) {
