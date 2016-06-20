@@ -581,7 +581,6 @@ if(APPLE)
 
 	message(STATUS "Detected OS X ${OSX_SYSTEM} and Xcode ${XCODE_VERSION} at ${XCODE_BUNDLE}")
 
-#	set(OSX_SYSTEM "10.11")
 
 	if(${XCODE_VERSION} VERSION_LESS 4.3)
 		# use guaranteed existing sdk
@@ -593,12 +592,13 @@ if(APPLE)
 		set(OSX_SYSROOT_PREFIX ${XCODE_BUNDLE}/Contents/Developer/Platforms/MacOSX.platform)
 		message(STATUS "OSX_SYSROOT_PREFIX: " ${OSX_SYSROOT_PREFIX})
 		set(OSX_DEVELOPER_PREFIX /Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk) # use guaranteed existing sdk
-		set(CMAKE_OSX_SYSROOT ${OSX_SYSROOT_PREFIX}/${OSX_DEVELOPER_PREFIX} CACHE PATH "" FORCE)
+		set(CMAKE_OSX_SYSROOT ${OSX_SYSROOT_PREFIX}/${OSX_DEVELOPER_PREFIX})
 		if(${CMAKE_GENERATOR} MATCHES "Xcode")
 			# to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT
 			set(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx${OSX_SYSTEM})
 		endif()
 	endif()
+
 
 	if(OSX_SYSTEM MATCHES 10.9)
 		# make sure syslibs and headers are looked up in sdk ( expecially for 10.9 openGL atm. )
@@ -607,11 +607,11 @@ if(APPLE)
 
 	if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 		# 10.6 is our min. target, if you use higher sdk, weak linking happens
-		set(CMAKE_OSX_DEPLOYMENT_TARGET "10.6" CACHE STRING "" FORCE)
+		set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "" FORCE)
 	endif()
 
 	if(OSX_SYSTEM VERSION_GREATER 10.9)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++11")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=gnu++11")
 	endif()
 
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode")
