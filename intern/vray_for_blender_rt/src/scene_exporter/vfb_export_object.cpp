@@ -21,8 +21,6 @@
 #include "vfb_utils_object.h"
 #include "vfb_utils_nodes.h"
 
-#include "DNA_object_types.h"
-
 uint32_t to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
 	for (int c = 0; c < 20; ++c) {
