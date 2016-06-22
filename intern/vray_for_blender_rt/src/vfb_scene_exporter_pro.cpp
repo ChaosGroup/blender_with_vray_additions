@@ -61,9 +61,6 @@ bool ProductionExporter::export_animation_frame(const int &check_updated)
 
 	bool frameExported = true;
 
-	const bool onlyCamera = m_settings.settings_animation.use &&
-		                    m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
-
 	m_settings.settings_animation.frame_current = m_frameCurrent;
 	m_exporter->set_current_frame(m_frameCurrent);
 

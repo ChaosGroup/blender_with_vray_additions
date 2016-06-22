@@ -122,8 +122,6 @@ public:
 	PluginManager       &getPluginManager() { return m_pluginManager; }
 
 protected:
-	bool                 is_prepass;
-
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
 	UpdateMessageCb      on_message_update;
@@ -131,6 +129,7 @@ protected:
 	float                current_scene_frame;
 	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
+	bool                 is_prepass;
 
 	PluginManager        m_pluginManager;
 

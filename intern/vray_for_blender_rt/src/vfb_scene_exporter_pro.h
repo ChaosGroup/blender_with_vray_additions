@@ -25,14 +25,6 @@
 
 namespace VRayForBlender {
 
-class ImageBuffer {
-	void   allocate(int w, int h) { pixels = new float[w * h]; }
-	float *pixels;
-};
-
-class RenderImageMan {
-};
-
 class ProductionExporter
         : public SceneExporter
 {
@@ -72,7 +64,6 @@ private:
 	BL::RenderResult  m_renderResult;
 	// used to signal a frame has been rendered
 	int               m_renderFinished;
-	RenderImageMan    m_imageMan;
 	bool              m_imageDirty;
 
 	bool              m_isAnimationRunning;

@@ -38,7 +38,7 @@ public:
 	virtual void  sync_dupli(BL::Object ob, const int &check_updated = false) override;
 	virtual void  create_exporter() override;
 
-	virtual void  setup_callbacks();
+	virtual void  setup_callbacks() override;
 
 public:
 	void          cb_on_image_ready() { tag_redraw(); }

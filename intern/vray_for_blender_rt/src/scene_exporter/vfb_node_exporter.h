@@ -272,12 +272,12 @@ public:
 	typedef std::unordered_map<std::string, std::vector<BL::Object>> ObjectHideMap;
 
 	DataExporter()
-	    : m_data(PointerRNA_NULL)
+	    : m_is_local_view(false)
+	    , m_data(PointerRNA_NULL)
 	    , m_scene(PointerRNA_NULL)
 	    , m_engine(PointerRNA_NULL)
 	    , m_context(PointerRNA_NULL)
 	    , m_view3d(PointerRNA_NULL)
-	    , m_is_local_view(false)
 	    , m_active_camera(PointerRNA_NULL)
 	    , m_exporter(nullptr)
 	{}
