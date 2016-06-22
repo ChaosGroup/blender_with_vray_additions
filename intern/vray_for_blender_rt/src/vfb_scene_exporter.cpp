@@ -62,11 +62,11 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_view3d(view3d)
     , m_region3d(region3d)
     , m_region(region)
-    , m_exporter(nullptr)
-    , m_isRunning(false)
-    , m_isLocalView(false)
-    , m_python_thread_state(nullptr)
     , m_active_camera(view3d ? view3d.camera() : scene.camera())
+    , m_python_thread_state(nullptr)
+    , m_exporter(nullptr)
+    , m_isLocalView(false)
+    , m_isRunning(false)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -755,7 +755,7 @@ void SceneExporter::tag_redraw()
 
 int SceneExporter::is_interrupted()
 {
-	return m_engine && m_engine.test_break() || m_exporter && m_exporter->is_aborted();
+	return (m_engine && m_engine.test_break()) || (m_exporter && m_exporter->is_aborted());
 }
 
 

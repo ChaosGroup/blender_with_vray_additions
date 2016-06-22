@@ -232,11 +232,11 @@ struct DataDefaults {
 
 struct ObjectOverridesAttrs {
 	ObjectOverridesAttrs()
-	    : override(false)
+	    : useInstancer(true)
+	    , override(false)
 	    , visible(true)
 	    , id(0)
 	    , dupliHolder(PointerRNA_NULL)
-	    , useInstancer(true)
 	{}
 
 	operator bool() const {
@@ -277,9 +277,9 @@ public:
 	    , m_engine(PointerRNA_NULL)
 	    , m_context(PointerRNA_NULL)
 	    , m_view3d(PointerRNA_NULL)
-	    , m_exporter(nullptr)
-	    , m_active_camera(PointerRNA_NULL)
 	    , m_is_local_view(false)
+	    , m_active_camera(PointerRNA_NULL)
+	    , m_exporter(nullptr)
 	{}
 
 	// Generate unique plugin name from node
