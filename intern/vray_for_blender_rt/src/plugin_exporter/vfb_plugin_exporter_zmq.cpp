@@ -434,6 +434,7 @@ void ZmqExporter::checkZmqClient()
 		m_Client = ZmqWorkerPool::getInstance().getClient();
 	} else {
 		if (!m_Client->connected()) {
+			m_IsAborted = true;
 			// we can't connect dont retry
 			return;
 		}
