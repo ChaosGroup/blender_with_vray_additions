@@ -207,19 +207,23 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 	if (img.imageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL && img.isBucket()) {
 		// merge in the bucket
 
-		std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+		if (!pixels) {
+			std::unique_lock<std::mutex> lock(exp->m_ImgMutex);
+			if (!pixels) {
+				w = exp->m_RenderWidth;
+				h = exp->m_RenderHeight;
+				channels = 4;
+
+				pixels = new float[w * h * channels];
+				memset(pixels, 0, w * h * channels * sizeof(float));
+
+				resetUpdated();
+			}
+		}
 
 		fixImage = false;
-		if (!this->pixels) {
-			PRINT_WARN("Result image not allocated, can't merge bucket!");
-		} else if (this->channels != 4) {
-			PRINT_WARN("Result image missmatch of channel count - %d, instead of %d!", channels, 4);
-		} else {
-			lock.unlock();
-			const float * sourceImage = reinterpret_cast<const float *>(img.data.get());
-
-			updateRegion(reinterpret_cast<const float *>(img.data.get()), img.x, img.y, img.width, img.height);
-		}
+		const float * sourceImage = reinterpret_cast<const float *>(img.data.get());
+		updateRegion(sourceImage, img.x, img.y, img.width, img.height);
 
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 		int channels = 0;
@@ -486,25 +490,12 @@ void ZmqExporter::set_viewport_quality(int quality)
 
 void ZmqExporter::set_render_size(const int &w, const int &h)
 {
-	if (!is_viewport) {
-		auto imageIter = m_LayerImages.find(RenderChannelType::RenderChannelTypeNone);
-		if (imageIter == m_LayerImages.end()) {
-			std::unique_lock<std::mutex> lock(m_ImgMutex);
-			auto & image = m_LayerImages[RenderChannelType::RenderChannelTypeNone];
-
-			if (!image.pixels || image.w != w || image.h != h || image.channels != 4) {
-
-				image.resetUpdated();
-				image.channels = 4;
-				image.w = w;
-				image.h = h;
-
-				delete[] image.pixels;
-				image.pixels = new float[image.w * image.h * image.channels];
-				memset(image.pixels, 0, image.w * image.h * image.channels);
-			}
-		}
+	{
+		std::unique_lock<std::mutex> lock(m_ImgMutex);
+		m_RenderWidth = w;
+		m_RenderHeight = h;
 	}
+
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Resize, w, h));
 }
