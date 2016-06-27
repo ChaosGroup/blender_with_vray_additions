@@ -334,6 +334,7 @@ void ProductionExporter::render_start()
 	if (!m_settings.settings_animation.use) {
 		SceneExporter::render_start();
 		m_frameCount = m_frameCurrent = m_frameStep = 1;
+		m_progress = 0;
 		render_loop();
 		render_end();
 	}
@@ -397,6 +398,13 @@ void ProductionExporter::cb_on_rt_image_updated()
 						RenderImage image = m_exporter->get_pass(renderPass.type());
 
 						if (image && image.w == m_viewParams.renderSize.w && image.h == m_viewParams.renderSize.h) {
+							auto resx = result.resolution_x();
+							auto resy = result.resolution_y();
+
+							if (resx != image.w || resy != image.h) {
+								image.cropTo(resx, resy);
+							}
+
 							if (renderPass.type() == BL::RenderPass::type_COMBINED) {
 								m_progress = image.updated;
 							}

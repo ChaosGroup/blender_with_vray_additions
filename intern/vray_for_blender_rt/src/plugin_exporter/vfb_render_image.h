@@ -26,11 +26,12 @@
 namespace VRayForBlender {
 
 struct RenderImage {
-	RenderImage():
-	    pixels(nullptr),
-	    w(0),
-	    h(0),
-	    channels(0)
+	RenderImage()
+	    : pixels(nullptr)
+	    , w(0)
+	    , h(0)
+	    , channels(0)
+	    , updated(0)
 	{}
 
 	RenderImage(const RenderImage &) = delete;
@@ -51,6 +52,8 @@ struct RenderImage {
 	void   flip();
 	void   clamp(float max=1.0f, float val=1.0f);
 	void   resetAlpha();
+	// gets the center width X height image out of the original, if target is bigger - does nothings
+	void   cropTo(int width, int height);
 
 	void   resetUpdated() { updated = 0.f; }
 

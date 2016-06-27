@@ -142,3 +142,29 @@ void RenderImage::clamp(float max, float val)
 		::clamp(pixels, w, h, channels, max, val);
 	}
 }
+
+
+void RenderImage::cropTo(int width, int height)
+{
+	int t_width = width < this->w ? width : this->w;
+	int t_height = height < this->h ? height : this->h;
+
+	if (t_width == this->w && t_height == this->h) {
+		PRINT_WARN("Failed to crop image to [%dx%d] from [%dx%d]", width, height, w, h);
+		return;
+	}
+
+	float * newImg = new float[t_width * t_height * channels];
+
+	const int left_offset = (w - t_width) / 2;
+	const int top_offset = (h - t_height) / 2;
+
+	for (int r = 0; r < t_height; ++r) {
+		const float * src = pixels + ((r + top_offset) * w * channels) + left_offset * channels;
+		float * dst = newImg + (r * t_width * channels);
+		memcpy(dst, src, t_width * channels * sizeof(float));
+	}
+
+	delete[] pixels;
+	pixels = newImg;
+}
