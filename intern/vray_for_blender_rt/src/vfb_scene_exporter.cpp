@@ -185,7 +185,10 @@ void SceneExporter::sync(const int &check_updated)
 		PRINT_INFO_EX("SceneExporter::sync(%i)",
 		              check_updated);
 
+		clock_t begin = clock();
+
 		m_settings.update(m_context, m_engine, m_data, m_scene);
+		sync_prepass();
 
 		// duplicate cycle's logic for layers here
 		m_sceneComputedLayers = 0;
@@ -217,9 +220,6 @@ void SceneExporter::sync(const int &check_updated)
 		m_exporter->set_render_mode(renderMode);
 		m_exporter->set_viewport_quality(m_settings.viewportQuality);
 
-		clock_t begin = clock();
-
-		sync_prepass();
 
 		// Export once per viewport session
 		if (!check_updated) {
@@ -279,11 +279,8 @@ static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, co
 
 void SceneExporter::sync_prepass()
 {
-	m_data_exporter.m_id_cache.clear();
-	m_data_exporter.m_id_track.reset_usage();
-	m_data_exporter.clearMaterialCache();
 	m_data_exporter.setActiveCamera(m_active_camera);
-	m_data_exporter.refreshHideLists();
+	m_data_exporter.resetSyncState();
 
 	BL::BlendData::node_groups_iterator nIt;
 	for (m_data.node_groups.begin(nIt); nIt != m_data.node_groups.end(); ++nIt) {
@@ -356,24 +353,54 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	if (add) {
 		bool skip_export = !m_data_exporter.isObjectVisible(ob) || m_data_exporter.isObjectInHideList(ob, "export");
 
-		if (!skip_export || override) {
-			if (override) {
-				m_data_exporter.m_id_cache.insert(override.id);
+		auto overrideAttr = override;
+
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+		if (skip_export && !overrideAttr) {
+			// we should skip this object, but maybe it's already exported then we need to hide it
+			std::string exportName;
+			bool remove = false;
+			if (ob.type() == BL::Object::type_MESH) {
+				if (RNA_boolean_get(&vrayClipper, "enabled")) {
+					remove = true;
+					exportName = "Clipper@" + obName;
+				} else {
+					exportName = m_data_exporter.getNodeName(ob);
+				}
+			} else if (ob.type() == BL::Object::type_LAMP) {
+				// we cant hide lamps, so we must remove
+				exportName = m_data_exporter.getLightName(ob);
+				remove = true;
+			}
+
+			if (m_exporter->getPluginManager().inCache(exportName)) {
+				// lamps and clippers should be removed, others should be hidden
+				if (remove) {
+					m_exporter->remove_plugin(exportName);
+				} else {
+					skip_export = false;
+					overrideAttr.override = true;
+					overrideAttr.visible = false;
+					overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
+				}
+			}
+		}
+
+		if (!skip_export || overrideAttr) {
+			if (overrideAttr) {
+				m_data_exporter.m_id_cache.insert(overrideAttr.id);
 				m_data_exporter.m_id_cache.insert(ob);
 			} else {
 				m_data_exporter.m_id_cache.insert(ob);
 			}
 
-			auto overrideAttr = override;
-
-			if (!override && ob.modifiers.length()) {
+			if (!overrideAttr && ob.modifiers.length()) {
 				overrideAttr.override = true;
 				overrideAttr.visible = m_data_exporter.isObjectVisible(ob);
 				overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 			}
-
-			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
 			PRINT_INFO_EX("Syncing: %s...", obName.c_str());
 #if 0

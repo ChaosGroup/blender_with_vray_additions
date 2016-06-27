@@ -28,6 +28,7 @@ class PluginManager {
 public:
 	PluginManager();
 
+	bool inCache(const std::string &name) const;
 	bool inCache(const PluginDesc &pluginDesc) const;
 	bool differs(const PluginDesc &pluginDesc) const;
 	PluginDesc differences(const PluginDesc &pluginDesc) const;
@@ -41,12 +42,13 @@ public:
 
 	void clear();
 
+	// returns the key in the cache for this pluginDesc (it's name)
+	std::string getKey(const PluginDesc &pluginDesc) const;
 private:
 
 	std::pair<bool, PluginDesc> diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const;
-	std::string getKey(const PluginDesc &pluginDesc) const;
 
-	// id + name -> PluginDesc
+	// name -> PluginDesc
 	boost::unordered_map<std::string, PluginDesc> cache;
 };
 

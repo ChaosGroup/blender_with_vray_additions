@@ -52,7 +52,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 		const std::string &lightPluginName = getLightName(ob);
 		m_id_track.insert(ob, lightPluginName);
 
-		if (is_updated || is_data_updated) {
+		if (is_updated || is_data_updated || m_layer_changed) {
 			PointerRNA vrayLamp = RNA_pointer_get(&lamp.ptr, "vray");
 
 			// Find plugin ID

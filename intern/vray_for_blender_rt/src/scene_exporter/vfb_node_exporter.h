@@ -317,9 +317,12 @@ public:
 	void              init(PluginExporter *exporter, ExporterSettings settings);
 	void              sync();
 
+	// will reset all state that is kept for one sync, must be called after each sync
+	void              resetSyncState();
+
 	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context, BL::SpaceView3D view3d);
 	void              init_defaults();
-	void              setComputedLayers(uint32_t layers) { m_computedLayers = layers; }
+	void              setComputedLayers(uint32_t layers) { m_layer_changed = m_computedLayers != layers; m_computedLayers = layers; }
 
 	void              setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
 	void              setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
@@ -435,6 +438,7 @@ private:
 	BL::Context       m_context;
 	BL::SpaceView3D   m_view3d;
 
+	bool              m_layer_changed;
 	bool              m_is_preview;
 
 	BL::Camera        m_active_camera;

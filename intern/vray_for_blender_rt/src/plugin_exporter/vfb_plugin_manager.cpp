@@ -115,6 +115,11 @@ std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
 	return pluginDesc.pluginName;
 }
 
+bool PluginManager::inCache(const std::string &name) const
+{
+	return cache.find(name) != cache.end();
+}
+
 bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 {
 	return cache.find(getKey(pluginDesc)) != cache.end();

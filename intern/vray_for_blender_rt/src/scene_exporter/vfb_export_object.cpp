@@ -200,18 +200,31 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		// XXX: Check for valid mesh?
 
 		if (!ntree) {
-			// TODO: Add check for export meshes flag
-			if (!(is_data_updated) /*|| !(m_settings.export_meshes)*/) {
+			// TODO: Add check for export meshes flag (m_settings.export_meshes)
+
+			if (!is_data_updated && !m_layer_changed) {
+				// nothing changed just get the name
 				geom = AttrPlugin(getMeshName(ob));
-			}
-			else {
+			} else if (is_data_updated) {
+				// data was update - must export mesh
 				geom = exportGeomStaticMesh(ob, override);
 				if (!geom) {
-					PRINT_ERROR("Object: %s => Incorrect geometry!",
-						ob.name().c_str());
+					PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
+				}
+			} else if (m_layer_changed) {
+				// changed layer, maybe this object's geom is still not exported
+				const auto name = getMeshName(ob);
+				if (m_exporter->getPluginManager().inCache(name)) {
+					geom = AttrPlugin(name);
+				} else {
+					geom = exportGeomStaticMesh(ob, override);
+					if (!geom) {
+						PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
+					}
 				}
 			}
-			if (is_updated) {
+
+			if (is_updated || m_layer_changed) {
 				// NOTE: It's easier just to reexport full material
 				mtl = exportMtlMulti(ob);
 			}
@@ -286,7 +299,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			mtl = getDefaultMaterial();
 		}
 
-		if (geom && mtl && (is_updated || is_data_updated)) {
+		if (geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
 			// No need to export Node if the object is LightMesh
 			if (!isMeshLight) {
 				PluginDesc nodeDesc(exportName, "Node");
@@ -321,7 +334,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	bool is_updated      = check_updated ? ob.is_updated()      : true;
 	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
 
-	if (!is_updated && !is_data_updated) {
+	if (!is_updated && !is_data_updated && !m_layer_changed) {
 		return pluginName;
 	}
 

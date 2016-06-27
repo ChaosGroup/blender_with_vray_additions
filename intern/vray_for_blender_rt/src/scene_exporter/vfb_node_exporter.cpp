@@ -209,6 +209,17 @@ void DataExporter::init_defaults()
 	}
 }
 
+void DataExporter::resetSyncState()
+{
+	m_id_cache.clear();
+	m_id_track.reset_usage();
+	clearMaterialCache();
+	// all hidden objects will be checked agains current settings
+	refreshHideLists();
+	// layer did not change since last set
+	m_layer_changed = false;
+}
+
 
 AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket &socket)
 {
@@ -588,7 +599,7 @@ bool DataExporter::isObjectVisible(BL::Object ob)
 
 	// object is duplicator and is hidden from dupli options/psys
 	if (!isDupliVisible(ob)) {
-		return true;
+		return false;
 	}
 
 	// hidden for current camra
