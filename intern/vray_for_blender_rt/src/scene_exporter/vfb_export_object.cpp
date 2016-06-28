@@ -206,7 +206,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				// nothing changed just get the name
 				geom = AttrPlugin(getMeshName(ob));
 			} else if (is_data_updated) {
-				// data was update - must export mesh
+				// data was updated - must export mesh
 				geom = exportGeomStaticMesh(ob, override);
 				if (!geom) {
 					PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
@@ -415,12 +415,28 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 			m_id_track.insert(ob, hairNodeName, IdTrack::HAIR);
 
 			AttrValue hair_geom;
-			// TODO: Add check for export meshes flag
-			if (!(hair_is_data_updated) /*|| !(m_settings.export_meshes)*/) {
-				hair_geom = AttrPlugin(getHairName(ob, psys, pset));
-			}
-			else {
-				hair_geom = exportGeomMayaHair(ob, psys, psm);;
+			const auto exporthairName = getHairName(ob, psys, pset);
+
+			// TODO: Add check for export meshes flag (m_settings.export_meshes)
+			if (!hair_is_data_updated && !m_layer_changed) {
+				// nothing changed just get the name
+				hair_geom = AttrPlugin(getMeshName(ob));
+			} else if (is_data_updated) {
+				// data was updated - must export mesh
+				hair_geom = exportGeomMayaHair(ob, psys, psm);
+				if (!hair_geom) {
+					PRINT_ERROR("Object: %s => Incorrect hair geometry!", ob.name().c_str());
+				}
+			} else if (m_layer_changed) {
+				// changed layer, maybe hair's geom is still not exported
+				if (m_exporter->getPluginManager().inCache(exporthairName)) {
+					hair_geom = AttrPlugin(exporthairName);
+				} else {
+					hair_geom = exportGeomMayaHair(ob, psys, psm);
+					if (!hair_geom) {
+						PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
+					}
+				}
 			}
 
 			AttrValue hair_mtl;
