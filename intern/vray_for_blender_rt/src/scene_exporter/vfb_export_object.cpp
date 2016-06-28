@@ -402,39 +402,48 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 
 		const std::string hairNodeName = "Node@" + getHairName(ob, psys, pset);
 
-		// Put hair node to the object dependent plugines
-		// (will be used to remove plugin when object is removed)
-		m_id_track.insert(ob, hairNodeName);
+		using Visibility = ObjectVisibility;
 
-		AttrValue hair_geom;
-		// TODO: Add check for export meshes flag
-		if (!(hair_is_data_updated) /*|| !(m_settings.export_meshes)*/) {
-			hair_geom = AttrPlugin(getHairName(ob, psys, pset));
-		}
-		else {
-			hair_geom = exportGeomMayaHair(ob, psys, psm);;
-		}
+		const int base_visibility = Visibility::HIDE_VIEWPORT | Visibility::HIDE_RENDER | Visibility::HIDE_LAYER;
+		const bool skip_export = !isObjectVisible(ob, Visibility(base_visibility));
 
-		AttrValue hair_mtl;
-		const int hair_mtl_index = pset.material() - 1;
-		if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
-			BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
-			if (hair_material) {
-				hair_mtl = exportMaterial(hair_material, ob);
+		if (skip_export) {
+			m_exporter->remove_plugin(hairNodeName);
+		} else {
+			// Put hair node to the object dependent plugines
+			// (will be used to remove plugin when object is removed)
+			m_id_track.insert(ob, hairNodeName, IdTrack::HAIR);
+
+			AttrValue hair_geom;
+			// TODO: Add check for export meshes flag
+			if (!(hair_is_data_updated) /*|| !(m_settings.export_meshes)*/) {
+				hair_geom = AttrPlugin(getHairName(ob, psys, pset));
 			}
-		}
-		if (!hair_mtl) {
-			hair_mtl = getDefaultMaterial();
-		}
+			else {
+				hair_geom = exportGeomMayaHair(ob, psys, psm);;
+			}
 
-		if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated)) {
-			PluginDesc hairNodeDesc(hairNodeName, "Node");
-			hairNodeDesc.add("geometry", hair_geom);
-			hairNodeDesc.add("material", hair_mtl);
-			hairNodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-			hairNodeDesc.add("objectID", ob.pass_index());
+			AttrValue hair_mtl;
+			const int hair_mtl_index = pset.material() - 1;
+			if (ob.material_slots.length() && (hair_mtl_index < ob.material_slots.length())) {
+				BL::Material hair_material = ob.material_slots[hair_mtl_index].material();
+				if (hair_material) {
+					hair_mtl = exportMaterial(hair_material, ob);
+				}
+			}
+			if (!hair_mtl) {
+				hair_mtl = getDefaultMaterial();
+			}
 
-			m_exporter->export_plugin(hairNodeDesc);
+			if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated || m_layer_changed)) {
+				PluginDesc hairNodeDesc(hairNodeName, "Node");
+				hairNodeDesc.add("geometry", hair_geom);
+				hairNodeDesc.add("material", hair_mtl);
+				hairNodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+				hairNodeDesc.add("objectID", ob.pass_index());
+
+				m_exporter->export_plugin(hairNodeDesc);
+			}
 		}
 	}
 }
@@ -443,7 +452,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
-	const bool visible = isObjectVisible(ob);
+	const bool visible = isObjectVisible(ob, ObjectVisibility(HIDE_RENDER | HIDE_VIEWPORT));
 
 	PluginDesc instancerDesc(exportName, "Instancer2");
 	instancerDesc.add("instances", instacer);

@@ -258,6 +258,17 @@ struct ObjectOverridesAttrs {
 
 class DataExporter {
 public:
+	enum ObjectVisibility {
+		HIDE_NONE                = 0,
+		HIDE_ALL                 = ~HIDE_NONE,
+		HIDE_DUPLI_EMITER        = 1,
+		HIDE_PARTICLE_EMITER     = 1 << 1,
+		HIDE_LIST                = 1 << 2,
+		HIDE_VIEWPORT            = 1 << 3,
+		HIDE_RENDER              = 1 << 4,
+		HIDE_LAYER               = 1 << 5,
+	};
+
 	enum ExpMode {
 		ExpModeNode = 0,
 		ExpModePlugin,
@@ -325,7 +336,7 @@ public:
 
 	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context, BL::SpaceView3D view3d);
 	void              init_defaults();
-	void              setComputedLayers(uint32_t layers) { m_layer_changed = m_computedLayers != layers; m_computedLayers = layers; }
+	void              setComputedLayers(uint32_t layers, bool is_local_view);
 
 	void              setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
 	void              setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
@@ -376,9 +387,12 @@ public:
 
 	AttrValue         getDefaultMaterial();
 
+	bool              hasLayerChanged() const { return m_layer_changed; }
 	bool              hasDupli(BL::Object ob);
-	bool              isDupliVisible(BL::Object ob);
-	bool              isObjectVisible(BL::Object ob);
+	// bits set in ObjectVisibility are used to check only some of the criteria
+	bool              isDupliVisible(BL::Object ob, ObjectVisibility ignore = HIDE_ALL);
+	// bits set in ObjectVisibility are used to check only some of the criteria
+	bool              isObjectVisible(BL::Object ob, ObjectVisibility ignore = HIDE_ALL);
 
 	void              clearMaterialCache();
 
@@ -433,7 +447,6 @@ public:
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
 
-	bool              m_is_local_view;
 private:
 	BL::BlendData     m_data;
 	BL::Scene         m_scene;
@@ -441,12 +454,14 @@ private:
 	BL::Context       m_context;
 	BL::SpaceView3D   m_view3d;
 
+	bool              m_is_local_view;
 	bool              m_layer_changed;
 	bool              m_is_preview;
 
 	BL::Camera        m_active_camera;
 	// should be set on each sync with setComputedLayers
 	uint32_t          m_computedLayers;
+	uint32_t          m_scene_layers;
 	ObjectHideMap     m_hide_lists;
 
 	PluginExporter   *m_exporter;

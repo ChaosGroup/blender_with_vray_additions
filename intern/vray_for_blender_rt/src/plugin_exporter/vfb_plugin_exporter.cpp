@@ -49,6 +49,7 @@ void PluginExporter::set_settings(const ExporterSettings &st)
 int PluginExporter::remove_plugin(const std::string &name) {
 	int result = 1;
 	if (m_pluginManager.inCache(name)) {
+		PRINT_INFO_EX("Removing plugin: [%s]", name.c_str());
 		m_pluginManager.remove(name);
 		result = this->remove_plugin_impl(name);
 	}

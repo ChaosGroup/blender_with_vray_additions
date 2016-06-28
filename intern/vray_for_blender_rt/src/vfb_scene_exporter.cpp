@@ -209,8 +209,7 @@ void SceneExporter::sync(const int &check_updated)
 			// truncate to local view layers
 			m_sceneComputedLayers >>= 20;
 		}
-		m_data_exporter.setComputedLayers(m_sceneComputedLayers);
-		m_data_exporter.m_is_local_view = m_isLocalView;
+		m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
 
 
 		VRayBaseTypes::RenderMode renderMode = m_view3d
@@ -379,6 +378,8 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				// lamps and clippers should be removed, others should be hidden
 				if (remove) {
 					m_exporter->remove_plugin(exportName);
+					// also check modifiers to remove
+					sync_object_modiefiers(ob, check_updated);
 				} else {
 					skip_export = false;
 					overrideAttr.override = true;
@@ -458,10 +459,17 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
 
+	using OVisibility = DataExporter::ObjectVisibility;
 
-	bool skip_export = !m_data_exporter.isObjectVisible(ob);
+	const int base_visibility = OVisibility::HIDE_VIEWPORT | OVisibility::HIDE_RENDER | OVisibility::HIDE_LAYER;
+	const bool skip_export = !m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
-	if (skip_export) {
+	if (skip_export && dupli_use_instancer) {
+		const auto exportNodeName = m_data_exporter.getNodeName(ob);
+		const auto exportInstName = "NodeWrapper@Instancer2@" + exportNodeName;
+		m_exporter->remove_plugin(exportInstName);
+		m_exporter->remove_plugin(exportNodeName);
+
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
 		return;
 	}
@@ -507,6 +515,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::Object      dupOb(dupliOb.object());
 
 		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
+
+		const int check_visibility_flag = ob.type() == BL::Object::type_EMPTY ? (OVisibility::HIDE_ALL & ~OVisibility::HIDE_LAYER) : OVisibility::HIDE_ALL;
 		const bool is_visible = m_data_exporter.isObjectVisible(dupOb);
 
 		const bool is_light = Blender::IsLight(dupOb);
@@ -607,8 +617,14 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		BL::Object ob(*obIt);
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
 		m_data_exporter.m_id_track.insert(ob, nodeName);
-		const bool is_updated = check_updated ? ob.is_updated() : true;
+		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 		const bool visible = m_data_exporter.isObjectVisible(ob);
+
+		bool has_array_mod = ob.modifiers.length();
+		if (has_array_mod) {
+			BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
+			has_array_mod = mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY;
+		}
 
 		if (ob.is_duplicator()) {
 
@@ -632,12 +648,18 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				sync_object(ob, check_updated, overAttrs);
 			}
 		}
-		else if (ob.modifiers.length()) {
-			BL::ArrayModifier modArray(PointerRNA_NULL);
-			BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
-			ObjectOverridesAttrs overrideAttrs;
+		else if (has_array_mod) {
+			if (!visible) {
+				// we have array mod but OB is not rendereable, remove mod
+				const auto exportNodeName = m_data_exporter.getNodeName(ob);
+				const auto exportInstName = "NodeWrapper@Instancer2@" + exportNodeName;
+				m_exporter->remove_plugin(exportInstName);
+				m_exporter->remove_plugin(exportNodeName);
+			} else {
+				BL::ArrayModifier modArray(PointerRNA_NULL);
+				BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
+				ObjectOverridesAttrs overrideAttrs;
 
-			if (mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY) {
 				// Store modifier
 				modArray = BL::ArrayModifier(mod);
 
@@ -651,13 +673,9 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				// Disable for render so that object is exported without Array modifier
 				modArray.show_render(false);
 				modArray.show_viewport(false);
-			} else {
-				overrideAttrs.override = false;
-			}
 
-			sync_object(ob, check_updated, overrideAttrs);
+				sync_object(ob, check_updated, overrideAttrs);
 
-			if (modArray) {
 				ArrayModifierData &amd = *(ArrayModifierData*)(modArray.ptr.data);
 				if (!amd.dupliTms) {
 					PRINT_ERROR("ArrayModifier dupliTms is null!");
@@ -693,6 +711,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				// Restore Array modifier settings
 				modArray.show_render(true);
 				modArray.show_viewport(true);
+
 			}
 		}
 		else {

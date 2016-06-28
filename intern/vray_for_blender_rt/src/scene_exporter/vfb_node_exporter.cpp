@@ -216,6 +216,13 @@ void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngi
 	m_is_preview = engine.is_preview();
 }
 
+void DataExporter::setComputedLayers(uint32_t layers, bool is_local_view)
+{
+	m_layer_changed = m_computedLayers != layers || m_is_local_view != is_local_view;
+	m_is_local_view = is_local_view;
+	m_computedLayers = layers;
+}
+
 
 void DataExporter::init_defaults()
 {
@@ -245,6 +252,7 @@ void DataExporter::resetSyncState()
 	refreshHideLists();
 	// layer did not change since last set
 	m_layer_changed = false;
+	m_scene_layers = to_int_layer(m_scene.layers());
 }
 
 
@@ -582,18 +590,18 @@ bool DataExporter::hasDupli(BL::Object ob) {
 	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
 }
 
-bool DataExporter::isDupliVisible(BL::Object ob) {
+bool DataExporter::isDupliVisible(BL::Object ob, ObjectVisibility ignore) {
 	bool is_renderable = true;
 
 	// Dulpi
-	if (hasDupli(ob)) {
+	if ((ignore & HIDE_DUPLI_EMITER) && hasDupli(ob)) {
 		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 		is_renderable = RNA_boolean_get(&vrayObject, "dupliShowEmitter");
 	}
 
 	// Particles
 	// Particle system "Show / Hide Emitter" has priority over dupli
-	if (ob.particle_systems.length()) {
+	if ((ignore & HIDE_PARTICLE_EMITER) && ob.particle_systems.length()) {
 		is_renderable = true;
 
 		BL::Object::modifiers_iterator mdIt;
@@ -618,36 +626,40 @@ bool DataExporter::isDupliVisible(BL::Object ob) {
 	return is_renderable;
 }
 
-bool DataExporter::isObjectVisible(BL::Object ob)
+bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 {
+#define has(flag) ((ignore & flag) != 0)
+
 	if (!ob) {
 		return false;
 	}
 
 	// object is duplicator and is hidden from dupli options/psys
-	if (!isDupliVisible(ob)) {
+	if (!isDupliVisible(ob, ignore)) {
 		return false;
 	}
 
 	// hidden for current camra
-	if (isObjectInHideList(ob, "camera")) {
+	if (has(HIDE_LIST) && isObjectInHideList(ob, "camera")) {
 		return false;
 	}
 
 	// hidden from viewport rendering
-	if (m_exporter->get_is_viewport() && ob.hide()) {
+	if (has(HIDE_VIEWPORT) && m_exporter->get_is_viewport() && ob.hide()) {
 		return false;
 	}
 
 	// hidden from rendering
-	if (!m_exporter->get_is_viewport() && ob.hide_render()) {
+	if (has(HIDE_RENDER) && !m_exporter->get_is_viewport() && ob.hide_render()) {
 		return false;
 	}
 
 	// object is on another layer
-	if ( !(m_computedLayers & ::get_layer(ob, m_is_local_view, to_int_layer(m_scene.layers()))) ) {
+	if (has(HIDE_LAYER) && !(m_computedLayers & ::get_layer(ob, m_is_local_view, ::to_int_layer(m_scene.layers()))) ) {
 		return false;
 	}
+
+#undef has;
 
 	return true;
 }
