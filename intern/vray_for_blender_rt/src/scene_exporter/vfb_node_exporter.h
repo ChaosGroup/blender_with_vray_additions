@@ -160,7 +160,7 @@ private:
 struct IdTrack {
 
 	enum PluginType {
-		NONE, CLIPPER, DUPLI_INSTACER, DUPLI_NODE, DUPLI_MODIFIER
+		NONE, CLIPPER, DUPLI_INSTACER, DUPLI_NODE, DUPLI_MODIFIER, HAIR
 	};
 
 	struct PluginInfo {
@@ -191,6 +191,9 @@ struct IdTrack {
 			break;
 		case IdTrack::DUPLI_NODE:
 			PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
+			break;
+		case IdTrack::HAIR:
+			PRINT_INFO_EX("IdTrack plugin %s HAIR", plugin.c_str());
 			break;
 		default:
 			break;

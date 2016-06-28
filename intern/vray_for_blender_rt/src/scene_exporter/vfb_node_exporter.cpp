@@ -109,6 +109,29 @@ void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
 }
 
 
+bool ob_has_hair(BL::Object ob)
+{
+	BL::Object::modifiers_iterator modIt;
+	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
+		BL::Modifier mod(*modIt);
+		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+			BL::ParticleSystemModifier psm(mod);
+			BL::ParticleSystem psys = psm.particle_system();
+			if (psys) {
+				BL::ParticleSettings pset(psys.settings());
+				if (pset &&
+				    pset.type() == BL::ParticleSettings::type_HAIR &&
+				    pset.render_type() == BL::ParticleSettings::render_type_PATH) {
+					
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 void DataExporter::sync()
 {
 	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.end(); ++dIt) {
@@ -139,7 +162,7 @@ void DataExporter::sync()
 				switch (plIter->second.type) {
 				case IdTrack::CLIPPER:
 					should_remove = !RNA_boolean_get(&vrayClipper, "enabled");
-					type = "DUPLI_CLIPPER";
+					type = "CLIPPER";
 					break;
 				case IdTrack::DUPLI_NODE:
 					// we had dupli *without* instancer, now we dont have dupli, or its via instancer
@@ -161,6 +184,10 @@ void DataExporter::sync()
 					}
 					type = "DUPLI_MODIFIER";
 					break;
+				case IdTrack::HAIR:
+					// we had hair, check if we still have hair
+					should_remove = !ob_has_hair(ob);
+					type = "HAIR";
 				default:
 					break;
 				}
