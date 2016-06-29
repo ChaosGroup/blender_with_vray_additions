@@ -465,10 +465,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	const bool skip_export = !m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
 	if (skip_export && dupli_use_instancer) {
-		const auto exportNodeName = m_data_exporter.getNodeName(ob);
-		const auto exportInstName = "NodeWrapper@Instancer2@" + exportNodeName;
+		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 		m_exporter->remove_plugin(exportInstName);
-		m_exporter->remove_plugin(exportNodeName);
 
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
 		return;
@@ -649,26 +647,26 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			}
 		}
 		else if (has_array_mod) {
+			ObjectOverridesAttrs overrideAttrs;
+
+			overrideAttrs.useInstancer = true;
+			overrideAttrs.override = true;
+			overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+			overrideAttrs.visible = visible;
+			overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+
 			if (!visible) {
 				// we have array mod but OB is not rendereable, remove mod
-				const auto exportNodeName = m_data_exporter.getNodeName(ob);
-				const auto exportInstName = "NodeWrapper@Instancer2@" + exportNodeName;
+				const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 				m_exporter->remove_plugin(exportInstName);
-				m_exporter->remove_plugin(exportNodeName);
+				// export base just in case we need to hide it
+				sync_object(ob, check_updated, overrideAttrs);
 			} else {
 				BL::ArrayModifier modArray(PointerRNA_NULL);
 				BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
-				ObjectOverridesAttrs overrideAttrs;
 
 				// Store modifier
 				modArray = BL::ArrayModifier(mod);
-
-				// We could have some heavy array, better use "dynamic_geometry"
-				overrideAttrs.useInstancer = true;
-				overrideAttrs.override = true;
-				overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overrideAttrs.visible = visible;
-				overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
 
 				// Disable for render so that object is exported without Array modifier
 				modArray.show_render(false);
