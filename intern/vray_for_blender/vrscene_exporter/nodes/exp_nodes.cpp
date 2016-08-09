@@ -60,16 +60,21 @@ std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, V
 {
 	std::string pluginName;
 	pluginName.reserve(512);
-	pluginName = "NT" + ntree.name() + "|" + node.name();
 
-	BL::NodeTree  parent = context.getNodeTree();
-	if (parent) {
-		pluginName += "|" + parent.name();
+	pluginName = "N" + node.name() + "|" + ntree.name();
+
+	for (VRayNodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
+		BL::NodeTree &parent = *ntIt;
+		if (parent) {
+			pluginName += "|" + parent.name();
+		}
 	}
 
-	BL::NodeGroup group  = context.getGroupNode();
-	if (group) {
-		pluginName += "@" + group.name();
+	for (VRayNodeContext::NodeVector::iterator gnIt = context.group.begin(); gnIt != context.group.end(); ++gnIt) {
+		BL::Node &group = *gnIt;
+		if (group) {
+			pluginName += "@" + group.name();
+		}
 	}
 
 	return StripString(pluginName);

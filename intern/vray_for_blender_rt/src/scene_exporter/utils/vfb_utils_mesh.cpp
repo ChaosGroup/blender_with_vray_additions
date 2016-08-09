@@ -514,7 +514,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 				}
 			}
 
-			data.meshes.remove(mesh);
+			data.meshes.remove(mesh, 1);
 
 			pluginDesc.add("vertices", vertices);
 			pluginDesc.add("faces", faces);
