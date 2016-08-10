@@ -34,6 +34,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <algorithm>
+#include <cmath> // std::isfinite is c++11
 
 #include "rayobject_rtbuild.h"
 
