@@ -42,6 +42,26 @@ set(INC
 	extern/vray-zmq-wrapper/include
 )
 
+if (WIN32)
+	macro(GroupSources curdir ignore_prefix)
+		file(GLOB children RELATIVE ${PROJECT_SOURCE_DIR}/${curdir} ${PROJECT_SOURCE_DIR}/${curdir}/*)
+		foreach(child ${children})
+			if(IS_DIRECTORY ${PROJECT_SOURCE_DIR}/${curdir}/${child})
+				if (${child} STREQUAL ".git")
+					# pass
+				else()
+					GroupSources(${curdir}/${child} ${ignore_prefix})
+				endif()
+			else()
+				string(REPLACE "${ignore_prefix}/" "" rel_path ${curdir})
+				string(REPLACE "/" "\\" groupname ${rel_path})
+				source_group(${groupname} FILES ${PROJECT_SOURCE_DIR}/${curdir}/${child})
+			endif()
+		endforeach()
+	endmacro()
+	GroupSources(intern/vray_for_blender_rt intern/vray_for_blender_rt)
+endif()
+
 if(USE_BLENDER_VRAY_APPSDK)
 	list(APPEND INC ${APPSDK_ROOT}/cpp/include)
 endif()
