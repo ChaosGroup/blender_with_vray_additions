@@ -63,6 +63,7 @@
 #include "BKE_library_remap.h"
 #include "BKE_main.h"
 #include "BKE_node.h"
+#include "BKE_depsgraph.h"
 
 #include "BLI_ghash.h"
 #include "BLI_threads.h"
@@ -3066,8 +3067,10 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 				BLI_callback_exec(NULL, &ntree->id, BLI_CB_EVT_NTREE_UPDATE);
 			}
 
-			// Tag update for ID.is_updated()
-			ntree->id.flag |= LIB_TAG_ID_RECALC;
+			// Tag update for ID.is_updated() / ntree.is_updated()
+			ntree->id.tag |= LIB_TAG_ID_RECALC;
+			// tag depsgraph to call update on the render engine
+			DAG_id_tag_update_ex(bmain, &ntree->id, ID_NT);
 
 			WM_main_add_notifier(ND_DRAW_RENDER_VIEWPORT, NULL);
 		}
