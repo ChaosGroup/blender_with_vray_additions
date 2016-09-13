@@ -97,12 +97,12 @@ static void copyData(ModifierData *md, ModifierData *target)
 
 	ArrayModifierData *amd = (ArrayModifierData *) md;
 	ArrayModifierData *tamd = (ArrayModifierData *) target;
-	if (tamd->dupliTms) {
-		MEM_freeN(tamd->dupliTms);
-		tamd->dupliTms = NULL;
-	}
 
-	if (amd->dupliTms) {
+	// right before this function, modifier_copyData_generic is called on target
+	// which does memcpy on the whole structure and thus tamd->dupliTms == amd->dupliTms
+	tamd->dupliTms = NULL;
+
+	if (amd->dupliTms && amd->count) {
 		tamd->dupliTms = (float*)MEM_mallocN(amd->count * sizeof(float[4][4]), "amd->dupliTms");
 		if (tamd->dupliTms) {
 			memcpy(tamd->dupliTms, amd->dupliTms, amd->count * sizeof(float[4][4]));
