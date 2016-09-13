@@ -98,8 +98,8 @@ static void copyData(ModifierData *md, ModifierData *target)
 	ArrayModifierData *amd = (ArrayModifierData *) md;
 	ArrayModifierData *tamd = (ArrayModifierData *) target;
 	if (tamd->dupliTms) {
-		MEM_freeN(amd->dupliTms);
-		amd->dupliTms = NULL;
+		MEM_freeN(tamd->dupliTms);
+		tamd->dupliTms = NULL;
 	}
 
 	if (amd->dupliTms) {
