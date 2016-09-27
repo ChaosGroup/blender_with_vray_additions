@@ -335,8 +335,8 @@ static void graph_channel_region_init(wmWindowManager *wm, ARegion *ar)
 	wmKeyMap *keymap;
 	
 	/* make sure we keep the hide flags */
-	ar->v2d.scroll |= (V2D_SCROLL_RIGHT | V2D_SCROLL_BOTTOM);
-	ar->v2d.scroll &= ~(V2D_SCROLL_LEFT | V2D_SCROLL_TOP);	/* prevent any noise of past */
+	ar->v2d.scroll |= V2D_SCROLL_RIGHT;
+	ar->v2d.scroll &= ~(V2D_SCROLL_LEFT | V2D_SCROLL_TOP | V2D_SCROLL_BOTTOM);	/* prevent any noise of past */
 	ar->v2d.scroll |= V2D_SCROLL_HORIZONTAL_HIDE;
 	ar->v2d.scroll |= V2D_SCROLL_VERTICAL_HIDE;
 	
@@ -687,7 +687,7 @@ static void graph_id_remap(ScrArea *UNUSED(sa), SpaceLink *slink, ID *old_id, ID
 		return;
 	}
 
-	if ((ID *)sgraph->ads->filter_grp == old_id) {
+	if (sgraph->ads && (ID *)sgraph->ads->filter_grp == old_id) {
 		sgraph->ads->filter_grp = (Group *)new_id;
 	}
 }

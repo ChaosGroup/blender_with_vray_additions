@@ -536,6 +536,14 @@ void smokeModifier_createType(struct SmokeModifierData *smd)
 #endif
 			smd->domain->data_depth = 0;
 			smd->domain->cache_file_format = PTCACHE_FILE_PTCACHE;
+
+			smd->domain->display_thickness = 1.0f;
+			smd->domain->slice_method = MOD_SMOKE_SLICE_VIEW_ALIGNED;
+			smd->domain->axis_slice_method = AXIS_SLICE_FULL;
+			smd->domain->slice_per_voxel = 5.0f;
+			smd->domain->slice_depth = 0.5f;
+			smd->domain->slice_axis = 0;
+			smd->domain->vector_scale = 1.0f;
 		}
 		else if (smd->type & MOD_SMOKE_TYPE_FLOW)
 		{
@@ -629,6 +637,15 @@ void smokeModifier_copy(struct SmokeModifierData *smd, struct SmokeModifierData 
 		tsmd->domain->openvdb_comp = smd->domain->openvdb_comp;
 		tsmd->domain->data_depth = smd->domain->data_depth;
 		tsmd->domain->cache_file_format = smd->domain->cache_file_format;
+
+		tsmd->domain->slice_method = smd->domain->slice_method;
+		tsmd->domain->axis_slice_method = smd->domain->axis_slice_method;
+		tsmd->domain->slice_per_voxel = smd->domain->slice_per_voxel;
+		tsmd->domain->slice_depth = smd->domain->slice_depth;
+		tsmd->domain->slice_axis = smd->domain->slice_axis;
+		tsmd->domain->draw_velocity = smd->domain->draw_velocity;
+		tsmd->domain->vector_draw_type = smd->domain->vector_draw_type;
+		tsmd->domain->vector_scale = smd->domain->vector_scale;
 	}
 	else if (tsmd->flow) {
 		tsmd->flow->psys = smd->flow->psys;
@@ -2737,19 +2754,18 @@ static void smokeModifier_process(SmokeModifierData *smd, Scene *scene, Object *
 			return;
 		}
 
+		/* only calculate something when we advanced a single frame */
+		/* don't simulate if viewing start frame, but scene frame is not real start frame */
+		bool can_simulate = (framenr == (int)smd->time + 1) && (framenr == scene->r.cfra);
+
 		/* try to read from cache */
-		if (BKE_ptcache_read(&pid, (float)framenr) == PTCACHE_READ_EXACT) {
+		if (BKE_ptcache_read(&pid, (float)framenr, can_simulate) == PTCACHE_READ_EXACT) {
 			BKE_ptcache_validate(cache, framenr);
 			smd->time = framenr;
 			return;
 		}
 
-		/* only calculate something when we advanced a single frame */
-		if (framenr != (int)smd->time + 1)
-			return;
-
-		/* don't simulate if viewing start frame, but scene frame is not real start frame */
-		if (framenr != scene->r.cfra)
+		if (!can_simulate)
 			return;
 
 #ifdef DEBUG_TIME
@@ -3052,9 +3068,15 @@ float smoke_get_velocity_at(struct Object *ob, float position[3], float velocity
 int smoke_get_data_flags(SmokeDomainSettings *sds)
 {
 	int flags = 0;
-	if (smoke_has_heat(sds->fluid)) flags |= SM_ACTIVE_HEAT;
-	if (smoke_has_fuel(sds->fluid)) flags |= SM_ACTIVE_FIRE;
-	if (smoke_has_colors(sds->fluid)) flags |= SM_ACTIVE_COLORS;
+
+	if (sds->fluid) {
+		if (smoke_has_heat(sds->fluid))
+			flags |= SM_ACTIVE_HEAT;
+		if (smoke_has_fuel(sds->fluid))
+			flags |= SM_ACTIVE_FIRE;
+		if (smoke_has_colors(sds->fluid))
+			flags |= SM_ACTIVE_COLORS;
+	}
 
 	return flags;
 }

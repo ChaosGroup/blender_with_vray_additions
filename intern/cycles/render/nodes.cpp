@@ -4762,6 +4762,7 @@ NODE_DEFINE(BumpNode)
 	NodeType* type = NodeType::add("bump", create, NodeType::SHADER);
 
 	SOCKET_BOOLEAN(invert, "Invert", false);
+	SOCKET_BOOLEAN(use_object_space, "UseObjectSpace", false);
 
 	/* this input is used by the user, but after graph transform it is no longer
 	 * used and moved to sampler center/x/y instead */
@@ -4800,7 +4801,8 @@ void BumpNode::compile(SVMCompiler& compiler)
 		compiler.encode_uchar4(
 			compiler.stack_assign_if_linked(normal_in),
 			compiler.stack_assign(distance_in),
-			invert),
+			invert,
+			use_object_space),
 		compiler.encode_uchar4(
 			compiler.stack_assign(center_in),
 			compiler.stack_assign(dx_in),
@@ -4812,6 +4814,7 @@ void BumpNode::compile(SVMCompiler& compiler)
 void BumpNode::compile(OSLCompiler& compiler)
 {
 	compiler.parameter(this, "invert");
+	compiler.parameter(this, "use_object_space");
 	compiler.add(this, "node_bump");
 }
 
@@ -4846,12 +4849,8 @@ void CurvesNode::constant_fold(const ConstantFolder& folder, ShaderInput *value_
 {
 	ShaderInput *fac_in = input("Fac");
 
-	/* remove no-op node */
-	if(!fac_in->link && fac == 0.0f) {
-		folder.bypass(value_in->link);
-	}
 	/* evaluate fully constant node */
-	else if(folder.all_inputs_constant()) {
+	if(folder.all_inputs_constant()) {
 		if (curves.size() == 0)
 			return;
 
@@ -4863,6 +4862,11 @@ void CurvesNode::constant_fold(const ConstantFolder& folder, ShaderInput *value_
 		result[2] = rgb_ramp_lookup(curves.data(), pos[2], true, true, curves.size()).z;
 
 		folder.make_constant(interp(value, result, fac));
+	}
+	/* remove no-op node */
+	else if(!fac_in->link && fac == 0.0f) {
+		/* link is not null because otherwise all inputs are constant */
+		folder.bypass(value_in->link);
 	}
 }
 
