@@ -3925,7 +3925,7 @@ static void system_step(ParticleSimulationData *sim, float cfra, const bool use_
 
 /* 2. try to read from the cache */
 	if (pid) {
-		int cache_result = BKE_ptcache_read(pid, cache_cfra);
+		int cache_result = BKE_ptcache_read(pid, cache_cfra, true);
 
 		if (ELEM(cache_result, PTCACHE_READ_EXACT, PTCACHE_READ_INTERPOLATED)) {
 			cached_step(sim, cfra);
@@ -4336,7 +4336,9 @@ void BKE_particlesystem_id_loop(ParticleSystem *psys, ParticleSystemIDFunc func,
 		func(psys, (ID **)&pt->ob, userdata, IDWALK_NOP);
 	}
 
-	if (psys->part->phystype == PART_PHYS_BOIDS) {
+	/* Even though psys->part should never be NULL, this can happen as an exception during deletion.
+	 * See ID_REMAP_SKIP/FORCE/FLAG_NEVER_NULL_USAGE in BKE_library_remap. */
+	if (psys->part && psys->part->phystype == PART_PHYS_BOIDS) {
 		ParticleData *pa;
 		int p;
 
