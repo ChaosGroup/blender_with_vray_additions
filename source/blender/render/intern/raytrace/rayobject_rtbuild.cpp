@@ -43,7 +43,7 @@
 #include "BLI_math.h"
 #include "BLI_utildefines.h"
 
-#if __cplusplus >= 201103L || __APPELE__
+#if __cplusplus >= 201103L || __APPLE__
 using std::isfinite;
 #endif
 
