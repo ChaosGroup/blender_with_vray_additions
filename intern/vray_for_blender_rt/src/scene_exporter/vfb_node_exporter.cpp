@@ -54,16 +54,23 @@ std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeC
 {
 	std::string pluginName;
 	pluginName.reserve(512);
-	pluginName = "NT" + ntree.name() + "|" + node.name();
 
-	BL::NodeTree  parent(context.getNodeTree());
-	if (parent) {
-		pluginName += "|" + parent.name();
+	pluginName = "N" + node.name() + "|" + ntree.name();
+
+	// If we are exporting nodes from group node tree we have to resolve full path to node
+	// to prevent plugin name override.
+	//
+	for (NodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
+		BL::NodeTree &parent = *ntIt;
+		if (parent) {
+			pluginName += "|" + parent.name();
+		}
 	}
-
-	BL::NodeGroup group(context.getGroupNode());
-	if (group) {
-		pluginName += "@" + group.name();
+	for (NodeContext::NodeVector::iterator gnIt = context.group.begin(); gnIt != context.group.end(); ++gnIt) {
+		BL::Node &group = *gnIt;
+		if (group) {
+			pluginName += "@" + group.name();
+		}
 	}
 
 	return pluginName;

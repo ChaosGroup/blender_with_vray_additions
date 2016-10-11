@@ -72,6 +72,9 @@ struct ObjectContext {
 
 class NodeContext {
 public:
+	typedef std::vector<BL::NodeTree> NodeTreeVector;
+	typedef std::vector<BL::Node>     NodeVector;
+
 	NodeContext() {}
 	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object)
 	    : object_context(data, scene, object)
@@ -114,15 +117,8 @@ public:
 	}
 
 	ObjectContext  object_context;
-
-private:
-	// If we are exporting group node we have to treat
-	// group ntree's nodes as nodes of the current tree
-	// to prevent plugin overriding.
-	//
-	std::vector<BL::NodeTree>  parent;
-	std::vector<BL::Node>      group;
-
+	NodeTreeVector parent;
+	NodeVector     group;
 };
 
 
