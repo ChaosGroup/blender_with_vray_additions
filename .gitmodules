@@ -12,7 +12,7 @@
 	ignore = all
 [submodule "intern/vray_for_blender_rt/extern/vray-zmq-wrapper"]
 	path = intern/vray_for_blender_rt/extern/vray-zmq-wrapper
-	url = https://github.com/bdancer/vray-zmq-wrapper.git
+	url = ../vray-zmq-wrapper.git
 	branch = master
 [submodule "source/tools"]
 	path = source/tools
