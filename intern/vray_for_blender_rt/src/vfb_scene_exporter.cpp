@@ -414,7 +414,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				if (RNA_boolean_get(&vrayClipper, "enabled")) {
 
 					overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
-					overrideAttr.visible = false;
+					overrideAttr.visible = true;
 					overrideAttr.override = true;
 
 					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
