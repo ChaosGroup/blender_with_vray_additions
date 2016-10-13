@@ -1306,6 +1306,8 @@ void VRsceneExporter::exportVRayClipper(BL::Object ob, const NodeAttrs &attrs)
 		AttributeValueMap clipperGeomNode;
 		clipperGeomNode["geometry"]  = clipperGeomName;
 		clipperGeomNode["transform"] = BOOST_FORMAT_TM(transform);
+		clipperGeomNode["visible"]   = BOOST_FORMAT_BOOL(true);
+		clipperGeomNode["material"]  = material;
 
 		VRayNodePluginExporter::exportPlugin("NODE", "Node", clipperGeomNodeName, clipperGeomNode);
 
