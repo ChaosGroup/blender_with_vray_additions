@@ -31,10 +31,16 @@
 
 
 #include <assert.h>
-#include <math.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <cmath> // std::isfinite is c++11
+
+#if __cplusplus >= 201103L
+#include <cmath>
+using std::isfinite;
+#else
+#include <math.h>
+#endif
 
 #include "rayobject_rtbuild.h"
 
@@ -42,10 +48,6 @@
 
 #include "BLI_math.h"
 #include "BLI_utildefines.h"
-
-#if __cplusplus >= 201103L || __APPLE__
-using std::isfinite;
-#endif
 
 static bool selected_node(RTBuilder::Object *node)
 {
