@@ -35,7 +35,7 @@
 #include <algorithm>
 #include <cmath> // std::isfinite is c++11
 
-#if __cplusplus >= 201103L
+#if __cplusplus >= 201103L || __APPLE__
 #include <cmath>
 using std::isfinite;
 #else
