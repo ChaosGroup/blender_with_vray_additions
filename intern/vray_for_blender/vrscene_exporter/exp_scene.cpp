@@ -272,6 +272,8 @@ void VRsceneExporter::exportObjectsPre()
 	m_exportedObjects.clear();
 	m_psys.clear();
 
+	m_hideFromView.clear();
+
 	// Create particle system data
 	// Needed for the correct first frame when particles
 	// generation is not started from the beginning of the
