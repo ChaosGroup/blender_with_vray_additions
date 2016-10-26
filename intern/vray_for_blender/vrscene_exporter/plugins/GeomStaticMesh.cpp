@@ -237,7 +237,7 @@ void GeomStaticMesh::init()
 
 		initHash();
 
-		b_data.meshes.remove(b_mesh, 1);
+		b_data.meshes.remove(b_mesh, false);
 		b_mesh = BL::Mesh(PointerRNA_NULL);
 	}
 }
