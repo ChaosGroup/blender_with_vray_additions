@@ -54,21 +54,10 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	settings_files.output_unique = RNA_boolean_get(&m_vrayExporter, "output_unique");
 	settings_files.project_path  = data.filepath();
 
-	// Check what layers to use
-	//
-	const ActiveLayers useLayers = (ActiveLayers)RNA_enum_get(&m_vrayExporter, "activeLayers");
-	if(useLayers == ActiveLayersScene) {
-		active_layers = scene.layers();
-	}
-	else if(useLayers == ActiveLayersAll) {
-		// TODO: active_layers = ~(1<<21);
-	}
-	else if(useLayers == ActiveLayersCustom) {
-		// Custom layers
-		int layer_values[20];
-		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", layer_values);
-
-		// TODO: memcpy((void*)(*active_layers), layer_values, 20 * sizeof(int));
+	// Read layers if custom are specified
+	use_active_layers = (ActiveLayers)RNA_enum_get(&m_vrayExporter, "activeLayers");
+	if(use_active_layers == ActiveLayersCustom) {
+		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
 
 	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");

@@ -194,7 +194,20 @@ void SceneExporter::sync(const int &check_updated)
 		m_sceneComputedLayers = 0;
 		m_isLocalView = m_view3d && m_view3d.local_view();
 
-		auto viewLayers = m_isLocalView ? m_view3d.layers() : m_scene.layers();
+		BlLayers viewLayers;
+		if (m_isLocalView) {
+			viewLayers = m_view3d.layers();
+		} else {
+			if (m_settings.use_active_layers == ExporterSettings::ActiveLayersCustom) {
+				viewLayers = m_settings.active_layers;
+			} else if (m_settings.use_active_layers == ExporterSettings::ActiveLayersAll) {
+				for (int c = 0; c < 20; ++c) {
+					viewLayers[c] = 1;
+				}
+			} else {
+				viewLayers = m_scene.layers();
+			}
+		}
 
 		for (int c = 0; c < 20; ++c) {
 			m_sceneComputedLayers |= (!!viewLayers[c] << c);

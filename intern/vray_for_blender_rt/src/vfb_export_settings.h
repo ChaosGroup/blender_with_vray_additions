@@ -148,6 +148,7 @@ struct ExporterSettings {
 
 	// Export options
 	BlLayers          active_layers;
+	ActiveLayers      use_active_layers;
 
 	DefaultMapping    default_mapping;
 	ExportFormat      export_file_format;
