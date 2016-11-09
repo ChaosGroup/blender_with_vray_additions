@@ -32,7 +32,26 @@
 ZmqWrapper * heartbeatClient = nullptr;
 std::mutex heartbeatLock;
 
-VRayForBlender::SceneExporter *undoRedoExporter = nullptr;
+
+std::queue<VRayForBlender::SceneExporter*> stashedExporters;
+
+// stash instead of delete exporters here that are marked for undo
+void stashExporter(VRayForBlender::SceneExporter* exporter)
+{
+	stashedExporters.push(exporter);
+}
+
+// try to take exporter from stash
+VRayForBlender::SceneExporter * tryTakeStashedExporter()
+{
+	if (stashedExporters.empty()) {
+		return nullptr;
+	}
+
+	auto exp = stashedExporters.front();
+	stashedExporters.pop();
+	return exp;
+}
 
 static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)
 {
@@ -255,8 +274,10 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 		RNA_main_pointer_create((Main*)PyLong_AsVoidPtr(pyData), &dataPtr);
 		RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyScene), &scenePtr);
 
-		if (undoRedoExporter) {
-			exporter = undoRedoExporter;
+		auto stashed = tryTakeStashedExporter();
+
+		if (stashed) {
+			exporter = stashed;
 			exporter->resume_from_undo(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
 		} else {
 			exporter = new VRayForBlender::InteractiveExporter(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
@@ -265,13 +286,11 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 		}
 
 		exporter->python_thread_state_save();
-		exporter->sync(undoRedoExporter != nullptr);
-		if (!undoRedoExporter) {
+		exporter->sync(stashed != nullptr);
+		if (!stashed) {
 			exporter->render_start();
 		}
 		exporter->python_thread_state_restore();
-
-		undoRedoExporter = nullptr;
 	} else {
 		PRINT_ERROR("Failed to initialize RT exporter!");
 	}
@@ -288,7 +307,7 @@ static PyObject* vfb_free(PyObject*, PyObject *value)
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
 		if (exporter->is_engine_undo_taged() && exporter->is_viewport()) {
-			undoRedoExporter = exporter;
+			stashExporter(exporter);
 			exporter->pause_for_undo();
 		} else {
 			FreePtr(exporter);
