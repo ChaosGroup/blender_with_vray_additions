@@ -84,6 +84,13 @@ public:
 	int                  is_viewport() { return !!m_view3d; }
 	int                  is_preview();
 
+	bool                 is_engine_undo_taged();
+	void                 pause_for_undo();
+	void                 resume_from_undo(BL::Context         context,
+	                                      BL::RenderEngine    engine,
+	                                      BL::BlendData       data,
+	                                      BL::Scene           scene);
+
 	// allows python threads to resume running
 	void                 python_thread_state_save();
 

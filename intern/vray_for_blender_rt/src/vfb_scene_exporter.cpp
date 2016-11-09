@@ -30,6 +30,8 @@
 #include "DNA_object_types.h"
 #include "DNA_modifier_types.h"
 
+#include "RE_engine.h"
+
 extern "C" {
 #include "BKE_idprop.h"
 #include "BKE_node.h" // For ntreeUpdateTree()
@@ -95,12 +97,47 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 	m_settings.update(m_context, m_engine, m_data, m_scene);
 }
 
+void SceneExporter::pause_for_undo()
+{
+	m_context = PointerRNA_NULL;
+	m_engine = PointerRNA_NULL;
+	m_data = PointerRNA_NULL;
+	m_scene = PointerRNA_NULL;
+	m_view3d = PointerRNA_NULL;
+	m_region3d = PointerRNA_NULL;
+	m_region = PointerRNA_NULL;
+
+	m_exporter->set_callback_on_message_updated([](const char *, const char *) {});
+}
+
+void SceneExporter::resume_from_undo(BL::Context         context,
+	                                 BL::RenderEngine    engine,
+	                                 BL::BlendData       data,
+	                                 BL::Scene           scene)
+{
+	m_context = context;
+	m_engine = engine;
+	m_data = data;
+	m_scene = scene;
+	m_view3d = BL::SpaceView3D(context.space_data());
+	m_region3d = context.region_data();
+	m_region = context.region();
+	m_active_camera = BL::Camera(m_view3d ? m_view3d.camera() : scene.camera());
+
+	m_settings.update(m_context, m_engine, m_data, m_scene);
+
+	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
+
+	setup_callbacks();
+
+	m_data_exporter.init(m_exporter, m_settings);
+	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
+}
 
 SceneExporter::~SceneExporter()
 {
 	free();
 }
-
 
 void SceneExporter::python_thread_state_save()
 {
@@ -144,9 +181,6 @@ void SceneExporter::create_exporter()
 	m_exporter = ExporterCreate(m_settings.exporter_type);
 	if (!m_exporter) {
 		m_exporter = ExporterCreate(m_settings.exporter_type = ExpoterType::ExporterTypeInvalid);
-		if (!m_exporter) {
-			return;
-		}
 	}
 }
 
@@ -800,13 +834,17 @@ void SceneExporter::sync_render_channels()
 
 void SceneExporter::tag_update()
 {
-	m_engine.tag_update();
+	if (m_engine) {
+		m_engine.tag_update();
+	}
 }
 
 
 void SceneExporter::tag_redraw()
 {
-	m_engine.tag_redraw();
+	if (m_engine) {
+		m_engine.tag_redraw();
+	}
 }
 
 
@@ -819,4 +857,13 @@ int SceneExporter::is_interrupted()
 int SceneExporter::is_preview()
 {
 	return m_engine && m_engine.is_preview();
+}
+
+bool SceneExporter::is_engine_undo_taged()
+{
+	if (m_engine) {
+		RenderEngine *re = reinterpret_cast<RenderEngine*>(m_engine.ptr.data);
+		return re->flag & RE_ENGINE_UNDO_REDO_FREE;
+	}
+	return false;
 }

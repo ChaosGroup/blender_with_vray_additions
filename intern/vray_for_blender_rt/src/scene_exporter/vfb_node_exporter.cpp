@@ -142,7 +142,7 @@ bool ob_has_hair(BL::Object ob)
 void DataExporter::sync()
 {
 	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.end(); ++dIt) {
-		auto ob = dIt->first;
+		auto ob = dIt->second.object;
 		auto &dep = dIt->second;
 
 		const auto & obName = ob.name();
@@ -201,7 +201,7 @@ void DataExporter::sync()
 			}
 
 			if (should_remove) {
-				PRINT_INFO_EX("Removing plugin: %s, with type: %s", plIter->first.c_str(), type);
+				PRINT_INFO_EX("Removing plugin: %s, with type: %s, for ob [%s]", plIter->first.c_str(), type, dIt->first.c_str());
 				m_exporter->remove_plugin(plIter->first);
 				plIter = dep.plugins.erase(plIter);
 			} else {
@@ -674,6 +674,7 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 
 std::string DataExporter::getNodeName(BL::Object ob)
 {
+	// TODO: check if ob is from library and append it's name
 	static boost::format obNameFormat("Node@%s");
 	return boost::str(obNameFormat % ob.name());
 }

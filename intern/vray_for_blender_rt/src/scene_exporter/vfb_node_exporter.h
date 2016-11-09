@@ -165,19 +165,35 @@ struct IdTrack {
 	};
 
 	struct IdDep {
+		IdDep(): object(PointerRNA_NULL) {}
 		std::unordered_map<std::string, PluginInfo> plugins;
+		BL::Object object;
 		int used;
 	};
 
-	int contains(BL::Object id) {
-		return data.find(id) != data.end();
+	int contains(BL::Object ob) {
+		return data.find(getObjectKey(ob)) != data.end();
 	}
 
 	void clear() {
 		data.clear();
 	}
 
-	void insert(BL::Object id, const std::string &plugin, PluginType type = PluginType::NONE) {
+	std::string getObjectKey(BL::Object ob) {
+		ID * id = reinterpret_cast<ID*>(ob.ptr.data);
+		std::string name(id->name);
+
+		Library * lib = id->lib;
+
+		while (lib) {
+			name += lib->name;
+			lib = lib->parent;
+		}
+
+		return name;
+	}
+
+	void insert(BL::Object ob, const std::string &plugin, PluginType type = PluginType::NONE) {
 		switch (type) {
 		case IdTrack::CLIPPER:
 			PRINT_INFO_EX("IdTrack plugin %s CLIPPER", plugin.c_str());
@@ -194,16 +210,14 @@ struct IdTrack {
 		default:
 			break;
 		}
-		IdDep &dep = data[id];
+		IdDep &dep = data[getObjectKey(ob)];
 		dep.plugins[plugin] = {true, type};
 		dep.used = true;
+		dep.object = ob;
 	}
 
 	void reset_usage() {
 		for (auto &dIt : data) {
-#if 0
-			ID    *id  = (ID*)dIt.first;
-#endif
 			IdDep &dep = dIt.second;
 			for (auto &pl : dep.plugins) {
 				pl.second.used = false;
@@ -212,7 +226,7 @@ struct IdTrack {
 		}
 	}
 
-	typedef std::map<BL::Object, IdDep> TrackMap;
+	typedef std::map<std::string, IdDep> TrackMap;
 	TrackMap data;
 
 };
