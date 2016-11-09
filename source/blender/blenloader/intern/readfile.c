@@ -6715,6 +6715,7 @@ void blo_lib_link_screen_restore(Main *newmain, bScreen *curscreen, Scene *cursc
 						RegionView3D *rv3d= ar->regiondata;
 						
 						if (rv3d && rv3d->render_engine) {
+							rv3d->render_engine->flag |= RE_ENGINE_UNDO_REDO_FREE;
 							RE_engine_free(rv3d->render_engine);
 							rv3d->render_engine = NULL;
 						}

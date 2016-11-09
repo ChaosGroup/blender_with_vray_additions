@@ -73,6 +73,7 @@ struct BakePixel;
 #define RE_ENGINE_RENDERING		16
 #define RE_ENGINE_HIGHLIGHT_TILES	32
 #define RE_ENGINE_USED_FOR_VIEWPORT	64
+#define RE_ENGINE_UNDO_REDO_FREE    128
 
 /* RenderEngine.update_flag, used by internal now */
 #define RE_ENGINE_UPDATE_MA			1
