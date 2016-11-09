@@ -49,6 +49,47 @@ static boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");
 using namespace VRayForBlender;
 using namespace VRayForBlender::Nodes;
 
+int IdTrack::contains(BL::Object ob) {
+	return data.find(DataExporter::getObjectUniqueKey(ob)) != data.end();
+}
+
+void IdTrack::clear() {
+	data.clear();
+}
+
+void IdTrack::insert(BL::Object ob, const std::string &plugin, PluginType type) {
+	switch (type) {
+	case IdTrack::CLIPPER:
+		PRINT_INFO_EX("IdTrack plugin %s CLIPPER", plugin.c_str());
+		break;
+	case IdTrack::DUPLI_INSTACER:
+		PRINT_INFO_EX("IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
+		break;
+	case IdTrack::DUPLI_NODE:
+		PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
+		break;
+	case IdTrack::HAIR:
+		PRINT_INFO_EX("IdTrack plugin %s HAIR", plugin.c_str());
+		break;
+	default:
+		break;
+	}
+	IdDep &dep = data[DataExporter::getObjectUniqueKey(ob)];
+	dep.plugins[plugin] = {true, type};
+	dep.used = true;
+	dep.object = ob;
+}
+
+void IdTrack::reset_usage() {
+	for (auto &dIt : data) {
+		IdDep &dep = dIt.second;
+		for (auto &pl : dep.plugins) {
+			pl.second.used = false;
+		}
+		dep.used = false;
+	}
+}
+
 
 std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context)
 {
@@ -710,6 +751,19 @@ std::string DataExporter::getLightName(BL::Object ob)
 	return boost::str(lampNameFormat % ob.name());
 }
 
+std::string DataExporter::getObjectUniqueKey(BL::Object ob) {
+	ID * id = reinterpret_cast<ID*>(ob.ptr.data);
+	std::string name(id->name);
+
+	Library * lib = id->lib;
+
+	while (lib) {
+		name += lib->name;
+		lib = lib->parent;
+	}
+
+	return name;
+}
 
 ParamDesc::PluginType DataExporter::GetConnectedNodePluginType(BL::NodeSocket fromSocket)
 {
@@ -734,3 +788,57 @@ void DataExporter::tag_ntree(BL::NodeTree ntree, bool updated)
 		_ntree->tag &= ~LIB_TAG_ID_RECALC_ALL;
 	}
 }
+
+bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
+{
+	// we are no undo-ing
+	if (!m_is_undo_sync) {
+		return false;
+	}
+
+	if (m_undo_stack.size() < 2) {
+		BLI_assert(!"Trying to do undo/redo but stach did not have enought states");
+		return false;
+	}
+
+	// check if object is the state we are currently undoing
+	const auto & checkState = m_undo_stack[1];
+	return checkState.find(getObjectUniqueKey(ob)) != checkState.end();
+}
+
+bool DataExporter::isObjectInThisSync(BL::Object ob)
+{
+	return m_undo_stack.front().find(getObjectUniqueKey(ob)) != m_undo_stack.front().end();
+}
+
+void DataExporter::saveSyncedObject(BL::Object ob)
+{
+	const auto key = getObjectUniqueKey(ob);
+	m_undo_stack.front().insert(key);
+}
+
+void DataExporter::syncStart(bool isUndoSync)
+{
+	m_is_undo_sync = isUndoSync;
+	m_undo_stack.push_front(UndoStateObjects());
+}
+
+void DataExporter::syncEnd() {
+	if (m_is_undo_sync) {
+		if (m_undo_stack.size() < 2) {
+			BLI_assert(!"Trying to do undo/redo but stach did not have enought states");
+			m_undo_stack.clear();
+		} else {
+			m_undo_stack.pop_back(); // pop the state then we were undo-ing stuff
+			m_undo_stack.pop_back(); // pop the original state where we were do-ing stuff
+		}
+	}
+
+	// discard oldest states until we reach limit
+	while (m_undo_stack.size() > 32) {
+		m_undo_stack.pop_back();
+	}
+
+	m_is_undo_sync = false;
+}
+

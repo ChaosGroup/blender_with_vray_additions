@@ -27,7 +27,10 @@
 
 #include "DNA_ID.h"
 #include <map>
-#include <unordered_map>
+#include <unordered_set>
+#include <stack>
+#include <vector>
+#include <deque>
 
 using namespace VRayForBlender;
 
@@ -44,7 +47,6 @@ const char* const EnvironmentMappingType[] = {
     "max_shrink_wrap",
     NULL
 };
-
 
 struct ObjectContext {
 	ObjectContext():
@@ -171,64 +173,13 @@ struct IdTrack {
 		int used;
 	};
 
-	int contains(BL::Object ob) {
-		return data.find(getObjectKey(ob)) != data.end();
-	}
-
-	void clear() {
-		data.clear();
-	}
-
-	std::string getObjectKey(BL::Object ob) {
-		ID * id = reinterpret_cast<ID*>(ob.ptr.data);
-		std::string name(id->name);
-
-		Library * lib = id->lib;
-
-		while (lib) {
-			name += lib->name;
-			lib = lib->parent;
-		}
-
-		return name;
-	}
-
-	void insert(BL::Object ob, const std::string &plugin, PluginType type = PluginType::NONE) {
-		switch (type) {
-		case IdTrack::CLIPPER:
-			PRINT_INFO_EX("IdTrack plugin %s CLIPPER", plugin.c_str());
-			break;
-		case IdTrack::DUPLI_INSTACER:
-			PRINT_INFO_EX("IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
-			break;
-		case IdTrack::DUPLI_NODE:
-			PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
-			break;
-		case IdTrack::HAIR:
-			PRINT_INFO_EX("IdTrack plugin %s HAIR", plugin.c_str());
-			break;
-		default:
-			break;
-		}
-		IdDep &dep = data[getObjectKey(ob)];
-		dep.plugins[plugin] = {true, type};
-		dep.used = true;
-		dep.object = ob;
-	}
-
-	void reset_usage() {
-		for (auto &dIt : data) {
-			IdDep &dep = dIt.second;
-			for (auto &pl : dep.plugins) {
-				pl.second.used = false;
-			}
-			dep.used = false;
-		}
-	}
+	int               contains(BL::Object ob);
+	void              clear();
+	void              insert(BL::Object ob, const std::string &plugin, PluginType type = PluginType::NONE);
+	void              reset_usage();
 
 	typedef std::map<std::string, IdDep> TrackMap;
 	TrackMap data;
-
 };
 
 
@@ -267,6 +218,9 @@ struct ObjectOverridesAttrs {
 
 
 class DataExporter {
+	// one state hold all objects that were exported on a given sync
+	typedef std::unordered_set<std::string> UndoStateObjects;
+	typedef std::deque<UndoStateObjects> UndoStack;
 public:
 	enum ObjectVisibility {
 		HIDE_NONE                = 0,
@@ -315,15 +269,16 @@ public:
 	static std::string            GetNodePluginID(BL::Node node);
 	static std::string            GetConnectedNodePluginID(BL::NodeSocket fromSocket);
 
-	static void                   tag_ntree(BL::NodeTree ntree, bool updated=true);
-
-	std::vector<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
-
 	// Generate data name
 	std::string       getNodeName(BL::Object ob);
 	std::string       getMeshName(BL::Object ob);
 	std::string       getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
 	std::string       getLightName(BL::Object ob);
+	static std::string       getObjectUniqueKey(BL::Object ob);
+
+	static void              tag_ntree(BL::NodeTree ntree, bool updated=true);
+
+	std::vector<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
 
 	void              fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
 	void              fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
@@ -343,6 +298,15 @@ public:
 
 	// will reset all state that is kept for one sync, must be called after each sync
 	void              resetSyncState();
+
+	bool              isObjectInThisSync(BL::Object ob);
+	// checks if we are currently in undo sync and if yes, checks if the object passed was changed in the sync we are unding currently
+	bool              shouldSyncUndoneObject(BL::Object ob);
+	// saves that this object was synced on current sync
+	void              saveSyncedObject(BL::Object ob);
+
+	void              syncStart(bool isUndoSync);
+	void              syncEnd();
 
 	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context, BL::SpaceView3D view3d);
 	void              init_defaults();
@@ -456,6 +420,10 @@ public:
 	StrSet            RenderChannelNames;
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
+
+	bool              m_is_undo_sync;
+	UndoStack         m_undo_stack;
+
 
 private:
 	BL::BlendData     m_data;

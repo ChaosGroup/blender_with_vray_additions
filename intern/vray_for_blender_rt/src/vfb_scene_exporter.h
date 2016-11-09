@@ -131,6 +131,7 @@ protected:
 	uint32_t             m_sceneComputedLayers;
 
 	bool                 m_isRunning;
+	bool                 m_isUndoSync;
 private:
 	int                  is_physical_view(BL::Object &cameraObject);
 	int                  is_physical_updated(ViewParams &viewParams);

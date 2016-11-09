@@ -37,7 +37,6 @@
 #include <boost/function.hpp>
 #include <boost/unordered_map.hpp>
 
-
 namespace VRayForBlender {
 
 struct ExporterSettings;

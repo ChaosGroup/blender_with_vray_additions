@@ -299,7 +299,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			mtl = getDefaultMaterial();
 		}
 
-		if (geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
+		if (geom && mtl && (is_updated || is_data_updated || m_layer_changed || shouldSyncUndoneObject(ob))) {
 			// No need to export Node if the object is LightMesh
 			if (!isMeshLight) {
 				PluginDesc nodeDesc(exportName, "Node");

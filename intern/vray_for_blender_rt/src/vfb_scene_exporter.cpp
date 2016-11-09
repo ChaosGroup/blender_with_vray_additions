@@ -69,6 +69,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_exporter(nullptr)
     , m_isLocalView(false)
     , m_isRunning(false)
+	, m_isUndoSync(false)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -132,6 +133,8 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 
 	m_data_exporter.init(m_exporter, m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
+
+	m_isUndoSync = true;
 }
 
 SceneExporter::~SceneExporter()
@@ -214,101 +217,106 @@ void SceneExporter::sync(const int &check_updated)
 {
 	if (!m_syncLock.try_lock()) {
 		tag_update();
+		return;
 	}
-	else {
-		PRINT_INFO_EX("SceneExporter::sync(%i)",
-		              check_updated);
 
-		clock_t begin = clock();
+	PRINT_INFO_EX("SceneExporter::sync(%i)",
+		            check_updated);
 
-		m_settings.update(m_context, m_engine, m_data, m_scene);
-		sync_prepass();
+	clock_t begin = clock();
 
-		// duplicate cycle's logic for layers here
-		m_sceneComputedLayers = 0;
-		m_isLocalView = m_view3d && m_view3d.local_view();
+	m_data_exporter.syncStart(m_isUndoSync);
 
-		BlLayers viewLayers;
-		if (m_isLocalView) {
-			viewLayers = m_view3d.layers();
+	m_settings.update(m_context, m_engine, m_data, m_scene);
+	sync_prepass();
+
+	// duplicate cycle's logic for layers here
+	m_sceneComputedLayers = 0;
+	m_isLocalView = m_view3d && m_view3d.local_view();
+
+	BlLayers viewLayers;
+	if (m_isLocalView) {
+		viewLayers = m_view3d.layers();
+	} else {
+		if (m_settings.use_active_layers == ExporterSettings::ActiveLayersCustom) {
+			viewLayers = m_settings.active_layers;
+		} else if (m_settings.use_active_layers == ExporterSettings::ActiveLayersAll) {
+			for (int c = 0; c < 20; ++c) {
+				viewLayers[c] = 1;
+			}
 		} else {
-			if (m_settings.use_active_layers == ExporterSettings::ActiveLayersCustom) {
-				viewLayers = m_settings.active_layers;
-			} else if (m_settings.use_active_layers == ExporterSettings::ActiveLayersAll) {
-				for (int c = 0; c < 20; ++c) {
-					viewLayers[c] = 1;
-				}
-			} else {
-				viewLayers = m_scene.layers();
-			}
+			viewLayers = m_scene.layers();
 		}
-
-		for (int c = 0; c < 20; ++c) {
-			m_sceneComputedLayers |= (!!viewLayers[c] << c);
-		}
-
-		if (m_isLocalView) {
-			auto viewLocalLayers = m_view3d.layers_local_view();
-			for (int c = 0; c < 8; ++c) {
-				m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
-			}
-
-			// truncate to local view layers
-			m_sceneComputedLayers >>= 20;
-		}
-		m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
-
-
-		VRayBaseTypes::RenderMode renderMode = m_view3d
-		                                       ? m_settings.getViewportRenderMode()
-		                                       : m_settings.getRenderMode();
-
-		m_exporter->set_render_mode(renderMode);
-		m_exporter->set_viewport_quality(m_settings.viewportQuality);
-
-
-		// Export once per viewport session
-		if (!check_updated) {
-			sync_render_settings();
-
-			if (!is_viewport()) {
-				sync_render_channels();
-			}
-		}
-
-		// First materials sync is done from "sync_objects"
-		// so run it only in update call
-		if (check_updated) {
-			sync_materials();
-		}
-
-		sync_view(check_updated);
-		sync_objects(check_updated);
-		sync_effects(check_updated);
-
-
-		// Sync data (will remove deleted objects)
-		m_data_exporter.sync();
-
-		clock_t end = clock();
-
-		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-
-		PRINT_INFO_EX("Synced in %.3f sec.",
-		              elapsed_secs);
-
-		// Sync plugins
-		m_exporter->sync();
-
-		// Export stuff after sync
-		if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
-		    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
-			const std::string filepath = "scene_app_sdk.vrscene";
-			m_exporter->export_vrscene(filepath);
-		}
-
-		m_syncLock.unlock();
 	}
+
+	for (int c = 0; c < 20; ++c) {
+		m_sceneComputedLayers |= (!!viewLayers[c] << c);
+	}
+
+	if (m_isLocalView) {
+		auto viewLocalLayers = m_view3d.layers_local_view();
+		for (int c = 0; c < 8; ++c) {
+			m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
+		}
+
+		// truncate to local view layers
+		m_sceneComputedLayers >>= 20;
+	}
+	m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
+
+
+	VRayBaseTypes::RenderMode renderMode = m_view3d
+		                                    ? m_settings.getViewportRenderMode()
+		                                    : m_settings.getRenderMode();
+
+	m_exporter->set_render_mode(renderMode);
+	m_exporter->set_viewport_quality(m_settings.viewportQuality);
+
+
+	// Export once per viewport session
+	if (!check_updated) {
+		sync_render_settings();
+
+		if (!is_viewport()) {
+			sync_render_channels();
+		}
+	}
+
+	// First materials sync is done from "sync_objects"
+	// so run it only in update call
+	if (check_updated) {
+		sync_materials();
+	}
+
+	sync_view(check_updated);
+	sync_objects(check_updated);
+	sync_effects(check_updated);
+
+
+	// Sync data (will remove deleted objects)
+	m_data_exporter.sync();
+
+	clock_t end = clock();
+
+	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+
+	PRINT_INFO_EX("Synced in %.3f sec.",
+		            elapsed_secs);
+
+	// Sync plugins
+	m_exporter->sync();
+
+	// Export stuff after sync
+	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
+		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+		const std::string filepath = "scene_app_sdk.vrscene";
+		m_exporter->export_vrscene(filepath);
+	}
+
+	m_data_exporter.syncEnd();
+	m_isUndoSync = false;
+
+	m_syncLock.unlock();
 }
 
 
@@ -437,6 +445,8 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		}
 
 		if (!skip_export || overrideAttr) {
+			m_data_exporter.saveSyncedObject(ob);
+
 			if (overrideAttr) {
 				m_data_exporter.m_id_cache.insert(overrideAttr.id);
 				m_data_exporter.m_id_cache.insert(ob);
