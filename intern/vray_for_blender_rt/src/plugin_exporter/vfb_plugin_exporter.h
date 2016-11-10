@@ -96,6 +96,7 @@ public:
 	RenderImage          get_pass(BL::RenderPass::type_enum passType);
 
 	virtual void         show_frame_buffer() {}
+	virtual void         hide_frame_buffer() {}
 	virtual void         set_render_mode(RenderMode renderMode) {}
 
 	virtual void         set_render_size(const int&, const int&) {}

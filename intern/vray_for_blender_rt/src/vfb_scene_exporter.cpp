@@ -228,6 +228,11 @@ void SceneExporter::sync(const int &check_updated)
 	m_data_exporter.syncStart(m_isUndoSync);
 
 	m_settings.update(m_context, m_engine, m_data, m_scene);
+	if (m_settings.showViewport) {
+		m_exporter->show_frame_buffer();
+	} else {
+		m_exporter->hide_frame_buffer();
+	}
 	sync_prepass();
 
 	// duplicate cycle's logic for layers here
@@ -533,8 +538,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	instances.frameNumber = m_scene.frame_current();
 	int num_instances = 0;
 	if (dupli_use_instancer) {
-
-
 		BL::Object::dupli_list_iterator dupIt;
 		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
 			BL::DupliObject dupliOb(*dupIt);
@@ -551,7 +554,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		instances.data.resize(num_instances);
 	}
-
 
 	if (is_interrupted()) {
 		return;
@@ -682,7 +684,6 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		}
 
 		if (ob.is_duplicator()) {
-
 			if (is_updated) {
 				sync_dupli(ob, check_updated);
 			}

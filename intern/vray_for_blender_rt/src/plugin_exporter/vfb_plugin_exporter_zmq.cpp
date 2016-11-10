@@ -480,6 +480,18 @@ void ZmqExporter::sync()
 {
 }
 
+void ZmqExporter::show_frame_buffer()
+{
+	checkZmqClient();
+	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(true)));
+}
+
+void ZmqExporter::hide_frame_buffer()
+{
+	checkZmqClient();
+	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(false)));
+}
+
 void ZmqExporter::set_viewport_quality(int quality)
 {
 	if (quality != m_RenderQuality) {

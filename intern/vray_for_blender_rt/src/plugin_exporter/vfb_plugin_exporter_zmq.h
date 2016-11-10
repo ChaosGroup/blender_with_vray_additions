@@ -76,6 +76,10 @@ public:
 	virtual void        sync();
 	virtual void        start();
 	virtual void        stop();
+
+	virtual void        show_frame_buffer();
+	virtual void        hide_frame_buffer();
+
 	virtual bool        is_running() const { return m_Started; }
 
 	virtual RenderImage get_image();

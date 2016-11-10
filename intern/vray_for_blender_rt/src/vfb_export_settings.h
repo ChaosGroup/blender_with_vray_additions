@@ -162,6 +162,7 @@ struct ExporterSettings {
 	int               use_select_preview;
 	int               use_subsurf_to_osd;
 
+	bool              showViewport;
 	int               viewportQuality;
 	int               zmq_server_port;
 	std::string       zmq_server_address;
