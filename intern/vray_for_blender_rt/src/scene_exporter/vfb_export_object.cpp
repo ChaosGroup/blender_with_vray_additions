@@ -180,6 +180,11 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			is_updated = true;
 		}
 
+		// we are syncing "undo" state so check if this object was changed in the "do" state
+		if (!is_updated && shouldSyncUndoneObject(ob)) {
+			is_updated = true;
+		}
+
 		if (!is_updated && ob.parent()) {
 			BL::Object parent(ob.parent());
 			is_updated = parent.is_updated();
@@ -299,7 +304,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			mtl = getDefaultMaterial();
 		}
 
-		if (geom && mtl && (is_updated || is_data_updated || m_layer_changed || shouldSyncUndoneObject(ob))) {
+		if (geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
 			// No need to export Node if the object is LightMesh
 			if (!isMeshLight) {
 				PluginDesc nodeDesc(exportName, "Node");
@@ -333,6 +338,10 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 
 	bool is_updated      = check_updated ? ob.is_updated()      : true;
 	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+	if (!is_updated && shouldSyncUndoneObject(ob)) {
+		is_updated = true;
+	}
 
 	if (!is_updated && !is_data_updated && !m_layer_changed) {
 		return pluginName;
@@ -389,6 +398,10 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 {
 	bool is_updated      = check_updated ? ob.is_updated()      : true;
 	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+
+	if (!is_updated && shouldSyncUndoneObject(ob)) {
+		is_updated = true;
+	}
 
 	BL::ParticleSettings pset(psys.settings());
 	if (pset && (pset.type() == BL::ParticleSettings::type_HAIR) && (pset.render_type() == BL::ParticleSettings::render_type_PATH)) {
