@@ -563,7 +563,7 @@ void AppSdkExporter::export_vrscene(const std::string &filepath)
 	exportParams.useHexFormat = false;
 	exportParams.compressed = false;
 
-	int res = m_vray->exportScene(filepath, &exportParams);
+	int res = m_vray->exportScene(filepath, exportParams);
 	if (res) {
 		PRINT_ERROR("Error exporting scene!");
 	}

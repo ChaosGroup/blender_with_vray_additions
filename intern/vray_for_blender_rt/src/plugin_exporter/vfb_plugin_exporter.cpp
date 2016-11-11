@@ -97,8 +97,6 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 					this->commit_changes();
 					this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOn);
 				}
-
-
 			}
 
 			m_pluginManager.updateCache(pluginDesc);
