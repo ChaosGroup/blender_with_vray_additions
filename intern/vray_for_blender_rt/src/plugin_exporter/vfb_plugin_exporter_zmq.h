@@ -91,7 +91,7 @@ public:
 	virtual void        set_viewport_quality(int quality);
 	virtual bool        is_aborted() const { return m_IsAborted; }
 
-
+	virtual void        replace_plugin(const std::string & oldPlugin, const std::string & newPlugin);
 	virtual int         remove_plugin_impl(const std::string&);
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:

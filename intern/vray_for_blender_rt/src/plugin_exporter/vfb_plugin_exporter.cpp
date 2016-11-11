@@ -56,7 +56,7 @@ int PluginExporter::remove_plugin(const std::string &name) {
 	return result;
 }
 
-AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
+AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool replace)
 {
 	if (is_prepass) {
 		return AttrPlugin(pluginDesc.pluginName);
@@ -80,7 +80,25 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc)
 				this->remove_plugin(name);
 				plg = this->export_plugin_impl(pluginDesc);
 			} else {
-				plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+				if (!replace) {
+					plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+				} else {
+					this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOff);
+					auto pluginCopy = pluginDesc;
+					pluginCopy.pluginName += "_internalDest";
+
+					this->export_plugin_impl(pluginCopy);
+					this->replace_plugin(pluginDesc.pluginName, pluginCopy.pluginName);
+					this->remove_plugin_impl(pluginDesc.pluginName);
+					plg = this->export_plugin_impl(pluginDesc);
+					this->replace_plugin(pluginCopy.pluginName, pluginDesc.pluginName);
+					this->remove_plugin_impl(pluginCopy.pluginName);
+
+					this->commit_changes();
+					this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOn);
+				}
+
+
 			}
 
 			m_pluginManager.updateCache(pluginDesc);

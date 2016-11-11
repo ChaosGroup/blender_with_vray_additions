@@ -551,6 +551,13 @@ int ZmqExporter::remove_plugin_impl(const std::string &name)
 	return PluginExporter::remove_plugin_impl(name);
 }
 
+void ZmqExporter::replace_plugin(const std::string & oldPlugin, const std::string & newPlugin)
+{
+	checkZmqClient();
+	m_Client->send(VRayMessage::msgReplacePlugin(oldPlugin, newPlugin));
+}
+
+
 AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 {
 	checkZmqClient();

@@ -81,7 +81,8 @@ public:
 	virtual void         export_vrscene(const std::string&) {}
 
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
-	AttrPlugin           export_plugin(const PluginDesc &pluginDesc);
+	AttrPlugin           export_plugin(const PluginDesc &pluginDesc, bool replace = false);
+	virtual void         replace_plugin(const std::string & oldPlugin, const std::string & newPlugin) {};
 
 	virtual int          remove_plugin_impl(const std::string&) { return 0; }
 	int                  remove_plugin(const std::string&);

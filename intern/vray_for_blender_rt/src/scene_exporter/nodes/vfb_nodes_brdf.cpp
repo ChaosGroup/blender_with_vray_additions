@@ -75,7 +75,7 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node 
 
 	pluginDesc.add("additive_mode", RNA_boolean_get(&node.ptr, "additive_mode"));
 
-	return m_exporter->export_plugin(pluginDesc);
+	return m_exporter->export_plugin(pluginDesc, true);
 }
 
 
