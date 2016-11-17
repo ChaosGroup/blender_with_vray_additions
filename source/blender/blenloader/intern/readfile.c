@@ -2155,11 +2155,15 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 		switch (loop->type) {
 		case IDP_ID: /* DatablockProperty */
 			newaddr = newlibadr(fd, NULL, IDP_Id(loop));
-			if (newaddr) {
-				IDP_ID_Unregister(loop);
-				loop->data.pointer = newaddr;
-				IDP_ID_Register(loop);
+
+			if (IDP_Id(loop) && !newaddr) {
+				printf("Error while loading \"%s\". Data not found in file!\n", loop->name);
 			}
+
+			IDP_ID_Unregister(loop);
+			loop->data.pointer = newaddr;
+			IDP_ID_Register(loop);
+
 			break;
 		case IDP_IDPARRAY: /* CollectionProperty */
 			idp_loop = IDP_Array(loop);
