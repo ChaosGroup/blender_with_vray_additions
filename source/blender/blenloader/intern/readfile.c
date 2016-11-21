@@ -2809,10 +2809,6 @@ static void lib_link_ntree(FileData *fd, ID *id, bNodeTree *ntree)
 	lib_link_animdata(fd, &ntree->id, ntree->adt);
 	
 	ntree->gpd = newlibadr_us(fd, id->lib, ntree->gpd);
-
-	if (ntree->id.tag & LIB_TAG_NEED_LINK) {
-		IDP_LibLinkProperty(ntree->id.properties, fd);
-	}
 	
 	for (node = ntree->nodes.first; node; node = node->next) {
 		/* Link ID Properties -- and copy this comment EXACTLY for easy finding
@@ -3988,10 +3984,6 @@ static void lib_link_material(FileData *fd, Main *main)
 	for (ma = main->mat.first; ma; ma = ma->id.next) {
 		if (ma->id.tag & LIB_TAG_NEED_LINK) {
 			lib_link_animdata(fd, &ma->id, ma->adt);
-
-			/* Link ID Properties -- and copy this comment EXACTLY for easy finding
-			 * of library blocks that implement this.*/
-			IDP_LibLinkProperty(ma->id.properties, fd);
 			
 			ma->ipo = newlibadr_us(fd, ma->id.lib, ma->ipo);  // XXX deprecated - old animation system
 
