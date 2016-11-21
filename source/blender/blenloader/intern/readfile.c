@@ -2160,7 +2160,6 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 				printf("Error while loading \"%s\". Data not found in file!\n", loop->name);
 			}
 
-			IDP_ID_Unregister(loop);
 			loop->data.pointer = newaddr;
 			IDP_ID_Register(loop);
 
