@@ -34,6 +34,7 @@ set(INC
 	./vrscene_exporter
 	./vrscene_exporter/nodes
 	./vrscene_exporter/plugins
+	./vrscene_exporter/instancer
 
 	${CMAKE_SOURCE_DIR}/intern/guardedalloc
 	${CMAKE_SOURCE_DIR}/intern/smoke/extern

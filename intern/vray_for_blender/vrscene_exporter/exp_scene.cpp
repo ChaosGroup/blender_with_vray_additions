@@ -60,10 +60,6 @@ extern "C" {
 #include <boost/algorithm/string/predicate.hpp>
 
 
-// Default velocity transform matrix hex
-const char* InstancerItem::velocity = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-
-
 static bool ob_is_mesh(BL::Object ob)
 {
 	return (ob.type() == BL::Object::type_MESH    ||
@@ -270,18 +266,8 @@ void VRsceneExporter::exportObjectsPre()
 {
 	// Clear caches
 	m_exportedObjects.clear();
-	m_psys.clear();
 
-	m_hideFromView.clear();
-
-	// Create particle system data
-	// Needed for the correct first frame when particles
-	// generation is not started from the beginning of the
-	// animation range.
-	//
-	if (ExporterSettings::gSet.m_isAnimation) {
-		initDupli();
-	}
+	instancer.freeData();
 }
 
 
@@ -477,6 +463,8 @@ void VRsceneExporter::exportObjectsPost()
 	// Light linker settings only for the first frame
 	if (ExporterSettings::gSet.IsFirstFrame())
 		m_lightLinker.write(ExporterSettings::gSet.m_fileObject);
+
+	m_hideFromView.clear();
 }
 
 
@@ -502,6 +490,30 @@ void VRsceneExporter::exportClearCaches()
 	Node::FreeMeshCache();
 }
 
+/// Checks if object is a valid object for Instancer.
+/// @param ob Blender object.
+static int isValidInstancerObject(BL::Object ob)
+{
+	int isValidItem = true;
+
+	if (ob_is_smoke_domain(ob)) {
+		isValidItem = false;
+	}
+	else {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		if (RNA_boolean_get(&vrayObject, "overrideWithScene")) {
+			isValidItem = false;
+		}
+		else {
+			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+			if (RNA_boolean_get(&vrayClipper, "enabled")) {
+				isValidItem = false;
+			}
+		}
+	}
+
+	return isValidItem;
+}
 
 void VRsceneExporter::exportObjectBase(BL::Object ob)
 {
@@ -536,110 +548,91 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 			if (process_dupli) {
 				ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
 
-				const int overrideObjectID = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
-				const int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
+				// If need to override object ID.
+				const int dupliGroupIDOverride = RNA_int_get(&vrayObject, "dupliGroupIDOverride");
 
-				const std::string &duplicatorName = GetIDName(ob);
+				int dupliIndex = 0;
+				BL::Object::dupli_list_iterator dupliIt;
+				for (ob.dupli_list.begin(dupliIt); dupliIt != ob.dupli_list.end(); ++dupliIt, ++dupliIndex) {
+					if (is_interrupted())
+						break;
 
-				BL::Object::dupli_list_iterator b_dup;
-				for (ob.dupli_list.begin(b_dup); b_dup != ob.dupli_list.end(); ++b_dup) {
-					if (NOT(is_interrupted())) {
-						BL::DupliObject dup(*b_dup);
-						BL::Object      dop(dup.object());
+					BL::DupliObject dupliObject(*dupliIt);
+					BL::Object      duplicatedObject(dupliObject.object());
 
-						const int dop_has_hair          = ob_has_hair(dop);
-						const int dop_is_dup_renderable = ob_is_duplicator_renderable(dop);
+					if (!dupliObject.hide() && !duplicatedObject.hide_render()) {
+						const MHash particleID = VRayForBlender::getParticleID(ob, dupliObject, dupliIndex);
 
-						if (!dup.hide() && !dop.hide_render() && (dop_has_hair || dop_is_dup_renderable)) {
-							DupliObject *dupliOb = (DupliObject*)dup.ptr.data;
+						const int objectID = (dupliGroupIDOverride == VRayForBlender::InstancerItem::useOriginalObjectID)
+						                     ? duplicatedObject.pass_index()
+						                     : dupliGroupIDOverride;
 
-							if (ob_is_mesh(dop) || ob_is_light(dop)) {
-								MHash persistendID;
-								MurmurHash3_x86_32((const void*)dup.persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+						// Export new light for every DupliObject.
+						if (ob_is_light(duplicatedObject) ||
+							ob_is_mesh_light(duplicatedObject))
+						{
+							static boost::format dupliLightFtm("DupliLight|%u|%s");
 
-								const std::string &dupliNamePrefix = StripString("D" + BOOST_FORMAT_UINT(persistendID) + "@" + ob.name());
+							NodeAttrs attrs;
+							attrs.override = true;
+							attrs.namePrefix = boost::str(dupliLightFtm % particleID % GetIDName(duplicatedObject));
+							attrs.tm = dupliObject.matrix();
+							attrs.objectID = objectID;
 
-								const bool is_light = ob_is_light(dop) || ob_is_mesh_light(dop);
+							exportLamp(duplicatedObject, attrs);
+						}
+						// Export Node once and add Instancer particle.
+						else if (ob_is_mesh(duplicatedObject)) {
+							// For Node.
+							NodeAttrs attrs;
+							attrs.override = true;
+							attrs.objectID = objectID;
 
-								NodeAttrs dupliAttrs;
-								dupliAttrs.override = true;
-								// If dupli are shown via Instancer we need to hide
-								// original object
-								dupliAttrs.visible  = NOT(useInstancer);
-								dupliAttrs.objectID = overrideObjectID;
-								dupliAttrs.dupliHolder = ob;
-								dupliAttrs.dynamic_geometry = true;
+							if (isValidInstancerObject(duplicatedObject)) {
+								// If DupliObject comes from a particle system then
+								// show original object, hide it otherwise.
+								attrs.visible = !!(dupliObject.particle_system());
 
-								if (NOT(useInstancer) || is_light) {
-									dupliAttrs.namePrefix = dupliNamePrefix;
-									dupliAttrs.tm = dup.matrix();
-								}
+								// For proper instancing with Instancer.
+								attrs.dynamic_geometry = true;
 
-								if (ob_is_light(dop)) {
-									if (dop_is_dup_renderable) {
-										exportLamp(dop, dupliAttrs);
-									}
-								}
-								else {
-									if(NOT(useInstancer)) {
-										if (dop_is_dup_renderable) {
-											// If LightLinker contain duplicator,
-											// we need to exclude it's objects
-											//
-											std::string pluginName = dupliAttrs.namePrefix + GetIDName((ID*)dupliOb->ob);
-											m_lightLinker.excludePlugin(duplicatorName, pluginName);
-											exportObject(dop, dupliAttrs);
-										}
+								// Set original object transform
+								attrs.tm = duplicatedObject.matrix_world();
 
-										if (dop_has_hair) {
-											Node::WriteHair(dop, dupliAttrs);
-										}
-									}
-									else {
-										std::string dupliBaseName;
+								exportObject(duplicatedObject, attrs);
 
-										BL::ParticleSystem bl_psys = dup.particle_system();
-										if(NOT(bl_psys))
-											dupliBaseName = ob.name();
-										else {
-											BL::ParticleSettings bl_pset = bl_psys.settings();
-											dupliBaseName = ob.name() + bl_psys.name() + bl_pset.name();
+								// Add duplicated object particle.
+								VRayForBlender::InstancerItem instancerItem(particleID);
+								instancerItem.objectName = GetIDName(duplicatedObject);
+								instancerItem.objectID = objectID;
 
-											// We are inserting object partices with Instancer,
-											// and instancer requires base Node to be hidden.
-											// This matches the dehaviour of dupli, but for particles
-											// there may be a need to show the original object also.
-											//
-											if (ob_on_visible_layer(dop)) {
-												dupliAttrs.visible = true;
-											}
-										}
+								instancerItem.setTransform(dupliObject.matrix(), duplicatedObject.matrix_world());
 
-										// Set original object transform
-										dupliAttrs.tm = dop.matrix_world();
+								instancer.addParticle(instancerItem);
+							}
+							else {
+								// Need to construct unique name for a new plugin.
+								static boost::format dupliLightFtm("DupliItem|%u|%s");
+								attrs.namePrefix = boost::str(dupliLightFtm % particleID % GetIDName(duplicatedObject));
+								attrs.tm = dupliObject.matrix();
 
-										if (dop_is_dup_renderable) {
-											m_psys.get(dop)->add(GetIDName(&dupliOb->ob->id),
-																 persistendID,
-																 dupliOb->ob->obmat,
-																 dupliOb->mat);
+								exportObject(duplicatedObject, attrs);
+							}
 
-											exportObject(dop, dupliAttrs);
-										}
+							// Duplicated object could also contain hair.
+							if (ob_has_hair(duplicatedObject)) {
+								// Export hair nodes and geometry.
+								StrSet hairNodes;
+								Node::WriteHair(duplicatedObject, attrs, &hairNodes);
 
-										if (dop_has_hair) {
-											StrSet hairNodes;
+								// Add hair particles.
+								for (StrSet::const_iterator hIt = hairNodes.begin(); hIt != hairNodes.end(); ++hIt) {
+									// Add hair particle.
+									VRayForBlender::InstancerItem instancerItem(particleID);
+									instancerItem.objectName = *hIt;
+									instancerItem.setTransform(dupliObject.matrix(), duplicatedObject.matrix_world());
 
-											Node::WriteHair(dop, dupliAttrs, &hairNodes);
-
-											for (StrSet::const_iterator hIt = hairNodes.begin(); hIt != hairNodes.end(); ++hIt) {
-												m_psys.get(dop)->add(*hIt,
-																	 persistendID,
-																	 dupliOb->ob->obmat,
-																	 dupliOb->mat);
-											}
-										}
-									}
+									instancer.addParticle(instancerItem);
 								}
 							}
 						}
@@ -700,18 +693,21 @@ void VRsceneExporter::exportDupliFromArray(BL::Object ob, BL::ArrayModifier modA
 					ob.name().c_str(), modArray.name().c_str());
 	}
 	else {
-		InstancerSystem &instSys = *m_psys.get(ob);
-
-		for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
-			float *dupliTm = amd.dupliTms + dupliIdx * 16;
+		for (int arrayIndex = 0; arrayIndex < amd.count-1; ++arrayIndex) {
+			float *dupliTm = amd.dupliTms + arrayIndex * 16;
 
 			// Array dupli tm to world space
 			float dupliTmWorld[4][4];
 			copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
 			mul_m4_m4m4(dupliTmWorld, object.obmat, dupliTmWorld);
 
-			// TODO: Investigate if we need unique "dupliIdx"
-			instSys.add(GetIDName(ob), dupliIdx, object.obmat, dupliTmWorld);
+			// Add array object particle.
+			VRayForBlender::InstancerItem instancerItem(VRayForBlender::getParticleID(ob, arrayIndex));
+			instancerItem.objectName = GetIDName(ob);
+			instancerItem.objectID = ob.pass_index();
+			instancerItem.setTransform(dupliTmWorld, object.obmat);
+
+			instancer.addParticle(instancerItem);
 		}
 	}
 }
@@ -1111,6 +1107,10 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 		pluginAttrs["v_size"] = BOOST_FORMAT_FLOAT(sizeY);
 
 		pluginAttrs["use_rect_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("rect_tex"));
+
+		if (attrs.override && attrs.objectID != VRayForBlender::InstancerItem::useOriginalObjectID) {
+			pluginAttrs["objectID"] = BOOST_FORMAT_INT(attrs.objectID);
+		}
 	}
 	else if(pluginID == "LightDome") {
 		pluginAttrs["use_dome_tex"] = BOOST_FORMAT_BOOL(pluginAttrs.count("dome_tex"));
@@ -1342,94 +1342,41 @@ void VRsceneExporter::exportVRayClipper(BL::Object ob, const NodeAttrs &attrs)
 	VRayNodePluginExporter::exportPlugin("NODE", "VRayClipper", pluginName, pluginAttrs);
 }
 
-
-void VRsceneExporter::initDupli()
-{
-	PointerRNA sceneRNA;
-	RNA_id_pointer_create((ID*)ExporterSettings::gSet.m_sce, &sceneRNA);
-	BL::Scene scene(sceneRNA);
-
-	BL::Scene::objects_iterator obIt;
-	for (scene.objects.begin(obIt); obIt != scene.objects.end(); ++obIt) {
-		BL::Object ob = *obIt;
-		if ((ob.type() != BL::Object::type_META) && ob.is_duplicator()) {
-			// From particles
-			BL::Object::particle_systems_iterator psIt;
-			for (ob.particle_systems.begin(psIt); psIt != ob.particle_systems.end(); ++psIt) {
-				BL::ParticleSystem psys = *psIt;
-				if (psys) {
-					BL::ParticleSettings pset = psys.settings();
-					if (pset && !IS_PSYS_HAIR(pset)) {
-						m_psys.get(ob);
-					}
-				}
-			}
-
-			// From dupli
-			if (ob.dupli_type() != BL::Object::dupli_type_NONE) {
-				m_psys.get(ob);
-			}
-		}
-	}
-}
-
-
-InstancerItem *InstancerSystem::add(const std::string &node, const MHash idx, float obmat[4][4], float dupmat[4][4]) {
-	InstancerItem *pa = new InstancerItem;
-	pa->nodeName = node;
-	pa->particleId = idx;
-
-	// Instancer use original object's transform,
-	// so apply inverse matrix here.
-	// When linking from file 'imat' is not valid,
-	// so better to always calculate inverse matrix ourselves.
-	//
-	float duplicatedTmInv[4][4];
-	copy_m4_m4(duplicatedTmInv, obmat);
-	invert_m4(duplicatedTmInv);
-
-	float dupliTm[4][4];
-	mul_m4_m4m4(dupliTm, dupmat, duplicatedTmInv);
-
-	GetTransformHex(dupliTm, pa->transform);
-
-	append(pa);
-
-	return pa;
-}
-
-
 void VRsceneExporter::exportDupli()
 {
 	PyObject *out = ExporterSettings::gSet.m_fileObject;
 
 	VRayExportable::initInterpolate(ExporterSettings::gSet.m_frameCurrent);
 
-	for(MyPartSystems::iterator sysIt = m_psys.m_systems.begin(); sysIt != m_psys.m_systems.end(); ++sysIt) {
-		static boost::format InstancerFmt("Dulpi@%s");
+	const VRayForBlender::InstancerItems &particles = instancer.getParticles();
 
-		BL::ID instancedObject = sysIt->first;
+	PYTHON_PRINTF(out, "\nInstancer instancer {");
+	PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
+	if (particles.size()) {
+		PYTHON_PRINT(out, ",");
 
-		const InstancerSystem *parts = sysIt->second;
-		const std::string &psysName = boost::str(InstancerFmt % instancedObject.name());
+		for(VRayForBlender::InstancerItems::const_iterator paIt = particles.begin(); paIt != particles.end(); ++paIt) {
+			const VRayForBlender::InstancerItem &pa = *paIt;
 
-		PYTHON_PRINTF(out, "\nInstancer %s {", StripString(psysName).c_str());
-		PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
-		if(parts->size()) {
-			PYTHON_PRINT(out, ",");
-			for(InstancerItems::const_iterator paIt = parts->m_instances.begin(); paIt != parts->m_instances.end(); ++paIt) {
-				const InstancerItem *pa = *paIt;
+			PYTHON_PRINTF(out, "\n\t\tList(%u,"
+			                   "TransformHex(\"%s\"),"
+			                   "TransformHex(\"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"),"
+			                   "%i,"
+			                   "%i,"
+			                   "%s)",
+			              pa.particleID,
+			              GetTransformHex(pa.getTransform()).c_str(),
+			              pa.flags,
+			              pa.objectID,
+			              pa.objectName.c_str());
 
-				PYTHON_PRINTF(out, "List(%u,TransformHex(\"%s\"),TransformHex(\"%s\"),%s)", pa->particleId, pa->transform, pa->velocity, pa->nodeName.c_str());
-
-				if(paIt != --parts->m_instances.end()) {
-					PYTHON_PRINT(out, ",");
-				}
+			if(paIt != --particles.end()) {
+				PYTHON_PRINT(out, ",");
 			}
 		}
-		PYTHON_PRINTF(out, ")%s;", VRayExportable::m_interpEnd);
-		PYTHON_PRINTF(ExporterSettings::gSet.m_fileObject, "\n}\n");
 	}
-
-	m_psys.clear();
+	PYTHON_PRINTF(out, "\n\t)%s;", VRayExportable::m_interpEnd);
+	PYTHON_PRINT(out, "\n\tuse_additional_params=1;");
+	PYTHON_PRINT(out, "\n\tuse_time_instancing=0;");
+	PYTHON_PRINTF(ExporterSettings::gSet.m_fileObject, "\n}\n");
 }
