@@ -60,12 +60,12 @@ std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, V
 {
 	std::string pluginName;
 	pluginName.reserve(512);
-	pluginName = "N" + node.name() + "|" + ntree.name();
+	pluginName = "N" + node.name() + "|" + GetIDName(ntree);
 
 	for (VRayNodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
 		BL::NodeTree &parent = *ntIt;
 		if (parent) {
-			pluginName += "|" + parent.name();
+			pluginName += "|" + GetIDName(parent);
 		}
 	}
 
