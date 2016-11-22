@@ -2997,7 +2997,7 @@ void DAG_id_tag_update_ex(Main *bmain, ID *id, short flag)
 				MeshSeqCacheModifierData *mcmd = (MeshSeqCacheModifierData *)md;
 
 				if (mcmd->cache_file && (&mcmd->cache_file->id == id)) {
-					ob->recalc |= OB_RECALC_DATA;
+					ob->recalc |= OB_RECALC_ALL;
 					continue;
 				}
 			}
@@ -3010,7 +3010,7 @@ void DAG_id_tag_update_ex(Main *bmain, ID *id, short flag)
 				bTransformCacheConstraint *data = con->data;
 
 				if (data->cache_file && (&data->cache_file->id == id)) {
-					ob->recalc |= OB_RECALC_DATA;
+					ob->recalc |= OB_RECALC_ALL;
 					break;
 				}
 			}
@@ -3284,7 +3284,7 @@ void DAG_threaded_update_handle_node_updated(void *node_v,
 	for (itA = node->child; itA; itA = itA->next) {
 		DagNode *child_node = itA->node;
 		if (child_node != node) {
-			atomic_sub_uint32(&child_node->num_pending_parents, 1);
+			atomic_sub_and_fetch_uint32(&child_node->num_pending_parents, 1);
 
 			if (child_node->num_pending_parents == 0) {
 				bool need_schedule;

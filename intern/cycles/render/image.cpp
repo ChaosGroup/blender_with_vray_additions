@@ -43,7 +43,7 @@ ImageManager::ImageManager(const DeviceInfo& info)
 	 * be screwed on so many levels..
 	 */
 	DeviceType device_type = info.type;
-	if (device_type == DEVICE_MULTI) {
+	if(device_type == DEVICE_MULTI) {
 		device_type = info.multi_devices[0].type;
 	}
 
@@ -471,48 +471,79 @@ bool ImageManager::file_load_image_generic(Image *img, ImageInput **in, int &wid
 	return true;
 }
 
-template<typename T>
-bool ImageManager::file_load_byte_image(Image *img, ImageDataType type, device_vector<T>& tex_img)
+template<TypeDesc::BASETYPE FileFormat,
+         typename StorageType,
+         typename DeviceType>
+bool ImageManager::file_load_image(Image *img,
+                                   ImageDataType type,
+                                   device_vector<DeviceType>& tex_img)
 {
+	const StorageType alpha_one = (FileFormat == TypeDesc::UINT8)? 255 : 1;
 	ImageInput *in = NULL;
 	int width, height, depth, components;
-
-	if(!file_load_image_generic(img, &in, width, height, depth, components))
+	if(!file_load_image_generic(img, &in, width, height, depth, components)) {
 		return false;
-
-	/* read RGBA pixels */
-	uchar *pixels = (uchar*)tex_img.resize(width, height, depth);
+	}
+	/* Read RGBA pixels. */
+	StorageType *pixels = (StorageType*)tex_img.resize(width, height, depth);
 	if(pixels == NULL) {
 		return false;
 	}
 	bool cmyk = false;
-
 	if(in) {
+		StorageType *readpixels = pixels;
+		vector<StorageType> tmppixels;
+		if(components > 4) {
+			tmppixels.resize(((size_t)width)*height*components);
+			readpixels = &tmppixels[0];
+		}
 		if(depth <= 1) {
-			int scanlinesize = width*components*sizeof(uchar);
-
-			in->read_image(TypeDesc::UINT8,
-			               (uchar*)pixels + (((size_t)height)-1)*scanlinesize,
+			size_t scanlinesize = ((size_t)width)*components*sizeof(StorageType);
+			in->read_image(FileFormat,
+			               (uchar*)readpixels + (height-1)*scanlinesize,
 			               AutoStride,
 			               -scanlinesize,
 			               AutoStride);
 		}
 		else {
-			in->read_image(TypeDesc::UINT8, (uchar*)pixels);
+			in->read_image(FileFormat, (uchar*)readpixels);
 		}
-
+		if(components > 4) {
+			size_t dimensions = ((size_t)width)*height;
+			for(size_t i = dimensions-1, pixel = 0; pixel < dimensions; pixel++, i--) {
+				pixels[i*4+3] = tmppixels[i*components+3];
+				pixels[i*4+2] = tmppixels[i*components+2];
+				pixels[i*4+1] = tmppixels[i*components+1];
+				pixels[i*4+0] = tmppixels[i*components+0];
+			}
+			tmppixels.clear();
+		}
 		cmyk = strcmp(in->format_name(), "jpeg") == 0 && components == 4;
-
 		in->close();
 		delete in;
 	}
 	else {
-		builtin_image_pixels_cb(img->filename, img->builtin_data, pixels);
+		if(FileFormat == TypeDesc::FLOAT) {
+			builtin_image_float_pixels_cb(img->filename,
+			                              img->builtin_data,
+			                              (float*)pixels);
+		}
+		else if(FileFormat == TypeDesc::UINT8) {
+			builtin_image_pixels_cb(img->filename,
+			                        img->builtin_data,
+			                        (uchar*)pixels);
+		}
+		else {
+			/* TODO(dingto): Support half for ImBuf. */
+		}
 	}
-
-	/* Check if we actually have a byte4 slot, in case components == 1, but device
-	 * doesn't support single channel textures. */
-	if(type == IMAGE_DATA_TYPE_BYTE4) {
+	/* Check if we actually have a float4 slot, in case components == 1,
+	 * but device doesn't support single channel textures.
+	 */
+	if(type == IMAGE_DATA_TYPE_FLOAT4 ||
+	   type == IMAGE_DATA_TYPE_HALF4 ||
+	   type == IMAGE_DATA_TYPE_BYTE4)
+	{
 		size_t num_pixels = ((size_t)width) * height * depth;
 		if(cmyk) {
 			/* CMYK */
@@ -520,7 +551,7 @@ bool ImageManager::file_load_byte_image(Image *img, ImageDataType type, device_v
 				pixels[i*4+2] = (pixels[i*4+2]*pixels[i*4+3])/255;
 				pixels[i*4+1] = (pixels[i*4+1]*pixels[i*4+3])/255;
 				pixels[i*4+0] = (pixels[i*4+0]*pixels[i*4+3])/255;
-				pixels[i*4+3] = 255;
+				pixels[i*4+3] = alpha_one;
 			}
 		}
 		else if(components == 2) {
@@ -535,7 +566,7 @@ bool ImageManager::file_load_byte_image(Image *img, ImageDataType type, device_v
 		else if(components == 3) {
 			/* RGB */
 			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
+				pixels[i*4+3] = alpha_one;
 				pixels[i*4+2] = pixels[i*3+2];
 				pixels[i*4+1] = pixels[i*3+1];
 				pixels[i*4+0] = pixels[i*3+0];
@@ -544,229 +575,18 @@ bool ImageManager::file_load_byte_image(Image *img, ImageDataType type, device_v
 		else if(components == 1) {
 			/* grayscale */
 			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
+				pixels[i*4+3] = alpha_one;
 				pixels[i*4+2] = pixels[i];
 				pixels[i*4+1] = pixels[i];
 				pixels[i*4+0] = pixels[i];
 			}
 		}
-
 		if(img->use_alpha == false) {
 			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
+				pixels[i*4+3] = alpha_one;
 			}
 		}
 	}
-
-	return true;
-}
-
-template<typename T>
-bool ImageManager::file_load_float_image(Image *img, ImageDataType type, device_vector<T>& tex_img)
-{
-	ImageInput *in = NULL;
-	int width, height, depth, components;
-
-	if(!file_load_image_generic(img, &in, width, height, depth, components))
-		return false;
-
-	/* read RGBA pixels */
-	float *pixels = (float*)tex_img.resize(width, height, depth);
-	if(pixels == NULL) {
-		return false;
-	}
-	bool cmyk = false;
-
-	if(in) {
-		float *readpixels = pixels;
-		vector<float> tmppixels;
-
-		if(components > 4) {
-			tmppixels.resize(((size_t)width)*height*components);
-			readpixels = &tmppixels[0];
-		}
-
-		if(depth <= 1) {
-			size_t scanlinesize = ((size_t)width)*components*sizeof(float);
-			in->read_image(TypeDesc::FLOAT,
-			               (uchar*)readpixels + (height-1)*scanlinesize,
-			               AutoStride,
-			               -scanlinesize,
-			               AutoStride);
-		}
-		else {
-			in->read_image(TypeDesc::FLOAT, (uchar*)readpixels);
-		}
-
-		if(components > 4) {
-			size_t dimensions = ((size_t)width)*height;
-			for(size_t i = dimensions-1, pixel = 0; pixel < dimensions; pixel++, i--) {
-				pixels[i*4+3] = tmppixels[i*components+3];
-				pixels[i*4+2] = tmppixels[i*components+2];
-				pixels[i*4+1] = tmppixels[i*components+1];
-				pixels[i*4+0] = tmppixels[i*components+0];
-			}
-
-			tmppixels.clear();
-		}
-
-		cmyk = strcmp(in->format_name(), "jpeg") == 0 && components == 4;
-
-		in->close();
-		delete in;
-	}
-	else {
-		builtin_image_float_pixels_cb(img->filename, img->builtin_data, pixels);
-	}
-
-	/* Check if we actually have a float4 slot, in case components == 1, but device
-	 * doesn't support single channel textures. */
-	if(type == IMAGE_DATA_TYPE_FLOAT4) {
-		size_t num_pixels = ((size_t)width) * height * depth;
-		if(cmyk) {
-			/* CMYK */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
-				pixels[i*4+2] = (pixels[i*4+2]*pixels[i*4+3])/255;
-				pixels[i*4+1] = (pixels[i*4+1]*pixels[i*4+3])/255;
-				pixels[i*4+0] = (pixels[i*4+0]*pixels[i*4+3])/255;
-			}
-		}
-		else if(components == 2) {
-			/* grayscale + alpha */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = pixels[i*2+1];
-				pixels[i*4+2] = pixels[i*2+0];
-				pixels[i*4+1] = pixels[i*2+0];
-				pixels[i*4+0] = pixels[i*2+0];
-			}
-		}
-		else if(components == 3) {
-			/* RGB */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-				pixels[i*4+2] = pixels[i*3+2];
-				pixels[i*4+1] = pixels[i*3+1];
-				pixels[i*4+0] = pixels[i*3+0];
-			}
-		}
-		else if(components == 1) {
-			/* grayscale */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-				pixels[i*4+2] = pixels[i];
-				pixels[i*4+1] = pixels[i];
-				pixels[i*4+0] = pixels[i];
-			}
-		}
-
-		if(img->use_alpha == false) {
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-			}
-		}
-	}
-
-	return true;
-}
-
-template<typename T>
-bool ImageManager::file_load_half_image(Image *img, ImageDataType type, device_vector<T>& tex_img)
-{
-	ImageInput *in = NULL;
-	int width, height, depth, components;
-
-	if(!file_load_image_generic(img, &in, width, height, depth, components))
-		return false;
-
-	/* read RGBA pixels */
-	half *pixels = (half*)tex_img.resize(width, height, depth);
-	if(pixels == NULL) {
-		return false;
-	}
-
-	if(in) {
-		half *readpixels = pixels;
-		vector<half> tmppixels;
-
-		if(components > 4) {
-			tmppixels.resize(((size_t)width)*height*components);
-			readpixels = &tmppixels[0];
-		}
-
-		if(depth <= 1) {
-			size_t scanlinesize = ((size_t)width)*components*sizeof(half);
-			in->read_image(TypeDesc::HALF,
-			               (uchar*)readpixels + (height-1)*scanlinesize,
-			               AutoStride,
-			               -scanlinesize,
-			               AutoStride);
-		}
-		else {
-			in->read_image(TypeDesc::HALF, (uchar*)readpixels);
-		}
-
-		if(components > 4) {
-			size_t dimensions = ((size_t)width)*height;
-			for(size_t i = dimensions-1, pixel = 0; pixel < dimensions; pixel++, i--) {
-				pixels[i*4+3] = tmppixels[i*components+3];
-				pixels[i*4+2] = tmppixels[i*components+2];
-				pixels[i*4+1] = tmppixels[i*components+1];
-				pixels[i*4+0] = tmppixels[i*components+0];
-			}
-
-			tmppixels.clear();
-		}
-
-		in->close();
-		delete in;
-	}
-#if 0
-	/* TODO(dingto): Support half for ImBuf. */
-	else {
-		builtin_image_float_pixels_cb(img->filename, img->builtin_data, pixels);
-	}
-#endif
-
-	/* Check if we actually have a half4 slot, in case components == 1, but device
-	 * doesn't support single channel textures. */
-	if(type == IMAGE_DATA_TYPE_HALF4) {
-		size_t num_pixels = ((size_t)width) * height * depth;
-		if(components == 2) {
-			/* grayscale + alpha */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = pixels[i*2+1];
-				pixels[i*4+2] = pixels[i*2+0];
-				pixels[i*4+1] = pixels[i*2+0];
-				pixels[i*4+0] = pixels[i*2+0];
-			}
-		}
-		else if(components == 3) {
-			/* RGB */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-				pixels[i*4+2] = pixels[i*3+2];
-				pixels[i*4+1] = pixels[i*3+1];
-				pixels[i*4+0] = pixels[i*3+0];
-			}
-		}
-		else if(components == 1) {
-			/* grayscale */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-				pixels[i*4+2] = pixels[i];
-				pixels[i*4+1] = pixels[i];
-				pixels[i*4+0] = pixels[i];
-			}
-		}
-
-		if(img->use_alpha == false) {
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-			}
-		}
-	}
-
 	return true;
 }
 
@@ -802,7 +622,7 @@ void ImageManager::device_load_image(Device *device, DeviceScene *dscene, ImageD
 			device->tex_free(tex_img);
 		}
 
-		if(!file_load_float_image(img, type, tex_img)) {
+		if(!file_load_image<TypeDesc::FLOAT, float>(img, type, tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			float *pixels = (float*)tex_img.resize(1, 1);
 
@@ -828,7 +648,7 @@ void ImageManager::device_load_image(Device *device, DeviceScene *dscene, ImageD
 			device->tex_free(tex_img);
 		}
 
-		if(!file_load_float_image(img, type, tex_img)) {
+		if(!file_load_image<TypeDesc::FLOAT, float>(img, type, tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			float *pixels = (float*)tex_img.resize(1, 1);
 
@@ -851,7 +671,7 @@ void ImageManager::device_load_image(Device *device, DeviceScene *dscene, ImageD
 			device->tex_free(tex_img);
 		}
 
-		if(!file_load_byte_image(img, type, tex_img)) {
+		if(!file_load_image<TypeDesc::UINT8, uchar>(img, type, tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			uchar *pixels = (uchar*)tex_img.resize(1, 1);
 
@@ -877,7 +697,7 @@ void ImageManager::device_load_image(Device *device, DeviceScene *dscene, ImageD
 			device->tex_free(tex_img);
 		}
 
-		if(!file_load_byte_image(img, type, tex_img)) {
+		if(!file_load_image<TypeDesc::UINT8, uchar>(img, type, tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			uchar *pixels = (uchar*)tex_img.resize(1, 1);
 
@@ -900,7 +720,7 @@ void ImageManager::device_load_image(Device *device, DeviceScene *dscene, ImageD
 			device->tex_free(tex_img);
 		}
 
-		if(!file_load_half_image(img, type, tex_img)) {
+		if(!file_load_image<TypeDesc::HALF, half>(img, type, tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			half *pixels = (half*)tex_img.resize(1, 1);
 
@@ -926,7 +746,7 @@ void ImageManager::device_load_image(Device *device, DeviceScene *dscene, ImageD
 			device->tex_free(tex_img);
 		}
 
-		if(!file_load_half_image(img, type, tex_img)) {
+		if(!file_load_image<TypeDesc::HALF, half>(img, type, tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			half *pixels = (half*)tex_img.resize(1, 1);
 
@@ -1107,7 +927,7 @@ void ImageManager::device_pack_images(Device *device,
 
 	int info_size = tex_num_images[IMAGE_DATA_TYPE_FLOAT4] + tex_num_images[IMAGE_DATA_TYPE_BYTE4]
 	                + tex_num_images[IMAGE_DATA_TYPE_FLOAT] + tex_num_images[IMAGE_DATA_TYPE_BYTE];
-	uint4 *info = dscene->tex_image_packed_info.resize(info_size);
+	uint4 *info = dscene->tex_image_packed_info.resize(info_size*2);
 
 	/* Byte4 Textures*/
 	type = IMAGE_DATA_TYPE_BYTE4;
@@ -1130,7 +950,9 @@ void ImageManager::device_pack_images(Device *device,
 
 		uint8_t options = pack_image_options(type, slot);
 
-		info[type_index_to_flattened_slot(slot, type)] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+		int index = type_index_to_flattened_slot(slot, type) * 2;
+		info[index] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+		info[index+1] = make_uint4(tex_img.data_depth, 0, 0, 0);
 
 		memcpy(pixels_byte4+offset, (void*)tex_img.data_pointer, tex_img.memory_size());
 		offset += tex_img.size();
@@ -1159,7 +981,10 @@ void ImageManager::device_pack_images(Device *device,
 		/* todo: support 3D textures, only CPU for now */
 
 		uint8_t options = pack_image_options(type, slot);
-		info[type_index_to_flattened_slot(slot, type)] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+
+		int index = type_index_to_flattened_slot(slot, type) * 2;
+		info[index] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+		info[index+1] = make_uint4(tex_img.data_depth, 0, 0, 0);
 
 		memcpy(pixels_float4+offset, (void*)tex_img.data_pointer, tex_img.memory_size());
 		offset += tex_img.size();
@@ -1187,7 +1012,9 @@ void ImageManager::device_pack_images(Device *device,
 
 		uint8_t options = pack_image_options(type, slot);
 
-		info[type_index_to_flattened_slot(slot, type)] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+		int index = type_index_to_flattened_slot(slot, type) * 2;
+		info[index] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+		info[index+1] = make_uint4(tex_img.data_depth, 0, 0, 0);
 
 		memcpy(pixels_byte+offset, (void*)tex_img.data_pointer, tex_img.memory_size());
 		offset += tex_img.size();
@@ -1216,7 +1043,10 @@ void ImageManager::device_pack_images(Device *device,
 		/* todo: support 3D textures, only CPU for now */
 
 		uint8_t options = pack_image_options(type, slot);
-		info[type_index_to_flattened_slot(slot, type)] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+
+		int index = type_index_to_flattened_slot(slot, type) * 2;
+		info[index] = make_uint4(tex_img.data_width, tex_img.data_height, offset, options);
+		info[index+1] = make_uint4(tex_img.data_depth, 0, 0, 0);
 
 		memcpy(pixels_float+offset, (void*)tex_img.data_pointer, tex_img.memory_size());
 		offset += tex_img.size();

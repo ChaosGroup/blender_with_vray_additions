@@ -21,7 +21,8 @@ from bpy.props import (BoolProperty,
                        EnumProperty,
                        FloatProperty,
                        IntProperty,
-                       PointerProperty)
+                       PointerProperty,
+                       StringProperty)
 
 # enums
 
@@ -29,7 +30,7 @@ import _cycles
 
 enum_devices = (
     ('CPU', "CPU", "Use CPU for rendering"),
-    ('GPU', "GPU Compute", "Use GPU compute device for rendering, configured in user preferences"),
+    ('GPU', "GPU Compute", "Use GPU compute device for rendering, configured in the system tab in the user preferences"),
     )
 
 if _cycles.with_network:
@@ -120,6 +121,12 @@ enum_volume_sampling = (
 enum_volume_interpolation = (
     ('LINEAR', "Linear", "Good smoothness and speed"),
     ('CUBIC', "Cubic", "Smoothed high quality interpolation, but slower")
+    )
+
+enum_device_type = (
+    ('CPU', "CPU", "CPU", 0),
+    ('CUDA', "CUDA", "CUDA", 1),
+    ('OPENCL', "OpenCL", "OpenCL", 2)
     )
 
 
@@ -265,6 +272,13 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 name="Sample All Indirect Lights",
                 description="Sample all lights (for indirect samples), rather than randomly picking one",
                 default=True,
+                )
+        cls.light_sampling_threshold = FloatProperty(
+                name="Light Sampling Threshold",
+                description="Probabilistically terminate light samples when the light contribution is below this threshold (more noise but faster rendering). "
+                            "Zero disables the test and never ignores lights",
+                min=0.0, max=1.0,
+                default=0.05,
                 )
 
         cls.caustics_reflective = BoolProperty(
@@ -550,6 +564,19 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 description="Margin for the camera space culling",
                 default=0.1,
                 min=0.0, max=5.0
+                )
+
+        cls.use_distance_cull = BoolProperty(
+                name="Use Distance Cull",
+                description="Allow objects to be culled based on the distance from camera",
+                default=False,
+                )
+
+        cls.distance_cull_margin = FloatProperty(
+                name="Cull Distance",
+                description="Cull objects which are further away from camera then this distance",
+                default=50,
+                min=0.0
                 )
 
         cls.motion_blur_position = EnumProperty(
@@ -1002,6 +1029,12 @@ class CyclesObjectSettings(bpy.types.PropertyGroup):
                 default=False,
                 )
 
+        cls.use_distance_cull = BoolProperty(
+                name="Use Distance Cull",
+                description="Allow this object and its duplicators to be culled by distance from camera",
+                default=False,
+                )
+
         cls.use_adaptive_subdivision = BoolProperty(
                 name="Use Adaptive Subdivision",
                 description="Use adaptive render time subdivision",
@@ -1123,6 +1156,107 @@ class CyclesCurveSettings(bpy.types.PropertyGroup):
         del bpy.types.ParticleSettings.cycles
 
 
+class CyclesDeviceSettings(bpy.types.PropertyGroup):
+    @classmethod
+    def register(cls):
+        cls.id = StringProperty(name="ID")
+        cls.name = StringProperty(name="Name")
+        cls.use = BoolProperty(name="Use", default=True)
+        cls.type = EnumProperty(name="Type", items=enum_device_type, default='CUDA')
+
+
+class CyclesPreferences(bpy.types.AddonPreferences):
+    bl_idname = __package__
+
+    def get_device_types(self, context):
+        import _cycles
+        has_cuda, has_opencl = _cycles.get_device_types()
+        list = [('NONE', "None", "Don't use compute device", 0)]
+        if has_cuda:
+            list.append(('CUDA', "CUDA", "Use CUDA for GPU acceleration", 1))
+        if has_opencl:
+            list.append(('OPENCL', "OpenCL", "Use OpenCL for GPU acceleration", 2))
+        return list
+
+    compute_device_type = EnumProperty(
+            name="Compute Device Type",
+            description="Device to use for computation (rendering with Cycles)",
+            items=get_device_types,
+            )
+
+    devices = bpy.props.CollectionProperty(type=CyclesDeviceSettings)
+
+    def get_devices(self):
+        import _cycles
+        # Layout of the device tuples: (Name, Type, Persistent ID)
+        device_list = _cycles.available_devices()
+
+        cuda_devices = []
+        opencl_devices = []
+        for device in device_list:
+            if not device[1] in {'CUDA', 'OPENCL'}:
+                continue
+
+            entry = None
+            # Try to find existing Device entry
+            for dev in self.devices:
+                if dev.id == device[2] and dev.type == device[1]:
+                    entry = dev
+                    break
+            # Create new entry if no existing one was found
+            if not entry:
+                entry = self.devices.add()
+                entry.id   = device[2]
+                entry.name = device[0]
+                entry.type = device[1]
+
+            # Sort entries into lists
+            if entry.type == 'CUDA':
+                cuda_devices.append(entry)
+            elif entry.type == 'OPENCL':
+                opencl_devices.append(entry)
+        return cuda_devices, opencl_devices
+
+
+    def get_num_gpu_devices(self):
+        import _cycles
+        device_list = _cycles.available_devices()
+        num = 0
+        for device in device_list:
+            if device[1] != self.compute_device_type:
+                continue
+            for dev in self.devices:
+                if dev.use and dev.id == device[2]:
+                    num += 1
+        return num
+
+
+    def has_active_device(self):
+        return self.get_num_gpu_devices() > 0
+
+
+    def draw_impl(self, layout, context):
+        layout.label(text="Cycles Compute Device:")
+        layout.row().prop(self, "compute_device_type", expand=True)
+
+        cuda_devices, opencl_devices = self.get_devices()
+        row = layout.row()
+
+        if self.compute_device_type == 'CUDA' and cuda_devices:
+            col = row.column(align=True)
+            for device in cuda_devices:
+                col.prop(device, "use", text=device.name, toggle=True)
+
+        if self.compute_device_type == 'OPENCL' and opencl_devices:
+            col = row.column(align=True)
+            for device in opencl_devices:
+                col.prop(device, "use", text=device.name, toggle=True)
+
+
+    def draw(self, context):
+        self.draw_impl(self.layout, context)
+
+
 def register():
     bpy.utils.register_class(CyclesRenderSettings)
     bpy.utils.register_class(CyclesCameraSettings)
@@ -1134,6 +1268,8 @@ def register():
     bpy.utils.register_class(CyclesObjectSettings)
     bpy.utils.register_class(CyclesCurveRenderSettings)
     bpy.utils.register_class(CyclesCurveSettings)
+    bpy.utils.register_class(CyclesDeviceSettings)
+    bpy.utils.register_class(CyclesPreferences)
 
 
 def unregister():
@@ -1147,3 +1283,5 @@ def unregister():
     bpy.utils.unregister_class(CyclesVisibilitySettings)
     bpy.utils.unregister_class(CyclesCurveRenderSettings)
     bpy.utils.unregister_class(CyclesCurveSettings)
+    bpy.utils.unregister_class(CyclesDeviceSettings)
+    bpy.utils.unregister_class(CyclesPreferences)

@@ -32,8 +32,6 @@
 
 #include "intern/depsgraph.h" /* own include */
 
-#include <string.h>
-
 #include "MEM_guardedalloc.h"
 
 #include "BLI_utildefines.h"
@@ -52,6 +50,8 @@ extern "C" {
 
 #include "RNA_access.h"
 }
+
+#include <cstring>
 
 #include "DEG_depsgraph.h"
 
@@ -116,7 +116,7 @@ static bool pointer_to_component_node_criteria(const PointerRNA *ptr,
                                                const PropertyRNA *prop,
                                                ID **id,
                                                eDepsNode_Type *type,
-                                               string *subdata)
+                                               const char **subdata)
 {
 	if (!ptr->type)
 		return false;
@@ -232,7 +232,7 @@ DepsNode *Depsgraph::find_node_from_pointer(const PointerRNA *ptr,
 {
 	ID *id;
 	eDepsNode_Type type;
-	string name;
+	const char *name;
 
 	/* Get querying conditions. */
 	if (pointer_to_id_node_criteria(ptr, prop, &id)) {
@@ -240,8 +240,9 @@ DepsNode *Depsgraph::find_node_from_pointer(const PointerRNA *ptr,
 	}
 	else if (pointer_to_component_node_criteria(ptr, prop, &id, &type, &name)) {
 		IDDepsNode *id_node = find_id_node(id);
-		if (id_node)
+		if (id_node != NULL) {
 			return id_node->find_component(type, name);
+		}
 	}
 
 	return NULL;
@@ -328,7 +329,7 @@ IDDepsNode *Depsgraph::find_id_node(const ID *id) const
 	return reinterpret_cast<IDDepsNode *>(BLI_ghash_lookup(id_hash, id));
 }
 
-IDDepsNode *Depsgraph::add_id_node(ID *id, const string &name)
+IDDepsNode *Depsgraph::add_id_node(ID *id, const char *name)
 {
 	IDDepsNode *id_node = find_id_node(id);
 	if (!id_node) {
@@ -370,8 +371,7 @@ DepsRelation *Depsgraph::add_new_relation(OperationDepsNode *from,
 	if (comp_node->type == DEPSNODE_TYPE_GEOMETRY) {
 		IDDepsNode *id_to = to->owner->owner;
 		IDDepsNode *id_from = from->owner->owner;
-		Object *object_to = (Object *)id_to->id;
-		if (id_to != id_from && (object_to->recalc & OB_RECALC_ALL)) {
+		if (id_to != id_from && (id_to->id->tag & LIB_TAG_ID_RECALC_ALL)) {
 			if ((id_from->eval_flags & DAG_EVAL_NEED_CPU) == 0) {
 				id_from->tag_update(this);
 				id_from->eval_flags |= DAG_EVAL_NEED_CPU;
