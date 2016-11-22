@@ -76,17 +76,23 @@ bool CouldInstance(BL::Scene scene, BL::Object ob)
 
 std::string GetIDName(ID *id)
 {
-	std::string idName(id->name);
+	std::string idName;
 
-	if(id->lib) {
+	Library *fromLibrary = id->lib;
+	while (fromLibrary) {
 		char libFilename[FILE_MAX] = "";
 
-		BLI_split_file_part(id->lib->name+2, libFilename, FILE_MAX);
+		BLI_split_file_part(fromLibrary->name+2, libFilename, FILE_MAX);
 		BLI_replace_extension(libFilename, FILE_MAX, "");
 
 		idName.append("LI");
 		idName.append(libFilename);
+		idName.append("|");
+
+		fromLibrary = fromLibrary->parent;
 	}
+
+	idName.append(id->name);
 
 	return StripString(idName);
 }
