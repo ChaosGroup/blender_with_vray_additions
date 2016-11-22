@@ -72,14 +72,16 @@ MHash VRayForBlender::getParticleID(BL::Object arrayGenerator, int arrayIndex)
 		ArrayKey(BL::Object arrayGenerator, int arrayIndex) {
 			::memset(key, 0, sizeof(key));
 
+			int keyOffs = 0;
+
 			// Array index.
-			key[0] = arrayIndex;
+			key[keyOffs++] = arrayIndex;
 
 			// Array generator object pointer.
-			key[1] = reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
+			key[keyOffs++] = reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
 		}
 
-		intptr_t key[2];
+		intptr_t key[20];
 	} arrayKey(arrayGenerator, arrayIndex);
 
 	MurmurHash3_x86_32((const void*)&arrayKey, sizeof(ArrayKey), 42, &particleID);
