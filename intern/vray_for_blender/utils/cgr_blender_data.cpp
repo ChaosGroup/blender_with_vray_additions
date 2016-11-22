@@ -123,7 +123,7 @@ static bool is_mesh_valid(Scene *sce, Main *main, Object *ob, bool check_length=
 		BL::Mesh mesh = data.meshes.new_from_object(scene, obj, true, 1, false, false);
 		valid = mesh && mesh.polygons.length();
 		if (mesh) {
-			data.meshes.remove(mesh, 1);
+			data.meshes.remove(mesh, false);
 		}
 	}
 
