@@ -3363,11 +3363,11 @@ void BKE_object_relink(Object *ob)
 	if (ob->id.lib)
 		return;
 
-	BKE_constraints_relink(&ob->constraints);
+	// BKE_constraints_relink(&ob->constraints);
 	if (ob->pose) {
 		bPoseChannel *chan;
 		for (chan = ob->pose->chanbase.first; chan; chan = chan->next) {
-			BKE_constraints_relink(&chan->constraints);
+			// BKE_constraints_relink(&chan->constraints);
 		}
 	}
 	modifiers_foreachIDLink(ob, copy_object__forwardModifierLinks, NULL);
