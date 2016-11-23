@@ -492,7 +492,9 @@ void IDP_restore_fake_user(void)
 		if (data) {
 			if (data->us == 0 || !(data->flag & LIB_FAKEUSER)) {
 				data->flag |= LIB_FAKEUSER;
-				id_us_min(data);
+				if (data->us > ID_FAKE_USERS(data)) {
+					id_us_min(data);
+				}
 			}
 		}
 	}
