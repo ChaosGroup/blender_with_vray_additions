@@ -2156,6 +2156,23 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 		case IDP_ID: /* DatablockProperty */
 			newaddr = newlibadr(fd, NULL, IDP_Id(loop));
 
+			if (strcmp(loop->name, "ntree") == 0) {
+				bool ntree_exists = false;
+				// fd->mainlist is already joined here
+				FOREACH_NODETREE((Main*)fd->mainlist->first, nodetree, ntreeIter) {
+					if (newaddr == (bNodeTree*)ntreeIter) {
+						ntree_exists = true;
+						break;
+					}
+				} FOREACH_NODETREE_END
+
+				if (!ntree_exists) {
+					newaddr = NULL;
+					printf("Error while loading ntree. Wrong data found in file!\n");
+				}
+				ntree_exists = false;
+			}
+
 			if (IDP_Id(loop) && !newaddr) {
 				printf("Error while loading \"%s\". Data not found in file!\n", loop->name);
 			}
