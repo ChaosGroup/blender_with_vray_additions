@@ -53,6 +53,7 @@
 #include "DNA_actuator_types.h"
 #include "DNA_view3d_types.h"
 #include "DNA_smoke_types.h"
+#include "DNA_rigidbody_types.h"
 
 #include "DNA_genfile.h"
 
@@ -1393,7 +1394,7 @@ void blo_do_versions_270(FileData *fd, Library *UNUSED(lib), Main *main)
 			}
 		}
 	}
-	if (!MAIN_VERSION_ATLEAST(main, 279, 0)) {
+	if (!MAIN_VERSION_ATLEAST(main, 278, 2)) {
 		if (!DNA_struct_elem_find(fd->filesdna, "FFMpegCodecData", "int", "ffmpeg_preset")) {
 			for (Scene *scene = main->scene.first; scene; scene = scene->id.next) {
 				/* "medium" is the preset FFmpeg uses when no presets are given. */
@@ -1426,7 +1427,7 @@ void blo_do_versions_270(FileData *fd, Library *UNUSED(lib), Main *main)
 		}
 	}
 
-	{
+	if (!MAIN_VERSION_ATLEAST(main, 278, 3)) {
 		for (Scene *scene = main->scene.first; scene != NULL; scene = scene->id.next) {
 			if (scene->toolsettings != NULL) {
 				ToolSettings *ts = scene->toolsettings;
@@ -1437,6 +1438,39 @@ void blo_do_versions_270(FileData *fd, Library *UNUSED(lib), Main *main)
 					}
 				}
 			}
+		}
+
+		if (!DNA_struct_elem_find(fd->filesdna, "RigidBodyCon", "float", "spring_stiffness_ang_x")) {
+			Object *ob;
+			for (ob = main->object.first; ob; ob = ob->id.next) {
+				RigidBodyCon *rbc = ob->rigidbody_constraint;
+				if (rbc) {
+					rbc->spring_stiffness_ang_x = 10.0;
+					rbc->spring_stiffness_ang_y = 10.0;
+					rbc->spring_stiffness_ang_z = 10.0;
+					rbc->spring_damping_ang_x = 0.5;
+					rbc->spring_damping_ang_y = 0.5;
+					rbc->spring_damping_ang_z = 0.5;
+				}
+			}
+		}
+
+		/* constant detail for sculpting is now a resolution value instead of
+		 * a percentage, we reuse old DNA struct member but convert it */
+		for (Scene *scene = main->scene.first; scene != NULL; scene = scene->id.next) {
+			if (scene->toolsettings != NULL) {
+				ToolSettings *ts = scene->toolsettings;
+				if (ts->sculpt && ts->sculpt->constant_detail != 0.0f) {
+					ts->sculpt->constant_detail = 100.0f / ts->sculpt->constant_detail;
+				}
+			}
+		}
+	}
+
+	if (!MAIN_VERSION_ATLEAST(main, 278, 4)) {
+		const float sqrt_3 = (float)M_SQRT3;
+		for (Brush *br = main->brush.first; br; br = br->id.next) {
+			br->fill_threshold /= sqrt_3;
 		}
 	}
 }

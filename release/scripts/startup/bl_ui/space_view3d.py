@@ -710,6 +710,7 @@ class VIEW3D_MT_select_particle(Menu):
         layout = self.layout
 
         layout.operator("view3d.select_border")
+        layout.operator("view3d.select_circle")
 
         layout.separator()
 
@@ -2477,6 +2478,10 @@ class VIEW3D_MT_edit_mesh_vertices(Menu):
         layout.menu("VIEW3D_MT_vertex_group")
         layout.menu("VIEW3D_MT_hook")
 
+        layout.separator()
+
+        layout.operator("object.vertex_parent_set")
+
 
 class VIEW3D_MT_edit_mesh_edges(Menu):
     bl_label = "Edges"
@@ -2731,6 +2736,10 @@ class VIEW3D_MT_edit_curve_ctrlpoints(Menu):
 
         layout.menu("VIEW3D_MT_hook")
 
+        layout.separator()
+
+        layout.operator("object.vertex_parent_set")
+
 
 class VIEW3D_MT_edit_curve_segments(Menu):
     bl_label = "Segments"
@@ -2890,6 +2899,10 @@ class VIEW3D_MT_edit_lattice(Menu):
         layout.separator()
 
         layout.operator("lattice.make_regular")
+
+        layout.separator()
+
+        layout.operator("object.vertex_parent_set")
 
         layout.separator()
 
@@ -3231,8 +3244,10 @@ class VIEW3D_PT_view3d_display(Panel):
         row.prop(view, "show_axis_z", text="Z", toggle=True)
 
         sub = col.column(align=True)
-        sub.active = (display_all and view.show_floor)
-        sub.prop(view, "grid_lines", text="Lines")
+        sub.active = bool(view.show_floor or view.region_quadviews or not view.region_3d.is_perspective)
+        subsub = sub.column(align=True)
+        subsub.active = view.show_floor
+        subsub.prop(view, "grid_lines", text="Lines")
         sub.prop(view, "grid_scale", text="Scale")
         subsub = sub.column(align=True)
         subsub.active = scene.unit_settings.system == 'NONE'

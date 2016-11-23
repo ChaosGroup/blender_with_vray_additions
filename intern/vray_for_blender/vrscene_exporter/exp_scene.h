@@ -27,6 +27,7 @@
 
 #include "exp_defines.h"
 #include "exp_types.h"
+#include "vfb_instancer.h"
 
 #include "Node.h"
 #include "LightLinker.h"
@@ -81,76 +82,6 @@ struct HideFromView {
 };
 
 
-struct InstancerItem {
-	std::string        nodeName;
-	MHash              particleId;
-	char               transform[CGR_TRANSFORM_HEX_SIZE];
-	static const char *velocity;
-};
-typedef std::vector<InstancerItem*> InstancerItems;
-
-
-class InstancerSystem {
-public:
-	~InstancerSystem() {
-		clear();
-	}
-
-	InstancerItems  m_instances;
-
-	InstancerItem* add(const std::string &node, const MHash idx, float obmat[4][4], float dupmat[4][4]);
-
-	void append(InstancerItem *pa) {
-		m_instances.push_back(pa);
-	}
-
-	void clear() {
-		for(InstancerItems::const_iterator paIt = m_instances.begin(); paIt != m_instances.end(); ++paIt) {
-			delete *paIt;
-		}
-		m_instances.clear();
-	}
-
-	const size_t size() const {
-		return m_instances.size();
-	}
-};
-typedef std::map<BL::ID, InstancerSystem*> MyPartSystems;
-
-
-class MyParticles {
-public:
-	~MyParticles() {
-		clear();
-	}
-
-	InstancerSystem *get(BL::ID ob) {
-		InstancerSystem *myPsys = NULL;
-
-		MyPartSystems::iterator it = m_systems.find(ob);
-		if (it != m_systems.end()) {
-			myPsys = it->second;
-		}
-		else {
-			myPsys = new InstancerSystem();
-			m_systems.insert(std::make_pair(ob, myPsys));
-		}
-
-		return myPsys;
-	}
-
-	void clear() {
-		for (MyPartSystems::iterator sysIt = m_systems.begin(); sysIt != m_systems.end(); ++sysIt) {
-			InstancerSystem *myPsys = sysIt->second;
-			myPsys->clear();
-			delete myPsys;
-		}
-		m_systems.clear();
-	}
-
-	MyPartSystems m_systems;
-};
-
 typedef std::set<BL::Object> ObjectSet;
 typedef std::map<int, ObjectSet> SubframeObjects;
 
@@ -179,13 +110,12 @@ private:
 	void                    exportNodeEx(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportObjectOrArray(BL::Object ob);
+
 	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportVRayAsset(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportVRayClipper(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
-	void                    exportDupliFromArray(BL::Object ob, BL::ArrayModifier arrayModifier);
-
-	void                    initDupli();
 	void                    exportDupli();
 
 	void                    exportNode(Object *ob, const NodeAttrs &attrs=NodeAttrs());
@@ -193,7 +123,6 @@ private:
 	std::string             writeNodeFromNodeTree(BL::NodeTree ntree, BL::Node node);
 
 	StrSet                  m_exportedObjects;
-	MyParticles             m_psys;
 	PtrSet                  m_skipObjects;
 
 	HideFromView            m_hideFromView;
@@ -201,6 +130,9 @@ private:
 	LightLinker             m_lightLinker;
 
 	SubframeObjects         m_subframeObjects;
+
+	/// Particle instancer.
+	VRayForBlender::Instancer instancer;
 
 	PYTHON_PRINT_BUF;
 
