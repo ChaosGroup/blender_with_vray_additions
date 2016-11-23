@@ -59,6 +59,8 @@ extern "C" {
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+/// Cast to float [4][4].
+#define _m4(x) ((float (*)[4])(x))
 
 static bool ob_is_mesh(BL::Object ob)
 {
@@ -647,33 +649,8 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 			Node::WriteHair(ob);
 
 			if (ob_is_duplicator_renderable(ob) && ob_on_visible_layer(ob)) {
-				NodeAttrs nodeAttrs;
-
-				// Check if last modifier is Array and disable it - we'll handle it manually
-				BL::ArrayModifier modArray(PointerRNA_NULL);
-				if (ob.modifiers.length()) {
-					BL::Modifier mod = ob.modifiers[ob.modifiers.length()-1];
-					if (mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY) {
-						// Store modifier
-						modArray = BL::ArrayModifier(mod);
-
-						// We could have some heavy array, better use "dynamic_geometry"
-						nodeAttrs.dynamic_geometry = true;
-
-						// Disable for render so that object is exported without Array modifier
-						modArray.show_render(false);
-					}
-				}
-
-				exportObject(ob, nodeAttrs);
-
-				if (modArray) {
-					// Restore Array modifier settings
-					modArray.show_render(true);
-
-					// Export array data
-					exportDupliFromArray(ob, modArray);
-				}
+				// Export / expand array object.
+				exportObjectOrArray(ob);
 			}
 		}
 	}
@@ -683,29 +660,217 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 }
 
 
-void VRsceneExporter::exportDupliFromArray(BL::Object ob, BL::ArrayModifier modArray)
+void VRsceneExporter::exportObjectOrArray(BL::Object ob)
 {
-	Object            &object  = *(Object*)ob.ptr.data;
-	ArrayModifierData &amd     = *(ArrayModifierData*)(modArray.ptr.data);
+	/// Wrapper for BLTransform with convenient constructors.
+	struct ArrayModTm {
+		typedef std::vector<ArrayModTm> Vector;
 
-	if (!amd.dupliTms) {
-		PRINT_ERROR("Object: %s Modifier: %s: dupliTms is NULL",
-					ob.name().c_str(), modArray.name().c_str());
+		ArrayModTm(BLTransform tm)
+		    : tm(tm)
+		{}
+		ArrayModTm(float m[4][4]) {
+			::memcpy(tm.data, m, 16 * sizeof(float));
+		}
+		ArrayModTm(const float *m) {
+			::memcpy(tm.data, m, 16 * sizeof(float));
+		}
+
+		BLTransform tm;
+	};
+
+	/// Wrapper for BL::ArrayModifier with convenient constructor.
+	struct ArrayMod {
+		typedef std::vector<ArrayMod> Vector;
+
+		ArrayMod(BL::Modifier modArray=BL::Modifier(PointerRNA_NULL), int index=0)
+		    : arrayModifier(modArray)
+		    , index(index)
+		{}
+
+		int count() const {
+			ArrayModifierData *md = getArrayModifierData();
+			BLI_assert(md);
+			return md->count;
+		}
+
+		/// Returns transform for the particular array item.
+		/// @param index Array item.
+		const float *getTm(int index) const {
+			ArrayModifierData *md = getArrayModifierData();
+			BLI_assert(md);
+			BLI_assert(index < md->count);
+
+			float *tm = NULL;
+
+			// "count" represents the object itself + number of copies,
+			// we store transforms only for the copies, so basically first is
+			// identity transform.
+			if (index == 0) {
+				// Identity transform.
+				static float identityTm[4][4];
+				static int identityTmInit = false;
+				if (!identityTmInit) {
+					unit_m4(identityTm);
+					identityTmInit = true;
+				}
+
+				tm = (float*)identityTm;
+			}
+			else {
+				tm = md->dupliTms + (index-1) * 16;
+			}
+
+			BLI_assert(tm);
+
+			return tm;
+		}
+
+		/// Set render mode for the modifier. Used to export object without
+		/// any array modifier applied.
+		/// @param value True to enable for render, false - otherwise.
+		void showRender(int value) {
+			arrayModifier.show_render(value);
+		}
+
+		/// Returns modifierd index in modifier stack.
+		int getIndex() const {
+			return index;
+		}
+
+	private:
+		/// Returns ArrayModifierData for the modifier.
+		ArrayModifierData *getArrayModifierData() const {
+			return reinterpret_cast<ArrayModifierData*>(arrayModifier.ptr.data);
+		}
+
+		/// The array modifier.
+		BL::ArrayModifier arrayModifier;
+
+		/// Modifier index in modifier stack.
+		/// Used to detect that modifiers are going one after another.
+		int index;
+	};
+
+	ArrayMod::Vector arrayMods;
+
+	const int numModifiers = ob.modifiers.length();
+
+	// We support only the last sequence of Array modifiers in the modifier stack.
+	for (int modIdx = numModifiers-1; modIdx >= 0; --modIdx) {
+		BL::Modifier mod = ob.modifiers[modIdx];
+		if (mod && mod.show_render()) {
+			if (mod.type() != BL::Modifier::type_ARRAY) {
+				break;
+			}
+			else {
+				int addModifier = false;
+
+				if (arrayMods.empty()) {
+					addModifier = true;
+				}
+				else {
+					const ArrayMod &lastAddedMod = arrayMods[arrayMods.size()-1];
+					if (lastAddedMod.getIndex() - modIdx == 1) {
+						addModifier = true;
+					}
+				}
+
+				if (addModifier) {
+					arrayMods.emplace_back(ArrayMod(mod, modIdx));
+				}
+			}
+		}
 	}
-	else {
-		for (int arrayIndex = 0; arrayIndex < amd.count-1; ++arrayIndex) {
-			float *dupliTm = amd.dupliTms + arrayIndex * 16;
 
-			// Array dupli tm to world space
-			float dupliTmWorld[4][4];
-			copy_m4_m4(dupliTmWorld, (float (*)[4])dupliTm);
-			mul_m4_m4m4(dupliTmWorld, object.obmat, dupliTmWorld);
+	// Export object as is.
+	if (arrayMods.empty()) {
+		exportObject(ob);
+	}
+	// Export Array modifiers as Instancer particles.
+	else {
+		// We want modifiers in descending order.
+		std::reverse(arrayMods.begin(), arrayMods.end());
+
+		// Disable for render so that object is exported without any Array modifier.
+		for (int modIdx = 0; modIdx < arrayMods.size(); ++modIdx) {
+			arrayMods[modIdx].showRender(false);
+		}
+
+		NodeAttrs nodeAttrs;
+		nodeAttrs.override = true;
+		nodeAttrs.objectID = ob.pass_index();
+		nodeAttrs.tm = ob.matrix_world();
+
+		// It'll be shown with Instancer.
+		nodeAttrs.visible = false;
+
+		// We could have some heavy array, better use "dynamic_geometry".
+		nodeAttrs.dynamic_geometry = true;
+
+		// Export node.
+		exportObject(ob, nodeAttrs);
+
+		// Restore Array modifier settings.
+		for (int modIdx = 0; modIdx < arrayMods.size(); ++modIdx) {
+			arrayMods[modIdx].showRender(true);
+		}
+
+		// Collect transforms.
+		ArrayModTm::Vector finalTms;
+
+		for (int modIdx = 0; modIdx < arrayMods.size(); ++modIdx) {
+			const ArrayMod &arrayMod = arrayMods[modIdx];
+
+			// Add the first modifier data as is.
+			if (modIdx == 0) {
+				for (int arrIdx = 0; arrIdx < arrayMod.count(); ++arrIdx) {
+					finalTms.emplace_back(arrayMod.getTm(arrIdx));
+				}
+			}
+			// Each next modifier is multiplying everything generated by the
+			// previous ones.
+			else {
+				// Collect this modifier layer data.
+				ArrayModTm::Vector layerTms;
+
+				for (int finIdx = 0; finIdx < finalTms.size(); ++finIdx) {
+					const ArrayModTm &finTm = finalTms[finIdx];
+
+					// Starting with 1 because first elements are already there
+					// from the previous layer.
+					for (int arrIdx = 1; arrIdx < arrayMod.count(); ++arrIdx) {
+						const float *itemTm = arrayMod.getTm(arrIdx);
+
+						float tm[4][4];
+						mul_m4_m4m4(tm, _m4(finTm.tm.data), _m4(itemTm));
+
+						layerTms.emplace_back(tm);
+					}
+				}
+
+				// Apped data to the main storage.
+				for (int layIdx = 0; layIdx < layerTms.size(); ++layIdx) {
+					finalTms.emplace_back(layerTms[layIdx].tm);
+				}
+			}
+		}
+
+		// Add particles for the whole array.
+		for (int finIdx = 0; finIdx < finalTms.size(); ++finIdx) {
+			const BLTransform &tm = finalTms[finIdx].tm;
+			const BLTransform &obTm = ob.matrix_world();
+
+			// Transform TM to world space.
+			BLTransform dupliTmWorld;
+			copy_m4_m4(_m4(dupliTmWorld.data), _m4(tm.data));
+			mul_m4_m4m4(_m4(dupliTmWorld.data), _m4(obTm.data), _m4(dupliTmWorld.data));
 
 			// Add array object particle.
-			VRayForBlender::InstancerItem instancerItem(VRayForBlender::getParticleID(ob, arrayIndex));
+			VRayForBlender::InstancerItem instancerItem(VRayForBlender::getParticleID(ob, finIdx));
 			instancerItem.objectName = GetIDName(ob);
 			instancerItem.objectID = ob.pass_index();
-			instancerItem.setTransform(dupliTmWorld, object.obmat);
+			instancerItem.setTransform(dupliTmWorld, obTm);
 
 			instancer.addParticle(instancerItem);
 		}
@@ -971,16 +1136,16 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	// comes from advanced DupliGroup export.
 	//
 	if(attrs.override) {
-		PointerRNA vrayObject = RNA_pointer_get((PointerRNA*)&attrs.dupliHolder.ptr, "vray");
-
 		visible  = attrs.visible;
 		objectID = attrs.objectID;
-
 		transform = GetTransformHex(attrs.tm);
 
-		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
-		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
-		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
+		if (attrs.dupliHolder.ptr.data) {
+			PointerRNA vrayObject = RNA_pointer_get((PointerRNA*)&attrs.dupliHolder.ptr, "vray");
+			std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
+			material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
+			material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
+		}
 	}
 
 	PointerRNA vrayNode = RNA_pointer_get(&vrayObject, "Node");
