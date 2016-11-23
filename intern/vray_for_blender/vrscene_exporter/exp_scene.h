@@ -110,11 +110,12 @@ private:
 	void                    exportNodeEx(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
 	void                    exportObject(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
+	void                    exportObjectOrArray(BL::Object ob);
+
 	void                    exportLamp(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportVRayAsset(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 	void                    exportVRayClipper(BL::Object ob, const NodeAttrs &attrs=NodeAttrs());
 
-	void                    exportDupliFromArray(BL::Object ob, BL::ArrayModifier arrayModifier);
 	void                    exportDupli();
 
 	void                    exportNode(Object *ob, const NodeAttrs &attrs=NodeAttrs());
