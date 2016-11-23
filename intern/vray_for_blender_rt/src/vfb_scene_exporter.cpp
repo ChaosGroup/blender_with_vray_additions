@@ -740,7 +740,6 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		float dupliLocalTm[4][4];
 		unit_m4(dupliLocalTm);
 
-		// skip 0, we use it as base
 		for (int r = 0; r < tmIndecies.size(); ++r) {
 			auto & arrMod = ob.modifiers[arrModIndecies[r]];
 			const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
