@@ -60,6 +60,8 @@ public:
 	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
 
+	void                 sync_array_mod(BL::Object ob, const int &check_updated);
+
 	void                 sync_prepass();
 	void                 sync(const int &check_updated=false);
 	void                 sync_view(int check_updated=false);

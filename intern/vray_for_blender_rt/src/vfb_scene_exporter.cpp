@@ -661,6 +661,117 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 }
 
+static std::vector<int> unravel_index(int index, const std::vector<int> & dimSizes) {
+	auto result = dimSizes;
+	for (int c = dimSizes.size() - 1; c >= 0; --c) {
+		result[c] = index % dimSizes[c];
+		index /= dimSizes[c];
+	}
+	return result;
+}
+
+void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
+	const auto & nodeName = m_data_exporter.getNodeName(ob);
+	const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
+	const bool visible = m_data_exporter.isObjectVisible(ob);
+
+	ObjectOverridesAttrs overrideAttrs;
+
+	overrideAttrs.useInstancer = true;
+	overrideAttrs.override = true;
+	overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+	overrideAttrs.visible = false;
+	overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+
+	if (!visible) {
+		// we have array mod but OB is not rendereable, remove mod
+		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
+		m_exporter->remove_plugin(exportInstName);
+		// export base just in case we need to hide it
+		sync_object(ob, check_updated, overrideAttrs);
+		return;
+	}
+
+	sync_object(ob, check_updated, overrideAttrs);
+
+	// if we have N array modifiers we have N dimentional grid
+	// so total objects is product of all dimension's sizes
+
+	std::vector<int> arrModIndecies, arrModSizes;
+	int totalCount = 1;
+	for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
+		auto & mod = ob.modifiers[c];
+		if (mod.type() != BL::Modifier::type_ARRAY) {
+			break;
+		}
+
+		if (mod.show_render()) {
+			arrModIndecies.push_back(c);
+			auto arrMod = BL::ArrayModifier(ob.modifiers[c]);
+			arrMod.show_viewport(false);
+			arrMod.show_render(false);
+			const int modSize = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data)->count;
+			totalCount *= modSize;
+			arrModSizes.push_back(modSize);
+		}
+	}
+	std::reverse(arrModIndecies.begin(), arrModIndecies.end());
+	std::reverse(arrModSizes.begin(), arrModSizes.end());
+
+	float objectInvertedTm[4][4];
+	copy_m4_m4(objectInvertedTm, ((Object*)ob.ptr.data)->obmat);
+	invert_m4(objectInvertedTm);
+
+	AttrInstancer instances;
+	instances.frameNumber = m_scene.frame_current();
+	instances.data.resize(totalCount);
+
+	std::default_random_engine randomEng((int)(intptr_t)ob.ptr.data);
+	std::uniform_int_distribution<int> dist(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+
+	float m4Identity[4][4];
+	unit_m4(m4Identity);
+
+	for (int c = 0; c < totalCount; ++c) {
+		auto tmIndecies = unravel_index(c, arrModSizes);
+		BLI_assert(tmIndecies.size() == arrModIndecies.size());
+		// tmIndecies maps index to TM in n'th modifier
+
+		float dupliLocalTm[4][4];
+		unit_m4(dupliLocalTm);
+
+		// skip 0, we use it as base
+		for (int r = 0; r < tmIndecies.size(); ++r) {
+			auto & arrMod = ob.modifiers[arrModIndecies[r]];
+			const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+
+			if (!amd->dupliTms) {
+				PRINT_ERROR("ArrayModifier dupliTms is null!");
+				return;
+			}
+
+			const float * amdTm = tmIndecies[r] ? amd->dupliTms + (tmIndecies[r]-1) * 16 : reinterpret_cast<const float *>(m4Identity);
+			mul_m4_m4m4(dupliLocalTm, dupliLocalTm, (float (*)[4])amdTm);
+		}
+
+		mul_m4_m4m4(dupliLocalTm, dupliLocalTm, objectInvertedTm);
+
+		AttrInstancer::Item &instancer_item = (*instances.data)[c];
+		instancer_item.index = dist(randomEng);
+		instancer_item.node = nodeName;
+		instancer_item.tm = AttrTransformFromBlTransform(dupliLocalTm);
+		memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+	}
+
+	m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
+
+	for (int c = 0; c < arrModIndecies.size(); ++c) {
+		auto & arrMod = ob.modifiers[arrModIndecies[c]];
+		arrMod.show_render(true);
+		arrMod.show_viewport(true);
+	}
+}
+
 
 void SceneExporter::sync_objects(const int &check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
@@ -677,10 +788,9 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 
-		bool has_array_mod = ob.modifiers.length();
-		if (has_array_mod) {
-			BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
-			has_array_mod = mod && mod.show_render() && mod.type() == BL::Modifier::type_ARRAY;
+		bool has_array_mod = false;
+		for (int c = 0; c < ob.modifiers.length(); ++c) {
+			has_array_mod = has_array_mod || (ob.modifiers[c].show_render() && ob.modifiers[c].type() == BL::Modifier::type_ARRAY);
 		}
 
 		if (ob.is_duplicator()) {
@@ -705,70 +815,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			}
 		}
 		else if (has_array_mod) {
-			ObjectOverridesAttrs overrideAttrs;
-
-			overrideAttrs.useInstancer = true;
-			overrideAttrs.override = true;
-			overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-			overrideAttrs.visible = visible;
-			overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-
-			if (!visible) {
-				// we have array mod but OB is not rendereable, remove mod
-				const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
-				m_exporter->remove_plugin(exportInstName);
-				// export base just in case we need to hide it
-				sync_object(ob, check_updated, overrideAttrs);
-			} else {
-				BL::ArrayModifier modArray(PointerRNA_NULL);
-				BL::Modifier mod = ob.modifiers[ob.modifiers.length() - 1];
-
-				// Store modifier
-				modArray = BL::ArrayModifier(mod);
-
-				// Disable for render so that object is exported without Array modifier
-				modArray.show_render(false);
-				modArray.show_viewport(false);
-
-				sync_object(ob, check_updated, overrideAttrs);
-
-				ArrayModifierData &amd = *(ArrayModifierData*)(modArray.ptr.data);
-				if (!amd.dupliTms) {
-					PRINT_ERROR("ArrayModifier dupliTms is null!");
-				}
-
-				if (is_updated && amd.dupliTms) {
-					AttrInstancer instances;
-					instances.frameNumber = m_scene.frame_current();
-					instances.data.resize(amd.count - 1);
-
-					std::default_random_engine randomEng((int)(intptr_t)ob.ptr.data);
-					std::uniform_int_distribution<int> dist(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
-
-					for (int dupliIdx = 0; dupliIdx < amd.count-1; ++dupliIdx) {
-						float *dupliTm = amd.dupliTms + dupliIdx * 16;
-
-						// move dupli to local space and let vray move it to world space from wrapper's tm
-						float inverted[4][4];
-						copy_m4_m4(inverted, ((Object*)ob.ptr.data)->obmat);
-						invert_m4(inverted);
-						mul_m4_m4m4(inverted, (float (*)[4])dupliTm, inverted);
-
-						AttrInstancer::Item &instancer_item = (*instances.data)[dupliIdx];
-						instancer_item.index = dist(randomEng);
-						instancer_item.node = nodeName;
-						instancer_item.tm = AttrTransformFromBlTransform(inverted);
-						memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
-					}
-
-					m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
-				}
-
-				// Restore Array modifier settings
-				modArray.show_render(true);
-				modArray.show_viewport(true);
-
-			}
+			sync_array_mod(ob, check_updated);
 		}
 		else {
 			sync_object(ob, check_updated);
