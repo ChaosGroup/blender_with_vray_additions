@@ -800,6 +800,7 @@ void VRsceneExporter::exportObjectOrArray(BL::Object ob)
 		NodeAttrs nodeAttrs;
 		nodeAttrs.override = true;
 		nodeAttrs.objectID = ob.pass_index();
+		nodeAttrs.tm = ob.matrix_world();
 
 		// It'll be shown with Instancer.
 		nodeAttrs.visible = false;
@@ -1135,16 +1136,16 @@ void VRsceneExporter::exportNodeFromNodeTree(BL::NodeTree ntree, Object *ob, con
 	// comes from advanced DupliGroup export.
 	//
 	if(attrs.override) {
-		PointerRNA vrayObject = RNA_pointer_get((PointerRNA*)&attrs.dupliHolder.ptr, "vray");
-
 		visible  = attrs.visible;
 		objectID = attrs.objectID;
-
 		transform = GetTransformHex(attrs.tm);
 
-		std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
-		material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
-		material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
+		if (attrs.dupliHolder.ptr.data) {
+			PointerRNA vrayObject = RNA_pointer_get((PointerRNA*)&attrs.dupliHolder.ptr, "vray");
+			std::string overrideBaseName = pluginName + "@" + GetIDName((ID*)attrs.dupliHolder.ptr.data);
+			material = Node::WriteMtlWrapper(&vrayObject, NULL, overrideBaseName, material);
+			material = Node::WriteMtlRenderStats(&vrayObject, NULL, overrideBaseName, material);
+		}
 	}
 
 	PointerRNA vrayNode = RNA_pointer_get(&vrayObject, "Node");
