@@ -692,8 +692,6 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		return;
 	}
 
-	sync_object(ob, check_updated, overrideAttrs);
-
 	// if we have N array modifiers we have N dimentional grid
 	// so total objects is product of all dimension's sizes
 
@@ -715,6 +713,15 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			arrModSizes.push_back(modSize);
 		}
 	}
+	// export the node for the base object
+	sync_object(ob, check_updated, overrideAttrs);
+
+	for (int c = 0; c < arrModIndecies.size(); ++c) {
+		auto & arrMod = ob.modifiers[arrModIndecies[c]];
+		arrMod.show_render(true);
+		arrMod.show_viewport(true);
+	}
+
 	std::reverse(arrModIndecies.begin(), arrModIndecies.end());
 	std::reverse(arrModSizes.begin(), arrModSizes.end());
 
@@ -766,12 +773,6 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	}
 
 	m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
-
-	for (int c = 0; c < arrModIndecies.size(); ++c) {
-		auto & arrMod = ob.modifiers[arrModIndecies[c]];
-		arrMod.show_render(true);
-		arrMod.show_viewport(true);
-	}
 }
 
 
@@ -791,8 +792,16 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 
 		bool has_array_mod = false;
-		for (int c = 0; c < ob.modifiers.length(); ++c) {
-			has_array_mod = has_array_mod || (ob.modifiers[c].show_render() && ob.modifiers[c].type() == BL::Modifier::type_ARRAY);
+		for (int c = ob.modifiers.length() - 1 ; c >= 0; ++c) {
+			if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
+				// stop on last non array mod - we export only array mods on top of mod stack
+				break;
+			}
+			if (ob.modifiers[c].show_render()) {
+				// we found atleast one stuitable array mod
+				has_array_mod = true;
+				break;
+			}
 		}
 
 		if (ob.is_duplicator()) {
