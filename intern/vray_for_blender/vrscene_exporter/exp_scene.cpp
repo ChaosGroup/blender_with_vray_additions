@@ -492,28 +492,30 @@ void VRsceneExporter::exportClearCaches()
 	Node::FreeMeshCache();
 }
 
+/// Checks if object is a VRayScene.
+/// @param ob Blender object.
+static int ob_is_VRayScene(BL::Object ob)
+{
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+	return RNA_boolean_get(&vrayObject, "overrideWithScene");
+}
+
+/// Checks if object is a VRayClipper.
+/// @param ob Blender object.
+static int ob_is_VRayClipper(BL::Object ob)
+{
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+	return RNA_boolean_get(&vrayClipper, "enabled");
+}
+
 /// Checks if object is a valid object for Instancer.
 /// @param ob Blender object.
 static int isValidInstancerObject(BL::Object ob)
 {
-	int isValidItem = true;
-
-	if (ob_is_smoke_domain(ob)) {
-		isValidItem = false;
-	}
-	else {
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		if (RNA_boolean_get(&vrayObject, "overrideWithScene")) {
-			isValidItem = false;
-		}
-		else {
-			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-			if (RNA_boolean_get(&vrayClipper, "enabled")) {
-				isValidItem = false;
-			}
-		}
-	}
-
+	const int isValidItem = !(ob_is_smoke_domain(ob) ||
+	                          ob_is_VRayScene(ob) ||
+	                          ob_is_VRayClipper(ob));
 	return isValidItem;
 }
 
@@ -649,8 +651,14 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 			Node::WriteHair(ob);
 
 			if (ob_is_duplicator_renderable(ob) && ob_on_visible_layer(ob)) {
-				// Export / expand array object.
-				exportObjectOrArray(ob);
+				// If object is a VRayClipper export it as is.
+				if (ob_is_VRayClipper(ob)) {
+					exportObject(ob);
+				}
+				else {
+					// Export / expand array object.
+					exportObjectOrArray(ob);
+				}
 			}
 		}
 	}
@@ -856,6 +864,8 @@ void VRsceneExporter::exportObjectOrArray(BL::Object ob)
 			}
 		}
 
+		const int validForInstancer = isValidInstancerObject(ob);
+
 		// Add particles for the whole array.
 		for (int finIdx = 0; finIdx < finalTms.size(); ++finIdx) {
 			const BLTransform &tm = finalTms[finIdx].tm;
@@ -867,12 +877,29 @@ void VRsceneExporter::exportObjectOrArray(BL::Object ob)
 			mul_m4_m4m4(_m4(dupliTmWorld.data), _m4(obTm.data), _m4(dupliTmWorld.data));
 
 			// Add array object particle.
-			VRayForBlender::InstancerItem instancerItem(VRayForBlender::getParticleID(ob, finIdx));
-			instancerItem.objectName = GetIDName(ob);
-			instancerItem.objectID = ob.pass_index();
-			instancerItem.setTransform(dupliTmWorld, obTm);
+			if (validForInstancer) {
+				VRayForBlender::InstancerItem instancerItem(VRayForBlender::getParticleID(ob, finIdx));
+				instancerItem.objectName = GetIDName(ob);
+				instancerItem.objectID = ob.pass_index();
+				instancerItem.setTransform(dupliTmWorld, obTm);
 
-			instancer.addParticle(instancerItem);
+				instancer.addParticle(instancerItem);
+			}
+			// Export new one.
+			else if (ob_is_VRayScene(ob)) {
+				// Need to construct unique name for a new plugin.
+				static boost::format dupliArrayFtm("DupliVRayScene|%u|%s");
+
+				// For Node.
+				NodeAttrs attrs;
+				attrs.override = true;
+				attrs.dynamic_geometry = true;
+				attrs.objectID = ob.pass_index();
+				attrs.namePrefix = boost::str(dupliArrayFtm % VRayForBlender::getParticleID(ob, finIdx) % GetIDName(ob));
+				attrs.tm = dupliTmWorld;
+
+				exportObject(ob, attrs);
+			}
 		}
 	}
 }
@@ -1515,7 +1542,7 @@ void VRsceneExporter::exportDupli()
 
 	const VRayForBlender::InstancerItems &particles = instancer.getParticles();
 
-	PYTHON_PRINTF(out, "\nInstancer instancer {");
+	PYTHON_PRINTF(out, "\nInstancer2 instancer|geom {");
 	PYTHON_PRINTF(out, "\n\tinstances=%sList(%g", VRayExportable::m_interpStart, ExporterSettings::gSet.m_isAnimation ? ExporterSettings::gSet.m_frameCurrent : 0);
 	if (particles.size()) {
 		PYTHON_PRINT(out, ",");
@@ -1543,5 +1570,11 @@ void VRsceneExporter::exportDupli()
 	PYTHON_PRINTF(out, "\n\t)%s;", VRayExportable::m_interpEnd);
 	PYTHON_PRINT(out, "\n\tuse_additional_params=1;");
 	PYTHON_PRINT(out, "\n\tuse_time_instancing=0;");
-	PYTHON_PRINTF(ExporterSettings::gSet.m_fileObject, "\n}\n");
+	PYTHON_PRINTF(out, "\n}\n");
+
+	PYTHON_PRINT(out, "\nNode instancer|node {");
+	PYTHON_PRINT(out, "\n\tgeometry=instancer|geom;");
+	PYTHON_PRINT(out, "\n\tmaterial=MANOMATERIALISSET;");
+	PYTHON_PRINT(out, "\n\ttransform=TransformHex(\"0000803F0000000000000000000000000000803F0000000000000000000000000000803FE37F0000000000000000000000000000000000000000000000000000\");");
+	PYTHON_PRINT(out, "\n}\n");
 }
