@@ -2007,7 +2007,7 @@ static void test_pointer_array(FileData *fd, void **mat, size_t items)
 /* ************ READ ID Properties *************** */
 
 static void IDP_DirectLinkProperty(IDProperty *prop, int switch_endian, FileData *fd);
-static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd);
+static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd, Main *main);
 
 static void IDP_DirectLinkIDPArray(IDProperty *prop, int switch_endian, FileData *fd)
 {
@@ -2141,7 +2141,7 @@ static void _IDP_DirectLinkGroup_OrFree(IDProperty **prop, int switch_endian, Fi
 extern void IDP_ID_Register(IDProperty *prop);
 extern void IDP_ID_Unregister(IDProperty *prop);
 
-static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
+static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd, Main *main)
 {
 	IDProperty *loop;
 	IDProperty *idp_loop;
@@ -2159,7 +2159,7 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 			if (strcmp(loop->name, "ntree") == 0) {
 				bool ntree_exists = false;
 				// fd->mainlist is already joined here
-				FOREACH_NODETREE((Main*)fd->mainlist->first, nodetree, ntreeIter) {
+				FOREACH_NODETREE(main, nodetree, ntreeIter) {
 					if (newaddr == (bNodeTree*)ntreeIter) {
 						ntree_exists = true;
 						break;
@@ -2184,11 +2184,11 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd)
 		case IDP_IDPARRAY: /* CollectionProperty */
 			idp_loop = IDP_Array(loop);
 			for (i = 0; i < loop->totallen; i++) {
-				IDP_LibLinkProperty(&(idp_loop[i]), fd);
+				IDP_LibLinkProperty(&(idp_loop[i]), fd, main);
 			}
 			break;
 		case IDP_GROUP: /* PointerProperty */
-			IDP_LibLinkProperty(loop, fd);
+			IDP_LibLinkProperty(loop, fd, main);
 			break;
 		}
 	}
@@ -2809,16 +2809,16 @@ static void direct_link_motionpath(FileData *fd, bMotionPath *mpath)
 
 /* ************ READ NODE TREE *************** */
 
-static void lib_link_node_socket(FileData *fd, ID *UNUSED(id), bNodeSocket *sock)
+static void lib_link_node_socket(FileData *fd, ID *UNUSED(id), bNodeSocket *sock, Main *main)
 {
 	/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 	 * of library blocks that implement this.*/
 	if (sock->prop)
-		IDP_LibLinkProperty(sock->prop, fd);
+		IDP_LibLinkProperty(sock->prop, fd, main);
 }
 
 /* Single node tree (also used for material/scene trees), ntree is not NULL */
-static void lib_link_ntree(FileData *fd, ID *id, bNodeTree *ntree)
+static void lib_link_ntree(FileData *fd, ID *id, bNodeTree *ntree, Main *main)
 {
 	bNode *node;
 	bNodeSocket *sock;
@@ -2831,21 +2831,21 @@ static void lib_link_ntree(FileData *fd, ID *id, bNodeTree *ntree)
 		/* Link ID Properties -- and copy this comment EXACTLY for easy finding
 		 * of library blocks that implement this.*/
 		if (node->prop && ntree->id.tag & LIB_TAG_NEED_LINK) {
-			IDP_LibLinkProperty(node->prop, fd);
+			IDP_LibLinkProperty(node->prop, fd, main);
 		}
 
 		node->id= newlibadr_us(fd, id->lib, node->id);
 
 		for (sock = node->inputs.first; sock; sock = sock->next)
-			lib_link_node_socket(fd, id, sock);
+			lib_link_node_socket(fd, id, sock, main);
 		for (sock = node->outputs.first; sock; sock = sock->next)
-			lib_link_node_socket(fd, id, sock);
+			lib_link_node_socket(fd, id, sock, main);
 	}
 	
 	for (sock = ntree->inputs.first; sock; sock = sock->next)
-		lib_link_node_socket(fd, id, sock);
+		lib_link_node_socket(fd, id, sock, main);
 	for (sock = ntree->outputs.first; sock; sock = sock->next)
-		lib_link_node_socket(fd, id, sock);
+		lib_link_node_socket(fd, id, sock, main);
 }
 
 /* library ntree linking after fileread */
@@ -2856,7 +2856,7 @@ static void lib_link_nodetree(FileData *fd, Main *main)
 	/* only link ID pointers */
 	for (ntree = main->nodetree.first; ntree; ntree = ntree->id.next) {
 		if (ntree->id.tag & LIB_TAG_NEED_LINK) {
-			lib_link_ntree(fd, &ntree->id, ntree);
+			lib_link_ntree(fd, &ntree->id, ntree, main);
 			ntree->id.tag &= ~LIB_TAG_NEED_LINK;
 		}
 	}
@@ -3381,7 +3381,7 @@ static void lib_link_armature(FileData *fd, Main *main)
 			lib_link_animdata(fd, &arm->id, arm->adt);
 
 			for (bone = arm->bonebase.first; bone; bone = bone->next)
-				IDP_LibLinkProperty(bone->prop, fd);
+				IDP_LibLinkProperty(bone->prop, fd, main);
 
 			arm->id.tag &= ~LIB_TAG_NEED_LINK;
 		}
@@ -3472,7 +3472,7 @@ static void lib_link_lamp(FileData *fd, Main *main)
 			la->ipo = newlibadr_us(fd, la->id.lib, la->ipo); // XXX deprecated - old animation system
 			
 			if (la->nodetree) {
-				lib_link_ntree(fd, &la->id, la->nodetree);
+				lib_link_ntree(fd, &la->id, la->nodetree, main);
 				la->nodetree->id.lib = la->id.lib;
 			}
 			
@@ -3648,7 +3648,7 @@ static void lib_link_world(FileData *fd, Main *main)
 			}
 			
 			if (wrld->nodetree) {
-				lib_link_ntree(fd, &wrld->id, wrld->nodetree);
+				lib_link_ntree(fd, &wrld->id, wrld->nodetree, main);
 				wrld->nodetree->id.lib = wrld->id.lib;
 			}
 			
@@ -3933,7 +3933,7 @@ static void lib_link_texture(FileData *fd, Main *main)
 				tex->ot->object = newlibadr(fd, tex->id.lib, tex->ot->object);
 			
 			if (tex->nodetree) {
-				lib_link_ntree(fd, &tex->id, tex->nodetree);
+				lib_link_ntree(fd, &tex->id, tex->nodetree, main);
 				tex->nodetree->id.lib = tex->id.lib;
 			}
 			
@@ -4015,7 +4015,7 @@ static void lib_link_material(FileData *fd, Main *main)
 			}
 			
 			if (ma->nodetree) {
-				lib_link_ntree(fd, &ma->id, ma->nodetree);
+				lib_link_ntree(fd, &ma->id, ma->nodetree, main);
 				ma->nodetree->id.lib = ma->id.lib;
 			}
 			
@@ -5817,7 +5817,7 @@ static void lib_link_scene(FileData *fd, Main *main)
 			}
 			
 			if (sce->nodetree) {
-				lib_link_ntree(fd, &sce->id, sce->nodetree);
+				lib_link_ntree(fd, &sce->id, sce->nodetree, main);
 				sce->nodetree->id.lib = sce->id.lib;
 				composite_patch(sce->nodetree, sce);
 			}
@@ -7791,7 +7791,7 @@ static void lib_link_linestyle(FileData *fd, Main *main)
 				}
 			}
 			if (linestyle->nodetree) {
-				lib_link_ntree(fd, &linestyle->id, linestyle->nodetree);
+				lib_link_ntree(fd, &linestyle->id, linestyle->nodetree, main);
 				linestyle->nodetree->id.lib = linestyle->id.lib;
 			}
 		}
@@ -8467,7 +8467,7 @@ static void lib_link_all(FileData *fd, Main *main)
 
 		while (loop) {
 			if (loop->tag & LIB_TAG_NEED_LINK) /* Don't unset yet! */
-				IDP_LibLinkProperty(loop->properties, fd);
+				IDP_LibLinkProperty(loop->properties, fd, main);
 			loop = loop->next;
 		}
 	}
