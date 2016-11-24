@@ -922,28 +922,24 @@ void VRsceneExporter::exportNodeEx(BL::Object ob, const NodeAttrs &attrs)
 void VRsceneExporter::exportObject(BL::Object ob, const NodeAttrs &attrs)
 {
 	if (ob_is_mesh(ob)) {
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-
-		if (RNA_boolean_get(&vrayObject, "overrideWithScene")) {
+		if (ob_is_VRayScene(ob)) {
 			exportVRayAsset(ob, attrs);
 		}
-		else if (RNA_boolean_get(&vrayClipper, "enabled")) {
+		else if (ob_is_VRayClipper(ob)) {
 			exportVRayClipper(ob, attrs);
 		}
-		else {
-			if (!ob_is_smoke_domain(ob)) {
-				const std::string idName = attrs.namePrefix + GetIDName(ob);
-				if (!m_exportedObjects.count(idName)) {
-					m_exportedObjects.insert(idName);
+		else if (!ob_is_smoke_domain(ob)) {
+			const std::string idName = attrs.namePrefix + GetIDName(ob);
+			if (!m_exportedObjects.count(idName)) {
+				m_exportedObjects.insert(idName);
 
-					const int subframes = RNA_int_get(&vrayObject, "subframes");
-					if (subframes) {
-						m_subframeObjects[subframes].insert(ob);
-					}
-
-					exportNodeEx(ob, attrs);
+				PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+				const int subframes = RNA_int_get(&vrayObject, "subframes");
+				if (subframes) {
+					m_subframeObjects[subframes].insert(ob);
 				}
+
+				exportNodeEx(ob, attrs);
 			}
 		}
 	}
@@ -1469,9 +1465,7 @@ void VRsceneExporter::exportVRayClipper(BL::Object ob, const NodeAttrs &attrs)
 		return;
 	m_exportedObjects.insert(pluginName);
 
-	char transform[CGR_TRANSFORM_HEX_SIZE];
-	GetTransformHex(((Object*)ob.ptr.data)->obmat, transform);
-
+	const std::string &transform = GetTransformHex(attrs.override ? attrs.tm : ob.matrix_world());
 	const std::string &material = VRayNodeExporter::exportMtlMulti(ExporterSettings::gSet.b_data, ob);
 
 	AttributeValueMap pluginAttrs;
@@ -1487,16 +1481,20 @@ void VRsceneExporter::exportVRayClipper(BL::Object ob, const NodeAttrs &attrs)
 	pluginAttrs["transform"]        = BOOST_FORMAT_TM(transform);
 
 	if (RNA_boolean_get(&vrayClipper, "use_obj_mesh")) {
-		const std::string &clipperGeomName = pluginName + "@Mesh";
+		const std::string &clipperGeomName = GetIDName(ob.data());
 
-		ExportGeomStaticMesh(ExporterSettings::gSet.m_fileGeom,
-							 ExporterSettings::gSet.m_sce,
-							 (Object*)ob.ptr.data,
-							 ExporterSettings::gSet.m_main,
-							 clipperGeomName.c_str(),
-							 NULL);
+		if (!m_exportedObjects.count(clipperGeomName)) {
+			m_exportedObjects.insert(clipperGeomName);
 
-		const std::string &clipperGeomNodeName = clipperGeomName + "|Node";
+			ExportGeomStaticMesh(ExporterSettings::gSet.m_fileGeom,
+			                     ExporterSettings::gSet.m_sce,
+			                     (Object*)ob.ptr.data,
+			                     ExporterSettings::gSet.m_main,
+			                     clipperGeomName.c_str(),
+			                     NULL);
+		}
+
+		const std::string &clipperGeomNodeName = pluginName + "|node";
 		AttributeValueMap clipperGeomNode;
 		clipperGeomNode["geometry"]  = clipperGeomName;
 		clipperGeomNode["transform"] = BOOST_FORMAT_TM(transform);
