@@ -50,7 +50,7 @@ using namespace VRayForBlender;
 using namespace VRayForBlender::Nodes;
 
 int IdTrack::contains(BL::Object ob) {
-	return data.find(DataExporter::getObjectUniqueKey(ob)) != data.end();
+	return data.find(DataExporter::getIdUniqueName(ob)) != data.end();
 }
 
 void IdTrack::clear() {
@@ -74,7 +74,7 @@ void IdTrack::insert(BL::Object ob, const std::string &plugin, PluginType type) 
 	default:
 		break;
 	}
-	IdDep &dep = data[DataExporter::getObjectUniqueKey(ob)];
+	IdDep &dep = data[DataExporter::getIdUniqueName(ob)];
 	dep.plugins[plugin] = {true, type};
 	dep.used = true;
 	dep.object = ob;
@@ -91,26 +91,21 @@ void IdTrack::reset_usage() {
 }
 
 
-std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context)
-{
-	std::string pluginName;
-	pluginName.reserve(512);
+std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context) {
+	static boost::format nodeNameFmt("%s|N%s");
+	std::string pluginName = boost::str(nodeNameFmt % getIdUniqueName(ntree) % node.name());
 
-	pluginName = "N" + node.name() + "|" + ntree.name();
-
-	// If we are exporting nodes from group node tree we have to resolve full path to node
-	// to prevent plugin name override.
-	//
 	for (NodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
 		BL::NodeTree &parent = *ntIt;
 		if (parent) {
-			pluginName += "|" + parent.name();
+			pluginName += "|NT" + getIdUniqueName(parent);
 		}
 	}
+
 	for (NodeContext::NodeVector::iterator gnIt = context.group.begin(); gnIt != context.group.end(); ++gnIt) {
 		BL::Node &group = *gnIt;
 		if (group) {
-			pluginName += "@" + group.name();
+			pluginName += "|GR" + group.name();
 		}
 	}
 
@@ -635,7 +630,8 @@ std::string DataExporter::GetConnectedNodePluginID(BL::NodeSocket fromSocket)
 }
 
 bool DataExporter::hasDupli(BL::Object ob) {
-	return ((ob.dupli_type() != BL::Object::dupli_type_NONE) && (ob.dupli_type() != BL::Object::dupli_type_FRAMES));
+	const auto dupliType = ob.dupli_type();
+	return dupliType != BL::Object::dupli_type_NONE && dupliType != BL::Object::dupli_type_FRAMES;
 }
 
 bool DataExporter::isDupliVisible(BL::Object ob, ObjectVisibility ignore) {
@@ -707,7 +703,7 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 		return false;
 	}
 
-#undef has;
+#undef has
 
 	return true;
 }
@@ -717,7 +713,7 @@ std::string DataExporter::getNodeName(BL::Object ob)
 {
 	// TODO: check if ob is from library and append it's name
 	static boost::format obNameFormat("Node@%s");
-	return boost::str(obNameFormat % ob.name());
+	return boost::str(obNameFormat % getIdUniqueName(ob));
 }
 
 
@@ -729,7 +725,7 @@ std::string DataExporter::getMeshName(BL::Object ob)
 	                 ? ob
 	                 : ob.data();
 
-	return boost::str(meshNameFormat % data_id.name());
+	return boost::str(meshNameFormat % getIdUniqueName(data_id));
 }
 
 
@@ -741,28 +737,33 @@ std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL
 	                ? ob
 	                : ob.data();
 
-	return boost::str(hairNameFormat % data_id.name() % psys.name() % pset.name());
+	return boost::str(hairNameFormat % getIdUniqueName(data_id) % psys.name() % pset.name());
 }
 
 
 std::string DataExporter::getLightName(BL::Object ob)
 {
 	static boost::format lampNameFormat("Lamp@%s");
-	return boost::str(lampNameFormat % ob.name());
+	return boost::str(lampNameFormat % getIdUniqueName(ob));
 }
 
-std::string DataExporter::getObjectUniqueKey(BL::Object ob) {
-	ID * id = reinterpret_cast<ID*>(ob.ptr.data);
+std::string DataExporter::getIdUniqueName(ID * id) {
 	std::string name(id->name);
-
+	const std::string libPrefix("|L");
 	Library * lib = id->lib;
 
+
 	while (lib) {
+		name += libPrefix;
 		name += lib->name;
 		lib = lib->parent;
 	}
 
 	return name;
+}
+
+std::string DataExporter::getIdUniqueName(BL::Pointer ob) {
+	return getIdUniqueName(reinterpret_cast<ID*>(ob.ptr.data));
 }
 
 ParamDesc::PluginType DataExporter::GetConnectedNodePluginType(BL::NodeSocket fromSocket)
@@ -803,17 +804,17 @@ bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 
 	// check if object is the state we are currently undoing
 	const auto & checkState = m_undo_stack[1];
-	return checkState.find(getObjectUniqueKey(ob)) != checkState.end();
+	return checkState.find(getIdUniqueName(ob)) != checkState.end();
 }
 
 bool DataExporter::isObjectInThisSync(BL::Object ob)
 {
-	return m_undo_stack.front().find(getObjectUniqueKey(ob)) != m_undo_stack.front().end();
+	return m_undo_stack.front().find(getIdUniqueName(ob)) != m_undo_stack.front().end();
 }
 
 void DataExporter::saveSyncedObject(BL::Object ob)
 {
-	const auto key = getObjectUniqueKey(ob);
+	const auto key = getIdUniqueName(ob);
 	m_undo_stack.front().insert(key);
 }
 
