@@ -35,6 +35,7 @@
 
 typedef BL::Array<float, 16> BLTransform;
 
+void  getStringHex(const u_int8_t *buf, unsigned nBytes, char *pstr);
 
 void  GetDoubleHex(float f, char *buf);
 void  GetFloatHex(float f, char *buf);
