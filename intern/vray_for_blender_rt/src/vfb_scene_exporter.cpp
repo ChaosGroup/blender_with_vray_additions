@@ -578,9 +578,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::Object      dupOb(dupliOb.object());
 
 		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
-
-		const int check_visibility_flag = ob.type() == BL::Object::type_EMPTY ? (OVisibility::HIDE_ALL & ~OVisibility::HIDE_LAYER) : OVisibility::HIDE_ALL;
-		const bool is_visible = m_data_exporter.isObjectVisible(dupOb);
+		const bool is_visible =  ob.type() == BL::Object::type_EMPTY ? false : m_data_exporter.isObjectVisible(dupOb);
 
 		const bool is_light = Blender::IsLight(dupOb);
 		const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
@@ -599,11 +597,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				overrideAttrs.id = persistendID;
 
 				char namePrefix[255] = {0, };
-				namePrefix[0] = 'D';
-				snprintf(namePrefix + 1, 250, "%u", persistendID);
-				strcat(namePrefix, "@");
-				strcat(namePrefix, ob.name().c_str());
-
+				snprintf(namePrefix + 1, 250, "D%u@", persistendID);
 				overrideAttrs.namePrefix = namePrefix;
 
 				sync_object(dupOb, check_updated, overrideAttrs);

@@ -95,7 +95,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 			if (!pluginID.empty()) {
 				PointerRNA lampPropGroup = RNA_pointer_get(&vrayLamp, pluginID.c_str());
 
-				const std::string & lampName = override ? override.namePrefix : lightPluginName;
+				const std::string & lampName = override.namePrefix + lightPluginName;
 
 				PluginDesc pluginDesc(lampName, pluginID);
 
