@@ -60,6 +60,7 @@ class PluginExporter
 {
 public:
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
+	typedef VRayBaseTypes::CommitAction CommitState;
 
 	PluginExporter()
 	    : is_viewport(false)
@@ -109,7 +110,8 @@ public:
 
 	virtual void         set_camera_plugin(const std::string &pluginName) {}
 	virtual void         commit_changes() { set_commit_state(VRayBaseTypes::CommitAction::CommitNow); }
-	virtual void         set_commit_state(VRayBaseTypes::CommitAction ca) {};
+	virtual void         set_commit_state(VRayBaseTypes::CommitAction ca);
+	CommitState          get_commit_state() const { return commit_state; }
 
 	virtual void         set_export_file(VRayForBlender::ParamDesc::PluginType, PyObject *) {}
 
@@ -131,6 +133,7 @@ protected:
 	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
 	bool                 is_prepass;
+	CommitState          commit_state;
 
 	PluginManager        m_pluginManager;
 

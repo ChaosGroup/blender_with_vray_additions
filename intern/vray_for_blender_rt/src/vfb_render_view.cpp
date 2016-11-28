@@ -411,13 +411,16 @@ void SceneExporter::sync_view(int check_updated)
 		needReset = needReset || is_physical_updated(viewParams);
 	}
 
+	auto commitState = m_exporter->get_commit_state();
 	if (needReset) {
 		if (!m_viewLock.try_lock()) {
 			tag_redraw();
 			return;
 		}
 
-		m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
+		if (commitState != VRayBaseTypes::CommitAutoOff) {
+			m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
+		}
 		m_exporter->remove_plugin(ViewParams::settingsCameraPluginName);
 		m_exporter->remove_plugin(ViewParams::settingsCameraDofPluginName);
 		m_exporter->remove_plugin(ViewParams::physicalCameraPluginName);
@@ -465,7 +468,13 @@ void SceneExporter::sync_view(int check_updated)
 	// Store new params
 	m_viewParams = viewParams;
 	if (needReset) {
-		m_exporter->set_commit_state(VRayBaseTypes::CommitNow);
-		m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOn);
+		m_exporter->commit_changes();
+		if (commitState != VRayBaseTypes::CommitAutoOff) {
+			m_exporter->set_commit_state(commitState);
+		}
+	} else {
+		if (commitState == VRayBaseTypes::CommitAutoOff) {
+			m_exporter->commit_changes();
+		}
 	}
 }

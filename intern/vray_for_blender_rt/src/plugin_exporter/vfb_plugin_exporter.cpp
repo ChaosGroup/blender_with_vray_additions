@@ -83,7 +83,10 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 				if (!replace) {
 					plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
 				} else {
-					this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOff);
+					auto state = this->get_commit_state();
+					if (state != CommitState::CommitAutoOff) {
+						this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOff);
+					}
 					auto pluginCopy = pluginDesc;
 					pluginCopy.pluginName += "_internalDest";
 
@@ -95,7 +98,10 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 					this->remove_plugin_impl(pluginCopy.pluginName);
 
 					this->commit_changes();
-					this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOn);
+
+					if (state != CommitState::CommitAutoOff) {
+						this->set_commit_state(state);
+					}
 				}
 			}
 
@@ -115,6 +121,12 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 	return plg;
 }
 
+void PluginExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
+{
+	if (ca == VRayBaseTypes::CommitAutoOff || ca == VRayBaseTypes::CommitAutoOn) {
+		commit_state = ca;
+	}
+}
 
 RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
 {

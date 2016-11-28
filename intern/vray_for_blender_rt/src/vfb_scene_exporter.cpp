@@ -208,6 +208,9 @@ void SceneExporter::render_start()
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		m_exporter->start();
+
+		// TODO: check if sync is faster with manual commit
+		// m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
 	} else {
 		PRINT_INFO_EX("Work mode WorkModeExportOnly, skipping renderer_start");
 	}
@@ -297,6 +300,9 @@ void SceneExporter::sync(const int &check_updated)
 	sync_objects(check_updated);
 	sync_effects(check_updated);
 
+	if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
+		m_exporter->commit_changes();
+	}
 
 	// Sync data (will remove deleted objects)
 	m_data_exporter.sync();

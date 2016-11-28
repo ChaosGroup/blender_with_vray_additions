@@ -520,6 +520,7 @@ void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 
 void ZmqExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
 {
+	PluginExporter::set_commit_state(ca);
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
 }
