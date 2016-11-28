@@ -595,7 +595,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 							if (isValidInstancerObject(duplicatedObject)) {
 								// If DupliObject comes from a particle system then
 								// show original object, hide it otherwise.
-								attrs.visible = !!(dupliObject.particle_system());
+								attrs.visible = dupliObject.particle_system() && ob_is_visible(duplicatedObject);
 
 								// For proper instancing with Instancer.
 								attrs.dynamic_geometry = true;
