@@ -798,7 +798,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 
 		bool has_array_mod = false;
-		for (int c = ob.modifiers.length() - 1 ; c >= 0; ++c) {
+		for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
 			if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
 				// stop on last non array mod - we export only array mods on top of mod stack
 				break;
