@@ -486,17 +486,8 @@ void IDP_restore_fake_user(void)
 
 	BLI_spin_lock(&HashTableLock);
 
-	BLI_ghashIterator_init(&ghi, IDP_IDHashTable);
-	for (; !BLI_ghashIterator_done(&ghi); BLI_ghashIterator_step(&ghi)) {
-		ID *data = (ID*)BLI_ghashIterator_getKey(&ghi);
-		if (data) {
-			if (data->us == 0 || !(data->flag & LIB_FAKEUSER)) {
-				data->flag |= LIB_FAKEUSER;
-				if (data->us > ID_FAKE_USERS(data)) {
-					id_us_min(data);
-				}
-			}
-		}
+	for (BLI_ghashIterator_init(&ghi, IDP_IDHashTable); !BLI_ghashIterator_done(&ghi); BLI_ghashIterator_step(&ghi)) {
+		id_fake_user_set((ID*)BLI_ghashIterator_getKey(&ghi));
 	}
 
 	BLI_spin_unlock(&HashTableLock);
