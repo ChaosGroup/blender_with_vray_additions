@@ -698,7 +698,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	std::vector<int> arrModIndecies, arrModSizes;
 	int totalCount = 1;
 	for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
-		auto & mod = ob.modifiers[c];
+		auto mod = ob.modifiers[c];
 		if (mod.type() != BL::Modifier::type_ARRAY) {
 			break;
 		}
@@ -717,7 +717,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	sync_object(ob, check_updated, overrideAttrs);
 
 	for (int c = 0; c < arrModIndecies.size(); ++c) {
-		auto & arrMod = ob.modifiers[arrModIndecies[c]];
+		auto arrMod = ob.modifiers[arrModIndecies[c]];
 		arrMod.show_render(true);
 		arrMod.show_viewport(true);
 	}
@@ -748,7 +748,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		unit_m4(dupliLocalTm);
 
 		for (int r = 0; r < tmIndecies.size(); ++r) {
-			auto & arrMod = ob.modifiers[arrModIndecies[r]];
+			auto arrMod = ob.modifiers[arrModIndecies[r]];
 			const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
 
 			if (!amd->dupliTms) {
