@@ -525,7 +525,8 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-	const int dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+	const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
 
 	using OVisibility = DataExporter::ObjectVisibility;
 
@@ -791,16 +792,22 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+
 		bool has_array_mod = false;
-		for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
-			if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
-				// stop on last non array mod - we export only array mods on top of mod stack
-				break;
-			}
-			if (ob.modifiers[c].show_render()) {
-				// we found atleast one stuitable array mod
-				has_array_mod = true;
-				break;
+		if (dupli_use_instancer) {
+			for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
+				if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
+					// stop on last non array mod - we export only array mods on top of mod stack
+					break;
+				}
+				if (ob.modifiers[c].show_render()) {
+					// we found atleast one stuitable array mod
+					has_array_mod = true;
+					break;
+				}
 			}
 		}
 
