@@ -259,11 +259,11 @@ std::string VRayScene::Node::GetMaterialName(Material *ma, const std::string &ma
 
 std::string Node::GetNodeMtlMulti(Object *ob, const std::string materialOverride, AttributeValueMap &mtlMulti)
 {
-	if(NOT(materialOverride.empty())) {
-		return materialOverride;
-	}
-	if(NOT(ob->totcol)) {
-		return CGR_DEFAULT_MATERIAL;
+	if (!ob->totcol) {
+		if (materialOverride.empty())
+			return CGR_DEFAULT_MATERIAL;
+		else
+			return materialOverride;
 	}
 
 	StrVector mtls_list;
