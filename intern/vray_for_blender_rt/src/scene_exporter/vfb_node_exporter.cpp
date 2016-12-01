@@ -184,13 +184,14 @@ void DataExporter::sync()
 		const auto & obName = ob.name();
 
 		PointerRNA vrayObject = PointerRNA_NULL;
-		PointerRNA vrayClipper = PointerRNA_NULL;
+		bool use_clipper = false;
 		bool dupli_use_instancer = false;
 
 		if (dep.used) {
 			vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-			vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-			dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer");
+			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+			use_clipper = RNA_boolean_get(&vrayClipper, "enabled");
+			dupli_use_instancer = !use_clipper && RNA_boolean_get(&vrayObject, "use_instancer");
 		}
 
 		for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
@@ -204,7 +205,7 @@ void DataExporter::sync()
 				// object used, but not this plugin - check if object still has it
 				switch (plIter->second.type) {
 				case IdTrack::CLIPPER:
-					should_remove = !RNA_boolean_get(&vrayClipper, "enabled");
+					should_remove = !use_clipper;
 					type = "CLIPPER";
 					break;
 				case IdTrack::DUPLI_NODE:

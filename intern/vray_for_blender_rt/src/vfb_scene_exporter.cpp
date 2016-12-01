@@ -481,9 +481,11 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			if (ob.data() && ob.type() == BL::Object::type_MESH) {
 				if (RNA_boolean_get(&vrayClipper, "enabled")) {
 
-					overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					if (!overrideAttr) {
+						overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
+						overrideAttr.override = true;
+					}
 					overrideAttr.visible = true;
-					overrideAttr.override = true;
 
 					m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 
@@ -584,76 +586,67 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		const bool is_light = Blender::IsLight(dupOb);
 		const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
 
+		if (!supported_type || is_hidden) {
+			continue;
+		}
+
 		MHash persistendID;
 		MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
 
-		if (!is_hidden && supported_type) {
-			if (is_light) {
-				ObjectOverridesAttrs overrideAttrs;
+		ObjectOverridesAttrs overrideAttrs;
+		overrideAttrs.override = true;
 
-				overrideAttrs.override = true;
+		if (is_light || !dupli_use_instancer) {
+			overrideAttrs.useInstancer = false;
+
+			// sync dupli base object
+			if (!is_light) {
+				// maybe we need to hide base ob?
 				overrideAttrs.visible = is_visible;
-				overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
-				overrideAttrs.useInstancer = false;
-				overrideAttrs.id = persistendID;
-
-				char namePrefix[255] = {0, };
-				snprintf(namePrefix + 1, 250, "D%u@", persistendID);
-				overrideAttrs.namePrefix = namePrefix;
-
+				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
 				sync_object(dupOb, check_updated, overrideAttrs);
 			}
-			else {
-				ObjectOverridesAttrs overrideAttrs;
-				overrideAttrs.override = true;
+			overrideAttrs.visible = true;
+			overrideAttrs.override = true;
+			overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+			overrideAttrs.id = persistendID;
 
-				// If dupli are shown via Instancer we need to hide
-				// original object
+			char namePrefix[255] = {0, };
+			snprintf(namePrefix, 250, "Dupli%u@", persistendID);
+			overrideAttrs.namePrefix = namePrefix;
 
-				if (dupli_use_instancer) {
-					overrideAttrs.visible = is_visible;
-					overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-					overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
+			// overrideAttrs.visible = true; do this?
 
-					float inverted[4][4];
-					copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
-					invert_m4(inverted);
-
-					float tm[4][4];
-					mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
-
-					AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
-					instancer_item.index = persistendID;
-					instancer_item.node = m_data_exporter.getNodeName(dupOb);
-					instancer_item.tm = AttrTransformFromBlTransform(tm);
-					memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
-
-					dupli_instance++;
-
-					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
-					sync_object(dupOb, check_updated, overrideAttrs);
-
-				} else {
-					overrideAttrs.useInstancer = false;
-					overrideAttrs.visible = is_visible;
-
-					// base objects
-					overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
-					sync_object(dupOb, check_updated, overrideAttrs);
-
-
-					char namePrefix[255] = {0, };
-					snprintf(namePrefix, 250, "Dupli%u@", persistendID);
-					overrideAttrs.namePrefix = namePrefix;
-					overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
-					overrideAttrs.id = persistendID;
-					overrideAttrs.visible = true;
-
-					m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
-					sync_object(dupOb, check_updated, overrideAttrs);
-				}
+			if (!is_light) {
+				// mark the duplication so we can remove in rt
+				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
 			}
+			sync_object(dupOb, check_updated, overrideAttrs);
+		} else {
+
+			overrideAttrs.visible = is_visible;
+			overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
+			overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
+
+			float inverted[4][4];
+			copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
+			invert_m4(inverted);
+
+			float tm[4][4];
+			mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
+
+			AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+			instancer_item.index = persistendID;
+			instancer_item.node = m_data_exporter.getNodeName(dupOb);
+			instancer_item.tm = AttrTransformFromBlTransform(tm);
+			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+
+			dupli_instance++;
+
+			m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+			sync_object(dupOb, check_updated, overrideAttrs);
+
 		}
 	}
 

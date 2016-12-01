@@ -332,7 +332,8 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	PointerRNA vrayObject  = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
-	const std::string &pluginName = "Clipper@" + ob.name();
+	const auto clipNode = overrideAttrs.namePrefix + getNodeName(ob);
+	const std::string &pluginName = "Clipper@" + clipNode;
 	m_id_track.insert(ob, pluginName, IdTrack::CLIPPER);
 
 	bool is_updated      = check_updated ? ob.is_updated()      : true;
@@ -355,7 +356,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	}
 
 	if (RNA_boolean_get(&vrayClipper, "use_obj_mesh")) {
-		nodeDesc.add("clip_mesh", AttrPlugin(getNodeName(ob)));
+		nodeDesc.add("clip_mesh", AttrPlugin(clipNode));
 	} else {
 		nodeDesc.add("clip_mesh", AttrPlugin("NULL"));
 	}
@@ -367,7 +368,11 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	nodeDesc.add("set_material_id", RNA_boolean_get(&vrayClipper, "set_material_id"));
 	nodeDesc.add("material_id", RNA_int_get(&vrayClipper, "material_id"));
 	nodeDesc.add("object_id", ob.pass_index());
-	nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	if (overrideAttrs) {
+		nodeDesc.add("transform", overrideAttrs.tm);
+	} else {
+		nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	}
 
 	const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 	if (NOT(excludeGroupName.empty())) {
@@ -480,6 +485,8 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
+	// track instancer
+	m_id_track.insert(ob, exportName, dupliType);
 	const bool visible = isObjectVisible(ob, ObjectVisibility(HIDE_RENDER | HIDE_VIEWPORT));
 
 	PluginDesc instancerDesc(exportName, "Instancer2");
@@ -487,11 +494,12 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	instancerDesc.add("visible", visible);
 	instancerDesc.add("use_time_instancing", false);
 
-	m_id_track.insert(ob, exportName, dupliType);
+	const auto & wrapperName = "NodeWrapper@" + exportName;
+	// also track node wrapper
+	m_id_track.insert(ob, wrapperName, dupliType);
+	PluginDesc nodeWrapper(wrapperName, "Node");
+
 	auto inst = m_exporter->export_plugin(instancerDesc);
-
-	PluginDesc nodeWrapper("NodeWrapper@" + exportName, "Node");
-
 	nodeWrapper.add("geometry", inst);
 	nodeWrapper.add("visible", true);
 	nodeWrapper.add("objectID", ob.pass_index());
