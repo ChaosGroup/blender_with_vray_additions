@@ -300,12 +300,12 @@ void SceneExporter::sync(const int &check_updated)
 	sync_objects(check_updated);
 	sync_effects(check_updated);
 
+	// Sync data (will remove deleted objects)
+	m_data_exporter.sync();
+
 	if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
 		m_exporter->commit_changes();
 	}
-
-	// Sync data (will remove deleted objects)
-	m_data_exporter.sync();
 
 	clock_t end = clock();
 
