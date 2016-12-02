@@ -467,6 +467,8 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 	if (this->animation_settings.use) {
 		this->last_rendered_frame = this->animation_settings.frame_start - 1;
 	}
+	// set to inverted so first time we dont hit cache
+	m_vfbVisible = !settings.showViewport;
 }
 
 
@@ -482,14 +484,22 @@ void ZmqExporter::sync()
 
 void ZmqExporter::show_frame_buffer()
 {
+	if (m_vfbVisible) {
+		return;
+	}
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(true)));
+	m_vfbVisible = true;
 }
 
 void ZmqExporter::hide_frame_buffer()
 {
+	if (!m_vfbVisible) {
+		return;
+	}
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(false)));
+	m_vfbVisible = false;
 }
 
 void ZmqExporter::set_viewport_quality(int quality)
@@ -514,6 +524,13 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 
 void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 {
+	if (m_activeCamera == "") {
+		m_activeCamera = pluginName;
+	} else {
+		if (m_activeCamera == pluginName) {
+			return;
+		}
+	}
 	checkZmqClient();
 	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 }

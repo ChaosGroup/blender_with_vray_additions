@@ -105,6 +105,10 @@ private:
 	std::string         m_ServerAddress;
 	ClientPtr           m_Client;
 
+	// some cached values to reduce trafix
+	std::string         m_activeCamera;
+	bool                m_vfbVisible;
+
 	// ensures the image is not changed while it is read
 	std::mutex          m_ImgMutex;
 	std::mutex          m_ZmqClientMutex;
