@@ -27,7 +27,7 @@
 
 #include "vfb_plugin_exporter_zmq.h"
 
-#include "zmq_wrapper.h"
+#include "zmq_wrapper.hpp"
 
 ZmqWrapper * heartbeatClient = nullptr;
 std::mutex heartbeatLock;

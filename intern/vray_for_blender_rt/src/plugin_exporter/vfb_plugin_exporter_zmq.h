@@ -22,7 +22,7 @@
 
 #include "vfb_plugin_exporter.h"
 
-#include "zmq_wrapper.h"
+#include "zmq_wrapper.hpp"
 #include "zmq_message.hpp"
 
 #include <unordered_map>
