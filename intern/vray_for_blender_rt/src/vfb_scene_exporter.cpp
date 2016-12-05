@@ -205,12 +205,13 @@ void SceneExporter::resize(int w, int h)
 
 void SceneExporter::render_start()
 {
+	// TODO: check if sync is faster with manual commit
+	// m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
+	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOn);
+
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		m_exporter->start();
-
-		// TODO: check if sync is faster with manual commit
-		// m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
 	} else {
 		PRINT_INFO_EX("Work mode WorkModeExportOnly, skipping renderer_start");
 	}

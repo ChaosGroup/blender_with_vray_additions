@@ -65,6 +65,7 @@ public:
 	PluginExporter()
 	    : is_viewport(false)
 	    , is_prepass(false)
+	    , commit_state(CommitState::CommitAutoOn)
 	{}
 
 	virtual             ~PluginExporter()=0;
