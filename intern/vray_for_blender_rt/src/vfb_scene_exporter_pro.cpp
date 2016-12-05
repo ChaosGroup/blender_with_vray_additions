@@ -151,7 +151,7 @@ bool ProductionExporter::do_export()
 
 
 		std::thread runner;
-		if (!is_file_export) {
+		if (!is_file_export && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly) {
 			runner = std::thread(&ProductionExporter::render_loop, this);
 		}
 
@@ -302,7 +302,7 @@ void ProductionExporter::render_loop()
 
 void ProductionExporter::render_start()
 {
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile || m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly) {
 		return SceneExporter::render_start();
 	}
 
@@ -324,14 +324,17 @@ void ProductionExporter::render_start()
 		}
 	}
 
-	if (!is_preview()) {
+	if (m_settings.showViewport) {
 		m_exporter->show_frame_buffer();
 	}
 
 
 	m_isRunning = true;
 
-	if (!m_settings.settings_animation.use) {
+	if (!m_settings.settings_animation.use &&
+		m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly &&
+		m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
+
 		SceneExporter::render_start();
 		m_frameCount = m_frameCurrent = m_frameStep = 1;
 		m_progress = 0;
