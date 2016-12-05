@@ -729,10 +729,7 @@ elseif(WIN32)
 			)
 
 			if(WITH_PYTHON_INSTALL_NUMPY)
-				set(PYTHON_NUMPY_VERSION 1.9)
-				if((MSVC_VERSION EQUAL 1900) OR (MSVC_VERSION EQUAL 1910))
-					set(PYTHON_NUMPY_VERSION 1.11)
-				endif()
+				set(PYTHON_NUMPY_VERSION 1.10)
 				add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages
 					COMMAND ${CMAKE_COMMAND} -E
 					        make_directory ${CMAKE_CURRENT_BINARY_DIR}/${BLENDER_VERSION}/python/lib/site-packages)
@@ -846,11 +843,12 @@ elseif(WIN32)
 		else()
 			install(
 				FILES
-					${LIBDIR}/ffmpeg/lib/avcodec-55.dll
-					${LIBDIR}/ffmpeg/lib/avformat-55.dll
-					${LIBDIR}/ffmpeg/lib/avdevice-55.dll
-					${LIBDIR}/ffmpeg/lib/avutil-52.dll
-					${LIBDIR}/ffmpeg/lib/swscale-2.dll
+					${LIBDIR}/ffmpeg/lib/avcodec-57.dll
+					${LIBDIR}/ffmpeg/lib/avformat-57.dll
+					${LIBDIR}/ffmpeg/lib/avdevice-57.dll
+					${LIBDIR}/ffmpeg/lib/avutil-55.dll
+					${LIBDIR}/ffmpeg/lib/swscale-4.dll
+					${LIBDIR}/ffmpeg/lib/swresample-2.dll
 				DESTINATION "."
 			)
 		endif()
@@ -1203,7 +1201,7 @@ if(WIN32 AND NOT WITH_PYTHON_MODULE)
 				message(FATAL_ERROR "Windows 10 SDK directory not found")
 			endif()
 		endif()
-		
+		FILE(TO_CMAKE_PATH  ${KITSPATH} KITSPATH)
 		install(
 			FILES
 				${KITSPATH}/api-ms-win-core-file-l1-2-0.dll
