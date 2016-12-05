@@ -245,11 +245,18 @@ ccl_device float kernel_volume_equiangular_sample(Ray *ray, float3 light_P, floa
 	float t = ray->t;
 
 	float delta = dot((light_P - ray->P) , ray->D);
-	float D = sqrtf(len_squared(light_P - ray->P) - delta * delta);
+	float D = safe_sqrtf(len_squared(light_P - ray->P) - delta * delta);
+	if(UNLIKELY(D == 0.0f)) {
+		*pdf = 0.0f;
+		return 0.0f;
+	}
 	float theta_a = -atan2f(delta, D);
 	float theta_b = atan2f(t - delta, D);
 	float t_ = D * tanf((xi * theta_b) + (1 - xi) * theta_a);
-
+	if(UNLIKELY(theta_b == theta_a)) {
+		*pdf = 0.0f;
+		return 0.0f;
+	}
 	*pdf = D / ((theta_b - theta_a) * (D * D + t_ * t_));
 
 	return min(t, delta + t_); /* min is only for float precision errors */
@@ -258,13 +265,19 @@ ccl_device float kernel_volume_equiangular_sample(Ray *ray, float3 light_P, floa
 ccl_device float kernel_volume_equiangular_pdf(Ray *ray, float3 light_P, float sample_t)
 {
 	float delta = dot((light_P - ray->P) , ray->D);
-	float D = sqrtf(len_squared(light_P - ray->P) - delta * delta);
+	float D = safe_sqrtf(len_squared(light_P - ray->P) - delta * delta);
+	if(UNLIKELY(D == 0.0f)) {
+		return 0.0f;
+	}
 
 	float t = ray->t;
 	float t_ = sample_t - delta;
 
 	float theta_a = -atan2f(delta, D);
 	float theta_b = atan2f(t - delta, D);
+	if(UNLIKELY(theta_b == theta_a)) {
+		return 0.0f;
+	}
 
 	float pdf = D / ((theta_b - theta_a) * (D * D + t_ * t_));
 
@@ -569,17 +582,12 @@ ccl_device VolumeIntegrateResult kernel_volume_integrate_heterogeneous_distance(
 ccl_device_noinline VolumeIntegrateResult kernel_volume_integrate(KernelGlobals *kg,
 	PathState *state, ShaderData *sd, Ray *ray, PathRadiance *L, float3 *throughput, RNG *rng, bool heterogeneous)
 {
-	/* workaround to fix correlation bug in T38710, can find better solution
-	 * in random number generator later, for now this is done here to not impact
-	 * performance of rendering without volumes */
-	RNG tmp_rng = cmj_hash(*rng, state->rng_offset);
-
 	shader_setup_from_volume(kg, sd, ray);
 
 	if(heterogeneous)
-		return kernel_volume_integrate_heterogeneous_distance(kg, state, ray, sd, L, throughput, &tmp_rng);
+		return kernel_volume_integrate_heterogeneous_distance(kg, state, ray, sd, L, throughput, rng);
 	else
-		return kernel_volume_integrate_homogeneous(kg, state, ray, sd, L, throughput, &tmp_rng, true);
+		return kernel_volume_integrate_homogeneous(kg, state, ray, sd, L, throughput, rng, true);
 }
 
 /* Decoupled Volume Sampling
@@ -957,6 +965,9 @@ ccl_device VolumeIntegrateResult kernel_volume_decoupled_scatter(
 			float distance_pdf = average(distance_pdf3 * step_pdf_distance);
 			mis_weight = 2.0f*power_heuristic(pdf, distance_pdf);
 		}
+	}
+	if(sample_t < 1e-6f) {
+		return VOLUME_PATH_SCATTERED;
 	}
 
 	/* compute transmittance up to this step */

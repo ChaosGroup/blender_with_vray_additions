@@ -748,7 +748,7 @@ static int datadropper_poll(bContext *C)
 	if ((CTX_wm_window(C) != NULL) &&
 	    (but = UI_context_active_but_prop_get(C, &ptr, &prop, &index_dummy)) &&
 	    (but->type == UI_BTYPE_SEARCH_MENU) &&
-	    (but->flag & UI_BUT_SEARCH_UNLINK))
+	    (but->flag & UI_BUT_VALUE_CLEAR))
 	{
 		if (prop && RNA_property_type(prop) == PROP_POINTER) {
 			StructRNA *type = RNA_property_pointer_type(&ptr, prop);
@@ -1081,6 +1081,15 @@ static int depthdropper_poll(bContext *C)
 		    (RNA_property_array_check(prop) == false))
 		{
 			return 1;
+		}
+	}
+	else  {
+		RegionView3D *rv3d = CTX_wm_region_view3d(C);
+		if (rv3d && rv3d->persp == RV3D_CAMOB) {
+			View3D *v3d = CTX_wm_view3d(C);
+			if (v3d->camera && v3d->camera->data && !ID_IS_LINKED_DATABLOCK(v3d->camera->data)) {
+				return 1;
+			}
 		}
 	}
 

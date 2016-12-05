@@ -49,7 +49,7 @@ class DeviceInfo {
 public:
 	DeviceType type;
 	string description;
-	string id;
+	string id; /* used for user preferences, should stay fixed with changing hardware config */
 	int num;
 	bool display_device;
 	bool advanced_shading;
@@ -68,6 +68,12 @@ public:
 		pack_images = false;
 		has_bindless_textures = false;
 		use_split_kernel = false;
+	}
+
+	bool operator==(const DeviceInfo &info) {
+		/* Multiple Devices with the same ID would be very bad. */
+		assert(id != info.id || (type == info.type && num == info.num && description == info.description));
+		return id == info.id;
 	}
 };
 
@@ -214,6 +220,7 @@ public:
 	DeviceInfo info;
 	virtual const string& error_message() { return error_msg; }
 	bool have_error() { return !error_message().empty(); }
+	virtual bool show_samples() const { return false; }
 
 	/* statistics */
 	Stats &stats;
@@ -282,6 +289,7 @@ public:
 	static vector<DeviceType>& available_types();
 	static vector<DeviceInfo>& available_devices();
 	static string device_capabilities();
+	static DeviceInfo get_multi_device(vector<DeviceInfo> subdevices);
 
 	/* Tag devices lists for update. */
 	static void tag_update();

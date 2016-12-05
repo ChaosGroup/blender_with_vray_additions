@@ -230,7 +230,9 @@ static MPoly *dm_dupPolyArray(DerivedMesh *dm)
 
 static int dm_getNumLoopTri(DerivedMesh *dm)
 {
-	return dm->looptris.num;
+	const int numlooptris = poly_to_tri_count(dm->getNumPolys(dm), dm->getNumLoops(dm));
+	BLI_assert(ELEM(dm->looptris.num, 0, numlooptris));
+	return numlooptris;
 }
 
 static CustomData *dm_getVertCData(DerivedMesh *dm)
@@ -3256,7 +3258,7 @@ void DM_calc_tangents_names_from_gpu(
 	*r_tangent_names_count = count;
 }
 
-static void DM_calc_loop_tangents_thread(TaskPool *UNUSED(pool), void *taskdata, int UNUSED(threadid))
+static void DM_calc_loop_tangents_thread(TaskPool * __restrict UNUSED(pool), void *taskdata, int UNUSED(threadid))
 {
 	struct SGLSLMeshToTangent *mesh2tangent = taskdata;
 	/* new computation method */

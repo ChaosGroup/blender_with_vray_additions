@@ -2218,34 +2218,8 @@ static void ui_but_drop(bContext *C, const wmEvent *event, uiBut *but, uiHandleB
 
 /* ******************* copy and paste ********************  */
 
-static void ui_but_copy_data_path(uiBut *but, const bool full_path)
-{
-	char *id_path;
-
-	if (but->rnapoin.id.data == NULL) {
-		return;
-	}
-
-	if (full_path) {
-		if (but->rnaprop) {
-			id_path = RNA_path_full_property_py_ex(&but->rnapoin, but->rnaprop, but->rnaindex, true);
-		}
-		else {
-			id_path = RNA_path_full_struct_py(&but->rnapoin);
-		}
-	}
-	else {
-		id_path = RNA_path_from_ID_to_property(&but->rnapoin, but->rnaprop);
-	}
-
-	if (id_path) {
-		WM_clipboard_text_set(id_path, false);
-		MEM_freeN(id_path);
-	}
-}
-
 /* c = copy, v = paste */
-static void ui_but_copy_paste(bContext *C, uiBut *but, uiHandleButtonData *data, char mode)
+static void ui_but_copy_paste(bContext *C, uiBut *but, uiHandleButtonData *data, const char mode, const bool copy_array)
 {
 	int buf_paste_len = 0;
 	const char *buf_paste = "";
@@ -2280,6 +2254,46 @@ static void ui_but_copy_paste(bContext *C, uiBut *but, uiHandleButtonData *data,
 		
 		if (but->poin == NULL && but->rnapoin.data == NULL) {
 			/* pass */
+		}
+		else if (copy_array && but->rnapoin.data && but->rnaprop &&
+		         ELEM(RNA_property_subtype(but->rnaprop), PROP_COLOR, PROP_TRANSLATION, PROP_DIRECTION,
+		              PROP_VELOCITY, PROP_ACCELERATION, PROP_MATRIX, PROP_EULER, PROP_QUATERNION, PROP_AXISANGLE,
+		              PROP_XYZ, PROP_XYZ_LENGTH, PROP_COLOR_GAMMA, PROP_COORDS))
+		{
+			float values[4];
+			int array_length = RNA_property_array_length(&but->rnapoin, but->rnaprop);
+
+			if (mode == 'c') {
+				char buf_copy[UI_MAX_DRAW_STR];
+
+				if (array_length == 4) {
+					 values[3] = RNA_property_float_get_index(&but->rnapoin, but->rnaprop, 3);
+				}
+				else {
+					values[3] = 0.0f;
+				}
+				ui_but_v3_get(but, values);
+
+				BLI_snprintf(buf_copy, sizeof(buf_copy), "[%f, %f, %f, %f]", values[0], values[1], values[2], values[3]);
+				WM_clipboard_text_set(buf_copy, 0);
+			}
+			else {
+				if (sscanf(buf_paste, "[%f, %f, %f, %f]", &values[0], &values[1], &values[2], &values[3]) >= array_length) {
+					button_activate_state(C, but, BUTTON_STATE_NUM_EDITING);
+
+					ui_but_v3_set(but, values);
+					if (but->rnaprop && array_length == 4) {
+						RNA_property_float_set_index(&but->rnapoin, but->rnaprop, 3, values[3]);
+					}
+					data->value = values[but->rnaindex];
+
+					button_activate_state(C, but, BUTTON_STATE_EXIT);
+				}
+				else {
+					WM_report(RPT_ERROR, "Paste expected 4 numbers, formatted: '[n, n, n, n]'");
+					show_report = true;
+				}
+			}
 		}
 		else if (mode == 'c') {
 			/* Get many decimal places, then strip trailing zeros.
@@ -2547,6 +2561,18 @@ void ui_but_text_password_hide(char password_str[UI_MAX_PASSWORD_STR], uiBut *bu
 		memset(butstr, '*', len);
 		butstr[len] = '\0';
 	}
+}
+
+static void ui_but_text_clear(bContext *C, uiBut *but, uiHandleButtonData *data)
+{
+	/* most likely NULL, but let's check, and give it temp zero string */
+	if (!data->str) {
+		data->str = MEM_callocN(1, "temp str");
+	}
+	data->str[0] = 0;
+
+	ui_apply_but_TEX(C, but, data);
+	button_activate_state(C, but, BUTTON_STATE_EXIT);
 }
 
 
@@ -3053,7 +3079,7 @@ static void ui_textedit_begin(bContext *C, uiBut *but, uiHandleButtonData *data)
 		data->str = ui_but_string_get_dynamic(but, &data->maxlen);
 	}
 
-	if (ui_but_is_float(but) && !ui_but_is_unit(but)) {
+	if (ui_but_is_float(but) && !ui_but_is_unit(but) && !ui_but_anim_expression_get(but, NULL, 0)) {
 		BLI_str_rstrip_float_zero(data->str, '\0');
 	}
 
@@ -3828,6 +3854,21 @@ static int ui_do_but_KEYEVT(
 	return WM_UI_HANDLER_CONTINUE;
 }
 
+static bool ui_but_is_mouse_over_icon_extra(const ARegion *region, uiBut *but, const int mouse_xy[2])
+{
+	int x = mouse_xy[0], y = mouse_xy[1];
+	rcti icon_rect;
+
+	BLI_assert(ui_but_icon_extra_get(but) != UI_BUT_ICONEXTRA_NONE);
+
+	ui_window_to_block(region, but->block, &x, &y);
+
+	BLI_rcti_rctf_copy(&icon_rect, &but->rect);
+	icon_rect.xmin = icon_rect.xmax - (BLI_rcti_size_y(&icon_rect));
+
+	return BLI_rcti_isect_pt(&icon_rect, x, y);
+}
+
 static int ui_do_but_TEX(
         bContext *C, uiBlock *block, uiBut *but,
         uiHandleButtonData *data, const wmEvent *event)
@@ -3841,7 +3882,14 @@ static int ui_do_but_TEX(
 				/* pass */
 			}
 			else {
-				button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
+				const bool has_icon_extra = ui_but_icon_extra_get(but) == UI_BUT_ICONEXTRA_CLEAR;
+
+				if (has_icon_extra && ui_but_is_mouse_over_icon_extra(data->region, but, &event->x)) {
+					ui_but_text_clear(C, but, data);
+				}
+				else {
+					button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
+				}
 				return WM_UI_HANDLER_BREAK;
 			}
 		}
@@ -3862,47 +3910,29 @@ static int ui_do_but_SEARCH_UNLINK(
         bContext *C, uiBlock *block, uiBut *but,
         uiHandleButtonData *data, const wmEvent *event)
 {
-	uiButExtraIconType extra_icon_type;
+	const uiButExtraIconType extra_icon_type = ui_but_icon_extra_get(but);
+	const bool has_icon_extra = (extra_icon_type != UI_BUT_ICONEXTRA_NONE);
 
 	/* unlink icon is on right */
 	if ((ELEM(event->type, LEFTMOUSE, EVT_BUT_OPEN, PADENTER, RETKEY)) &&
-	    ((extra_icon_type = ui_but_icon_extra_get(but)) != UI_BUT_ICONEXTRA_NONE))
+	    (has_icon_extra == true) &&
+	    (ui_but_is_mouse_over_icon_extra(data->region, but, &event->x) == true))
 	{
-		ARegion *ar = data->region;
-		rcti rect;
-		int x = event->x, y = event->y;
-		
-		ui_window_to_block(ar, but->block, &x, &y);
-		
-		BLI_rcti_rctf_copy(&rect, &but->rect);
-		
-		rect.xmin = rect.xmax - (BLI_rcti_size_y(&rect));
-		/* handle click on unlink/eyedropper icon */
-		if (BLI_rcti_isect_pt(&rect, x, y)) {
-			/* doing this on KM_PRESS calls eyedropper after clicking unlink icon */
-			if (event->val == KM_RELEASE) {
-				/* unlink */
-				if (extra_icon_type == UI_BUT_ICONEXTRA_UNLINK) {
-					/* most likely NULL, but let's check, and give it temp zero string */
-					if (data->str == NULL) {
-						data->str = MEM_callocN(1, "temp str");
-					}
-					data->str[0] = 0;
-
-					ui_apply_but_TEX(C, but, data);
-					button_activate_state(C, but, BUTTON_STATE_EXIT);
-				}
-				/* eyedropper */
-				else if (extra_icon_type == UI_BUT_ICONEXTRA_EYEDROPPER) {
-					WM_operator_name_call(C, "UI_OT_eyedropper_id", WM_OP_INVOKE_DEFAULT, NULL);
-				}
-				else {
-					BLI_assert(0);
-				}
+		/* doing this on KM_PRESS calls eyedropper after clicking unlink icon */
+		if (event->val == KM_RELEASE) {
+			/* unlink */
+			if (extra_icon_type == UI_BUT_ICONEXTRA_CLEAR) {
+				ui_but_text_clear(C, but, data);
 			}
-
-			return WM_UI_HANDLER_BREAK;
+			/* eyedropper */
+			else if (extra_icon_type == UI_BUT_ICONEXTRA_EYEDROPPER) {
+				WM_operator_name_call(C, "UI_OT_eyedropper_id", WM_OP_INVOKE_DEFAULT, NULL);
+			}
+			else {
+				BLI_assert(0);
+			}
 		}
+		return WM_UI_HANDLER_BREAK;
 	}
 	return ui_do_but_TEX(C, block, but, data, event);
 }
@@ -6643,15 +6673,22 @@ static void popup_add_shortcut_func(bContext *C, void *arg1, void *UNUSED(arg2))
 void ui_panel_menu(bContext *C, ARegion *ar, Panel *pa)
 {
 	bScreen *sc = CTX_wm_screen(C);
+	const bool has_panel_category = UI_panel_category_is_visible(ar);
+	const bool any_item_visible = has_panel_category;
 	PointerRNA ptr;
 	uiPopupMenu *pup;
 	uiLayout *layout;
+
+	if (!any_item_visible) {
+		return;
+	}
 
 	RNA_pointer_create(&sc->id, &RNA_Panel, pa, &ptr);
 
 	pup = UI_popup_menu_begin(C, IFACE_("Panel"), ICON_NONE);
 	layout = UI_popup_menu_layout(pup);
-	if (UI_panel_category_is_visible(ar)) {
+
+	if (has_panel_category) {
 		char tmpstr[80];
 		BLI_snprintf(tmpstr, sizeof(tmpstr), "%s" UI_SEP_CHAR_S "%s", IFACE_("Pin"), IFACE_("Shift+Left Mouse"));
 		uiItemR(layout, &ptr, "use_pin", 0, tmpstr, ICON_NONE);
@@ -6662,7 +6699,6 @@ void ui_panel_menu(bContext *C, ARegion *ar, Panel *pa)
 			uiBut *but = block->buttons.last;
 			but->flag |= UI_BUT_HAS_SEP_CHAR;
 		}
-
 	}
 	UI_popup_menu_end(C, pup);
 }
@@ -6985,7 +7021,7 @@ static int ui_do_button(bContext *C, uiBlock *block, uiBut *but, const wmEvent *
 	if ((data->state == BUTTON_STATE_HIGHLIGHT) || (event->type == EVT_DROP)) {
 		/* handle copy-paste */
 		if (ELEM(event->type, CKEY, VKEY) && event->val == KM_PRESS &&
-		    IS_EVENT_MOD(event, ctrl, oskey))
+		    IS_EVENT_MOD(event, ctrl, oskey) && !event->shift)
 		{
 			/* Specific handling for listrows, we try to find their overlapping tex button. */
 			if (but->type == UI_BTYPE_LISTROW) {
@@ -6995,14 +7031,7 @@ static int ui_do_button(bContext *C, uiBlock *block, uiBut *but, const wmEvent *
 					data = but->active;
 				}
 			}
-
-			/* special case, copy-data-path */
-			if ((event->type == CKEY) && event->shift) {
-				ui_but_copy_data_path(but, event->alt != 0);
-				return WM_UI_HANDLER_BREAK;
-			}
-
-			ui_but_copy_paste(C, but, data, (event->type == CKEY) ? 'c' : 'v');
+			ui_but_copy_paste(C, but, data, (event->type == CKEY) ? 'c' : 'v', event->alt);
 			return WM_UI_HANDLER_BREAK;
 		}
 		/* handle drop */
@@ -7078,7 +7107,7 @@ static int ui_do_button(bContext *C, uiBlock *block, uiBut *but, const wmEvent *
 		case UI_BTYPE_TEXT:
 		case UI_BTYPE_SEARCH_MENU:
 			if ((but->type == UI_BTYPE_SEARCH_MENU) &&
-			    (but->flag & UI_BUT_SEARCH_UNLINK))
+			    (but->flag & UI_BUT_VALUE_CLEAR))
 			{
 				retval = ui_do_but_SEARCH_UNLINK(C, block, but, data, event);
 				if (retval & WM_UI_HANDLER_BREAK) {

@@ -316,6 +316,10 @@ bool OpenCLDeviceBase::OpenCLProgram::build_kernel(const string *debug_src)
 
 	clGetProgramBuildInfo(program, device->cdDevice, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
 
+	if(ciErr != CL_SUCCESS) {
+		add_error(string("OpenCL build failed with error ") + clewErrorString(ciErr) + ", errors in console.");
+	}
+
 	if(ret_val_size > 1) {
 		vector<char> build_log(ret_val_size + 1);
 		clGetProgramBuildInfo(program, device->cdDevice, CL_PROGRAM_BUILD_LOG, ret_val_size, &build_log[0], NULL);
@@ -323,22 +327,11 @@ bool OpenCLDeviceBase::OpenCLProgram::build_kernel(const string *debug_src)
 		build_log[ret_val_size] = '\0';
 		/* Skip meaningless empty output from the NVidia compiler. */
 		if(!(ret_val_size == 2 && build_log[0] == '\n')) {
-			add_error("OpenCL build failed: errors in console");
-			if(use_stdout) {
-				fprintf(stderr, "OpenCL kernel build output:\n%s\n", &build_log[0]);
-			}
-			else {
-				compile_output = string(&build_log[0]);
-			}
+			add_log(string("OpenCL program ") + program_name + " build output: " + string(&build_log[0]), ciErr == CL_SUCCESS);
 		}
 	}
 
-	if(ciErr != CL_SUCCESS) {
-		add_error(string("OpenCL build failed: ") + clewErrorString(ciErr));
-		return false;
-	}
-
-	return true;
+	return (ciErr == CL_SUCCESS);
 }
 
 bool OpenCLDeviceBase::OpenCLProgram::compile_kernel(const string *debug_src)
@@ -668,6 +661,33 @@ bool OpenCLInfo::device_version_check(cl_device_id device,
 	return true;
 }
 
+string OpenCLInfo::get_hardware_id(string platform_name, cl_device_id device_id)
+{
+	if(platform_name == "AMD Accelerated Parallel Processing" || platform_name == "Apple") {
+		/* Use cl_amd_device_topology extension. */
+		cl_char topology[24];
+		if(clGetDeviceInfo(device_id, 0x4037, sizeof(topology), topology, NULL) == CL_SUCCESS && topology[0] == 1) {
+			return string_printf("%02x:%02x.%01x",
+			                     (unsigned int)topology[21],
+			                     (unsigned int)topology[22],
+			                     (unsigned int)topology[23]);
+		}
+	}
+	else if(platform_name == "NVIDIA CUDA") {
+		/* Use two undocumented options of the cl_nv_device_attribute_query extension. */
+		cl_int bus_id, slot_id;
+		if(clGetDeviceInfo(device_id, 0x4008, sizeof(cl_int), &bus_id,  NULL) == CL_SUCCESS &&
+		   clGetDeviceInfo(device_id, 0x4009, sizeof(cl_int), &slot_id, NULL) == CL_SUCCESS) {
+			return string_printf("%02x:%02x.%01x",
+			                     (unsigned int)(bus_id),
+			                     (unsigned int)(slot_id >> 3),
+			                     (unsigned int)(slot_id & 0x7));
+		}
+	}
+	/* No general way to get a hardware ID from OpenCL => give up. */
+	return "";
+}
+
 void OpenCLInfo::get_usable_devices(vector<OpenCLPlatformDevice> *usable_devices,
                                     bool force_all)
 {
@@ -780,11 +800,13 @@ void OpenCLInfo::get_usable_devices(vector<OpenCLPlatformDevice> *usable_devices
 					continue;
 				}
 				FIRST_VLOG(2) << "Adding new device " << device_name << ".";
+				string hardware_id = get_hardware_id(platform_name, device_id);
 				usable_devices->push_back(OpenCLPlatformDevice(platform_id,
 				                                               platform_name,
 				                                               device_id,
 				                                               device_type,
-				                                               device_name));
+				                                               device_name,
+				                                               hardware_id));
 			}
 			else {
 				FIRST_VLOG(2) << "Ignoring device " << device_name
