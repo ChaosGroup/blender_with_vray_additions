@@ -1218,6 +1218,9 @@ void BKE_object_make_local_ex(Main *bmain, Object *ob, const bool lib_local, con
 			ob_new->id.us = 0;
 			ob_new->proxy = ob_new->proxy_from = ob_new->proxy_group = NULL;
 
+			/* setting newid is mandatory for complex make_lib_local logic... */
+			ID_NEW_SET(ob, ob_new);
+
 			if (!lib_local) {
 				BKE_libblock_remap(bmain, ob, ob_new, ID_REMAP_SKIP_INDIRECT_USAGE);
 			}
@@ -3378,10 +3381,10 @@ void BKE_object_relink(Object *ob)
 	if (ob->rigidbody_constraint)
 		BKE_rigidbody_relink_constraint(ob->rigidbody_constraint);
 
-	ID_NEW(ob->parent);
+	ID_NEW_REMAP(ob->parent);
 
-	ID_NEW(ob->proxy);
-	ID_NEW(ob->proxy_group);
+	ID_NEW_REMAP(ob->proxy);
+	ID_NEW_REMAP(ob->proxy_group);
 
 	IDP_RelinkProperty(ob->id.properties);
 }

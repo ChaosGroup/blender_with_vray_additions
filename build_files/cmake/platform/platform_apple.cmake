@@ -160,7 +160,7 @@ if(WITH_CODEC_FFMPEG)
 		mp3lame swscale x264 xvidcore theora theoradec theoraenc vorbis vorbisenc vorbisfile ogg
 	)
 	if(WITH_CXX11)
-		set(FFMPEG_LIBRARIES ${FFMPEG_LIBRARIES} schroedinger orc vpx)
+		set(FFMPEG_LIBRARIES ${FFMPEG_LIBRARIES} schroedinger orc vpx webp swresample)
 	endif()
 	set(FFMPEG_LIBPATH ${FFMPEG}/lib)
 endif()
@@ -320,6 +320,9 @@ if(WITH_OPENIMAGEIO)
 		${OPENEXR_LIBRARIES}
 		${ZLIB_LIBRARIES}
 	)
+	if(WITH_CXX11)
+		set(OPENIMAGEIO_LIBRARIES ${OPENIMAGEIO_LIBRARIES} ${LIBDIR}/ffmpeg/lib/libwebp.a)
+	endif()
 	set(OPENIMAGEIO_LIBPATH
 		${OPENIMAGEIO}/lib
 		${JPEG_LIBPATH}
