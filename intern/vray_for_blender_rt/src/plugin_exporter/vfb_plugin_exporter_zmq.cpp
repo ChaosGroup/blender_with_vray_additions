@@ -480,6 +480,16 @@ void ZmqExporter::free()
 
 void ZmqExporter::sync()
 {
+	checkZmqClient();
+	// we send current time if there are any changes, but if exporting animation and frame has no changes
+	// frame won't be sent and we must manually update
+	if (animation_settings.use && !is_viewport) {
+		assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+		if (m_LastExportedFrame != this->current_scene_frame) {
+			m_LastExportedFrame = this->current_scene_frame;
+			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+		}
+	}
 }
 
 void ZmqExporter::show_frame_buffer()
