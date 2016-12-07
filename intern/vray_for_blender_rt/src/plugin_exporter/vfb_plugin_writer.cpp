@@ -87,18 +87,8 @@ void PluginWriter::blockFlushAll()
 	for (int c = 0; c < m_items.size(); ++c) {
 		auto & item = m_items[c];
 		// lazy wait for item
-		int wait = 0;
 		while (!item.isDone()) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			PRINT_INFO_EX("Waiting for item [%d] for file [%x]", c, m_file);
-			++wait;
-
-			if (wait > 10) {
-				for (int r = c; r < m_items.size(); ++r) {
-					PRINT_INFO_EX("Item [%d] is [%s]", r, m_items[r].isDone() ? "done" : "waiting");
-				}
-				exit(-1);
-			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 		PyObject_CallMethod(m_file, _C("write"), _C("s"), item.getData());
 	}
