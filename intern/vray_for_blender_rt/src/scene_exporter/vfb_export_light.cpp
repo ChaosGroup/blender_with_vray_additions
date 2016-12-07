@@ -140,6 +140,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 				}
 				if (override) {
 					pluginDesc.add("transform", override.tm);
+					pluginDesc.add("enabled", override.visible);
 				} else {
 					pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 				}
@@ -160,6 +161,12 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 					PluginAttr *rect_tex = pluginDesc.get("rect_tex");
 					bool use_rect_tex = (rect_tex && rect_tex->attrValue.type == ValueTypePlugin);
 					pluginDesc.add("use_rect_tex", use_rect_tex);
+					// if lamp is hidden by override also make it invisible to
+					if (override) {
+						pluginDesc.add("invisible", !override.visible);
+					} else {
+						pluginDesc.add("invisible", false);
+					}
 				}
 				else if (pluginID == "LightDome") {
 					// Q: Ignoring UI option "use_dome_tex" at all?

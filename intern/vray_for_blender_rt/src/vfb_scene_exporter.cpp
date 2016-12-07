@@ -442,8 +442,9 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		} else if (ob.type() == BL::Object::type_LAMP) {
 			// we cant hide lamps, so we must remove
 			exportName = overrideAttr.namePrefix + m_data_exporter.getLightName(ob);
-			remove = true;
 		}
+
+		ObjectOverridesAttrs oattrs;
 
 		if (m_exporter->getPluginManager().inCache(exportName)) {
 			// lamps and clippers should be removed, others should be hidden
@@ -452,18 +453,22 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				m_exporter->remove_plugin(exportName);
 				if (isClipper) {
 					// for clipper we have also node which we need to hide since it will appear when clipper is removed
-					ObjectOverridesAttrs oattrs;
 					oattrs.override = true;
 					oattrs.visible = false;
 					oattrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-					m_data_exporter.exportObject(ob, check_updated, oattrs);
 				}
 			} else {
-				ObjectOverridesAttrs oattrs;
 				oattrs.override = true;
 				oattrs.visible = false;
 				oattrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+			}
+		}
+
+		if (oattrs.override) {
+			if (ob.data() && ob.type() == BL::Object::type_MESH) {
 				m_data_exporter.exportObject(ob, check_updated, oattrs);
+			} else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
+				m_data_exporter.exportLight(ob, check_updated, oattrs);
 			}
 		}
 	}
