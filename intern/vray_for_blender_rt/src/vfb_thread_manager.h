@@ -60,6 +60,7 @@ public:
 
 	// @task with LOW  @priority will be added at the end      of queue
 	// @task with HIGH @priority will be added at the begining of queue
+	// okay to be called concurrently
 	void addTask(Task task, Priority priority);
 private:
 	ThreadManager(int thCount);

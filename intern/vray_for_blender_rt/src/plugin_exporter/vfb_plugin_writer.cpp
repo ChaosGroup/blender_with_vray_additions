@@ -31,8 +31,9 @@ struct TraceTransformHex {
 	double v[3];
 };
 
-PluginWriter::PluginWriter(PyObject *pyFile, ExporterSettings::ExportFormat format)
-    : m_file(pyFile)
+PluginWriter::PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat format)
+	: m_threadManager(tm)
+    , m_file(pyFile)
     , m_format(format)
     , m_animationFrame(-1)
     , m_depth(1)
@@ -44,22 +45,65 @@ bool PluginWriter::good() const
 	return m_file != nullptr;
 }
 
-#define PyPrintf(pp, ...)                                         \
-	if (!pp.good()) {                                             \
-		return pp;                                                \
-	}                                                             \
+#define FormatAndAdd(pp, ...)                                     \
 	char buf[2048];                                               \
 	sprintf(buf, __VA_ARGS__);                                    \
-	PyObject_CallMethod(pp.getFile(), _C("write"), _C("s"), buf); \
+	pp.writeStr(buf);                                             \
 	return pp;                                                    \
 
 
 PluginWriter &PluginWriter::writeStr(const char *str)
 {
 	if (good()) {
-		PyObject_CallMethod(m_file, _C("write"), _C("s"), str);
+		addTask(str);
 	}
 	return *this;
+}
+
+void PluginWriter::processItems(const char * val)
+{
+	// this function will not be called concurrently
+	// so it is safe to traverse m_items and expect not to change during execution
+
+	const int maxRep = m_items.size();
+	for (int c = 0; c < maxRep && m_items.front().isDone(); ++c) {
+		PyObject_CallMethod(m_file, _C("write"), _C("s"), m_items.front().getData());
+		m_items.pop_front();
+	}
+
+	if (val && *val) {
+		if (m_items.empty()) {
+			// no items left in que, just write current value
+			PyObject_CallMethod(m_file, _C("write"), _C("s"), val);
+		} else {
+			m_items.push_back(WriteItem(val));
+		}
+	}
+}
+
+
+void PluginWriter::blockFlushAll()
+{
+	for (int c = 0; c < m_items.size(); ++c) {
+		auto & item = m_items[c];
+		// lazy wait for item
+		int wait = 0;
+		while (!item.isDone()) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			PRINT_INFO_EX("Waiting for item [%d] for file [%x]", c, m_file);
+			++wait;
+
+			if (wait > 10) {
+				for (int r = c; r < m_items.size(); ++r) {
+					PRINT_INFO_EX("Item [%d] is [%s]", r, m_items[r].isDone() ? "done" : "waiting");
+				}
+				exit(-1);
+			}
+		}
+		PyObject_CallMethod(m_file, _C("write"), _C("s"), item.getData());
+	}
+
+	m_items.clear();
 }
 
 const char * PluginWriter::indentation()
@@ -76,12 +120,12 @@ const char * PluginWriter::indentation()
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val)
 {
-	PyPrintf(pp, "%d", val);
+	FormatAndAdd(pp, "%d", val);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const float &val)
 {
-	PyPrintf(pp, "%g", val);
+	FormatAndAdd(pp, "%g", val);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const char *val)
@@ -96,22 +140,22 @@ PluginWriter &operator<<(PluginWriter &pp, const std::string &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrColor &val)
 {
-	PyPrintf(pp, "Color(%g,%g,%g)", val.r, val.g, val.b);
+	FormatAndAdd(pp, "Color(%g,%g,%g)", val.r, val.g, val.b);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrAColor &val)
 {
-	PyPrintf(pp, "AColor(%g,%g,%g,%g)", val.color.r, val.color.g, val.color.b, val.alpha);
+	FormatAndAdd(pp, "AColor(%g,%g,%g,%g)", val.color.r, val.color.g, val.color.b, val.alpha);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrVector &val)
 {
-	PyPrintf(pp, "Vector(%g,%g,%g)", val.x, val.y, val.z);
+	FormatAndAdd(pp, "Vector(%g,%g,%g)", val.x, val.y, val.z);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrVector2 &val)
 {
-	PyPrintf(pp, "Vector(%g,%g,0)", val.x, val.y);
+	FormatAndAdd(pp, "Vector(%g,%g,0)", val.x, val.y);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrMatrix &val)

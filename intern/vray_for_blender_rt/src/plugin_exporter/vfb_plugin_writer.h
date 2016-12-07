@@ -4,10 +4,13 @@
 #include <cstdio>
 #include <string>
 #include <memory>
+#include <atomic>
 #include <set>
+#include <deque>
 
 #include "vfb_plugin_attrs.h"
 #include "vfb_export_settings.h"
+#include "vfb_thread_manager.h"
 
 #include "utils/cgr_vrscene.h"
 #include "utils/cgr_string.h"
@@ -17,7 +20,7 @@ namespace VRayForBlender {
 #define VRSCENE_INDENT "    "
 class PluginWriter {
 public:
-	PluginWriter(PyObject *pyFile, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
+	PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
 
 	PluginWriter &writeStr(const char *str);
 
@@ -44,18 +47,122 @@ public:
 	const char * unindent() { --m_depth; return ""; }
 
 	const char * indentation();
-private:
 
-	int m_depth;
-	int m_animationFrame;
-	PyObject *m_file;
-	ExporterSettings::ExportFormat m_format;
+	template <typename T>
+	struct AsyncZipTask {
+		const VRayBaseTypes::AttrList<T> & m_data;
+
+		AsyncZipTask() = delete;
+		AsyncZipTask(const AsyncZipTask &) = delete;
+		AsyncZipTask & operator=(const AsyncZipTask &) = delete;
+
+		explicit AsyncZipTask(const VRayBaseTypes::AttrList<T> & val): m_data(val) {}
+	};
+
+	void addTask(const char * data) {
+		processItems(data);
+	}
+
+	void addTask(const std::string & data) {
+		processItems(data.c_str());
+	}
+
+	template <typename T>
+	void addTask(const AsyncZipTask<T> &task) {
+		// when adding and removing elements from deque no references are invalidated
+		const auto & compressData = task.m_data;
+		m_items.emplace_back();
+		auto & item = m_items.back();
+
+		// get ref to item and copy the data
+		// we could get away with reference the task's VRayBaseTypes::AttrList because it is kept in cache
+		// and the scene exporter will blockFlushAll to wait for all tasks
+		m_threadManager->addTask([&item, compressData, this](std::thread::id id, const volatile bool & stop) {
+			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
+			item.asyncDone(zipData);
+		}, ThreadManager::Priority::LOW);
+		processItems();
+	}
+
+
+	void blockFlushAll();
+
+private:
+	class WriteItem {
+	public:
+		bool isDone() const {
+			return m_ready;
+		}
+
+		const char * getData() const {
+			if (m_isAsync) {
+				return m_asyncData;
+			} else {
+				return m_data.c_str();
+			}
+		}
+
+		void asyncDone(const char * data) {
+			BLI_assert(m_isAsync && "Called asyncDone on sync WriteItem");
+			// first copy data into task
+			if (data) {
+				m_asyncData = data;
+				m_freeData = true;
+			} else {
+				m_asyncData = "";
+			}
+			_ReadWriteBarrier();
+			// than mark as ready
+			m_ready = true;
+		}
+
+		~WriteItem() {
+			if (m_freeData) {
+				delete[] m_asyncData;
+			}
+		}
+
+		WriteItem(WriteItem && other): WriteItem() {
+			std::swap(m_data, other.m_data);
+			std::swap(m_asyncData, other.m_asyncData);
+			m_ready = other.m_ready;
+			other.m_ready = false;
+			std::swap(m_freeData, other.m_freeData);
+			std::swap(m_isAsync, other.m_isAsync);
+		}
+
+		WriteItem(const WriteItem &) = delete;
+		WriteItem & operator=(const WriteItem &) = delete;
+
+		WriteItem(): m_data(""), m_ready(false), m_freeData(false), m_isAsync(true) {}
+		explicit WriteItem(const std::string & val): m_data(val), m_ready(true), m_freeData(false), m_isAsync(false) {}
+		explicit WriteItem(const char * val): m_data(val ? val : ""), m_ready(true), m_freeData(false), m_isAsync(false) {}
+
+	private:
+		std::string                 m_data;
+		const char                 *m_asyncData;
+		bool                        m_ready;
+		bool                        m_freeData;
+		bool                        m_isAsync;
+	};
+
+	void processItems(const char * val = nullptr);
+
+	// only used to syncronize waiting for items
+	std::mutex                      m_itemMutex;
+	// used to block on blockFlushAll
+	std::condition_variable         m_itemDoneVar;
+	std::deque<WriteItem>           m_items;
+	ThreadManager::Ptr              m_threadManager;
+	int                             m_depth;
+	int                             m_animationFrame;
+	PyObject                       *m_file;
+	ExporterSettings::ExportFormat  m_format;
 
 private:
 	PluginWriter(const PluginWriter&) = delete;
 	PluginWriter &operator=(const PluginWriter&) = delete;
 };
-
 
 PluginWriter &operator<<(PluginWriter &pp, const int &val);
 PluginWriter &operator<<(PluginWriter &pp, const float &val);
@@ -71,6 +178,13 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrTransform &v
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrPlugin &val);
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrMapChannels &val);
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrInstancer &val);
+
+template <typename T>
+PluginWriter &operator<<(PluginWriter &pp, const PluginWriter::AsyncZipTask<T> &task)
+{
+	pp.addTask(task);
+	return pp;
+}
 
 template <typename T>
 using KVPair = std::pair<std::string, T>;
@@ -117,9 +231,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 			pp.unindent();
 			pp << "\n" << pp.indentation() << ")";
 		} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
-			char * hexData = GetStringZip(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
-			pp << "Hex(\"" << hexData << "\")";
-			delete[] hexData;
+			pp << "Hex(\"" << PluginWriter::AsyncZipTask<T>(val) << "\")";
 		} else {
 			char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
 			pp << "Hex(\"" << zipData << "\")";

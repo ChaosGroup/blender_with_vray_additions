@@ -308,15 +308,15 @@ void SceneExporter::sync(const int &check_updated)
 		m_exporter->commit_changes();
 	}
 
+	// Sync plugins
+	m_exporter->sync();
+
 	clock_t end = clock();
 
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 
 	PRINT_INFO_EX("Synced in %.3f sec.",
 		            elapsed_secs);
-
-	// Sync plugins
-	m_exporter->sync();
 
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||

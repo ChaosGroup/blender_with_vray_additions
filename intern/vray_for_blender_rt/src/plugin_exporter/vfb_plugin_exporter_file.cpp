@@ -41,7 +41,21 @@ VrsceneExporter::VrsceneExporter()
 void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file)
 {
 	if (file) {
-		auto writer = std::shared_ptr<PluginWriter>(new PluginWriter(file, m_ExportFormat));
+		std::shared_ptr<PluginWriter> writer;
+		auto iter = m_fileWritersMap.find(reinterpret_cast<intptr_t>(file));
+
+		if (iter == m_fileWritersMap.end()) {
+			// ensure only one PluginWriter is instantiated for a file
+			writer.reset(new PluginWriter(m_threadManager, file, m_ExportFormat));
+			if (!writer) {
+				BLI_assert("Failed to create PluginWriter for python file!");
+				return;
+			}
+			m_fileWritersMap[reinterpret_cast<intptr_t>(file)] = writer;
+		} else {
+			writer = iter->second;
+		}
+
 		switch (type) {
 		case VRayForBlender::ParamDesc::PluginChannel:
 		case VRayForBlender::ParamDesc::PluginFilter:
@@ -71,7 +85,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 void VrsceneExporter::set_settings(const ExporterSettings &st)
 {
 	m_ExportFormat = st.export_file_format;
-	for (auto & w : m_Writers) {
+	for (auto & w : m_fileWritersMap) {
 		w.second->setFormat(m_ExportFormat);
 	}
 	animation_settings = st.settings_animation;
@@ -87,6 +101,7 @@ VrsceneExporter::~VrsceneExporter()
 void VrsceneExporter::init()
 {
 	PRINT_INFO_EX("Initting VrsceneExporter");
+	m_threadManager = ThreadManager::make(2);
 }
 
 
@@ -98,7 +113,13 @@ void VrsceneExporter::free()
 
 void VrsceneExporter::sync()
 {
+	PRINT_INFO_EX("Flusing all data to files");
 	m_Synced = true;
+	for (auto & writer : m_fileWritersMap) {
+		writer.second->blockFlushAll();
+	}
+
+	m_threadManager->stop();
 }
 
 

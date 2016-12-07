@@ -6,7 +6,9 @@
 using namespace VRayForBlender;
 using namespace std;
 
-ThreadManager::ThreadManager(int thCount) {
+ThreadManager::ThreadManager(int thCount)
+	: m_stop(false)
+{
 	if (thCount > 0) {
 		for (int c = 0; c < thCount; ++c) {
 			m_workers.emplace_back(thread(&ThreadManager::workerRun, this));
@@ -40,6 +42,8 @@ void ThreadManager::stop() {
 				BLI_assert(!"VFB ThreadManager's thread is not joinable during stop!");
 			}
 		}
+
+		m_workers.clear();
 	}
 }
 
