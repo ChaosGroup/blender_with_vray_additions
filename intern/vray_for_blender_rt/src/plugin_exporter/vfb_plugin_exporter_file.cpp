@@ -144,11 +144,11 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		if (!writerPtr) {
 			auto settingsWriter = m_Writers[ParamDesc::PluginSettings];
 			if (writerPtr = settingsWriter) {
-				PRINT_WARN("No PluginWriter for type %d exproting %s with id [%s], writing in main file!",
-					writerType, name.c_str(), pluginDesc.pluginID.c_str());
+				//PRINT_WARN("No PluginWriter for type %d exproting %s with id [%s], writing in main file!",
+				//	writerType, name.c_str(), pluginDesc.pluginID.c_str());
 			} else {
-				PRINT_ERROR("Failed to get plugin writer for type %d exporting %s with id [%s]",
-					writerType, name.c_str(), pluginDesc.pluginID.c_str());
+				//PRINT_ERROR("Failed to get plugin writer for type %d exporting %s with id [%s]",
+				//	writerType, name.c_str(), pluginDesc.pluginID.c_str());
 				return plugin;
 			}
 		}
@@ -225,8 +225,6 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:
-			PRINT_INFO_EX("--- > UNIMPLEMENTED DEFAULT");
-			assert(false);
 			break;
 		}
 	}

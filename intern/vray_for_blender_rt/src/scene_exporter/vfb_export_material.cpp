@@ -106,11 +106,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
 								PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
 								mtlSingleWrapper.add("brdf", material.valPlugin);
 
-								// PRINT_INFO_EX("Wrapping BRDF in single material %s", wrapper_name.c_str());
-
 								material = m_exporter->export_plugin(mtlSingleWrapper);
-							} else {
-								PRINT_WARN("Not wrapping pl type:[%d] mat type: [%d]", material.type, pluginType);
 							}
 
 							if (m_exporter->get_is_viewport()) {
