@@ -71,6 +71,7 @@ public:
 	void addTask(const AsyncZipTask<T> &task) {
 		// when adding and removing elements from deque no references are invalidated
 		const auto & compressData = task.m_data;
+
 		m_items.emplace_back();
 		auto & item = m_items.back();
 
@@ -78,20 +79,20 @@ public:
 		// we could get away with reference the task's VRayBaseTypes::AttrList because it is kept in cache
 		// and the scene exporter will blockFlushAll to wait for all tasks
 		m_threadManager->addTask([&item, compressData, this](std::thread::id id, const volatile bool & stop) {
-			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
+			char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
 			item.asyncDone(zipData);
 		}, ThreadManager::Priority::LOW);
+
 		processItems();
 	}
 
 
 	void blockFlushAll();
-
 private:
 	class WriteItem {
 	public:
 		bool isDone() const {
-			return m_ready;
+			return m_ready.load(std::memory_order_acquire);
 		}
 
 		const char * getData() const {
@@ -111,9 +112,9 @@ private:
 			} else {
 				m_asyncData = "";
 			}
-			_ReadWriteBarrier();
 			// than mark as ready
-			m_ready = true;
+			// release-aquire order so readers will see m_asyncData changed if m_ready is true
+			m_ready.store(true, std::memory_order_release);
 		}
 
 		~WriteItem() {
@@ -125,7 +126,7 @@ private:
 		WriteItem(WriteItem && other): WriteItem() {
 			std::swap(m_data, other.m_data);
 			std::swap(m_asyncData, other.m_asyncData);
-			m_ready = other.m_ready;
+			m_ready = other.m_ready.load();
 			other.m_ready = false;
 			std::swap(m_freeData, other.m_freeData);
 			std::swap(m_isAsync, other.m_isAsync);
@@ -139,11 +140,11 @@ private:
 		explicit WriteItem(const char * val): m_data(val ? val : ""), m_ready(true), m_freeData(false), m_isAsync(false) {}
 
 	private:
-		std::string                 m_data;
-		const char                 *m_asyncData;
-		bool                        m_ready;
-		bool                        m_freeData;
-		bool                        m_isAsync;
+		std::string        m_data;
+		const char        *m_asyncData;
+		std::atomic<bool>  m_ready;
+		bool               m_freeData;
+		bool               m_isAsync;
 	};
 
 	void processItems(const char * val = nullptr);
