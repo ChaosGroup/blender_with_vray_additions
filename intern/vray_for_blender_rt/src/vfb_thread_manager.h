@@ -36,8 +36,8 @@ public:
 	typedef std::shared_ptr<ThreadManager> Ptr;
 
 	// intended to be used with lambda which will capture all neded data
-	// can check current thread id and must obey stop flag asap
-	typedef std::function<void(std::thread::id id, const volatile bool & stop)> Task;
+	// must obey stop flag asap
+	typedef std::function<void(int threadIndex, const volatile bool & stop)> Task;
 
 	enum class Priority {
 		LOW, HIGH,

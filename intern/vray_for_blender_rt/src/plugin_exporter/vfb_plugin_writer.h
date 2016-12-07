@@ -78,8 +78,8 @@ public:
 		// get ref to item and copy the data
 		// we could get away with reference the task's VRayBaseTypes::AttrList because it is kept in cache
 		// and the scene exporter will blockFlushAll to wait for all tasks
-		m_threadManager->addTask([&item, compressData, this](std::thread::id id, const volatile bool & stop) {
-			char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
+		m_threadManager->addTask([&item, compressData, this](int, const volatile bool &) {
+			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
 			item.asyncDone(zipData);
 		}, ThreadManager::Priority::LOW);
 
