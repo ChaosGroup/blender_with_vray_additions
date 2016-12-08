@@ -241,11 +241,12 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		case ValueTypeInstancer:
 			if (animation_settings.use && attr.attrValue.valInstancer.frameNumber != current_scene_frame) {
 				PRINT_WARN("Exporting instancer in frame %d, while it has %d frame", static_cast<int>(current_scene_frame), attr.attrValue.valInstancer.frameNumber);
-				writer.setAnimationFrame(attr.attrValue.valInstancer.frameNumber);
+				const_cast<PluginAttr&>(attr).attrValue.valInstancer.frameNumber = current_scene_frame;
 			}
 			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:
+			BLI_assert("Attribute with type [%d] is not supported", static_cast<int>(attr.attrValue.type));
 			break;
 		}
 	}

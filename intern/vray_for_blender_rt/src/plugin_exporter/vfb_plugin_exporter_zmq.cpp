@@ -20,6 +20,9 @@
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
 #include "jpeglib.h"
+
+#include "BLI_utildefines.h"
+
 #include <setjmp.h>
 #include <limits>
 
@@ -484,7 +487,7 @@ void ZmqExporter::sync()
 	// we send current time if there are any changes, but if exporting animation and frame has no changes
 	// frame won't be sent and we must manually update
 	if (animation_settings.use && !is_viewport) {
-		assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+		BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
 		if (m_LastExportedFrame != this->current_scene_frame) {
 			m_LastExportedFrame = this->current_scene_frame;
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
@@ -603,7 +606,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
 
 	if (checkAnimation) {
-		assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+		BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
 		if (m_LastExportedFrame != this->current_scene_frame) {
 			m_LastExportedFrame = this->current_scene_frame;
 			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
@@ -663,16 +666,13 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			break;
 		case ValueTypeInstancer:
 			if (checkAnimation && attr.attrValue.valInstancer.frameNumber != this->current_scene_frame) {
-				auto inst = attr.attrValue.valInstancer;
-				inst.frameNumber = this->current_scene_frame;
-				m_Client->send(VRayMessage::createMessage(name, attr.attrName, inst));
-			} else {
-				m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
+				PRINT_WARN("Exporting instancer in frame %d, while it has %d frame", static_cast<int>(current_scene_frame), attr.attrValue.valInstancer.frameNumber);
+				const_cast<PluginAttr&>(attr).attrValue.valInstancer.frameNumber = current_scene_frame;
 			}
+			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
 			break;
 		default:
-			PRINT_INFO_EX("--- > UNIMPLEMENTED DEFAULT");
-			assert(false);
+			BLI_assert("Attribute with type [%d] is not supported", static_cast<int>(attr.attrValue.type));
 			break;
 		}
 	}
