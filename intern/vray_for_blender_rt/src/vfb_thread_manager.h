@@ -36,7 +36,7 @@ public:
 	typedef std::shared_ptr<ThreadManager> Ptr;
 
 	// intended to be used with lambda which will capture all neded data
-	// must obey stop flag asap
+	// must obey stop flag asap, threadIndex == -1 means calling thread (thCount == 0)
 	typedef std::function<void(int threadIndex, const volatile bool & stop)> Task;
 
 	enum class Priority {
@@ -65,7 +65,7 @@ public:
 private:
 	ThreadManager(int thCount);
 
-	void workerRun();
+	void workerRun(int thIdx);
 
 	std::mutex               m_queueMtx;
 	std::condition_variable  m_queueCondVar;

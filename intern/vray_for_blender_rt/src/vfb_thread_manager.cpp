@@ -11,7 +11,7 @@ ThreadManager::ThreadManager(int thCount)
 {
 	if (thCount > 0) {
 		for (int c = 0; c < thCount; ++c) {
-			m_workers.emplace_back(thread(&ThreadManager::workerRun, this));
+			m_workers.emplace_back(thread(&ThreadManager::workerRun, this, c));
 		}
 	}
 }
@@ -50,7 +50,7 @@ void ThreadManager::stop() {
 void ThreadManager::addTask(ThreadManager::Task task, ThreadManager::Priority priority) {
 	if (m_workers.empty()) {
 		// no workers - do the job ourselves
-		task(this_thread::get_id(), m_stop);
+		task(-1, m_stop);
 	} else {
 		{
 			lock_guard<mutex> lock(m_queueMtx);
@@ -64,10 +64,9 @@ void ThreadManager::addTask(ThreadManager::Task task, ThreadManager::Priority pr
 	}
 }
 
-void ThreadManager::workerRun() {
+void ThreadManager::workerRun(int thIdx) {
 	auto id = this_thread::get_id();
-
-	PRINT_INFO_EX("Thread [%u] starting ...", id.hash());
+	PRINT_INFO_EX("Thread [%u : %d] starting ...", id.hash(), thIdx);
 
 	while (!m_stop) {
 		Task task;
@@ -84,8 +83,8 @@ void ThreadManager::workerRun() {
 			m_tasks.pop_front();
 		}
 
-		task(id, m_stop);
+		task(thIdx, m_stop);
 	}
 
-	PRINT_INFO_EX("Thread [%u] stopping.", id.hash());
+	PRINT_INFO_EX("Thread [%u : %d] stopping.", id.hash(), thIdx);
 }
