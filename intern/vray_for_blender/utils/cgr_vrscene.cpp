@@ -131,7 +131,7 @@ char* GetStringZip(const u_int8_t *buf, unsigned bufLen)
     uLongf  tempLen = bufLen+bufLen/10+12;
     char   *temp = new char[tempLen];
 
-    int err = compress((Bytef*)temp, &tempLen, (Bytef*)buf, bufLen);
+    int err = compress2((Bytef*)temp, &tempLen, (Bytef*)buf, bufLen, 1);
     if(err == Z_MEM_ERROR) {
         delete [] temp;
         return NULL;
