@@ -65,8 +65,7 @@ void ThreadManager::addTask(ThreadManager::Task task, ThreadManager::Priority pr
 }
 
 void ThreadManager::workerRun(int thIdx) {
-	auto id = this_thread::get_id();
-	PRINT_INFO_EX("Thread [%u : %d] starting ...", id.hash(), thIdx);
+	PRINT_INFO_EX("Thread [%d] starting ...", thIdx);
 
 	while (!m_stop) {
 		Task task;
@@ -86,5 +85,5 @@ void ThreadManager::workerRun(int thIdx) {
 		task(thIdx, m_stop);
 	}
 
-	PRINT_INFO_EX("Thread [%u : %d] stopping.", id.hash(), thIdx);
+	PRINT_INFO_EX("Thread [%d] stopping.", thIdx);
 }
