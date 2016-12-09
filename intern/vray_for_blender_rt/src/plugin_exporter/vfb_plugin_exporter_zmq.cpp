@@ -672,7 +672,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
 			break;
 		default:
-			BLI_assert("Attribute with type [%d] is not supported", static_cast<int>(attr.attrValue.type));
+			BLI_assert("Unsupported attribute type");
 			break;
 		}
 	}

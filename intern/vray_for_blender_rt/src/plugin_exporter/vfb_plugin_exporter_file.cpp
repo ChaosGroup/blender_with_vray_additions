@@ -23,6 +23,7 @@
 
 #include "BLI_fileops.h"
 #include "BLI_path_util.h"
+#include "BLI_utildefines.h"
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -246,7 +247,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:
-			BLI_assert("Attribute with type [%d] is not supported", static_cast<int>(attr.attrValue.type));
+			BLI_assert("Unsupported attribute type");
 			break;
 		}
 	}
