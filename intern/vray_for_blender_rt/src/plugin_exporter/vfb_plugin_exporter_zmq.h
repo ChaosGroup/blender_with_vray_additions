@@ -33,24 +33,6 @@ namespace VRayForBlender {
 
 typedef std::unique_ptr<ZmqWrapper> ClientPtr;
 
-class ZmqWorkerPool {
-public:
-
-	static ZmqWorkerPool & getInstance();
-	ClientPtr getClient();
-	void returnClient(ClientPtr cl);
-
-	void shutdown();
-
-private:
-	std::stack<ClientPtr, std::vector<ClientPtr>> m_Clients;
-
-private:
-	~ZmqWorkerPool();
-	ZmqWorkerPool();
-};
-
-
 class ZmqExporter:
         public PluginExporter
 {

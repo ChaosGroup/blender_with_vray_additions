@@ -28,67 +28,6 @@
 
 using namespace VRayForBlender;
 
-#define USE_ZMQ_WORKER_POOL 0
-
-ZmqWorkerPool::ZmqWorkerPool()
-{
-}
-
-ZmqWorkerPool & ZmqWorkerPool::getInstance()
-{
-	static ZmqWorkerPool pool;
-	return pool;
-}
-
-ClientPtr ZmqWorkerPool::getClient()
-{
-#if USE_ZMQ_WORKER_POOL
-	if (m_Clients.empty()) {
-		m_Clients.push(ClientPtr(new ZmqWrapper()));
-	}
-
-	auto cl = std::move(m_Clients.top());
-	m_Clients.pop();
-	return cl;
-#else
-	return ClientPtr(new ZmqWrapper());
-#endif
-}
-
-void ZmqWorkerPool::returnClient(ClientPtr cl)
-{
-	if (cl) {
-		cl->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
-	}
-#if USE_ZMQ_WORKER_POOL
-	m_Clients.push(std::move(cl));
-#else
-	cl.reset();
-#endif
-}
-
-void ZmqWorkerPool::shutdown()
-{
-#if USE_ZMQ_WORKER_POOL
-	while (!m_Clients.empty()) {
-		m_Clients.top()->setFlushOnExit(false);
-		m_Clients.top()->syncStop();
-		m_Clients.pop();
-	}
-#endif
-}
-
-ZmqWorkerPool::~ZmqWorkerPool()
-{
-#if USE_ZMQ_WORKER_POOL
-	while (!m_Clients.empty()) {
-		m_Clients.top()->setFlushOnExit(false);
-		m_Clients.top()->forceFree();
-		m_Clients.pop();
-	}
-#endif
-}
-
 
 struct JpegErrorManager {
 	jpeg_error_mgr pub;
@@ -438,7 +377,7 @@ void ZmqExporter::checkZmqClient()
 	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
 
 	if (!m_Client) {
-		m_Client = ZmqWorkerPool::getInstance().getClient();
+		m_Client = ClientPtr(new ZmqWrapper());
 	} else {
 		if (!m_Client->connected()) {
 			m_IsAborted = true;
@@ -448,7 +387,7 @@ void ZmqExporter::checkZmqClient()
 
 		if (!m_Client->good()) {
 			m_Client.release();
-			m_Client = ZmqWorkerPool::getInstance().getClient();
+			m_Client = ClientPtr(new ZmqWrapper());
 			this->init();
 		}
 	}
