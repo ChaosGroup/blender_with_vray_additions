@@ -28,8 +28,9 @@
 #include "vfb_plugin_exporter_zmq.h"
 
 #include "zmq_wrapper.hpp"
+#include "vfb_plugin_exporter_zmq.h"
 
-ZmqWrapper * heartbeatClient = nullptr;
+VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
 
 
@@ -61,7 +62,7 @@ static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)
 		std::lock_guard<std::mutex> l(heartbeatLock);
 		if (!heartbeatClient) {
 			PRINT_INFO_EX("Starting hearbeat client for %s", conn_str);
-			heartbeatClient = new ZmqWrapper(true);
+			heartbeatClient.reset(new ZmqWrapper(true));
 			heartbeatClient->connect(conn_str);
 			if (heartbeatClient->connected()) {
 				Py_RETURN_TRUE;
@@ -85,8 +86,7 @@ static PyObject* vfb_zmq_heartbeat_stop(PyObject*)
 	if (heartbeatClient) {
 		PRINT_INFO_EX("Stopping hearbeat client");
 		heartbeatClient->syncStop();
-		delete heartbeatClient;
-		heartbeatClient = nullptr;
+		heartbeatClient.reset();
 	} else {
 		PRINT_ERROR("No zmq heartbeat client running...");
 	}
@@ -131,8 +131,6 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 		}
 	}
 
-	auto & zmqPool = ZmqWorkerPool::getInstance();
-
 	Py_RETURN_NONE;
 }
 
@@ -141,7 +139,6 @@ static PyObject* vfb_unload(PyObject*)
 {
 	PRINT_INFO_EX("vfb_unload()");
 
-	ZmqWorkerPool::getInstance().shutdown();
 	vfb_zmq_heartbeat_stop(nullptr);
 
 	Py_RETURN_NONE;
