@@ -264,7 +264,7 @@ ZmqExporter::~ZmqExporter()
 	std::lock_guard<std::mutex> imgLock(m_ImgMutex);
 
 	m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
-	ZmqWorkerPool::getInstance().returnClient(std::move(m_Client));
+	m_Client.reset();
 }
 
 RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
