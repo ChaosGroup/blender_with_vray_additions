@@ -26,65 +26,40 @@
 
 using namespace VRayForBlender;
 
+static MHash maxParticleID = 0;
+
+void VRayForBlender::resetMaxParticleID()
+{
+	maxParticleID = 0;
+}
+
+MHash VRayForBlender::getMaxParticleID()
+{
+	return maxParticleID;
+}
+
 MHash VRayForBlender::getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)
 {
-	MHash particleID = 0;
+	MHash particleID = dupliIndex ^
+	                   dupliObject.index() ^
+	                   reinterpret_cast<intptr_t>(dupliObject.object().ptr.data) ^
+	                   reinterpret_cast<intptr_t>(dupliGenerator.ptr.data);
 
-	/// Unique particle ID.
-	/// Combination of persistent_id(), particle index, dupli index and objects pointers.
-	struct ParticleKey {
-		ParticleKey(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex) {
-			::memset(key, 0, sizeof(key));
+	for (int i = 0; i < 16; ++i) {
+		particleID ^= dupliObject.persistent_id()[i];
+	}
 
-			int keyOffs = 0;
-
-			// Particle index.
-			key[keyOffs++] = dupliObject.index();
-
-			// Dupli index.
-			key[keyOffs++] = dupliIndex;
-
-			// Duplicated object pointer.
-			key[keyOffs++] = reinterpret_cast<intptr_t>(dupliObject.object().ptr.data);
-
-			// Generator pointer.
-			key[keyOffs++] = reinterpret_cast<intptr_t>(dupliGenerator.ptr.data);
-
-			// Persistent ID.
-			::memcpy(key+keyOffs, dupliObject.persistent_id().data, 16 * sizeof(int));
-		}
-
-		intptr_t key[20];
-	} particleKey(dupliGenerator, dupliObject, dupliIndex);
-
-	MurmurHash3_x86_32((const void*)&particleKey, sizeof(ParticleKey), 42, &particleID);
+	maxParticleID = std::max(particleID, maxParticleID);
 
 	return particleID;
 }
 
 MHash VRayForBlender::getParticleID(BL::Object arrayGenerator, int arrayIndex)
 {
-	MHash particleID = 0;
+	const MHash particleID = arrayIndex ^
+	                         reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
 
-	/// Unique particle ID.
-	/// Combination of persistent_id(), particle index, dupli index and objects pointers.
-	struct ArrayKey {
-		ArrayKey(BL::Object arrayGenerator, int arrayIndex) {
-			::memset(key, 0, sizeof(key));
-
-			int keyOffs = 0;
-
-			// Array index.
-			key[keyOffs++] = arrayIndex;
-
-			// Array generator object pointer.
-			key[keyOffs++] = reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
-		}
-
-		intptr_t key[20];
-	} arrayKey(arrayGenerator, arrayIndex);
-
-	MurmurHash3_x86_32((const void*)&arrayKey, sizeof(ArrayKey), 42, &particleID);
+	maxParticleID = std::max(particleID, maxParticleID);
 
 	return particleID;
 }

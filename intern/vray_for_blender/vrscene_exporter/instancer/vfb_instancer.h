@@ -28,6 +28,12 @@
 
 namespace VRayForBlender {
 
+/// Resets max. particle ID counter.
+void resetMaxParticleID();
+
+/// Returns max. particle ID counter.
+MHash getMaxParticleID();
+
 /// Returns unique particle ID. Used for duplication and particles.
 /// @param dupliGenerator Dupli generator.
 /// @param dupliObject DupliObject instance.

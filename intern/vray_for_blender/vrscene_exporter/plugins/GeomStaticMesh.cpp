@@ -862,7 +862,6 @@ void GeomStaticMesh::writeData(PyObject *output, VRayExportable *prevState, bool
 
 	if(ExporterSettings::gSet.IsFirstFrame()) {
 		PYTHON_PRINTF(output, "\n\tprimary_visibility=%i;", primary_visibility);
-		PYTHON_PRINTF(output, "\n\tenvironment_geometry=%i;", environment_geometry);
 		PYTHON_PRINTF(output, "\n\tdynamic_geometry=%i;", dynamic_geometry);
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_level=%i;", osd_subdiv_level);
 		PYTHON_PRINTF(output, "\n\tosd_subdiv_type=%i;",  osd_subdiv_type);

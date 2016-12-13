@@ -259,6 +259,8 @@ void VRsceneExporter::exportSceneInit()
 	m_lightLinker.prepass();
 	m_lightLinker.setSceneSet(&m_exportedObjects);
 
+	VRayForBlender::resetMaxParticleID();
+
 	Node::m_lightLinker = &m_lightLinker;
 	Node::m_scene_nodes = &m_exportedObjects;
 }
@@ -1548,13 +1550,15 @@ void VRsceneExporter::exportDupli()
 		for(VRayForBlender::InstancerItems::const_iterator paIt = particles.begin(); paIt != particles.end(); ++paIt) {
 			const VRayForBlender::InstancerItem &pa = *paIt;
 
+			const int particleID = VRayForBlender::getMaxParticleID() - pa.particleID;
+
 			PYTHON_PRINTF(out, "\n\t\tList(%u,"
 			                   "TransformHex(\"%s\"),"
 			                   "TransformHex(\"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"),"
 			                   "%i,"
 			                   "%i,"
 			                   "%s)",
-			              pa.particleID,
+			              particleID,
 			              GetTransformHex(pa.getTransform()).c_str(),
 			              pa.flags,
 			              pa.objectID,
@@ -1568,6 +1572,7 @@ void VRsceneExporter::exportDupli()
 	PYTHON_PRINTF(out, "\n\t)%s;", VRayExportable::m_interpEnd);
 	PYTHON_PRINT(out, "\n\tuse_additional_params=1;");
 	PYTHON_PRINT(out, "\n\tuse_time_instancing=0;");
+	PYTHON_PRINT(out, "\n\tshading_needs_ids=1;");
 	PYTHON_PRINTF(out, "\n}\n");
 
 	PYTHON_PRINT(out, "\nNode instancer|node {");
