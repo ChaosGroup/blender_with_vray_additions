@@ -493,6 +493,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	instancerDesc.add("instances", instacer);
 	instancerDesc.add("visible", visible);
 	instancerDesc.add("use_time_instancing", false);
+	instancerDesc.add("shading_needs_ids", true);
 
 	const auto & wrapperName = "NodeWrapper@" + exportName;
 	// also track node wrapper
