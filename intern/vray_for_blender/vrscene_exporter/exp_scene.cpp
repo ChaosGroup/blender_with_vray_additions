@@ -527,8 +527,8 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 		return;
 
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-
-	PRINT_INFO("Processing object %s", ob.name().c_str());
+	const std::string & objectName = ob.name();
+	PRINT_INFO("Processing object %s", objectName.c_str());
 
 	int data_updated = RNA_int_get(&vrayObject, "data_updated");
 	if (data_updated) {
@@ -769,27 +769,22 @@ void VRsceneExporter::exportObjectOrArray(BL::Object ob)
 	// We support only the last sequence of Array modifiers in the modifier stack.
 	for (int modIdx = numModifiers-1; modIdx >= 0; --modIdx) {
 		BL::Modifier mod = ob.modifiers[modIdx];
-		if (mod && mod.show_render()) {
-			if (mod.type() != BL::Modifier::type_ARRAY) {
-				break;
-			}
-			else {
-				int addModifier = false;
+		if (!mod || mod.type() != BL::Modifier::type_ARRAY) {
+			break;
+		}
 
-				if (arrayMods.empty()) {
-					addModifier = true;
-				}
-				else {
-					const ArrayMod &lastAddedMod = arrayMods[arrayMods.size()-1];
-					if (lastAddedMod.getIndex() - modIdx == 1) {
-						addModifier = true;
-					}
-				}
-
-				if (addModifier) {
-					arrayMods.push_back(ArrayMod(mod, modIdx));
-				}
+		if (mod.show_render()) {
+			if (!reinterpret_cast<ArrayModifierData*>(mod.ptr.data)->dupliTms) {
+				// dupliTms is missing - modifiers are not applied - so we force apply them now
+				ExporterSettings::gSet.b_data.meshes.new_from_object(ExporterSettings::gSet.b_scene, ob, /*apply_modifiers=*/true, /*1=preview,2=render*/2, false, false);
 			}
+
+			if (!reinterpret_cast<ArrayModifierData*>(mod.ptr.data)->dupliTms) {
+				PRINT_ERROR("Failed to apply array mod for \"%s\"", ob.name().c_str());
+				continue;
+			}
+
+			arrayMods.push_back(ArrayMod(mod, modIdx));
 		}
 	}
 

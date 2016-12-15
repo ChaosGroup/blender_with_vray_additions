@@ -723,12 +723,25 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			break;
 		}
 
-		if (mod.show_render()) {
+		const bool doShow = is_viewport() ? mod.show_viewport() : mod.show_render();
+
+		if (doShow) {
 			arrModIndecies.push_back(c);
 			auto arrMod = BL::ArrayModifier(ob.modifiers[c]);
-			arrMod.show_viewport(false);
-			arrMod.show_render(false);
-			const int modSize = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data)->count;
+			auto arrModData = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+
+			if (!arrModData->dupliTms) {
+				// force calculation of meshes
+				const int mode = is_viewport() ? 1 : 2;
+				m_data.meshes.new_from_object(m_scene, ob, /*apply_modifiers=*/true, mode, false, false);
+			}
+
+			if (is_viewport()) {
+				arrMod.show_viewport(false);
+			} else {
+				arrMod.show_render(false);
+			}
+			const int modSize = arrModData->count;
 			totalCount *= modSize;
 			arrModSizes.push_back(modSize);
 		}
@@ -738,8 +751,11 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 
 	for (int c = 0; c < arrModIndecies.size(); ++c) {
 		auto arrMod = ob.modifiers[arrModIndecies[c]];
-		arrMod.show_render(true);
-		arrMod.show_viewport(true);
+		if (is_viewport()) {
+			arrMod.show_viewport(true);
+		} else {
+			arrMod.show_render(true);
+		}
 	}
 
 	std::reverse(arrModIndecies.begin(), arrModIndecies.end());
@@ -772,7 +788,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
 
 			if (!amd->dupliTms) {
-				PRINT_ERROR("ArrayModifier dupliTms is null!");
+				PRINT_ERROR("ArrayModifier dupliTms is null for object \"%s\"", nodeName.c_str());
 				return;
 			}
 
