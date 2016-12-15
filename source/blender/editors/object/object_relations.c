@@ -77,6 +77,7 @@
 #include "BKE_lattice.h"
 #include "BKE_library.h"
 #include "BKE_library_query.h"
+#include "BKE_library_remap.h"
 #include "BKE_main.h"
 #include "BKE_material.h"
 #include "BKE_mball.h"
@@ -1807,7 +1808,7 @@ static void single_object_users(Main *bmain, Scene *scene, View3D *v3d, const in
 
 	/* object and group pointers */
 	for (base = FIRSTBASE; base; base = base->next) {
-		BKE_libblock_relink(&base->object->id);
+		BKE_libblock_relink_to_newid(&base->object->id);
 	}
 
 	set_sca_new_poins();
@@ -2214,6 +2215,36 @@ static bool make_local_all__instance_indirect_unused(Main *bmain, Scene *scene)
 	return changed;
 }
 
+static void IDP_ntree_make_local(IDProperty * prop, Main * bmain)
+{
+	IDProperty * loop;
+
+	if (!prop) {
+		return;
+	}
+
+	const char ntreeName[] = "ntree";
+
+	if (!strncmp(prop->name, ntreeName, sizeof(ntreeName))) {
+		BLI_assert(prop->type == IDP_ID);
+		ID * id = prop->data.pointer;
+		if (id) {
+			id_clear_lib_data_ex(bmain, id, true);
+			BKE_id_expand_local(id);
+			id->tag &= ~LIB_TAG_DOIT;
+		}
+		return;
+	}
+
+	BLI_assert(prop->type == IDP_GROUP);
+	for (loop = prop->data.group.first; loop; loop = loop->next) {
+		if (loop->type == IDP_GROUP || loop->type == IDP_ID) {
+			IDP_ntree_make_local(loop, bmain);
+		}
+	}
+}
+
+
 static int make_local_exec(bContext *C, wmOperator *op)
 {
 	Main *bmain = CTX_data_main(C);
@@ -2248,8 +2279,10 @@ static int make_local_exec(bContext *C, wmOperator *op)
 			continue;
 		}
 
-		if (ob->id.lib)
+		if (ob->id.lib) {
 			id_make_local(bmain, &ob->id, false, false);
+			IDP_ntree_make_local(ob->id.properties, bmain);
+		}
 	}
 	CTX_DATA_END;
 
@@ -2303,6 +2336,7 @@ static int make_local_exec(bContext *C, wmOperator *op)
 
 			if (ob->type == OB_LAMP) {
 				la = ob->data;
+				IDP_ntree_make_local(la->id.properties, bmain);
 
 				for (b = 0; b < MAX_MTEX; b++)
 					if (la->mtex[b] && la->mtex[b]->tex)
@@ -2311,16 +2345,20 @@ static int make_local_exec(bContext *C, wmOperator *op)
 			else {
 				for (a = 0; a < ob->totcol; a++) {
 					ma = ob->mat[a];
-					if (ma)
+					if (ma) {
 						make_local_makelocalmaterial(ma);
+						IDP_ntree_make_local(ma->id.properties, bmain);
+					}
 				}
 
 				matarar = (Material ***)give_matarar(ob);
 				if (matarar) {
 					for (a = 0; a < ob->totcol; a++) {
 						ma = (*matarar)[a];
-						if (ma)
+						if (ma) {
 							make_local_makelocalmaterial(ma);
+							IDP_ntree_make_local(ma->id.properties, bmain);
+						}
 					}
 				}
 			}
