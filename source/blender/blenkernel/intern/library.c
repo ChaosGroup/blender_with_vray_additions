@@ -353,6 +353,37 @@ void BKE_id_make_local_generic(Main *bmain, ID *id, const bool id_in_mainlist, c
 	}
 }
 
+static void IDP_make_local(IDProperty * prop, Main * bmain)
+{
+	IDProperty * loop, *idp_loop;
+	ID * idp;
+	int i;
+
+	if (!prop) {
+		return;
+	}
+
+	for (loop = prop->data.group.first; loop; loop = loop->next) {
+		switch (loop->type) {
+		case IDP_ID: /* DatablockProperty */
+			idp = IDP_Id(loop);
+			id_clear_lib_data_ex(bmain, idp, true);
+			BKE_id_expand_local(idp);
+			idp->tag &= ~LIB_TAG_DOIT;
+			break;
+		case IDP_IDPARRAY: /* CollectionProperty */
+			idp_loop = IDP_Array(loop);
+			for (i = 0; i < loop->totallen; i++) {
+				IDP_make_local(&(idp_loop[i]), bmain);
+			}
+			break;
+		case IDP_GROUP: /* PointerProperty */
+			IDP_make_local(loop, bmain);
+			break;
+		}
+	}
+}
+
 /**
  * Calls the appropriate make_local method for the block, unless test is set.
  *
@@ -367,6 +398,19 @@ bool id_make_local(Main *bmain, ID *id, const bool test, const bool lib_local)
 	/* We don't care whether ID is directly or indirectly linked in case we are making a whole lib local... */
 	if (!lib_local && (id->tag & LIB_TAG_INDIRECT)) {
 		return false;
+	}
+
+	if (!test) {
+		const ID_Type type = GS(id->name);
+		if (type == ID_OB || type == ID_MA) {
+			IDP_make_local(id->properties, bmain);
+			if (type == ID_OB) {
+				Object * ob = id;
+				if (ob->type == OB_LAMP) {
+					IDP_make_local(((ID*)ob->data)->properties, bmain);
+				}
+			}
+		}
 	}
 
 	switch ((ID_Type)GS(id->name)) {
