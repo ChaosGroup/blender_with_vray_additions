@@ -25,7 +25,6 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
 #include "vfb_node_exporter.h"
-#include "vrscene_exporter/instancer/vfb_instancer.h" // for VRayForBlender::getParticleID
 
 #include "DNA_ID.h"
 #include "DNA_object_types.h"
@@ -55,6 +54,30 @@ using namespace VRayForBlender;
 
 static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
+
+namespace {
+MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)
+{
+	MHash particleID = dupliIndex ^
+	                   dupliObject.index() ^
+	                   reinterpret_cast<intptr_t>(dupliObject.object().ptr.data) ^
+	                   reinterpret_cast<intptr_t>(dupliGenerator.ptr.data);
+
+	for (int i = 0; i < 16; ++i) {
+		particleID ^= dupliObject.persistent_id()[i];
+	}
+
+	return particleID;
+}
+
+MHash getParticleID(BL::Object arrayGenerator, int arrayIndex)
+{
+	const MHash particleID = arrayIndex ^
+	                         reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
+
+	return particleID;
+}
+}
 
 
 SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region)
