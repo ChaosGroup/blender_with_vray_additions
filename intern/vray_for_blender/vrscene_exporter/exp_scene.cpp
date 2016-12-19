@@ -160,7 +160,10 @@ static int ob_is_in_parents_dupli(BL::Object ob)
 {
 	BL::Object parent(ob.parent());
 	while (parent) {
-		if (ob_has_dupli(parent)) {
+		if ((parent.dupli_type() != BL::Object::dupli_type_NONE) &&
+		    (parent.dupli_type() != BL::Object::dupli_type_GROUP) &&
+		    (parent.dupli_type() != BL::Object::dupli_type_FRAMES))
+		{
 			return true;
 		}
 		parent = parent.parent();
