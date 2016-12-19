@@ -55,6 +55,30 @@ using namespace VRayForBlender;
 static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
 
+namespace {
+MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)
+{
+	MHash particleID = dupliIndex ^
+	                   dupliObject.index() ^
+	                   reinterpret_cast<intptr_t>(dupliObject.object().ptr.data) ^
+	                   reinterpret_cast<intptr_t>(dupliGenerator.ptr.data);
+
+	for (int i = 0; i < 16; ++i) {
+		particleID ^= dupliObject.persistent_id()[i];
+	}
+
+	return particleID;
+}
+
+MHash getParticleID(BL::Object arrayGenerator, int arrayIndex)
+{
+	const MHash particleID = arrayIndex ^
+	                         reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
+
+	return particleID;
+}
+}
+
 
 SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region)
     : m_context(context)
@@ -559,6 +583,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
 		return;
 	}
+	MHash maxParticleId = 0;
 
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
@@ -582,6 +607,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 					dupli_use_instancer = false;
 					break;
 				} else {
+					maxParticleId = std::max(maxParticleId, getParticleID(ob, dupliOb, num_instances));
 					num_instances++;
 				}
 			}
@@ -618,7 +644,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		}
 
 		MHash persistendID;
-		MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
+		persistendID = maxParticleId - getParticleID(ob, dupliOb, dupli_instance);
 
 		ObjectOverridesAttrs overrideAttrs;
 		overrideAttrs.override = true;
@@ -769,12 +795,10 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	instances.frameNumber = m_scene.frame_current();
 	instances.data.resize(totalCount);
 
-	std::default_random_engine randomEng((int)(intptr_t)ob.ptr.data);
-	std::uniform_int_distribution<int> dist(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
-
 	float m4Identity[4][4];
 	unit_m4(m4Identity);
 
+	MHash maxInstanceId = 0;
 	for (int c = 0; c < totalCount; ++c) {
 		auto tmIndecies = unravel_index(c, arrModSizes);
 		BLI_assert(tmIndecies.size() == arrModIndecies.size());
@@ -801,11 +825,18 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 
 		mul_m4_m4m4(dupliLocalTm, dupliLocalTm, objectInvertedTm);
 
+		MHash instanceId = getParticleID(ob, c);
+		maxInstanceId = std::max(maxInstanceId, instanceId);
+
 		AttrInstancer::Item &instancer_item = (*instances.data)[c];
-		instancer_item.index = dist(randomEng);
+		instancer_item.index = instanceId;
 		instancer_item.node = nodeName;
 		instancer_item.tm = AttrTransformFromBlTransform(dupliLocalTm);
 		memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+	}
+
+	for (int c = 0; c < totalCount; ++c) {
+		(*instances.data)[c].index = maxInstanceId - (*instances.data)[c].index;
 	}
 
 	m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
