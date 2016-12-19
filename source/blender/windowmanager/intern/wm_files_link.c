@@ -67,6 +67,9 @@
 #include "BKE_report.h"
 #include "BKE_scene.h"
 
+#include "BKE_idprop.h"
+#include "DNA_object_types.h"
+
 #include "BKE_idcode.h"
 
 
@@ -273,6 +276,24 @@ static void wm_link_do(
 
 		BLO_library_link_end(mainl, &bh, flag, scene, v3d);
 		BLO_blendhandle_close(bh);
+
+		for (itemlink = lapp_data->items.list; itemlink; itemlink = itemlink->next) {
+			ID * id = ((WMLinkAppendDataItem*)itemlink->link)->new_id;
+
+			if (id) {
+				/* ID properties of new_id could be themselves ID and must be marked as extern,
+				 * so they can be saved correctly. */
+
+				const ID_Type type = GS(id->name);
+				IDP_ID_Tag(id->properties, LIB_TAG_EXTERN, true);
+				if (type == ID_OB) {
+					Object * ob = id;
+					if (ob->type == OB_LAMP) {
+						IDP_ID_Tag(((ID*)ob->data)->properties, LIB_TAG_EXTERN, true);
+					}
+				}
+			}
+		}
 	}
 }
 
