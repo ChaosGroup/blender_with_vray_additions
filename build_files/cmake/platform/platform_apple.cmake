@@ -203,6 +203,10 @@ else()
 	list(APPEND PLATFORM_LINKLIBS stdc++)
 endif()
 
+if(USE_BLENDER_VRAY_ZMQ)
+	list(APPEND PLATFORM_LINKLIBS rt)
+endif()
+
 if(WITH_JACK)
 	set(PLATFORM_LINKFLAGS "${PLATFORM_LINKFLAGS} -F/Library/Frameworks -weak_framework jackmp")
 endif()
