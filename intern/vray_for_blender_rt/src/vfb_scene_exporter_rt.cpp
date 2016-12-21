@@ -30,11 +30,7 @@
 void InteractiveExporter::create_exporter()
 {
 	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
-#if defined(USE_BLENDER_VRAY_APPSDK)
-		m_settings.exporter_type = ExpoterType::ExpoterTypeAppSDK;
-#else
 		m_settings.exporter_type = ExpoterType::ExpoterTypeZMQ;
-#endif
 	}
 
 	SceneExporter::create_exporter();
