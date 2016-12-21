@@ -303,39 +303,35 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			mtl = getDefaultMaterial();
 		}
 
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
+		if (!isMeshLight && geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
+			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+			PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
 
-		if (RNA_boolean_get(&mtlRenderStats, "use")) {
-			PluginDesc genericWrapper("MtlRenderStats@" + exportName, "MtlRenderStats");
-			genericWrapper.add("base_mtl", mtl);
-
-			const char * attrsNames[] = {"visibility", "camera_visibility", "gi_visibility", "shadows_visibility", "reflections_visibility", "refractions_visibility"};
-			for (const auto name : attrsNames) {
-				genericWrapper.add(name, RNA_boolean_get(&mtlRenderStats, name));
-			}
-
-			mtl = m_exporter->export_plugin(genericWrapper);
-		}
-
-		if (geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
-			// No need to export Node if the object is LightMesh
-			if (!isMeshLight) {
-				PluginDesc nodeDesc(exportName, "Node");
-				nodeDesc.add("geometry", geom);
-				nodeDesc.add("material", mtl);
-				nodeDesc.add("objectID", ob.pass_index());
-				if (override) {
-					nodeDesc.add("visible", override.visible);
-					nodeDesc.add("transform", override.tm);
-				}
-				else {
-					nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-					nodeDesc.add("visible", isObjectVisible(ob));
+			if (RNA_boolean_get(&mtlRenderStats, "use")) {
+				PluginDesc genericWrapper("MtlRenderStats@" + exportName, "MtlRenderStats");
+				genericWrapper.add("base_mtl", mtl);
+				const char * attrsNames[] = {"visibility", "camera_visibility", "gi_visibility", "shadows_visibility", "reflections_visibility", "refractions_visibility"};
+				for (const auto name : attrsNames) {
+					genericWrapper.add(name, RNA_boolean_get(&mtlRenderStats, name));
 				}
 
-				node = m_exporter->export_plugin(nodeDesc);
+				mtl = m_exporter->export_plugin(genericWrapper);
 			}
+
+			PluginDesc nodeDesc(exportName, "Node");
+			nodeDesc.add("geometry", geom);
+			nodeDesc.add("material", mtl);
+			nodeDesc.add("objectID", ob.pass_index());
+			if (override) {
+				nodeDesc.add("visible", override.visible);
+				nodeDesc.add("transform", override.tm);
+			}
+			else {
+				nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+				nodeDesc.add("visible", isObjectVisible(ob));
+			}
+
+			node = m_exporter->export_plugin(nodeDesc);
 		}
 	}
 
