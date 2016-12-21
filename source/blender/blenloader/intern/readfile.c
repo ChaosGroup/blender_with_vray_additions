@@ -2199,13 +2199,17 @@ static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd, Main *main)
 
 				if (!ntree_exists) {
 					newaddr = NULL;
-					printf("Error while loading ntree. Wrong data found in file!\n");
+					if (G.debug) {
+						printf("Error while loading ntree. Wrong data found in file!\n");
+					}
 				}
 				ntree_exists = false;
 			}
 
 			if (IDP_Id(loop) && !newaddr) {
-				printf("Error while loading \"%s\". Data not found in file!\n", loop->name);
+				if (G.debug) {
+					printf("Error while loading \"%s\". Data not found in file!\n", loop->name);
+				}
 			}
 
 			loop->data.pointer = newaddr;
