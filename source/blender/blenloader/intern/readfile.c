@@ -2141,6 +2141,37 @@ static void _IDP_DirectLinkGroup_OrFree(IDProperty **prop, int switch_endian, Fi
 extern void IDP_ID_Register(IDProperty *prop);
 extern void IDP_ID_Unregister(IDProperty *prop);
 
+
+void IDP_ID_Tag(IDProperty * prop, short tag, bool set)
+{
+	IDProperty *loop, *idp_array;
+	int i;
+
+	if (!prop) return;
+	BLI_assert(prop->type == IDP_GROUP);
+
+	for (loop = prop->data.group.first; loop; loop = loop->next) {
+		switch (loop->type) {
+		case IDP_ID: /* DatablockProperty */
+			if (set) {
+				IDP_Id(loop)->tag |= tag;
+			} else {
+				IDP_Id(loop)->tag &= ~tag;
+			}
+			break;
+		case IDP_IDPARRAY: /* CollectionProperty */
+			idp_array = IDP_Array(loop);
+			for (i = 0; i < loop->totallen; i++) {
+				IDP_ID_Tag(&(idp_array[i]), tag, set);
+			}
+			break;
+		case IDP_GROUP: /* PointerProperty */
+			IDP_ID_Tag(loop, tag, set);
+			break;
+		}
+	}
+}
+
 static void IDP_LibLinkProperty(IDProperty *prop, FileData *fd, Main *main)
 {
 	IDProperty *loop;

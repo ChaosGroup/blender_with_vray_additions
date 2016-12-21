@@ -131,6 +131,8 @@ void IDP_UnlinkProperty(struct IDProperty *prop);
 
 void IDP_RelinkProperty(struct IDProperty *prop);
 
+void IDP_ID_Tag(IDProperty * prop, short tag, bool set);
+
 #define IDP_Int(prop)                     ((prop)->data.val)
 #define IDP_Array(prop)                   ((prop)->data.pointer)
 /* C11 const correctness for casts */
