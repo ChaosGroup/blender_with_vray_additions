@@ -1400,7 +1400,9 @@ void VRsceneExporter::exportLamp(BL::Object ob, const NodeAttrs &attrs)
 		transform = GetTransformHex(attrs.tm);
 	}
 
-	pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
+	if (!ELEM(pluginID, "LightAmbientMax")) {
+		pluginAttrs["transform"] = BOOST_FORMAT_TM(transform);
+	}
 
 	VRayNodePluginExporter::exportPlugin("LIGHT", pluginID, pluginName, pluginAttrs);
 }
