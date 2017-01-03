@@ -587,8 +587,14 @@ static void ui_item_enum_expand(
 
 	for (item = item_array; item->identifier; item++) {
 		if (!item->identifier[0]) {
-			if (radial)
+			if (radial) {
+				// TODO: maybe remove this if blender fix it?
+				if (!layout_radial) {
+					layout_radial = uiLayoutRadial(layout);
+					UI_block_layout_set_current(block, layout_radial);
+				}
 				uiItemS(layout_radial);
+			}
 			continue;
 		}
 
