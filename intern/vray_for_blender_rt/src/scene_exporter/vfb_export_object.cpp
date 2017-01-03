@@ -307,8 +307,6 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 			PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
 
-
-
 			if (RNA_boolean_get(&mtlRenderStats, "use")) {
 				PluginDesc genericWrapper("MtlRenderStats@" + exportName, "MtlRenderStats");
 				setAttrsFromPropGroupAuto(genericWrapper, &mtlRenderStats, "MtlRenderStats");
