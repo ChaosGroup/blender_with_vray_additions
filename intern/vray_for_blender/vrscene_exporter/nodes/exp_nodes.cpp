@@ -33,12 +33,12 @@ StrSet           VRayNodePluginExporter::m_namesCache;
 StrSet           VRayNodeExporter::RenderChannelNames;
 
 
-static boost::format FmtSwitch("Input %i");
+boost::format FmtSwitch("Input %i");
 
 
 static std::string GetUniqueChannelName(const std::string &baseName)
 {
-	static boost::format chanNameFormat("%s.%03i");
+	boost::format chanNameFormat("%s.%03i");
 
 	std::string uniqueName = baseName;
 
@@ -58,7 +58,7 @@ static std::string GetUniqueChannelName(const std::string &baseName)
 
 std::string VRayNodeExporter::getPluginName(BL::Node node, BL::NodeTree ntree, VRayNodeContext &context)
 {
-	static boost::format nodeNameFmt("%s|N%s");
+	boost::format nodeNameFmt("%s|N%s");
 	std::string pluginName = boost::str(nodeNameFmt % GetIDName(ntree) % node.name());
 
 	for (VRayNodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
@@ -737,7 +737,7 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 						if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
 							const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
 							if (mult != 1.0f) {
-								static boost::format multFmt("NT%sN%sS%sMult");
+								boost::format multFmt("NT%sN%sS%sMult");
 
 								std::string multPluginName = boost::str(multFmt
 								                                        % ntree.name()

@@ -4,6 +4,7 @@
 #include "utils/cgr_hash.h"
 
 using namespace VRayForBlender;
+using namespace std;
 
 namespace {
 
@@ -117,26 +118,31 @@ std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
 
 bool PluginManager::inCache(const std::string &name) const
 {
+	lock_guard<mutex> l(cacheLock);
 	return cache.find(name) != cache.end();
 }
 
 bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 {
+	lock_guard<mutex> l(cacheLock);
 	return cache.find(getKey(pluginDesc)) != cache.end();
 }
 
 void PluginManager::remove(const std::string &pluginName)
 {
+	lock_guard<mutex> l(cacheLock);
 	cache.erase(pluginName);
 }
 
 void PluginManager::remove(const PluginDesc &pluginDesc)
 {
+	lock_guard<mutex> l(cacheLock);
 	cache.erase(getKey(pluginDesc));
 }
 
 std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const 
 {
+	lock_guard<mutex> l(cacheLock);
 	const auto key = getKey(pluginDesc);
 	auto cacheEntry = cache.find(key);
 
@@ -188,12 +194,15 @@ PluginDesc PluginManager::differences(const PluginDesc &pluginDesc) const
 	return diffWithCache(pluginDesc, true).second;
 }
 
-const PluginDesc & PluginManager::operator[](const PluginDesc &search) const {
+const PluginDesc & PluginManager::operator[](const PluginDesc &search) const
+{
+	lock_guard<mutex> l(cacheLock);
 	return cache.find(getKey(search))->second;
 }
 
 PluginDesc PluginManager::fromCache(const PluginDesc &search) const
 {
+	lock_guard<mutex> l(cacheLock);
 	auto iter = cache.find(getKey(search));
 	if (iter != cache.cend()) {
 		return iter->second;
@@ -203,6 +212,7 @@ PluginDesc PluginManager::fromCache(const PluginDesc &search) const
 
 void PluginManager::updateCache(const PluginDesc &update)
 {
+	lock_guard<mutex> l(cacheLock);
 	const auto key = getKey(update);
 	auto iter = cache.find(key);
 
@@ -214,6 +224,8 @@ void PluginManager::updateCache(const PluginDesc &update)
 	}
 }
 
-void PluginManager::clear() {
+void PluginManager::clear()
+{
+	lock_guard<mutex> l(cacheLock);
 	cache.clear();
 }

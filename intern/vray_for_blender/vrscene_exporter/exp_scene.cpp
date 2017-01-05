@@ -580,7 +580,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 						if (ob_is_light(duplicatedObject) ||
 							ob_is_mesh_light(duplicatedObject))
 						{
-							static boost::format dupliLightFtm("DupliLight|%u|%s");
+							boost::format dupliLightFtm("DupliLight|%u|%s");
 
 							NodeAttrs attrs;
 							attrs.override = true;
@@ -621,7 +621,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 							}
 							else {
 								// Need to construct unique name for a new plugin.
-								static boost::format dupliLightFtm("DupliItem|%u|%s");
+								boost::format dupliLightFtm("DupliItem|%u|%s");
 								attrs.namePrefix = boost::str(dupliLightFtm % particleID % GetIDName(duplicatedObject));
 								attrs.tm = dupliObject.matrix();
 
@@ -888,7 +888,7 @@ void VRsceneExporter::exportObjectOrArray(BL::Object ob)
 			// Export new one.
 			else if (ob_is_VRayScene(ob)) {
 				// Need to construct unique name for a new plugin.
-				static boost::format dupliArrayFtm("DupliVRayScene|%u|%s");
+				boost::format dupliArrayFtm("DupliVRayScene|%u|%s");
 
 				// For Node.
 				NodeAttrs attrs;

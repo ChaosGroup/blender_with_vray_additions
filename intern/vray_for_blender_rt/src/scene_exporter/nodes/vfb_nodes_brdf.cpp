@@ -29,9 +29,9 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node 
 	AttrListPlugin brdfs;
 	AttrListPlugin weights;
 
-	static boost::format sockBrdfFormat("BRDF %i");
-	static boost::format sockWeigthFormat("Weight %i");
-	static boost::format weighTexFormat(pluginName + "W%i");
+	boost::format sockBrdfFormat("BRDF %i");
+	boost::format sockWeigthFormat("Weight %i");
+	boost::format weighTexFormat(pluginName + "W%i");
 
 	for (int i = 1; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
 		const std::string &brdfSockName = boost::str(sockBrdfFormat % i);

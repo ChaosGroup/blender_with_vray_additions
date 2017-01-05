@@ -22,6 +22,8 @@
 #include <vfb_plugin_attrs.h>
 #include <boost/unordered_map.hpp>
 
+#include <mutex>
+
 namespace VRayForBlender {
 
 class PluginManager {
@@ -50,6 +52,7 @@ private:
 
 	// name -> PluginDesc
 	boost::unordered_map<std::string, PluginDesc> cache;
+	mutable std::mutex cacheLock;
 };
 
 } // namespace VRayForBlender

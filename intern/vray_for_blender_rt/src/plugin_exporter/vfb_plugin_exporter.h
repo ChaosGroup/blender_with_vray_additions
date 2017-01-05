@@ -34,6 +34,8 @@
 
 #include "base_types.h"
 
+#include <mutex>
+
 #include <boost/function.hpp>
 #include <boost/unordered_map.hpp>
 
@@ -137,6 +139,7 @@ protected:
 	CommitState          commit_state;
 
 	PluginManager        m_pluginManager;
+	std::mutex           m_exportMtx;
 
 };
 

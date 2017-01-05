@@ -24,14 +24,14 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-static boost::format FormatFloat("%.6g");
-static boost::format FormatString("\"%s\"");
-static boost::format FormatTmHex("TransformHex(\"%s\")");
-static boost::format FormatInt("%i");
-static boost::format FormatUInt("%u");
-static boost::format FormatColor("Color(%.6g,%.6g,%.6g)");
-static boost::format FormatAColor("AColor(%.6g,%.6g,%.6g,%.6g)");
-static boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");
+boost::format FormatFloat("%.6g");
+boost::format FormatString("\"%s\"");
+boost::format FormatTmHex("TransformHex(\"%s\")");
+boost::format FormatInt("%i");
+boost::format FormatUInt("%u");
+boost::format FormatColor("Color(%.6g,%.6g,%.6g)");
+boost::format FormatAColor("AColor(%.6g,%.6g,%.6g,%.6g)");
+boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");
 
 #define BOOST_FORMAT_STRING(s)  boost::str(FormatFloat  % s)
 #define BOOST_FORMAT_FLOAT(f)   boost::str(FormatString % f)
@@ -92,7 +92,7 @@ void IdTrack::reset_usage() {
 
 
 std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context) {
-	static boost::format nodeNameFmt("%s|N%s");
+	boost::format nodeNameFmt("%s|N%s");
 	std::string pluginName = boost::str(nodeNameFmt % getIdUniqueName(ntree) % node.name());
 
 	for (NodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
@@ -177,6 +177,7 @@ bool ob_has_hair(BL::Object ob)
 
 void DataExporter::sync()
 {
+	auto lock = raiiLock();
 	for (auto dIt = m_id_track.data.begin(); dIt != m_id_track.data.end(); ++dIt) {
 		auto ob = dIt->second.object;
 		auto &dep = dIt->second;
@@ -287,6 +288,7 @@ void DataExporter::init_defaults()
 
 void DataExporter::resetSyncState()
 {
+	auto l = raiiLock();
 	m_id_cache.clear();
 	m_id_track.reset_usage();
 	clearMaterialCache();
@@ -710,15 +712,14 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 
 std::string DataExporter::getNodeName(BL::Object ob)
 {
-	// TODO: check if ob is from library and append it's name
-	static boost::format obNameFormat("Node@%s");
+	boost::format obNameFormat("Node@%s");
 	return boost::str(obNameFormat % getIdUniqueName(ob));
 }
 
 
 std::string DataExporter::getMeshName(BL::Object ob)
 {
-	static boost::format meshNameFormat("Geom@%s");
+	boost::format meshNameFormat("Geom@%s");
 
 	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
 	                 ? ob
@@ -730,7 +731,7 @@ std::string DataExporter::getMeshName(BL::Object ob)
 
 std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset)
 {
-	static boost::format hairNameFormat("Hair@%s|%s|%s");
+	boost::format hairNameFormat("Hair@%s|%s|%s");
 
 	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
 	                ? ob
@@ -742,7 +743,7 @@ std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL
 
 std::string DataExporter::getLightName(BL::Object ob)
 {
-	static boost::format lampNameFormat("Lamp@%s");
+	boost::format lampNameFormat("Lamp@%s");
 	return boost::str(lampNameFormat % getIdUniqueName(ob));
 }
 
@@ -791,6 +792,7 @@ void DataExporter::tag_ntree(BL::NodeTree ntree, bool updated)
 
 bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 {
+	auto lock = raiiLock();
 	// we are no undo-ing
 	if (!m_is_undo_sync) {
 		return false;
@@ -808,22 +810,27 @@ bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 
 bool DataExporter::isObjectInThisSync(BL::Object ob)
 {
+	auto lock = raiiLock();
 	return m_undo_stack.front().find(getIdUniqueName(ob)) != m_undo_stack.front().end();
 }
 
 void DataExporter::saveSyncedObject(BL::Object ob)
 {
+	auto lock = raiiLock();
 	const auto key = getIdUniqueName(ob);
 	m_undo_stack.front().insert(key);
 }
 
 void DataExporter::syncStart(bool isUndoSync)
 {
+	auto lock = raiiLock();
 	m_is_undo_sync = isUndoSync;
 	m_undo_stack.push_front(UndoStateObjects());
 }
 
-void DataExporter::syncEnd() {
+void DataExporter::syncEnd()
+{
+	auto lock = raiiLock();
 	if (m_is_undo_sync) {
 		if (m_undo_stack.size() < 2) {
 			BLI_assert(!"Trying to do undo/redo but stach did not have enought states");

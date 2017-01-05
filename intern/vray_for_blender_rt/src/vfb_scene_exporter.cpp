@@ -48,6 +48,7 @@ extern "C" {
 #include <random>
 #include <limits>
 #include <mutex>
+#include <atomic>
 
 using namespace VRayForBlender;
 
@@ -194,6 +195,7 @@ void SceneExporter::init() {
 	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
 	setup_callbacks();
+	m_threadManager = ThreadManager::make(4);
 }
 
 void SceneExporter::init_data()
@@ -214,6 +216,7 @@ void SceneExporter::create_exporter()
 
 void SceneExporter::free()
 {
+	m_threadManager->stop();
 	PluginDesc::cache.clear();
 	ExporterDelete(m_exporter);
 }
@@ -435,8 +438,10 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	const std::string &obName = ob.name();
 	bool add = false;
 	if (override) {
+		auto lock = m_data_exporter.raiiLock();
 		add = !m_data_exporter.m_id_cache.contains(override.id) && (!override.useInstancer || !m_data_exporter.m_id_cache.contains(ob));
 	} else {
+		auto lock = m_data_exporter.raiiLock();
 		add = !m_data_exporter.m_id_cache.contains(ob);
 	}
 	// this object's ID is already synced - skip
@@ -472,6 +477,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 		if (m_exporter->getPluginManager().inCache(exportName)) {
 			// lamps and clippers should be removed, others should be hidden
+			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(ob);
 			if (remove) {
 				m_exporter->remove_plugin(exportName);
@@ -502,9 +508,11 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		m_data_exporter.saveSyncedObject(ob);
 
 		if (overrideAttr) {
+			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(overrideAttr.id);
 			m_data_exporter.m_id_cache.insert(ob);
 		} else {
+			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(ob);
 		}
 
@@ -656,7 +664,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			if (!is_light && !hide_from_parent) {
 				overrideAttrs.visible = is_visible;
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+				{
+					auto lock = m_data_exporter.raiiLock();
+					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+				}
 				sync_object(dupOb, check_updated, overrideAttrs);
 			}
 			overrideAttrs.visible = true;
@@ -672,6 +683,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 			if (!is_light) {
 				// mark the duplication so we can remove in rt
+				auto lock = m_data_exporter.raiiLock();
 				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
 			}
 			sync_object(dupOb, check_updated, overrideAttrs);
@@ -695,8 +707,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 
 			dupli_instance++;
-
-			m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+			{
+				auto lock = m_data_exporter.raiiLock();
+				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+			}
 			sync_object(dupOb, check_updated, overrideAttrs);
 
 		}
@@ -759,6 +773,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			if (!arrModData->dupliTms) {
 				// force calculation of meshes
 				const int mode = is_viewport() ? 1 : 2;
+				WRITE_LOCK_BLENDER_RAII;
 				m_data.meshes.new_from_object(m_scene, ob, /*apply_modifiers=*/true, mode, false, false);
 			}
 
@@ -846,15 +861,21 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 void SceneExporter::sync_objects(const int &check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
+	std::atomic<int> remaining;
+
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+		++remaining;
 		if (is_interrupted()) {
 			break;
 		}
 
 		BL::Object ob(*obIt);
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
-		m_data_exporter.m_id_track.insert(ob, nodeName);
+		{
+			auto lock = m_data_exporter.raiiLock();
+			m_data_exporter.m_id_track.insert(ob, nodeName);
+		}
 		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 
@@ -878,32 +899,66 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		}
 
 		if (ob.is_duplicator()) {
-			if (is_updated) {
-				sync_dupli(ob, check_updated);
-			}
+			m_threadManager->addTask([this, is_updated, check_updated, ob, visible, &remaining](int, const volatile bool &) mutable {
+				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
+				try {
+					if (is_updated) {
+						sync_dupli(ob, check_updated);
+					}
+					if (is_interrupted()) {
+						return;
+					}
 
-			if (is_interrupted()) {
-				break;
-			}
+					// As in old exporter - dont sync base if its light dupli
+					if (!Blender::IsLight(ob)) {
+						ObjectOverridesAttrs overAttrs;
 
-			// As in old exporter - dont sync base if its light dupli
-			if (!Blender::IsLight(ob)) {
-				ObjectOverridesAttrs overAttrs;
+						overAttrs.override = true;
+						overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+						overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+						overAttrs.visible = visible;
 
-				overAttrs.override = true;
-				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overAttrs.visible = visible;
+						sync_object(ob, check_updated, overAttrs);
+					}
+				} catch (std::exception & e) {
+					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
+				}
 
-				sync_object(ob, check_updated, overAttrs);
-			}
+				PRINT_INFO_EX("-Exit ob [%s] ...", ob.name().c_str());
+				--remaining;
+			}, ThreadManager::Priority::LOW);
 		}
 		else if (has_array_mod) {
-			sync_array_mod(ob, check_updated);
+			m_threadManager->addTask([this, ob, check_updated, &remaining](int, const volatile bool &) mutable {
+				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
+				try {
+					sync_array_mod(ob, check_updated);
+				} catch (std::exception & e) {
+					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
+				}
+				PRINT_INFO_EX("-Exit ob [%s] ...", ob.name().c_str());
+				--remaining;
+			}, ThreadManager::Priority::LOW);
 		}
 		else {
-			sync_object(ob, check_updated);
+			m_threadManager->addTask([this, ob, check_updated, &remaining](int, const volatile bool &) mutable {
+				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
+				try {
+					sync_object(ob, check_updated);
+				} catch (std::exception & e) {
+					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
+				}
+				PRINT_INFO_EX("-Exit ob [%s] ...", ob.name().c_str());
+				--remaining;
+			}, ThreadManager::Priority::LOW);
 		}
+	}
+
+	PRINT_INFO_EX("LAUNCHED ALL TASKS - Waiting for finish");
+
+	while (remaining > 0) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		PRINT_INFO_EX("Waiting for [%d] ....", remaining.load());
 	}
 }
 

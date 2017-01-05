@@ -307,6 +307,7 @@ private:
 int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, VRayForBlender::Mesh::ExportOptions options, PluginDesc &pluginDesc)
 {
 	int err = 0;
+	WRITE_LOCK_BLENDER_RAII;
 
 	BL::Mesh mesh = data.meshes.new_from_object(scene, ob, true, options.mode, false, false);
 	if (!mesh) {

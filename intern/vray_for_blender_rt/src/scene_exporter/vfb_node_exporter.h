@@ -31,6 +31,7 @@
 #include <stack>
 #include <vector>
 #include <deque>
+#include <mutex>
 
 using namespace VRayForBlender;
 
@@ -418,6 +419,11 @@ private:
 	AttrValue         exportBlenderNodeNormal(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
 public:
+	std::unique_lock<std::mutex> raiiLock() {
+		return std::move(std::unique_lock<std::mutex>(m_maps_lock));
+	}
+
+	std::mutex        m_maps_lock;
 	StrSet            RenderChannelNames;
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
