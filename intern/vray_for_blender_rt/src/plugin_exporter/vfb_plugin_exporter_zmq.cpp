@@ -19,6 +19,7 @@
 
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
+#include "vfb_params_json.h"
 #include "jpeglib.h"
 
 #include "BLI_utildefines.h"
@@ -538,6 +539,34 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	const bool checkAnimation = animation_settings.use && !is_viewport;
 	const std::string & name = pluginDesc.pluginName;
 	AttrPlugin plugin(name);
+
+	const auto pluginType = GetPluginDescription(pluginDesc.pluginID).pluginType;
+	if (pluginType == ParamDesc::PluginType::PluginChannel) {
+		static const std::pair<std::string, RenderChannelType> channelMap[] = {
+			{"RenderChannelBumpNormals", RenderChannelType::RenderChannelTypeVfbBumpnormal},
+			{"RenderChannelColor", RenderChannelType::RenderChannelTypeVfbColor},
+			{"RenderChannelDenoiser", RenderChannelType::RenderChannelTypeVfbDenoised},
+			{"RenderChannelDRBucket", RenderChannelType::RenderChannelTypeDrbucket},
+			{"RenderChannelNodeID", RenderChannelType::RenderChannelTypeVfbNodeid},
+			{"RenderChannelNormals", RenderChannelType::RenderChannelTypeVfbNormal},
+			{"RenderChannelRenderID", RenderChannelType::RenderChannelTypeVfbRenderID},
+			{"RenderChannelVelocity", RenderChannelType::RenderChannelTypeVfbVelocity},
+			{"RenderChannelZDepth", RenderChannelType::RenderChannelTypeVfbZdepth},
+			// {"RenderChannelColorModo", }
+			// {"RenderChannelCoverage", }
+			// {"RenderChannelExtraTex", }
+			// {"RenderChannelGlossiness", }
+			// {"RenderChannelLightSelect", }
+			// {"RenderChannelMultiMatte", }
+			// {"RenderChannelObjectSelect", }
+		};
+
+		for (int c = 0; c < sizeof(channelMap) / sizeof(channelMap[0]); ++c) {
+			if (pluginDesc.pluginID == channelMap[c].first) {
+				m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(channelMap[c].second)));
+			}
+		}
+	}
 
 	m_Client->send(VRayMessage::msgPluginCreate(name, pluginDesc.pluginID));
 
