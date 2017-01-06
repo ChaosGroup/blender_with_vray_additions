@@ -195,7 +195,6 @@ void SceneExporter::init() {
 	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
 	setup_callbacks();
-	m_threadManager = ThreadManager::make(4);
 }
 
 void SceneExporter::init_data()
@@ -255,6 +254,15 @@ void SceneExporter::sync(const int &check_updated)
 		            check_updated);
 
 	clock_t begin = clock();
+
+	if (!m_threadManager && !check_updated) {
+		// lets init ThreadManager based on object count
+		if (m_scene.objects.length() > 10) {
+			m_threadManager = ThreadManager::make(2);
+		} else {
+			m_threadManager = ThreadManager::make(0);
+		}
+	}
 
 	m_data_exporter.syncStart(m_isUndoSync);
 
@@ -861,11 +869,10 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 void SceneExporter::sync_objects(const int &check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
-	std::atomic<int> remaining;
+	CondWaitGroup wg(m_scene.objects.length());
 
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-		++remaining;
 		if (is_interrupted()) {
 			break;
 		}
@@ -899,7 +906,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		}
 
 		if (ob.is_duplicator()) {
-			m_threadManager->addTask([this, is_updated, check_updated, ob, visible, &remaining](int, const volatile bool &) mutable {
+			m_threadManager->addTask([this, is_updated, check_updated, ob, visible, &wg](int, const volatile bool &) mutable {
 				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
 				try {
 					if (is_updated) {
@@ -924,41 +931,39 @@ void SceneExporter::sync_objects(const int &check_updated) {
 					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
 				}
 
-				PRINT_INFO_EX("-Exit ob [%s] ...", ob.name().c_str());
-				--remaining;
+				PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
+				wg.done();
 			}, ThreadManager::Priority::LOW);
 		}
 		else if (has_array_mod) {
-			m_threadManager->addTask([this, ob, check_updated, &remaining](int, const volatile bool &) mutable {
+			m_threadManager->addTask([this, ob, check_updated, &wg](int, const volatile bool &) mutable {
 				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
 				try {
 					sync_array_mod(ob, check_updated);
 				} catch (std::exception & e) {
 					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
 				}
-				PRINT_INFO_EX("-Exit ob [%s] ...", ob.name().c_str());
-				--remaining;
+				PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
+				wg.done();
 			}, ThreadManager::Priority::LOW);
 		}
 		else {
-			m_threadManager->addTask([this, ob, check_updated, &remaining](int, const volatile bool &) mutable {
+			m_threadManager->addTask([this, ob, check_updated, &wg](int, const volatile bool &) mutable {
 				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
 				try {
 					sync_object(ob, check_updated);
 				} catch (std::exception & e) {
 					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
 				}
-				PRINT_INFO_EX("-Exit ob [%s] ...", ob.name().c_str());
-				--remaining;
+				PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
+				wg.done();
 			}, ThreadManager::Priority::LOW);
 		}
 	}
 
-	PRINT_INFO_EX("LAUNCHED ALL TASKS - Waiting for finish");
-
-	while (remaining > 0) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		PRINT_INFO_EX("Waiting for [%d] ....", remaining.load());
+	if (m_threadManager->workerCount()) {
+		PRINT_INFO_EX("Started export for all object - waiting for all.");
+		wg.wait();
 	}
 }
 
