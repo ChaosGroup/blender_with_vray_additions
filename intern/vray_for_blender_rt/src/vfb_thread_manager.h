@@ -28,8 +28,59 @@
 #include <memory>
 #include <deque>
 #include <vector>
+#include <atomic>
+#include <chrono>
 
 namespace VRayForBlender {
+
+class CondWaitGroup {
+public:
+	CondWaitGroup(uint32_t tasks)
+		: m_remaining(tasks) {}
+
+	CondWaitGroup(const CondWaitGroup &) = delete;
+	CondWaitGroup & operator=(const CondWaitGroup &) = delete;
+
+	void done() {
+		std::lock_guard<std::mutex> lock(m_mtx);
+		if (--m_remaining == 0) {
+			m_condVar.notify_all();
+		}
+	}
+
+	void wait() {
+		std::unique_lock<std::mutex> lock(m_mtx);
+		m_condVar.wait(lock, [this]() { return this->m_remaining == 0; });
+	}
+
+
+private:
+	uint32_t                m_remaining;
+	std::mutex              m_mtx;
+	std::condition_variable m_condVar;
+};
+
+class BusyWaitGroup {
+public:
+	BusyWaitGroup(uint32_t tasks)
+		: m_remaining(tasks) {}
+
+	BusyWaitGroup(const BusyWaitGroup &) = delete;
+	BusyWaitGroup & operator=(const BusyWaitGroup &) = delete;
+
+	void done() {
+		--m_remaining;
+	}
+
+	void wait(int itervalMs = 10) {
+		while (m_remaining > 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(itervalMs));
+		}
+	}
+
+private:
+	std::atomic_uint32_t    m_remaining;
+};
 
 class ThreadManager {
 public:
