@@ -4,103 +4,97 @@
 #include "utils/cgr_hash.h"
 
 using namespace VRayForBlender;
+using namespace std;
 
 namespace {
 
 template <typename T>
-MHash getListHash(const AttrList<T> & val) {
+MHash getValueHash(const AttrList<T> & val, const MHash seed = 42) {
 	MHash id;
-	MurmurHash3_x86_32(val.getData()->data(), val.getBytesCount(), 42, &id);
+	MurmurHash3_x86_32(val.getData()->data(), val.getBytesCount(), seed, &id);
 	return id;
 }
 
-bool compare(const AttrValue & left, const AttrValue & right) {
-	if (left.type == right.type) {
-		switch (left.type) {
-			case ValueTypeInt:
-				return left.valInt == right.valInt;
-			case ValueTypeFloat:
-				return left.valFloat == right.valFloat;
-			case ValueTypeString:
-				return left.valString == right.valString;
-			case ValueTypeColor:
-				return 0 == memcmp(&left.valColor, &right.valColor, sizeof(left.valColor));
-			case ValueTypeAColor:
-				return 0 == memcmp(&left.valAColor, &right.valAColor, sizeof(left.valAColor));
-			case ValueTypeVector:
-				return 0 == memcmp(&left.valVector, &right.valVector, sizeof(left.valVector));
-			case ValueTypePlugin:
-				return left.valPlugin.plugin == right.valPlugin.plugin && left.valPlugin.output == right.valPlugin.output;
-			case ValueTypeTransform:
-				return 0 == memcmp(&left.valTransform, &right.valTransform, sizeof(left.valTransform));
-			case ValueTypeListInt:
-				return getListHash(left.valListInt) == getListHash(right.valListInt);
-			case ValueTypeListFloat:
-				return getListHash(left.valListFloat) == getListHash(right.valListFloat);
-			case ValueTypeListVector:
-				return getListHash(left.valListVector) == getListHash(right.valListVector);
-			case ValueTypeListColor:
-				return getListHash(left.valListColor) == getListHash(right.valListColor);
-			case ValueTypeInstancer:
-				if (left.valInstancer.data.getCount() != right.valInstancer.data.getCount() ||
-				    left.valInstancer.frameNumber != right.valInstancer.frameNumber) {
-					return false;
-				}
-				for (int c = 0; c < left.valInstancer.data.getCount(); c++) {
-					const auto &rd = (*right.valInstancer.data)[c],
-					        &ld = (*left.valInstancer.data)[c];
+template <typename T>
+MHash getValueHash(const T & val, const MHash seed = 42) {
+	MHash id;
+	MurmurHash3_x86_32(&val, sizeof(val), seed, &id);
+	return id;
+}
 
-					if (memcmp(&ld.tm, &rd.tm, sizeof(ld.tm)) != 0 ||
-					    memcmp(&ld.vel, &rd.vel, sizeof(ld.vel)) != 0 ||
-					    ld.index != rd.index ||
-					    ld.node != rd.node)
-					{
-						return false;
-					}
-				}
-				return true;
-			case ValueTypeListPlugin:
-				if (left.valListPlugin.getCount() != right.valListPlugin.getCount()) {
-					return false;
-				}
-				for (int c = 0; c < left.valListPlugin.getCount(); ++c) {
-					const auto & lPlugin = left.valListPlugin.getData()->at(c),
-					        &rPlugin = right.valListPlugin.getData()->at(c);
-					if (lPlugin.plugin != rPlugin.plugin || lPlugin.output != rPlugin.output) {
-						return false;
-					}
-				}
-				return true;
-			case ValueTypeListString:
-				if (left.valListString.getCount() != right.valListString.getCount()) {
-					return false;
-				}
-				for (int c = 0; c < left.valListString.getCount(); ++c) {
-					if (left.valListString.getData()->at(c) != right.valListString.getData()->at(c)) {
-						return false;
-					}
-				}
-				return true;
-			case ValueTypeMapChannels:
-				if (left.valMapChannels.data.size() != right.valMapChannels.data.size()) {
-					return false;
-				}
-				for (const auto & lIter : left.valMapChannels.data) {
-					const auto & rIter = right.valMapChannels.data.find(lIter.first);
-					if (rIter == right.valMapChannels.data.end()) {
-						return false;
-					}
+template <>
+MHash getValueHash(const std::string & val, const MHash seed) {
+	MHash id;
+	MurmurHash3_x86_32(val.c_str(), val.size(), seed, &id);
+	return id;
+}
 
-					if (rIter->second.name != lIter.second.name ||
-					    getListHash(rIter->second.faces) != getListHash(lIter.second.faces) ||
-					    getListHash(rIter->second.vertices) != getListHash(lIter.second.vertices)) {
-						return false;
-					}
+MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
+	MHash valHash = seed;
+	switch (value.type) {
+		case ValueTypeInt:
+			return getValueHash(value.valInt);
+		case ValueTypeFloat:
+			return getValueHash(value.valFloat);
+		case ValueTypeString:
+			return getValueHash(value.valString);
+		case ValueTypeColor:
+			return getValueHash(value.valColor);
+		case ValueTypeAColor:
+			return getValueHash(value.valAColor);
+		case ValueTypeVector:
+			return getValueHash(value.valVector);
+		case ValueTypePlugin:
+			valHash = getValueHash(value.valPlugin.plugin);
+			if (!value.valPlugin.output.empty()) {
+				valHash = getValueHash(value.valPlugin.output, valHash);
+			}
+			return valHash;
+		case ValueTypeTransform:
+			return getValueHash(value.valTransform);
+		case ValueTypeListInt:
+			return getValueHash(value.valListInt);
+		case ValueTypeListFloat:
+			return getValueHash(value.valListFloat);
+		case ValueTypeListVector:
+			return getValueHash(value.valListVector);
+		case ValueTypeListColor:
+			return getValueHash(value.valListColor);
+		case ValueTypeInstancer:
+			valHash = getValueHash(value.valInstancer.frameNumber);
+			for (int c = 0; c < value.valInstancer.data.getCount(); c++) {
+				const auto &rd = (*value.valInstancer.data)[c];
+
+				valHash = getValueHash(rd.tm, valHash);
+				valHash = getValueHash(rd.vel, valHash);
+				valHash = getValueHash(rd.index, valHash);
+				valHash = getValueHash(rd.node, valHash);
+			}
+			return valHash;
+		case ValueTypeListPlugin:
+			for (int c = 0; c < value.valListPlugin.getCount(); ++c) {
+				const auto & rPlugin = value.valListPlugin.getData()->at(c);
+				valHash = getValueHash(rPlugin.plugin, valHash);
+				if (!rPlugin.output.empty()) {
+					valHash = getValueHash(rPlugin.output, valHash);
 				}
-				return true;
-			default:
-				break;
-		}
+			}
+			return valHash;
+		case ValueTypeListString:
+			for (int c = 0; c < value.valListString.getCount(); ++c) {
+				valHash = getValueHash(value.valListString.getData()->at(c), valHash);
+			}
+			return valHash;
+		case ValueTypeMapChannels:
+			for (const auto & iter : value.valMapChannels.data) {
+				auto & map = iter.second;
+				valHash = getValueHash(map.name, valHash);
+				valHash = getValueHash(map.faces, valHash);
+				valHash = getValueHash(map.vertices, valHash);
+			}
+			return valHash;
+		default:
+			break;
 	}
 	return false;
 }
@@ -117,65 +111,89 @@ std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
 
 bool PluginManager::inCache(const std::string &name) const
 {
-	return cache.find(name) != cache.end();
+	return m_cache.find(name) != m_cache.end();
 }
 
 bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 {
-	return cache.find(getKey(pluginDesc)) != cache.end();
+	return m_cache.find(getKey(pluginDesc)) != m_cache.end();
 }
 
 void PluginManager::remove(const std::string &pluginName)
 {
-	cache.erase(pluginName);
+	m_cache.erase(pluginName);
 }
 
 void PluginManager::remove(const PluginDesc &pluginDesc)
 {
-	cache.erase(getKey(pluginDesc));
+	m_cache.erase(getKey(pluginDesc));
 }
 
 std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const 
 {
 	const auto key = getKey(pluginDesc);
-	auto cacheEntry = cache.find(key);
+	auto cacheEntry = m_cache.find(key);
 
 	PluginDesc res(pluginDesc.pluginName, pluginDesc.pluginID);
 
-	if (cacheEntry == cache.end()) {
+	if (cacheEntry == m_cache.end()) {
 		return std::make_pair(true, res);
 	}
 
-	const auto &cacheAttributes = cacheEntry->second.pluginAttrs;
-
-	if (cacheAttributes.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
+	if (cacheEntry->second.m_values.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
 		return std::make_pair(true, res);
 	}
 
-	for (const auto &attribute : pluginDesc.pluginAttrs) {
-		auto cAttr = cacheAttributes.find(attribute.first);
+	const auto descHash = makeHash(pluginDesc);
 
-		// attribute present in the cached PluginDesc?
-		if (cAttr == cacheAttributes.end()) {
+	if (descHash.m_allHash == cacheEntry->second.m_allHash) {
+		return make_pair(true, res);
+	} else if (!buildDiff) {
+		return std::make_pair(true, res);
+	}
+
+	BLI_assert(descHash.m_name == pluginDesc.pluginName && "PluginManager::diffWithCache called with desc to different plugin!");
+
+	const auto & cacheAttrMap = cacheEntry->second.m_values;
+	const auto & descAttrMap = descHash.m_values;
+
+	for (const auto &attrHash : descAttrMap) {
+		auto cacheHash = cacheAttrMap.find(attrHash.first);
+
+		// attribute is not in cache at all
+		if (cacheHash == cacheAttrMap.end()) {
 			if (buildDiff) {
-				res.add(attribute.second.attrName, attribute.second.attrValue);
+				// we are sure it is here, since descAttrMap was build from pluginDesc
+				const auto & attr = pluginDesc.pluginAttrs.find(attrHash.first)->second;
+				res.add(attr.attrName, attr.attrValue);
 				continue;
 			} else {
 				return std::make_pair(true, res);
 			}
 		}
 
-		// attribute in cache but different value?
-		if (!compare(attribute.second.attrValue, cAttr->second.attrValue)) {
+		if (attrHash.second != cacheHash->second) {
 			if (buildDiff) {
-				res.add(attribute.second.attrName, attribute.second.attrValue);
+				// we are sure it is here, since descAttrMap was build from pluginDesc
+				const auto & attr = pluginDesc.pluginAttrs.find(attrHash.first)->second;
+				res.add(attr.attrName, attr.attrValue);
 			} else {
 				return std::make_pair(true, res);
 			}
 		}
 	}
 
-	return std::make_pair(false, res);;
+	return std::make_pair(false, res);
+}
+
+bool PluginManager::differsId(const PluginDesc &pluginDesc) const
+{
+	auto iter = m_cache.find(getKey(pluginDesc));
+	if (iter == m_cache.end()) {
+		return false;
+	}
+
+	return iter->second.m_id != pluginDesc.pluginID;
 }
 
 bool PluginManager::differs(const PluginDesc &pluginDesc) const
@@ -188,32 +206,43 @@ PluginDesc PluginManager::differences(const PluginDesc &pluginDesc) const
 	return diffWithCache(pluginDesc, true).second;
 }
 
-const PluginDesc & PluginManager::operator[](const PluginDesc &search) const {
-	return cache.find(getKey(search))->second;
+PluginManager::PluginDescHash PluginManager::makeHash(const PluginDesc &pluginDesc) const
+{
+	PluginDescHash hash;
+	hash.m_id = pluginDesc.pluginID;
+	hash.m_name = pluginDesc.pluginName;
+	hash.m_allHash = 42;
+
+	for (const auto & attr : pluginDesc.pluginAttrs) {
+		const auto aHash = getAttrHash(attr.second.attrValue);
+		hash.m_allHash = getValueHash(aHash, hash.m_allHash);
+		hash.m_values[attr.second.attrName] = aHash;
+	}
+
+	return hash;
 }
 
-PluginDesc PluginManager::fromCache(const PluginDesc &search) const
-{
-	auto iter = cache.find(getKey(search));
-	if (iter != cache.cend()) {
-		return iter->second;
-	}
-	return PluginDesc(search.pluginName, search.pluginID);
-}
+//const PluginDesc & PluginManager::operator[](const PluginDesc &search) const {
+//	return m_cache.find(getKey(search))->second;
+//}
+
+//PluginDesc PluginManager::fromCache(const PluginDesc &search) const
+//{
+//	auto iter = cache.find(getKey(search));
+//	if (iter != cache.cend()) {
+//		return iter->second;
+//	}
+//	return PluginDesc(search.pluginName, search.pluginID);
+//}
 
 void PluginManager::updateCache(const PluginDesc &update)
 {
 	const auto key = getKey(update);
-	auto iter = cache.find(key);
+	auto hash = makeHash(update);
 
-	if (iter == cache.end()) {
-		cache.insert(make_pair(key, update));
-	} else {
-		iter->second.pluginAttrs = update.pluginAttrs;
-		iter->second.pluginID = update.pluginID;
-	}
+	m_cache.insert(make_pair(key, hash));
 }
 
 void PluginManager::clear() {
-	cache.clear();
+	m_cache.clear();
 }
