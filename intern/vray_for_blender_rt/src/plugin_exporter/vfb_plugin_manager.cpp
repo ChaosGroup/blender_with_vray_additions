@@ -222,19 +222,6 @@ PluginManager::PluginDescHash PluginManager::makeHash(const PluginDesc &pluginDe
 	return hash;
 }
 
-//const PluginDesc & PluginManager::operator[](const PluginDesc &search) const {
-//	return m_cache.find(getKey(search))->second;
-//}
-
-//PluginDesc PluginManager::fromCache(const PluginDesc &search) const
-//{
-//	auto iter = cache.find(getKey(search));
-//	if (iter != cache.cend()) {
-//		return iter->second;
-//	}
-//	return PluginDesc(search.pluginName, search.pluginID);
-//}
-
 void PluginManager::updateCache(const PluginDesc &update)
 {
 	const auto key = getKey(update);

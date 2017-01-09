@@ -37,9 +37,6 @@ public:
 
 	PluginDesc differences(const PluginDesc &pluginDesc) const;
 
-	// PluginDesc fromCache(const PluginDesc &search) const;
-	// plugin must exist in cache - otherwise UB
-	// const PluginDesc & operator[](const PluginDesc &search) const;
 	void updateCache(const PluginDesc &update);
 	void remove(const PluginDesc &pluginDesc);
 	void remove(const std::string &pluginName);
