@@ -19,6 +19,7 @@
 
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
+#include "vfb_params_json.h"
 #include "jpeglib.h"
 
 #include "BLI_utildefines.h"
@@ -319,8 +320,8 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
 		}
 
 	} else if (msgType == VRayMessage::Type::ChangeRenderer) {
-		if (message.getRendererAction() == VRayMessage::RendererAction::SetRendererStatus) {
-			if (!(m_IsAborted = (message.getRendererStatus() == VRayMessage::RendererStatus::Abort))) {
+		if (message.getRendererAction() == VRayMessage::RendererAction::SetRendererState) {
+			if (!(m_IsAborted = (message.getRendererState() == VRayMessage::RendererState::Abort))) {
 				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
 
 				// reset updated% on all images
@@ -354,17 +355,14 @@ void ZmqExporter::init()
 				PRINT_INFO_EX("Setting RenderMode::RenderModeProduction");
 				m_RenderMode = RenderMode::RenderModeProduction;
 			}
-			m_Client->send(VRayMessage::createMessage(mode));
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Init));
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
+			m_Client->send(VRayMessage::msgRendererType(mode));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Init));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
 
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
 			if (!is_viewport && !this->animation_settings.use) {
-				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbZdepth)));
-				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
-				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbNormal)));
-				m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRenderID)));
+				m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
 			}
 		}
 	} catch (zmq::error_t &e) {
@@ -417,7 +415,7 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 void ZmqExporter::free()
 {
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Free));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Free));
 }
 
 void ZmqExporter::sync()
@@ -429,7 +427,7 @@ void ZmqExporter::sync()
 		BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
 		if (m_LastExportedFrame != this->current_scene_frame) {
 			m_LastExportedFrame = this->current_scene_frame;
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
 		}
 	}
 }
@@ -440,7 +438,7 @@ void ZmqExporter::show_frame_buffer()
 		return;
 	}
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(true)));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(true)));
 	m_vfbVisible = true;
 }
 
@@ -450,7 +448,7 @@ void ZmqExporter::hide_frame_buffer()
 		return;
 	}
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(false)));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(false)));
 	m_vfbVisible = false;
 }
 
@@ -458,7 +456,7 @@ void ZmqExporter::set_viewport_quality(int quality)
 {
 	if (quality != m_RenderQuality) {
 		m_RenderQuality = quality;
-		m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
+		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
 	}
 }
 
@@ -471,7 +469,7 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 	}
 
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Resize, w, h));
+	m_Client->send(VRayMessage::msgRendererResize(w, h));
 }
 
 void ZmqExporter::set_camera_plugin(const std::string &pluginName)
@@ -484,47 +482,47 @@ void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 		}
 	}
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 }
 
 void ZmqExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
 {
 	PluginExporter::set_commit_state(ca);
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
 }
 
 void ZmqExporter::start()
 {
 	checkZmqClient();
 	m_Started = true;
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Start));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Start));
 }
 
 
 void ZmqExporter::stop()
 {
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::Stop));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Stop));
 }
 
 void ZmqExporter::export_vrscene(const std::string &filepath)
 {
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::ExportScene, filepath));
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ExportScene, filepath));
 }
 
 int ZmqExporter::remove_plugin_impl(const std::string &name)
 {
 	checkZmqClient();
-	m_Client->send(VRayMessage::createMessage(name, VRayMessage::PluginAction::Remove));
+	m_Client->send(VRayMessage::msgPluginAction(name, VRayMessage::PluginAction::Remove));
 	return PluginExporter::remove_plugin_impl(name);
 }
 
 void ZmqExporter::replace_plugin(const std::string & oldPlugin, const std::string & newPlugin)
 {
 	checkZmqClient();
-	m_Client->send(VRayMessage::msgReplacePlugin(oldPlugin, newPlugin));
+	m_Client->send(VRayMessage::msgPluginReplace(oldPlugin, newPlugin));
 }
 
 
@@ -542,13 +540,41 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	const std::string & name = pluginDesc.pluginName;
 	AttrPlugin plugin(name);
 
-	m_Client->send(VRayMessage::createMessage(name, pluginDesc.pluginID));
+	const auto pluginType = GetPluginDescription(pluginDesc.pluginID).pluginType;
+	if (pluginType == ParamDesc::PluginType::PluginChannel) {
+		static const std::pair<std::string, RenderChannelType> channelMap[] = {
+			{"RenderChannelBumpNormals", RenderChannelType::RenderChannelTypeVfbBumpnormal},
+			{"RenderChannelColor", RenderChannelType::RenderChannelTypeVfbColor},
+			{"RenderChannelDenoiser", RenderChannelType::RenderChannelTypeVfbDenoised},
+			{"RenderChannelDRBucket", RenderChannelType::RenderChannelTypeDrbucket},
+			{"RenderChannelNodeID", RenderChannelType::RenderChannelTypeVfbNodeid},
+			{"RenderChannelNormals", RenderChannelType::RenderChannelTypeVfbNormal},
+			{"RenderChannelRenderID", RenderChannelType::RenderChannelTypeVfbRenderID},
+			{"RenderChannelVelocity", RenderChannelType::RenderChannelTypeVfbVelocity},
+			{"RenderChannelZDepth", RenderChannelType::RenderChannelTypeVfbZdepth},
+			// {"RenderChannelColorModo", }
+			// {"RenderChannelCoverage", }
+			// {"RenderChannelExtraTex", }
+			// {"RenderChannelGlossiness", }
+			// {"RenderChannelLightSelect", }
+			// {"RenderChannelMultiMatte", }
+			// {"RenderChannelObjectSelect", }
+		};
+
+		for (int c = 0; c < sizeof(channelMap) / sizeof(channelMap[0]); ++c) {
+			if (pluginDesc.pluginID == channelMap[c].first) {
+				m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(channelMap[c].second)));
+			}
+		}
+	}
+
+	m_Client->send(VRayMessage::msgPluginCreate(name, pluginDesc.pluginID));
 
 	if (checkAnimation) {
 		BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
 		if (m_LastExportedFrame != this->current_scene_frame) {
 			m_LastExportedFrame = this->current_scene_frame;
-			m_Client->send(VRayMessage::createMessage(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
 		}
 	}
 
@@ -559,56 +585,56 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		case ValueTypeUnknown:
 			break;
 		case ValueTypeInt:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, VRayBaseTypes::AttrSimpleType<int>(attr.attrValue.valInt)));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, VRayBaseTypes::AttrSimpleType<int>(attr.attrValue.valInt)));
 			break;
 		case ValueTypeFloat:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, VRayBaseTypes::AttrSimpleType<float>(attr.attrValue.valFloat)));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, VRayBaseTypes::AttrSimpleType<float>(attr.attrValue.valFloat)));
 			break;
 		case ValueTypeString:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, VRayBaseTypes::AttrSimpleType<std::string>(attr.attrValue.valString)));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, VRayBaseTypes::AttrSimpleType<std::string>(attr.attrValue.valString)));
 			break;
 		case ValueTypeColor:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valColor));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valColor));
 			break;
 		case ValueTypeVector:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valVector));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valVector));
 			break;
 		case ValueTypeAColor:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valAColor));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valAColor));
 			break;
 		case ValueTypePlugin:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valPlugin));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valPlugin));
 			break;
 		case ValueTypeTransform:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valTransform));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valTransform));
 			break;
 		case ValueTypeListInt:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListInt));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListInt));
 			break;
 		case ValueTypeListFloat:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListFloat));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListFloat));
 			break;
 		case ValueTypeListVector:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListVector));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListVector));
 			break;
 		case ValueTypeListColor:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListColor));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListColor));
 			break;
 		case ValueTypeListPlugin:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListPlugin));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListPlugin));
 			break;
 		case ValueTypeListString:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valListString));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListString));
 			break;
 		case ValueTypeMapChannels:
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valMapChannels));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
 		case ValueTypeInstancer:
 			if (checkAnimation && attr.attrValue.valInstancer.frameNumber != this->current_scene_frame) {
 				PRINT_WARN("Exporting instancer in frame %d, while it has %d frame", static_cast<int>(current_scene_frame), attr.attrValue.valInstancer.frameNumber);
 				const_cast<PluginAttr&>(attr).attrValue.valInstancer.frameNumber = current_scene_frame;
 			}
-			m_Client->send(VRayMessage::createMessage(name, attr.attrName, attr.attrValue.valInstancer));
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valInstancer));
 			break;
 		default:
 			BLI_assert("Unsupported attribute type");

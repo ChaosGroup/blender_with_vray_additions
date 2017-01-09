@@ -181,8 +181,6 @@ void DataExporter::sync()
 		auto ob = dIt->second.object;
 		auto &dep = dIt->second;
 
-		const auto & obName = ob.name();
-
 		PointerRNA vrayObject = PointerRNA_NULL;
 		bool use_clipper = false;
 		bool dupli_use_instancer = false;

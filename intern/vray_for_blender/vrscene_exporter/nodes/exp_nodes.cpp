@@ -791,6 +791,7 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 								}
 								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
 									uvwgenType = "UVWGenObject";
+									uvwgenAttrs["uvw_transform"] = "TransformHex(\"" CGR_IDENTITY_TM  "\")";
 								}
 								else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eChannel) {
 									uvwgenType = "UVWGenChannel";

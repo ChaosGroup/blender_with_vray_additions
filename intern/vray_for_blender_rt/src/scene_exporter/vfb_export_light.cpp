@@ -164,8 +164,6 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 					// if lamp is hidden by override also make it invisible to
 					if (override) {
 						pluginDesc.add("invisible", !override.visible);
-					} else {
-						pluginDesc.add("invisible", false);
 					}
 				}
 				else if (pluginID == "LightDome") {

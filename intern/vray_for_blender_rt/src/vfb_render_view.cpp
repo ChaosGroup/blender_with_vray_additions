@@ -433,8 +433,7 @@ void SceneExporter::sync_view(int check_updated)
 	AttrPlugin physCam;
 	AttrPlugin defCam;
 
-	if (needReset &&
-	    !viewParams.renderView.ortho &&
+	if (!viewParams.renderView.ortho &&
 	    !viewParams.usePhysicalCamera) {
 		m_data_exporter.exportSettingsCameraDof(viewParams);
 	}
