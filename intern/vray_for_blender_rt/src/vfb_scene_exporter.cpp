@@ -934,6 +934,10 @@ void SceneExporter::sync_materials()
 
 void SceneExporter::sync_render_settings()
 {
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		return;
+	}
+
 	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
 	for (const auto &pluginID : RenderSettingsPlugins) {
 		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
