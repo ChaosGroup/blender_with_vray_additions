@@ -33,9 +33,9 @@ MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 	MHash valHash = seed;
 	switch (value.type) {
 		case ValueTypeInt:
-			return getValueHash(value.valInt);
+			return value.valInt;
 		case ValueTypeFloat:
-			return getValueHash(value.valFloat);
+			return *reinterpret_cast<const MHash*>(&value.valFloat);
 		case ValueTypeString:
 			return getValueHash(value.valString);
 		case ValueTypeColor:
