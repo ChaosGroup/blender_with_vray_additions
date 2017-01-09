@@ -53,7 +53,7 @@ private:
 		std::string                              m_name;
 		std::string                              m_id;
 		MHash                                    m_allHash;
-		boost::unordered_map<std::string, MHash> m_values;
+		std::unordered_map<std::string, MHash> m_values;
 	};
 
 	PluginDescHash makeHash(const PluginDesc &pluginDesc) const;
@@ -61,7 +61,7 @@ private:
 	std::pair<bool, PluginDesc> diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const;
 
 	// name -> PluginDesc
-	boost::unordered_map<std::string, PluginDescHash> m_cache;
+	std::unordered_map<std::string, PluginDescHash> m_cache;
 };
 
 } // namespace VRayForBlender

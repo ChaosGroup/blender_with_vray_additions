@@ -29,8 +29,7 @@ MHash getValueHash(const std::string & val, const MHash seed) {
 	return id;
 }
 
-template <>
-MHash getValueHash(const AttrValue & value, const MHash seed) {
+MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 	MHash valHash = seed;
 	switch (value.type) {
 		case ValueTypeInt:
@@ -145,10 +144,12 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 		return std::make_pair(true, res);
 	}
 
-	auto descHash = makeHash(pluginDesc);
+	const auto descHash = makeHash(pluginDesc);
 
 	if (descHash.m_allHash == cacheEntry->second.m_allHash) {
 		return make_pair(true, res);
+	} else if (!buildDiff) {
+		return std::make_pair(true, res);
 	}
 
 	BLI_assert(descHash.m_name == pluginDesc.pluginName && "PluginManager::diffWithCache called with desc to different plugin!");
@@ -180,7 +181,6 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 				return std::make_pair(true, res);
 			}
 		}
-
 	}
 
 	return std::make_pair(false, res);
@@ -214,7 +214,7 @@ PluginManager::PluginDescHash PluginManager::makeHash(const PluginDesc &pluginDe
 	hash.m_allHash = 42;
 
 	for (const auto & attr : pluginDesc.pluginAttrs) {
-		const auto aHash = getValueHash(attr);
+		const auto aHash = getAttrHash(attr.second.attrValue);
 		hash.m_allHash = getValueHash(aHash, hash.m_allHash);
 		hash.m_values[attr.second.attrName] = aHash;
 	}
