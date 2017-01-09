@@ -146,10 +146,12 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 
 	const auto descHash = makeHash(pluginDesc);
 
-	if (descHash.m_allHash == cacheEntry->second.m_allHash) {
-		return make_pair(true, res);
-	} else if (!buildDiff) {
-		return std::make_pair(true, res);
+	if (descHash.m_allHash != cacheEntry->second.m_allHash) {
+		if (!buildDiff) {
+			return std::make_pair(true, res);
+		}
+	} else {
+		return std::make_pair(false, res);
 	}
 
 	BLI_assert(descHash.m_name == pluginDesc.pluginName && "PluginManager::diffWithCache called with desc to different plugin!");
