@@ -883,82 +883,64 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_track.insert(ob, nodeName);
 		}
-		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
-		const bool visible = m_data_exporter.isObjectVisible(ob);
 
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+		m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
+			if (is_interrupted()) {
+				return;
+			}
 
-		bool has_array_mod = false;
-		if (dupli_use_instancer) {
-			for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
-				if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
-					// stop on last non array mod - we export only array mods on top of mod stack
-					break;
-				}
-				if (ob.modifiers[c].show_render()) {
-					// we found atleast one stuitable array mod
-					has_array_mod = true;
-					break;
+			PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
+
+			const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
+			const bool visible = m_data_exporter.isObjectVisible(ob);
+
+			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+			const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+
+			bool has_array_mod = false;
+			if (dupli_use_instancer) {
+				for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
+					if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
+						// stop on last non array mod - we export only array mods on top of mod stack
+						break;
+					}
+					if (ob.modifiers[c].show_render()) {
+						// we found atleast one stuitable array mod
+						has_array_mod = true;
+						break;
+					}
 				}
 			}
-		}
-
-		if (ob.is_duplicator()) {
-			m_threadManager->addTask([this, is_updated, check_updated, ob, visible, &wg](int, const volatile bool &) mutable {
-				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
-				try {
-					if (is_updated) {
-						sync_dupli(ob, check_updated);
-					}
-					if (is_interrupted()) {
-						return;
-					}
-
-					// As in old exporter - dont sync base if its light dupli
-					if (!Blender::IsLight(ob)) {
-						ObjectOverridesAttrs overAttrs;
-
-						overAttrs.override = true;
-						overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-						overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-						overAttrs.visible = visible;
-
-						sync_object(ob, check_updated, overAttrs);
-					}
-				} catch (std::exception & e) {
-					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
+			if (ob.is_duplicator()) {
+				if (is_updated) {
+					sync_dupli(ob, check_updated);
+				}
+				if (is_interrupted()) {
+					return;
 				}
 
-				PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
-				wg.done();
-			}, ThreadManager::Priority::LOW);
-		}
-		else if (has_array_mod) {
-			m_threadManager->addTask([this, ob, check_updated, &wg](int, const volatile bool &) mutable {
-				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
-				try {
-					sync_array_mod(ob, check_updated);
-				} catch (std::exception & e) {
-					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
+				// As in old exporter - dont sync base if its light dupli
+				if (!Blender::IsLight(ob)) {
+					ObjectOverridesAttrs overAttrs;
+
+					overAttrs.override = true;
+					overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					overAttrs.visible = visible;
+
+					sync_object(ob, check_updated, overAttrs);
 				}
-				PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
-				wg.done();
-			}, ThreadManager::Priority::LOW);
-		}
-		else {
-			m_threadManager->addTask([this, ob, check_updated, &wg](int, const volatile bool &) mutable {
-				PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
-				try {
-					sync_object(ob, check_updated);
-				} catch (std::exception & e) {
-					PRINT_ERROR("Exception for [%s] -> [%s]", ob.name().c_str(), e.what());
-				}
-				PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
-				wg.done();
-			}, ThreadManager::Priority::LOW);
-		}
+			}
+			else if (has_array_mod) {
+				sync_array_mod(ob, check_updated);
+			}
+			else {
+				sync_object(ob, check_updated);
+			}
+			PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
+			wg.done();
+		}, ThreadManager::Priority::LOW);
 	}
 
 	if (m_threadManager->workerCount()) {
