@@ -129,8 +129,12 @@ std::string VRayForBlender::String::ExpandFilenameVariables(
 				break;
 			case 'F': {
 				// basename(blendPath)
-				auto nameStart = blendPath.find_last_of("/\\");
-				result.append(blendPath.substr(nameStart == std::string::npos ? 0 : nameStart));
+				const auto nameStart = blendPath.find_last_of("/\\");
+				auto name = blendPath.substr(nameStart == std::string::npos ? 0 : nameStart);
+				if (name == "") {
+					name = "default";
+				}
+				result.append(name);
 			}
 				break;
 			default:
