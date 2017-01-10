@@ -26,9 +26,11 @@
 namespace VRayForBlender {
 namespace String {
 
-std::string  GetUniqueName(StrSet &namesSet, const std::string &name);
+std::string GetUniqueName(StrSet &namesSet, const std::string &name);
 
-std::string  StripString(std::string &str);
+std::string StripString(std::string &str);
+
+std::string ExpandFilenameVariables(const std::string & expr, const std::string & camera, const std::string & scene, const std::string & blendPath, const std::string & ext);
 
 } // namespace String
 } // namespace VRayForBlender

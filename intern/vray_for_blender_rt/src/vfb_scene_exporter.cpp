@@ -24,6 +24,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
+#include "vfb_utils_string.h"
 #include "vfb_node_exporter.h"
 
 #include "DNA_ID.h"
@@ -106,9 +107,9 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderSettingsPlugins.insert("SettingsDMCGI");
 		RenderSettingsPlugins.insert("SettingsRaycaster");
 		RenderSettingsPlugins.insert("SettingsRegionsGenerator");
-#if 0
-		RenderSettingsPlugins.insert("SettingsOutput");
-#endif
+		if (!is_viewport()) {
+			RenderSettingsPlugins.insert("SettingsOutput");
+		}
 		RenderSettingsPlugins.insert("SettingsRTEngine");
 	}
 
@@ -942,6 +943,22 @@ void SceneExporter::sync_render_settings()
 		PluginDesc pluginDesc(pluginID, pluginID);
 
 		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
+
+		if (pluginID == "SettingsOutput") {
+			auto * imgFile = pluginDesc.get("img_file");
+			int format = RNA_int_get(&propGroup, "img_format");
+			const char * formatNames[] = {"png", "jpg", "tiff", "tga", "sgi", "exr", "vrimg"};
+			const char * imgFormat = format >= 0 && format < ArraySize(formatNames) ? formatNames[format] : "";
+
+			if (imgFile) {
+				imgFile->attrValue.valString = String::ExpandFilenameVariables(
+					imgFile->attrValue.valString,
+					m_active_camera ? m_active_camera.name() : "Untitled",
+					m_scene.name(),
+					m_data.filepath(),
+					imgFormat);
+			}
+		}
 
 		m_exporter->export_plugin(pluginDesc);
 	}

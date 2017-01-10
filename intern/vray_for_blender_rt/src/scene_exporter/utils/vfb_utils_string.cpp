@@ -17,6 +17,7 @@
  */
 
 #include "vfb_utils_string.h"
+#include "cgr_config.h"
 
 #include <boost/format.hpp>
 
@@ -69,4 +70,42 @@ std::string VRayForBlender::String::StripString(std::string &str)
 	}
 
 	return str;
+}
+
+
+std::string VRayForBlender::String::ExpandFilenameVariables(
+	const std::string & expr,
+	const std::string & camera,
+	const std::string & scene,
+	const std::string & blendPath,
+	const std::string & ext)
+{
+	std::string result = "";
+	for (int c = 0; c < expr.length(); ++c) {
+		if (expr[c] == '$' && c + 1 < expr.length()) {
+			char type = expr[++c];
+			switch (type) {
+			case 'C':
+				result.append(camera);
+				break;
+			case 'S':
+				result.append(scene);
+				break;
+			case 'F': {
+				// basename(blendPath)
+				auto nameStart = blendPath.find_last_of("/\\");
+				result.append(blendPath.substr(nameStart == std::string::npos ? 0 : nameStart));
+			}
+				break;
+			default:
+				result.push_back('_');
+				result.push_back(type);
+				PRINT_WARN("Unknown format variable \"$%c\" in img_file", type);
+			}
+		} else {
+			result.push_back(expr[c]);
+		}
+	}
+	result.push_back('.');
+	return result + ext;
 }
