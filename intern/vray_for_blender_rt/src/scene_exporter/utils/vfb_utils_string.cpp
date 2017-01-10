@@ -75,10 +75,10 @@ std::string VRayForBlender::String::StripString(std::string &str)
 }
 
 namespace {
-
-// import datetime
-// t = datetime.datetime.now()
-// replaced = t.strftime(expr)
+/// Apply datetime's strftime to expression:
+/// import datetime
+/// t = datetime.datetime.now()
+/// replaced = t.strftime(expr)
 std::string doPythonTimeReplace(const std::string & expr)
 {
 	std::string replaced = expr;
