@@ -30,6 +30,9 @@ std::string GetUniqueName(StrSet &namesSet, const std::string &name);
 
 std::string StripString(std::string &str);
 
+/// Expand some variables from the provided string
+/// $C is camera name, $S is scene name, $F is blend file name
+/// also supports python's datetime placeholders like %H %M %S, etc.
 std::string ExpandFilenameVariables(const std::string & expr, const std::string & camera, const std::string & scene, const std::string & blendPath, const std::string & ext);
 
 } // namespace String

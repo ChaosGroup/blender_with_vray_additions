@@ -951,12 +951,17 @@ void SceneExporter::sync_render_settings()
 			const char * imgFormat = format >= 0 && format < ArraySize(formatNames) ? formatNames[format] : "";
 
 			if (imgFile) {
+				python_thread_state_restore();
+
+				// this will call python to try to parse any time expressions so we need to restore the state
 				imgFile->attrValue.valString = String::ExpandFilenameVariables(
 					imgFile->attrValue.valString,
 					m_active_camera ? m_active_camera.name() : "Untitled",
 					m_scene.name(),
 					m_data.filepath(),
 					imgFormat);
+
+				python_thread_state_save();
 			}
 		}
 

@@ -20,10 +20,24 @@
 #define VRAY_FOR_BLENDER_UTILS_BLENDER_H
 
 #include "vfb_rna.h"
-
+#include <memory>
+#include <Python.h>
+#include <functional>
 
 namespace VRayForBlender {
 namespace Blender {
+
+inline void freePyObject(PyObject * ob) {
+	if (ob) {
+		Py_DECREF(ob);
+	}
+}
+
+typedef std::unique_ptr<PyObject, void (*)(PyObject *)> PyObjectRAII;
+
+inline PyObjectRAII toPyPTR(PyObject * ob) {
+	return PyObjectRAII(ob, freePyObject);
+}
 
 std::string   GetFilepath(const std::string &filepath, ID *holder=nullptr);
 
