@@ -108,8 +108,8 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderSettingsPlugins.insert("SettingsRegionsGenerator");
 #if 0
 		RenderSettingsPlugins.insert("SettingsOutput");
-		RenderSettingsPlugins.insert("SettingsRTEngine");
 #endif
+		RenderSettingsPlugins.insert("SettingsRTEngine");
 	}
 
 	if (!RenderGIPlugins.size()) {
@@ -307,12 +307,9 @@ void SceneExporter::sync(const int &check_updated)
 
 
 	// Export once per viewport session
-	if (!check_updated) {
-		sync_render_settings();
-
-		if (!is_viewport()) {
-			sync_render_channels();
-		}
+	sync_render_settings();
+	if (!check_updated && !is_viewport()) {
+		sync_render_channels();
 	}
 
 	// First materials sync is done from "sync_objects"
