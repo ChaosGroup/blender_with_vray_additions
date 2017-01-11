@@ -91,7 +91,7 @@ static void AspectCorrectFovOrtho(ViewParams &viewParams)
 }
 
 
-AttrPlugin DataExporter::exportRenderView(const ViewParams &viewParams)
+AttrPlugin DataExporter::exportRenderView(ViewParams &viewParams)
 {
 	PluginDesc viewDesc(ViewParams::renderViewPluginName, "RenderView");
 	viewDesc.add("transform", AttrTransformFromBlTransform(viewParams.renderView.tm));
@@ -101,6 +101,10 @@ AttrPlugin DataExporter::exportRenderView(const ViewParams &viewParams)
 	viewDesc.add("clipping_far", viewParams.renderView.clip_end);
 	viewDesc.add("orthographic", viewParams.renderView.ortho);
 	viewDesc.add("orthographicWidth", viewParams.renderView.ortho_width);
+
+	if (viewParams.cameraObject) {
+		viewDesc.add("focalDistance", Blender::GetCameraDofDistance(viewParams.cameraObject));
+	}
 
 	// TODO: Set this only for viewport rendering
 	viewDesc.add("use_scene_offset", false);
@@ -156,6 +160,7 @@ void DataExporter::fillCameraData(BL::Object &cameraObject, ViewParams &viewPara
 	viewParams.renderView.clip_end   = cameraData.clip_end();
 
 	viewParams.renderView.tm = cameraObject.matrix_world();
+	normalize_m4((float (*)[4])viewParams.renderView.tm.data);
 	viewParams.cameraObject = cameraObject;
 }
 
