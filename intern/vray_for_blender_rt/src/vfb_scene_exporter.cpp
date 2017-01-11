@@ -945,6 +945,10 @@ void SceneExporter::sync_render_settings()
 		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
 
 		if (pluginID == "SettingsOutput") {
+			if (!RNA_boolean_get(&vrayScene, "auto_save_render")) {
+				continue;
+			}
+
 			auto * imgFile = pluginDesc.get("img_file");
 			int format = RNA_int_get(&propGroup, "img_format");
 			const char * formatNames[] = {"png", "jpg", "tiff", "tga", "sgi", "exr", "vrimg"};
