@@ -229,7 +229,7 @@ void PluginManager::updateCache(const PluginDesc &update)
 	const auto key = getKey(update);
 	auto hash = makeHash(update);
 
-	m_cache.insert(make_pair(key, hash));
+	m_cache[key] = hash;
 }
 
 void PluginManager::clear() {
