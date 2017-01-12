@@ -24,6 +24,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
+#include "vfb_utils_string.h"
 #include "vfb_node_exporter.h"
 
 #include "DNA_ID.h"
@@ -107,10 +108,10 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderSettingsPlugins.insert("SettingsDMCGI");
 		RenderSettingsPlugins.insert("SettingsRaycaster");
 		RenderSettingsPlugins.insert("SettingsRegionsGenerator");
-#if 0
-		RenderSettingsPlugins.insert("SettingsOutput");
+		if (!is_viewport()) {
+			RenderSettingsPlugins.insert("SettingsOutput");
+		}
 		RenderSettingsPlugins.insert("SettingsRTEngine");
-#endif
 	}
 
 	if (!RenderGIPlugins.size()) {
@@ -318,12 +319,9 @@ void SceneExporter::sync(const int &check_updated)
 
 
 	// Export once per viewport session
-	if (!check_updated) {
-		sync_render_settings();
-
-		if (!is_viewport()) {
-			sync_render_channels();
-		}
+	sync_render_settings();
+	if (!check_updated && !is_viewport()) {
+		sync_render_channels();
 	}
 
 	// First materials sync is done from "sync_objects"
@@ -976,6 +974,10 @@ void SceneExporter::sync_materials()
 
 void SceneExporter::sync_render_settings()
 {
+	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+		return;
+	}
+
 	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
 	for (const auto &pluginID : RenderSettingsPlugins) {
 		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
@@ -983,6 +985,31 @@ void SceneExporter::sync_render_settings()
 		PluginDesc pluginDesc(pluginID, pluginID);
 
 		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
+
+		if (pluginID == "SettingsOutput") {
+			if (!RNA_boolean_get(&vrayScene, "auto_save_render")) {
+				continue;
+			}
+
+			auto * imgFile = pluginDesc.get("img_file");
+			int format = RNA_int_get(&propGroup, "img_format");
+			const char * formatNames[] = {"png", "jpg", "tiff", "tga", "sgi", "exr", "vrimg"};
+			const char * imgFormat = format >= 0 && format < ArraySize(formatNames) ? formatNames[format] : "";
+
+			if (imgFile) {
+				python_thread_state_restore();
+
+				// this will call python to try to parse any time expressions so we need to restore the state
+				imgFile->attrValue.valString = String::ExpandFilenameVariables(
+					imgFile->attrValue.valString,
+					m_active_camera ? m_active_camera.name() : "Untitled",
+					m_scene.name(),
+					m_data.filepath(),
+					imgFormat);
+
+				python_thread_state_save();
+			}
+		}
 
 		m_exporter->export_plugin(pluginDesc);
 	}

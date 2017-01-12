@@ -341,7 +341,7 @@ public:
 	AttrValue         exportMtlMulti(BL::Object ob);
 	AttrValue         exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs &);
 	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
-	AttrPlugin        exportRenderView(const ViewParams &viewParams);
+	AttrPlugin        exportRenderView(ViewParams &viewParams);
 	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
 	AttrPlugin        exportCameraDefault(const ViewParams &viewParams);

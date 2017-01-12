@@ -67,6 +67,7 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 
 	bool inCache = m_pluginManager.inCache(pluginDesc);
 	bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;
+	bool isDifferentId = inCache ? m_pluginManager.differsId(pluginDesc) : false;
 	AttrPlugin plg(pluginDesc.pluginName);
 
 	if (is_viewport || !animation_settings.use) {
@@ -74,13 +75,11 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 			plg = this->export_plugin_impl(pluginDesc);
 			m_pluginManager.updateCache(pluginDesc);
 		} else if (inCache && isDifferent) {
-			const auto &cachedPlugin = m_pluginManager[pluginDesc];
 
-			if (cachedPlugin.pluginID != pluginDesc.pluginID) {
+			if (isDifferentId) {
 				// copy the name, since cachedPlugin is reference from inside the manager
 				// and when we remove it, it will reference invalid memory!
-				auto name = cachedPlugin.pluginName;
-				this->remove_plugin(name);
+				this->remove_plugin(pluginDesc.pluginName);
 				plg = this->export_plugin_impl(pluginDesc);
 			} else {
 				if (!replace) {
@@ -112,7 +111,8 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 		}
 	} else {
 		if (inCache && isDifferent) {
-			this->export_plugin_impl(m_pluginManager.fromCache(pluginDesc));
+			// TODO: do we really need to export previous state first?
+			// this->export_plugin_impl(m_pluginManager.fromCache(pluginDesc));
 			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
 			m_pluginManager.updateCache(pluginDesc);
 		} else if (!inCache) {

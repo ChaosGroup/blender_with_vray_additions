@@ -20,8 +20,14 @@
 #define VRAY_FOR_BLENDER_UTILS_BLENDER_H
 
 #include "vfb_rna.h"
+
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
+
+#include <Python.h>
+
+#include <memory>
+#include <functional>
 
 static boost::shared_mutex vfbExporterBlenderLock;
 #define WRITE_LOCK_BLENDER_RAII boost::unique_lock<boost::shared_mutex> _raiiWriteLock(vfbExporterBlenderLock);
@@ -29,6 +35,18 @@ static boost::shared_mutex vfbExporterBlenderLock;
 
 namespace VRayForBlender {
 namespace Blender {
+
+inline void freePyObject(PyObject * ob) {
+	if (ob) {
+		Py_DECREF(ob);
+	}
+}
+
+typedef std::unique_ptr<PyObject, void (*)(PyObject *)> PyObjectRAII;
+
+inline PyObjectRAII toPyPTR(PyObject * ob) {
+	return PyObjectRAII(ob, freePyObject);
+}
 
 std::string   GetFilepath(const std::string &filepath, ID *holder=nullptr);
 

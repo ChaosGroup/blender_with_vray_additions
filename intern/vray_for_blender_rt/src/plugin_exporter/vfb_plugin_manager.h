@@ -23,6 +23,7 @@
 #include <boost/unordered_map.hpp>
 
 #include <mutex>
+#include "utils/cgr_hash.h"
 
 namespace VRayForBlender {
 
@@ -33,11 +34,10 @@ public:
 	bool inCache(const std::string &name) const;
 	bool inCache(const PluginDesc &pluginDesc) const;
 	bool differs(const PluginDesc &pluginDesc) const;
+	bool differsId(const PluginDesc &pluginDesc) const;
+
 	PluginDesc differences(const PluginDesc &pluginDesc) const;
 
-	PluginDesc fromCache(const PluginDesc &search) const;
-	// plugin must exist in cache - otherwise UB
-	const PluginDesc & operator[](const PluginDesc &search) const;
 	void updateCache(const PluginDesc &update);
 	void remove(const PluginDesc &pluginDesc);
 	void remove(const std::string &pluginName);
@@ -47,10 +47,19 @@ public:
 	// returns the key in the cache for this pluginDesc (it's name)
 	std::string getKey(const PluginDesc &pluginDesc) const;
 private:
+	struct PluginDescHash {
+		std::string                              m_name;
+		std::string                              m_id;
+		MHash                                    m_allHash;
+		std::unordered_map<std::string, MHash> m_values;
+	};
+
+	PluginDescHash makeHash(const PluginDesc &pluginDesc) const;
 
 	std::pair<bool, PluginDesc> diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const;
 
 	// name -> PluginDesc
+	std::unordered_map<std::string, PluginDescHash> m_cache;
 	boost::unordered_map<std::string, PluginDesc> cache;
 	mutable std::mutex cacheLock;
 };
