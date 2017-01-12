@@ -29,6 +29,7 @@
 #include <memory>
 #include <functional>
 
+// This is global because multiple mt exporters could run at the same time
 static boost::shared_mutex vfbExporterBlenderLock;
 #define WRITE_LOCK_BLENDER_RAII boost::unique_lock<boost::shared_mutex> _raiiWriteLock(vfbExporterBlenderLock);
 #define READ_LOCK_BLENDER_RAII boost::shared_lock<boost::shared_mutex> _raiiReadLock(vfbExporterBlenderLock);

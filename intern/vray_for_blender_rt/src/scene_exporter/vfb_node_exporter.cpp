@@ -24,14 +24,20 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-boost::format FormatFloat("%.6g");
-boost::format FormatString("\"%s\"");
-boost::format FormatTmHex("TransformHex(\"%s\")");
-boost::format FormatInt("%i");
-boost::format FormatUInt("%u");
-boost::format FormatColor("Color(%.6g,%.6g,%.6g)");
-boost::format FormatAColor("AColor(%.6g,%.6g,%.6g,%.6g)");
-boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");
+// boost::format is thread unsafe when used to format strings (!duh)
+// so these are wrapped in a struct that inits them when they a re to be used with
+// BOOST_FORMAT_INIT_IN_SCOPE()
+
+#define BOOST_FORMAT_INIT_IN_SCOPE()                           \
+	boost::format FormatFloat("%.6g");                         \
+	boost::format FormatString("\"%s\"");                      \
+	boost::format FormatTmHex("TransformHex(\"%s\")");         \
+	boost::format FormatInt("%i");                             \
+	boost::format FormatUInt("%u");                            \
+	boost::format FormatColor("Color(%.6g,%.6g,%.6g)");        \
+	boost::format FormatAColor("AColor(%.6g,%.6g,%.6g,%.6g)"); \
+	boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");      \
+
 
 #define BOOST_FORMAT_STRING(s)  boost::str(FormatFloat  % s)
 #define BOOST_FORMAT_FLOAT(f)   boost::str(FormatString % f)
@@ -584,6 +590,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 
 void DataExporter::getUserAttributes(PointerRNA *ptr, StrVector &user_attributes)
 {
+	BOOST_FORMAT_INIT_IN_SCOPE();
 	RNA_BEGIN(ptr, itemptr, "user_attributes") {
 		bool useAttr = RNA_boolean_get(&itemptr, "use");
 		if (useAttr) {

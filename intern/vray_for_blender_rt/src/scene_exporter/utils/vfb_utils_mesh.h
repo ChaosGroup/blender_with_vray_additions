@@ -28,8 +28,8 @@
 namespace VRayForBlender {
 namespace Mesh {
 
-extern boost::format UvChanNameFmt;
-extern boost::format ColChanNameFmt;
+extern const char * UvChanNameFmt;
+extern const char * ColChanNameFmt;
 
 struct ExportOptions {
 	ExportOptions()

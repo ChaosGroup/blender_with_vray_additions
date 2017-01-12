@@ -258,7 +258,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 
 			PluginAttr *uv_set_name = mappingDesc.get("uv_set_name");
 			if (uv_set_name) {
-				uv_set_name->attrValue.valString = boost::str(VRayForBlender::Mesh::UvChanNameFmt % uv_set_name->attrValue.valString);
+				uv_set_name->attrValue.valString = boost::str(boost::format(VRayForBlender::Mesh::UvChanNameFmt) % uv_set_name->attrValue.valString);
 			}
 			else {
 				mappingDesc.add("uv_set_name", "UvUVMap");
@@ -483,7 +483,7 @@ AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &nt
 
 	PluginAttr *channel_name = pluginDesc.get("channel_name");
 	if (channel_name) {
-		channel_name->attrValue.valString = boost::str(VRayForBlender::Mesh::ColChanNameFmt % channel_name->attrValue.valString);
+		channel_name->attrValue.valString = boost::str(boost::format(VRayForBlender::Mesh::ColChanNameFmt) % channel_name->attrValue.valString);
 	}
 
 	return m_exporter->export_plugin(pluginDesc);
