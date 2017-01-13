@@ -53,7 +53,7 @@ extern "C" {
 
 using namespace VRayForBlender;
 
-
+// TODO: possible data race when multiple exporters start at the same time
 static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
 
