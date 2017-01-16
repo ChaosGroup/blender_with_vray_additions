@@ -139,7 +139,7 @@ protected:
 	CommitState          commit_state;
 
 	PluginManager        m_pluginManager;
-	std::mutex           m_exportMtx;
+	std::recursive_mutex m_exportMtx;
 
 };
 

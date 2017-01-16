@@ -47,7 +47,7 @@ void PluginExporter::set_settings(const ExporterSettings &st)
 }
 
 int PluginExporter::remove_plugin(const std::string &name) {
-	std::lock_guard<std::mutex> lock(m_exportMtx);
+	std::lock_guard<std::recursive_mutex> lock(m_exportMtx);
 	int result = 1;
 	if (m_pluginManager.inCache(name)) {
 		PRINT_INFO_EX("Removing plugin: [%s]", name.c_str());
@@ -63,7 +63,7 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 		return AttrPlugin(pluginDesc.pluginName);
 	}
 
-	std::lock_guard<std::mutex> lock(m_exportMtx);
+	std::lock_guard<std::recursive_mutex> lock(m_exportMtx);
 
 	bool inCache = m_pluginManager.inCache(pluginDesc);
 	bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;

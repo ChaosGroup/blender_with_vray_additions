@@ -528,7 +528,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 		}
 
-		PRINT_INFO_EX("Syncing: %s...", obName.c_str());
+		//PRINT_INFO_EX("Syncing: %s...", obName.c_str());
 #if 0
 		const int data_updated = RNA_int_get(&vrayObject, "data_updated");
 		PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing [%s]\"%s\"...",
@@ -887,7 +887,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 				return;
 			}
 
-			PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
+			//PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
 
 			const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 			const bool visible = m_data_exporter.isObjectVisible(ob);
@@ -936,7 +936,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			else {
 				sync_object(ob, check_updated);
 			}
-			PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
+			//PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
 			wg.done();
 		}, ThreadManager::Priority::LOW);
 	}
