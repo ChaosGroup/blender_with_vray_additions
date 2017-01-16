@@ -35,7 +35,7 @@ std::mutex heartbeatLock;
 
 
 std::queue<VRayForBlender::SceneExporter*> stashedExporters;
-
+namespace {
 // stash instead of delete exporters here that are marked for undo
 void stashExporter(VRayForBlender::SceneExporter* exporter)
 {
@@ -52,6 +52,7 @@ VRayForBlender::SceneExporter * tryTakeStashedExporter()
 	auto exp = stashedExporters.front();
 	stashedExporters.pop();
 	return exp;
+}
 }
 
 static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)

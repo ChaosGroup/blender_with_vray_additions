@@ -44,7 +44,7 @@ static void jpegErrorExit(j_common_ptr cinfo) {
 }
 
 
-static void init_source(j_decompress_ptr cinfo) {}
+static void init_source(j_decompress_ptr) {}
 
 static boolean fill_input_buffer (j_decompress_ptr cinfo) {
 	unsigned char *buf = (unsigned char *) cinfo->src->next_input_byte - 2;
@@ -244,14 +244,14 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 }
 
 
-ZmqExporter::ZmqExporter():
-	m_Client(nullptr),
-	m_LastExportedFrame(-1000.f),
-	m_IsAborted(false),
-	m_Started(false),
-	m_RenderWidth(0),
-	m_RenderHeight(0),
-	m_RenderQuality(100)
+ZmqExporter::ZmqExporter()
+	: m_Client(nullptr)
+	, m_LastExportedFrame(-1000.f)
+	, m_IsAborted(false)
+	, m_Started(false)
+	, m_RenderQuality(100)
+	, m_RenderWidth(0)
+	, m_RenderHeight(0)
 {
 	checkZmqClient();
 }
