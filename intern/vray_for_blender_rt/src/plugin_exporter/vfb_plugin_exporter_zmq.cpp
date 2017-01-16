@@ -67,7 +67,7 @@ static void skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
     }
 }
 
-static void term_source(j_decompress_ptr cinfo) {}
+static void term_source(j_decompress_ptr) {}
 
 static void jpeg_mem_src_own(j_decompress_ptr cinfo, const unsigned char * buffer, int nbytes) {
     struct jpeg_source_mgr* src;

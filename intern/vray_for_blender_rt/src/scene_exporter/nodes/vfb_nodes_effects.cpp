@@ -83,7 +83,7 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree &ntree, BL
 }
 #endif
 
-AttrValue DataExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &/*fromSocket*/, NodeContext &context)
 {
 	AttrValue voxel;
 	BL::NodeSocket domainSock = Nodes::GetInputSocketByName(node, "Domain");

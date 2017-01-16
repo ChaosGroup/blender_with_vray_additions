@@ -905,7 +905,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 }
 
 
-void SceneExporter::sync_effects(const int &check_updated)
+void SceneExporter::sync_effects(const int &)
 {
 	NodeContext ctx;
 	m_data_exporter.exportEnvironment(ctx);

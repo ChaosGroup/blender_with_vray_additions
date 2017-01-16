@@ -22,7 +22,7 @@
 #include <boost/format.hpp>
 
 
-AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &/*fromSocket*/, NodeContext &context)
 {
 	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
