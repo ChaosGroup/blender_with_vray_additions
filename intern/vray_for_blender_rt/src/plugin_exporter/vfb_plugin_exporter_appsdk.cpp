@@ -142,7 +142,7 @@ AppSdkExporter::AppSdkExporter()
 AppSdkExporter::~AppSdkExporter()
 {
 	if (m_vray) {
-		if (m_vray->isRendering()) {
+		if (m_vray->getState() >= VRay::PREPARING) {
 			m_vray->stop();
 		}
 	}

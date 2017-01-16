@@ -716,7 +716,6 @@ static std::vector<int> unravel_index(int index, const std::vector<int> & dimSiz
 
 void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	const auto & nodeName = m_data_exporter.getNodeName(ob);
-	const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 	const bool visible = m_data_exporter.isObjectVisible(ob);
 
 	ObjectOverridesAttrs overrideAttrs;

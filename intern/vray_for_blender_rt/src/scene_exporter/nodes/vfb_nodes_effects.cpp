@@ -479,7 +479,7 @@ AttrValue DataExporter::exportVRayNodeVolumeVRayToon(BL::NodeTree &ntree, BL::No
 
 				for (ObList::const_iterator obIt = excludeObjects.begin(); obIt != excludeObjects.end(); ++obIt) {
 					BL::Object ob(*obIt);
-					excludeList.append(Blender::GetIDName(ob, "OB"));
+					excludeList.append(getNodeName(ob));
 				}
 
 				pluginDesc.add("excludeList", excludeList);

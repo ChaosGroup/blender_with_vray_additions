@@ -18,7 +18,7 @@
 
 #include "vfb_node_exporter.h"
 
-
+// TODO:
 AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 #if 0
@@ -35,7 +35,7 @@ AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntr
 	return AttrValue();
 }
 
-
+// TODO:
 AttrValue DataExporter::exportVRayNodeRenderChannelColor(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 #if 0
