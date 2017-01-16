@@ -48,6 +48,7 @@ public:
 
 	const char * indentation();
 
+	/// Wrapper to carry data needed for async zip task
 	template <typename T>
 	struct AsyncZipTask {
 		const VRayBaseTypes::AttrList<T> & m_data;
@@ -67,6 +68,7 @@ public:
 		processItems(data.c_str());
 	}
 
+	/// Add task to the queue
 	template <typename T>
 	void addTask(const AsyncZipTask<T> &task) {
 		// when adding and removing elements from deque no references are invalidated
@@ -75,9 +77,7 @@ public:
 		m_items.emplace_back();
 		auto & item = m_items.back();
 
-		// get ref to item and copy the data
-		// we could get away with reference the task's VRayBaseTypes::AttrList because it is kept in cache
-		// and the scene exporter will blockFlushAll to wait for all tasks
+		// Array's data is actually shared_ptr so copy it inside to preserve the data
 		m_threadManager->addTask([&item, compressData, this](int, const volatile bool &) {
 			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
 			item.asyncDone(zipData);
@@ -86,79 +86,72 @@ public:
 		processItems();
 	}
 
-
+	/// Block until all items are done and wirtten to file
 	void blockFlushAll();
 private:
 	class WriteItem {
 	public:
-		bool isDone() const {
-			return m_ready.load(std::memory_order_acquire);
-		}
+		/// Check if this write item is done (may be zipping currently)
+		bool isDone() const;
 
-		const char * getData() const {
-			if (m_isAsync) {
-				return m_asyncData;
-			} else {
-				return m_data.c_str();
-			}
-		}
+		/// Get the data of this item
+		const char * getData() const;
 
-		void asyncDone(const char * data) {
-			BLI_assert(m_isAsync && "Called asyncDone on sync WriteItem");
-			// first copy data into task
-			if (data) {
-				m_asyncData = data;
-				m_freeData = true;
-			} else {
-				m_asyncData = "";
-			}
-			// than mark as ready
-			// release-aquire order so readers will see m_asyncData changed if m_ready is true
-			m_ready.store(true, std::memory_order_release);
-		}
+		/// Mark this item as done and store the pointer provided
+		void asyncDone(const char * data);
 
-		~WriteItem() {
-			if (m_freeData) {
-				delete[] m_asyncData;
-			}
-		}
+		/// Release any data set in asycnDone
+		~WriteItem();
 
-		WriteItem(WriteItem && other): WriteItem() {
-			std::swap(m_data, other.m_data);
-			std::swap(m_asyncData, other.m_asyncData);
-			m_ready = other.m_ready.load();
-			other.m_ready = false;
-			std::swap(m_freeData, other.m_freeData);
-			std::swap(m_isAsync, other.m_isAsync);
-		}
-
+		WriteItem(WriteItem && other);
 		WriteItem(const WriteItem &) = delete;
 		WriteItem & operator=(const WriteItem &) = delete;
 
-		WriteItem(): m_data(""), m_ready(false), m_freeData(false), m_isAsync(true) {}
-		explicit WriteItem(const std::string & val): m_data(val), m_ready(true), m_freeData(false), m_isAsync(false) {}
-		explicit WriteItem(const char * val): m_data(val ? val : ""), m_ready(true), m_freeData(false), m_isAsync(false) {}
+		/// Create item that is async task, which will be completed in some point in future
+		WriteItem()
+			: m_data("")
+			, m_asyncData(nullptr)
+			, m_ready(false)
+			, m_freeData(false)
+			, m_isAsync(true) {}
+
+		/// Create item that is done and has some value
+		explicit WriteItem(const std::string & val)
+			: m_data(val)
+			, m_asyncData(nullptr)
+			, m_ready(true)
+			, m_freeData(false)
+			, m_isAsync(false) {}
+
+		/// Create item that is done and has some value
+		explicit WriteItem(const char * val)
+			: m_data(val ? val : "")
+			, m_asyncData(nullptr)
+			, m_ready(true)
+			, m_freeData(false)
+			, m_isAsync(false) {}
 
 	private:
-		std::string        m_data;
-		const char        *m_asyncData;
-		std::atomic<bool>  m_ready;
-		bool               m_freeData;
-		bool               m_isAsync;
+		std::string        m_data; ///< Data if this item is created 'done'
+		const char        *m_asyncData; ///< Data if this item is asyncly zipped
+		std::atomic<bool>  m_ready; ///< Flag to check if this item is ready
+		bool               m_freeData; ///< True if data needs to be freed
+		bool               m_isAsync; ///< True if this item is async
 	};
 
+	/// Process any pending items
+	/// 1. write all completed items to file
+	/// 2. write val if queue is empty or add it to the queue
 	void processItems(const char * val = nullptr);
 
-	// only used to syncronize waiting for items
-	std::mutex                      m_itemMutex;
-	// used to block on blockFlushAll
-	std::condition_variable         m_itemDoneVar;
-	std::deque<WriteItem>           m_items;
-	ThreadManager::Ptr              m_threadManager;
-	int                             m_depth;
-	int                             m_animationFrame;
-	PyObject                       *m_file;
-	ExporterSettings::ExportFormat  m_format;
+	std::mutex                      m_itemMutex; //< only used to syncronize waiting for items
+	std::condition_variable         m_itemDoneVar; ///< used to block on blockFlushAll
+	std::deque<WriteItem>           m_items; ///< Item queue for all items to be writen to files
+	ThreadManager::Ptr              m_threadManager; ///< Thread manager for async items
+	int                             m_depth; ///< Current indentation depth
+	int                             m_animationFrame; ///< The current animation frame
+	PyObject                       *m_file; ///< The file object coming from python api
+	ExporterSettings::ExportFormat  m_format; ///< The file format (ASCII, HEX, ZIP)
 
 private:
 	PluginWriter(const PluginWriter&) = delete;

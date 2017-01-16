@@ -142,7 +142,7 @@ AppSdkExporter::AppSdkExporter()
 AppSdkExporter::~AppSdkExporter()
 {
 	if (m_vray) {
-		if (m_vray->isRendering()) {
+		if (m_vray->getState() >= VRay::PREPARING) {
 			m_vray->stop();
 		}
 	}
@@ -180,7 +180,7 @@ void AppSdkExporter::init()
 	}
 }
 
-void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
+void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *)
 {
 	PRINT_INFO_EX("AppSdkExporter::CbOnImageReady");
 	if (callback_on_image_ready) {
@@ -189,7 +189,7 @@ void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
 }
 
 
-void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *img, void *userData)
+void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *, void *)
 {
 	if (!is_viewport) {
 		m_bucket_image = AppSDKRenderImage(m_vray->getImage());
@@ -242,7 +242,7 @@ void AppSdkExporter::stop()
 }
 
 
-void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, const char *host, VRay::VRayImage *img, void *)
+void AppSdkExporter::bucket_ready(VRay::VRayRenderer &, int x, int y, const char *, VRay::VRayImage *img, void *)
 {
 	m_bucket_image.updateRegion(reinterpret_cast<const float *>(img->getPixelData()), x, y, img->getWidth(), img->getHeight());
 

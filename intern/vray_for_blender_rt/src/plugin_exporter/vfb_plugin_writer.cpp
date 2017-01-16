@@ -31,12 +31,54 @@ struct TraceTransformHex {
 	double v[3];
 };
 
+bool PluginWriter::WriteItem::isDone() const {
+	return m_ready.load(std::memory_order_acquire);
+}
+
+const char * PluginWriter::WriteItem::getData() const {
+	if (m_isAsync) {
+		return m_asyncData;
+	} else {
+		return m_data.c_str();
+	}
+}
+
+void PluginWriter::WriteItem::asyncDone(const char * data) {
+	BLI_assert(m_isAsync && "Called asyncDone on sync WriteItem");
+	// first copy data into task
+	if (data) {
+		m_asyncData = data;
+		m_freeData = true;
+	} else {
+		m_asyncData = "";
+	}
+	// than mark as ready
+	// release-aquire order so readers will see m_asyncData changed if m_ready is true
+	m_ready.store(true, std::memory_order_release);
+}
+
+PluginWriter::WriteItem::~WriteItem() {
+	if (m_freeData) {
+		delete[] m_asyncData;
+	}
+}
+
+PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
+	std::swap(m_data, other.m_data);
+	std::swap(m_asyncData, other.m_asyncData);
+	m_ready = other.m_ready.load();
+	other.m_ready = false;
+	std::swap(m_freeData, other.m_freeData);
+	std::swap(m_isAsync, other.m_isAsync);
+}
+
+
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat format)
 	: m_threadManager(tm)
+    , m_depth(1)
+    , m_animationFrame(-1)
     , m_file(pyFile)
     , m_format(format)
-    , m_animationFrame(-1)
-    , m_depth(1)
 {
 }
 

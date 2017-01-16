@@ -60,7 +60,7 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 		for (group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
 			BL::Object b_ob(*obIt);
 
-			pluginList.append(Blender::GetIDName(b_ob));
+			pluginList.append(getIdUniqueName(b_ob));
 		}
 	}
 
@@ -76,7 +76,7 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 		NodeContext ctx;
 		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, ctx);
 		if (ob) {
-			plugins.append(Blender::GetIDName(ob));
+			plugins.append(getIdUniqueName(ob));
 		}
 	}
 	else if (node.bl_idname() == "VRayNodeSelectGroup") {
@@ -96,24 +96,20 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 							BL::DupliObject dupliOb(*dupIt);
 							BL::Object      dupOb(dupliOb.object());
 
-							const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
 							if (Blender::IsLight(dupOb)) {
 								MHash persistendID;
 								MurmurHash3_x86_32((const void*)dupIt->persistent_id().data, 8 * sizeof(int), 42, &persistendID);
 
 								char namePrefix[255] = {0, };
-								namePrefix[0] = 'D';
-								snprintf(namePrefix + 1, 250, "%u", persistendID);
-								strcat(namePrefix, "@");
-								strcat(namePrefix, ob.name().c_str());
+								snprintf(namePrefix, 250, "Dupli%u@", persistendID);
 
-								plugins.append(std::string(namePrefix));
+								plugins.append(std::string(namePrefix) + getLightName(ob));
 							}
 						}
 
 						ob.dupli_list_clear();
 					} else {
-						plugins.append(Blender::GetIDName(ob));
+						plugins.append(getIdUniqueName(ob));
 					}
 				}
 			}

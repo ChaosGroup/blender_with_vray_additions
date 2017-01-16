@@ -49,6 +49,31 @@ static boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");
 using namespace VRayForBlender;
 using namespace VRayForBlender::Nodes;
 
+namespace {
+/// Check of object has particle system which is hair
+bool ob_has_hair(BL::Object ob) {
+	BL::Object::modifiers_iterator modIt;
+	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
+		BL::Modifier mod(*modIt);
+		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
+			BL::ParticleSystemModifier psm(mod);
+			BL::ParticleSystem psys = psm.particle_system();
+			if (psys) {
+				BL::ParticleSettings pset(psys.settings());
+				if (pset &&
+					pset.type() == BL::ParticleSettings::type_HAIR &&
+					pset.render_type() == BL::ParticleSettings::render_type_PATH) {
+
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+}
+
 int IdTrack::contains(BL::Object ob) {
 	return data.find(DataExporter::getIdUniqueName(ob)) != data.end();
 }
@@ -151,29 +176,6 @@ void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
 	m_evalMode = exporter->get_is_viewport() ? EvalModePreview : EvalModeRender;
 }
 
-
-bool ob_has_hair(BL::Object ob)
-{
-	BL::Object::modifiers_iterator modIt;
-	for (ob.modifiers.begin(modIt); modIt != ob.modifiers.end(); ++modIt) {
-		BL::Modifier mod(*modIt);
-		if (mod && mod.show_render() && mod.type() == BL::Modifier::type_PARTICLE_SYSTEM) {
-			BL::ParticleSystemModifier psm(mod);
-			BL::ParticleSystem psys = psm.particle_system();
-			if (psys) {
-				BL::ParticleSettings pset(psys.settings());
-				if (pset &&
-				    pset.type() == BL::ParticleSettings::type_HAIR &&
-				    pset.render_type() == BL::ParticleSettings::render_type_PATH) {
-					
-					return true;
-				}
-			}
-		}
-	}
-
-	return false;
-}
 
 void DataExporter::sync()
 {

@@ -84,7 +84,7 @@ public:
 
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
 	AttrPlugin           export_plugin(const PluginDesc &pluginDesc, bool replace = false);
-	virtual void         replace_plugin(const std::string & oldPlugin, const std::string & newPlugin) {};
+	virtual void         replace_plugin(const std::string &, const std::string &) {};
 
 	virtual int          remove_plugin_impl(const std::string&) { return 0; }
 	int                  remove_plugin(const std::string&);
@@ -94,13 +94,13 @@ public:
 	virtual bool         is_aborted() const { return false; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }
-	virtual RenderImage  get_render_channel(RenderChannelType channelType) { return RenderImage(); }
+	virtual RenderImage  get_render_channel(RenderChannelType) { return RenderImage(); }
 
 	RenderImage          get_pass(BL::RenderPass::type_enum passType);
 
 	virtual void         show_frame_buffer() {}
 	virtual void         hide_frame_buffer() {}
-	virtual void         set_render_mode(RenderMode renderMode) {}
+	virtual void         set_render_mode(RenderMode) {}
 
 	virtual void         set_render_size(const int&, const int&) {}
 	virtual void         set_viewport_quality(int) {}
@@ -109,7 +109,7 @@ public:
 	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) { callback_on_rt_image_updated = cb; }
 	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
 
-	virtual void         set_camera_plugin(const std::string &pluginName) {}
+	virtual void         set_camera_plugin(const std::string &) {}
 	virtual void         commit_changes() { set_commit_state(VRayBaseTypes::CommitAction::CommitNow); }
 	virtual void         set_commit_state(VRayBaseTypes::CommitAction ca);
 	CommitState          get_commit_state() const { return commit_state; }

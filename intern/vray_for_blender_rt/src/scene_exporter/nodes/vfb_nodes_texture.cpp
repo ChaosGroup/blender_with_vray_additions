@@ -23,7 +23,7 @@
 #include "vfb_utils_mesh.h"
 
 
-int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc)
+int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &, NodeContext &, PluginDesc &pluginDesc)
 {
 	BL::Texture texture(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, "texture"));
 	if (texture) {
