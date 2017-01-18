@@ -209,7 +209,7 @@ void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *, 
 
 void AppSdkExporter::CbOnProgress(VRay::VRayRenderer &, const char * msg, int, void *)
 {
-	on_message_update("", msg);
+	callback_on_message_update("", msg);
 }
 
 
@@ -331,7 +331,7 @@ void AppSdkExporter::set_callback_on_rt_image_updated(ExpoterCallback cb)
 void AppSdkExporter::set_callback_on_message_updated(PluginExporter::UpdateMessageCb cb)
 {
 	PluginExporter::set_callback_on_message_updated(cb);
-	if (on_message_update) {
+	if (callback_on_message_update) {
 		// m_vray->setOnProgress<AppSdkExporter, &AppSdkExporter::CbOnProgress>(*this);
 	}
 }

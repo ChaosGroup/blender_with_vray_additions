@@ -48,6 +48,8 @@ struct RenderImage {
 		return !!(pixels);
 	}
 
+	static void updateImageRegion(float * dest, int destW, int destH, int x, int y, const float * source, int sourceW, int sourceH, int channels);
+
 	void   updateRegion(const float *data, int x, int y, int w, int h);
 	void   flip();
 	void   clamp(float max=1.0f, float val=1.0f);

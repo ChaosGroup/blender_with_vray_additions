@@ -293,23 +293,30 @@ RenderImage ZmqExporter::get_image() {
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
-		if (this->on_message_update) {
+		if (this->callback_on_message_update) {
 			auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
 			auto newLine = msg.find_first_of("\n\r");
 			if (newLine != std::string::npos) {
 				msg.resize(newLine);
 			}
 
-			this->on_message_update("", msg.c_str());
+			this->callback_on_message_update("", msg.c_str());
 		}
 	} else if (msgType == VRayMessage::Type::Image) {
-		auto set = message.getValue<VRayBaseTypes::AttrImageSet>();
+		auto * set = message.getValue<VRayBaseTypes::AttrImageSet>();
 		bool ready = set->sourceType == VRayBaseTypes::ImageSourceType::ImageReady;
+		bool rtImageUpdate = false;
 		for (const auto &img : set->images) {
 			m_LayerImages[img.first].update(img.second, this, !is_viewport);
+			// for result buckets use on bucket ready, otherwise rt image updated callback
+			if (img.first == RenderChannelType::RenderChannelTypeNone && img.second.isBucket() && this->callback_on_bucket_ready) {
+				this->callback_on_bucket_ready(img.second);
+			} else {
+				rtImageUpdate = true;
+			}
 		}
 
-		if (this->callback_on_rt_image_updated) {
+		if (rtImageUpdate && this->callback_on_rt_image_updated) {
 			callback_on_rt_image_updated.cb();
 		}
 

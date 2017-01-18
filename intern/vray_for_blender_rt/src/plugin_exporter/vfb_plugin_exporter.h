@@ -60,6 +60,7 @@ class PluginExporter
 {
 public:
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
+	typedef boost::function<void(const VRayBaseTypes::AttrImage &)> BucketReadyCb;
 	typedef VRayBaseTypes::CommitAction CommitState;
 
 	PluginExporter()
@@ -105,9 +106,10 @@ public:
 	virtual void         set_render_size(const int&, const int&) {}
 	virtual void         set_viewport_quality(int) {}
 
-	virtual void         set_callback_on_image_ready(ExpoterCallback cb)      { callback_on_image_ready = cb; }
+	virtual void         set_callback_on_image_ready(ExpoterCallback cb) { callback_on_image_ready = cb; }
 	virtual void         set_callback_on_rt_image_updated(ExpoterCallback cb) { callback_on_rt_image_updated = cb; }
-	virtual void         set_callback_on_message_updated(UpdateMessageCb cb)  { on_message_update = cb; }
+	virtual void         set_callback_on_message_updated(UpdateMessageCb cb) { callback_on_message_update = cb; }
+	virtual void         set_callback_on_bucket_ready(BucketReadyCb cb) { callback_on_bucket_ready = cb; }
 
 	virtual void         set_camera_plugin(const std::string &) {}
 	virtual void         commit_changes() { set_commit_state(VRayBaseTypes::CommitAction::CommitNow); }
@@ -128,7 +130,8 @@ public:
 protected:
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
-	UpdateMessageCb      on_message_update;
+	UpdateMessageCb      callback_on_message_update;
+	BucketReadyCb        callback_on_bucket_ready;
 	float                last_rendered_frame;
 	float                current_scene_frame;
 	SettingsAnimation    animation_settings;

@@ -46,6 +46,19 @@ namespace {
 	}
 }
 
+void RenderImage::updateImageRegion(float * destination, int destW, int destH, int x, int y, const float * source, int sourceW, int sourceH, int channels)
+{
+	y = destH - y;
+	for (int c = 0; c < sourceH; ++c) {
+		const float * src = source + c * sourceW * channels;
+		float * dst = destination + (y - c - 1) * destW * channels + x * channels;
+		memcpy(dst, src, sizeof(float) * sourceW * channels);
+
+		::resetAlpha(dst, sourceW, 1, channels);
+		::clamp(dst, sourceW, 1, channels, 1.0f, 1.0f);
+	}
+}
+
 
 RenderImage::RenderImage(RenderImage && other):
 	pixels(nullptr),
@@ -92,16 +105,7 @@ RenderImage::~RenderImage()
 void RenderImage::updateRegion(const float *data, int x, int y, int w, int h)
 {
 	updated += (float)(w * h) / std::max((float)(this->w * this->h), 1.f);
-	y = this->h - y;
-
-	for (int c = 0; c < h; ++c) {
-		const float * source = data + c * w * channels;
-		float * dest = this->pixels + (y - c - 1) * this->w * channels + x * channels;
-		memcpy(dest, source, sizeof(float) * w * channels);
-
-		::resetAlpha(dest, w, 1, channels);
-		::clamp(dest, w, 1, channels, 1.0f, 1.0f);
-	}
+	RenderImage::updateImageRegion(pixels, this->w, this->h, x, y, data, w, h, channels);
 }
 
 void RenderImage::flip()
