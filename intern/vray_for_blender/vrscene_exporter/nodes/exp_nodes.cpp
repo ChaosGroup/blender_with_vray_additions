@@ -816,8 +816,17 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 			}
 			else {
 				std::string propValue = VRayNodeExporter::getValueFromPropGroup(&propGroup, (ID*)ntree.ptr.data, attrName.c_str());
-				if(propValue != "NULL")
+				if (propValue != "NULL") {
+					if (v.second.count("options")) {
+						const bool isExportAsColor = v.second.get_child("options").data().find("EXPORT_AS_ACOLOR");
+						if (isExportAsColor) {
+							static boost::format AColorFromStrFmt("AColor(%s,%s,%s,1.0)");
+							propValue = boost::str(AColorFromStrFmt % propValue % propValue % propValue);
+						}
+					}
+
 					pluginAttrs[attrName] = propValue;
+				}
 			}
 		}
 	}
