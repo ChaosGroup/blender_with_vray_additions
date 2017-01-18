@@ -59,8 +59,12 @@ public:
 public:
 	void              cb_on_image_ready();
 	void              cb_on_rt_image_updated();
+	void              cb_on_bucket_ready(const VRayBaseTypes::AttrImage & image);
 
 private:
+	typedef std::chrono::high_resolution_clock::time_point time_point;
+	typedef std::vector<BL::RenderResult> RenderResults;
+
 	BL::RenderResult  m_renderResult;
 	// used to signal a frame has been rendered
 	int               m_renderFinished;
@@ -74,12 +78,8 @@ private:
 	int               m_frameCount;
 	bool              m_isFirstFrame;
 
-	typedef std::chrono::high_resolution_clock::time_point time_point;
-
 	time_point        m_lastReportTime;
-
-	std::vector<BL::RenderResult> m_renderResultsList;
-
+	RenderResults     m_renderResultsList;
 	std::mutex        m_callback_mtx;
 };
 
