@@ -142,9 +142,13 @@ AppSdkExporter::AppSdkExporter()
 AppSdkExporter::~AppSdkExporter()
 {
 	if (m_vray) {
-		if (m_vray->getState() >= VRay::PREPARING) {
-			m_vray->stop();
-		}
+		m_vray->setOnRTImageUpdated(nullptr);
+		m_vray->setOnImageReady(nullptr);
+		m_vray->setOnBucketReady(nullptr);
+		m_vray->setOnDumpMessage(nullptr);
+		m_vray->vfb.show(false, false);
+
+		m_vray->stop();
 	}
 	free();
 }
@@ -396,7 +400,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		           pluginDesc.pluginName.c_str());
 	}
 	else {
-		VRay::Plugin plug =  m_vray->newPlugin(pluginDesc.pluginName, pluginDesc.pluginID);
+		VRay::Plugin plug =  m_vray->getOrCreatePlugin(pluginDesc.pluginName, pluginDesc.pluginID);
 		if (NOT(plug)) {
 			PRINT_ERROR("Failed to create plugin: %s [%s]",
 			            pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str());
