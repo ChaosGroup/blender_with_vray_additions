@@ -291,8 +291,6 @@ RenderImage ZmqExporter::get_image() {
 }
 
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
-	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
-
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
 		if (this->on_message_update) {
@@ -384,6 +382,7 @@ void ZmqExporter::checkZmqClient()
 		}
 
 		if (!m_Client->good()) {
+			m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
 			m_Client.release();
 			m_Client = ClientPtr(new ZmqWrapper());
 			this->init();
@@ -502,7 +501,6 @@ void ZmqExporter::start()
 
 void ZmqExporter::stop()
 {
-	checkZmqClient();
 	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Stop));
 }
 
