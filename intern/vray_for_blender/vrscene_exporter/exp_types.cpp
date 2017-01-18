@@ -23,9 +23,19 @@
 #include "exp_types.h"
 #include "cgr_string.h"
 
-
 using namespace VRayScene;
 
+boost::format vrsceneStrFmt("%s");
+boost::format vrsceneQuotedStrFmt("\"%s\"");
+boost::format vrsceneFloatFmt("%.6g");
+boost::format vrsceneTmFmt("TransformHex(\"%s\")");
+boost::format vrsceneIntFmt("%i");
+boost::format vrsceneUIntFmt("%u");
+boost::format vrsceneColorFmt("Color(%.6g,%.6g,%.6g)");
+boost::format vrsceneAColorFmt("AColor(%.6g,%.6g,%.6g,%.6g)");
+boost::format vrsceneAColorNoAlphaFmt("AColor(%.6g,%.6g,%.6g,1.0)");
+boost::format vrsceneVectorFmt("Vector(%.6g,%.6g,%.6g)");
+boost::format vrsceneAsciiMatrixFmt("Matrix(Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g))");
 
 StrSet           VRayExportable::m_exportNameCache;
 ExpCache         VRayExportable::m_frameCache;
