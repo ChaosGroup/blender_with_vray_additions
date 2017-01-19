@@ -19,6 +19,7 @@
 #include "cgr_config.h"
 
 #include <Python.h>
+#include <queue>
 
 #include "cgr_vray_for_blender_rt.h"
 #include "vfb_scene_exporter_rt.h"
