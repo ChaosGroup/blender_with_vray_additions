@@ -399,7 +399,7 @@ void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img
 	for (auto & result : m_renderResultsList) {
 		for (int c = 0; c < result.layers.length(); ++c) {
 			for (int r = 0; r < result.layers[c].passes.length(); ++r) {
-				auto & pass = result.layers[c].passes[r];
+				auto pass = result.layers[c].passes[r];
 				if (pass.type() == BL::RenderPass::type_COMBINED) {
 					m_progress += static_cast<float>(img.width * img.height) / std::max(1, result.resolution_x() * result.resolution_y());
 					auto * bPass = reinterpret_cast<RenderPass*>(pass.ptr.data);
