@@ -214,10 +214,12 @@ static PyObject *CGR_initPython(void)
 {
 	return (PyObject*)VRayForBlender_initPython();
 }
+#ifdef WITH_VRAY_FOR_BLENDER_ZMQ
 static PyObject *CGR_initPythonRT(void)
 {
 	return (PyObject*)VRayForBlenderRT_initPython();
 }
+#endif
 #endif
 
 static struct _inittab bpy_internal_modules[] = {
@@ -244,7 +246,9 @@ static struct _inittab bpy_internal_modules[] = {
 #endif
 #ifdef WITH_VRAY_FOR_BLENDER
 	{"_vray_for_blender", CGR_initPython},
+#ifdef WITH_VRAY_FOR_BLENDER_ZMQ
 	{"_vray_for_blender_rt", CGR_initPythonRT},
+#endif
 #endif
 	{"gpu", GPU_initPython},
 	{"idprop", BPyInit_idprop},

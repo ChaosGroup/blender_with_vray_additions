@@ -859,6 +859,7 @@ if(WITH_VRAY_FOR_BLENDER)
 		if(NOT LIBS_ROOT)
 			message(FATAL_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
 		endif()
+		add_definitions(-DWITH_VRAY_FOR_BLENDER_ZMQ)
 	endif()
 endif()
 

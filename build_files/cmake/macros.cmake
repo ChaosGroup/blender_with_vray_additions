@@ -768,7 +768,9 @@ function(SETUP_BLENDER_SORTED_LIBS)
 
 	if(WITH_VRAY_FOR_BLENDER)
 		list_insert_after(BLENDER_SORTED_LIBS "bf_python_bmesh" "vray_for_blender")
-		list_insert_after(BLENDER_SORTED_LIBS "vray_for_blender" "vray_for_blender_rt")
+		if (USE_BLENDER_VRAY_ZMQ)
+			list_insert_after(BLENDER_SORTED_LIBS "vray_for_blender" "vray_for_blender_rt")
+		endif()
 	endif()
 
 	if(WITH_GAMEENGINE_DECKLINK)
