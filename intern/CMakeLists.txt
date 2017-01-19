@@ -95,5 +95,7 @@ endif()
 
 if(WITH_VRAY_FOR_BLENDER)
 	add_subdirectory(vray_for_blender)
-	add_subdirectory(vray_for_blender_rt)
+	if(USE_BLENDER_VRAY_ZMQ)
+		add_subdirectory(vray_for_blender_rt)
+	endif()
 endif()
