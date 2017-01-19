@@ -251,12 +251,12 @@ public:
 	typedef std::unordered_map<std::string, std::vector<BL::Object>> ObjectHideMap;
 
 	DataExporter()
-	    : m_is_local_view(false)
-	    , m_data(PointerRNA_NULL)
+	    : m_data(PointerRNA_NULL)
 	    , m_scene(PointerRNA_NULL)
 	    , m_engine(PointerRNA_NULL)
 	    , m_context(PointerRNA_NULL)
 	    , m_view3d(PointerRNA_NULL)
+	    , m_is_local_view(false)
 	    , m_active_camera(PointerRNA_NULL)
 	    , m_exporter(nullptr)
 	{}
@@ -316,7 +316,7 @@ public:
 
 	void              setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
 	void              setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
-	void              setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc);
+	void              setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const ParamDesc::AttrDesc &attrName, PluginDesc &pluginDesc);
 	void              setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID);
 
 

@@ -18,11 +18,19 @@
 
 #include "vfb_scene_exporter_pro.h"
 
+#include "RE_pipeline.h"
+#include "RE_engine.h"
+#include "render_types.h"
+
+#include <inttypes.h>
+
 #include <thread>
 #include <chrono>
 
 #include <Python.h>
 
+using namespace std;
+using namespace std::chrono;
 
 void ProductionExporter::create_exporter()
 {
@@ -39,6 +47,7 @@ void ProductionExporter::setup_callbacks()
 {
 	m_exporter->set_callback_on_image_ready(ExpoterCallback(boost::bind(&ProductionExporter::cb_on_image_ready, this)));
 	m_exporter->set_callback_on_rt_image_updated(ExpoterCallback(boost::bind(&ProductionExporter::cb_on_rt_image_updated, this)));
+	m_exporter->set_callback_on_bucket_ready(boost::bind(&ProductionExporter::cb_on_bucket_ready, this, boost::placeholders::_1));
 }
 
 int	ProductionExporter::is_interrupted()
@@ -56,9 +65,6 @@ int	ProductionExporter::is_interrupted()
 
 bool ProductionExporter::export_animation_frame(const int &check_updated)
 {
-	using namespace std;
-	using namespace std::chrono;
-
 	bool frameExported = true;
 
 	m_settings.settings_animation.frame_current = m_frameCurrent;
@@ -246,8 +252,6 @@ void ProductionExporter::render_frame()
 		return;
 	}
 
-	using namespace std::chrono;
-
 	const float frame_contrib = 1.f / m_frameCount;
 
 	auto now = high_resolution_clock::now();
@@ -277,9 +281,7 @@ void ProductionExporter::render_frame()
 
 		m_engine.update_progress(progress);
 		for (auto & result : m_renderResultsList) {
-			BL::RenderResult::layers_iterator rrlIt;
-			result.layers.begin(rrlIt);
-			if (rrlIt != result.layers.end()) {
+			if (result.layers.length() > 0) {
 				m_engine.update_result(result);
 			}
 		}
@@ -350,6 +352,7 @@ void ProductionExporter::render_end()
 		m_exporter->stop();
 		m_exporter->set_callback_on_image_ready(ExpoterCallback());
 		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback());
+		m_exporter->set_callback_on_bucket_ready([](const VRayBaseTypes::AttrImage &) {});
 	}
 	python_thread_state_restore();
 	for (auto & result : m_renderResultsList) {
@@ -383,6 +386,31 @@ void ProductionExporter::cb_on_image_ready()
 	m_renderFinished = true;
 }
 
+
+void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img)
+{
+	BLI_assert(img.isBucket() && "Image for cb_on_bucket_ready is not bucket image");
+	if (!img.isBucket()) {
+		return;
+	}
+	std::lock_guard<std::mutex> l(m_callback_mtx);
+	m_imageDirty = true;
+
+	for (auto & result : m_renderResultsList) {
+		for (int c = 0; c < result.layers.length(); ++c) {
+			for (int r = 0; r < result.layers[c].passes.length(); ++r) {
+				auto pass = result.layers[c].passes[r];
+				if (pass.type() == BL::RenderPass::type_COMBINED) {
+					m_progress += static_cast<float>(img.width * img.height) / std::max(1, result.resolution_x() * result.resolution_y());
+					auto * bPass = reinterpret_cast<RenderPass*>(pass.ptr.data);
+					RenderImage::updateImageRegion(bPass->rect, bPass->rectx, bPass->recty, img.x, img.y, reinterpret_cast<const float *>(img.data.get()), img.width, img.height, bPass->channels);
+					break;
+				}
+			}
+		}
+	}
+}
+
 void ProductionExporter::cb_on_rt_image_updated()
 {
 	std::lock_guard<std::mutex> l(m_callback_mtx);
@@ -408,9 +436,6 @@ void ProductionExporter::cb_on_rt_image_updated()
 								image.cropTo(resx, resy);
 							}
 
-							if (renderPass.type() == BL::RenderPass::type_COMBINED) {
-								m_progress = image.updated;
-							}
 							renderPass.rect(image.pixels);
 						}
 					}

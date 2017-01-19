@@ -142,9 +142,13 @@ AppSdkExporter::AppSdkExporter()
 AppSdkExporter::~AppSdkExporter()
 {
 	if (m_vray) {
-		if (m_vray->isRendering()) {
-			m_vray->stop();
-		}
+		m_vray->setOnRTImageUpdated(nullptr);
+		m_vray->setOnImageReady(nullptr);
+		m_vray->setOnBucketReady(nullptr);
+		m_vray->setOnDumpMessage(nullptr);
+		m_vray->vfb.show(false, false);
+
+		m_vray->stop();
 	}
 	free();
 }
@@ -180,7 +184,7 @@ void AppSdkExporter::init()
 	}
 }
 
-void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
+void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *)
 {
 	PRINT_INFO_EX("AppSdkExporter::CbOnImageReady");
 	if (callback_on_image_ready) {
@@ -189,7 +193,7 @@ void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *userData)
 }
 
 
-void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *img, void *userData)
+void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *, void *)
 {
 	if (!is_viewport) {
 		m_bucket_image = AppSDKRenderImage(m_vray->getImage());
@@ -205,7 +209,7 @@ void AppSdkExporter::CbOnRTImageUpdated(VRay::VRayRenderer&, VRay::VRayImage *im
 
 void AppSdkExporter::CbOnProgress(VRay::VRayRenderer &, const char * msg, int, void *)
 {
-	on_message_update("", msg);
+	callback_on_message_update("", msg);
 }
 
 
@@ -242,7 +246,7 @@ void AppSdkExporter::stop()
 }
 
 
-void AppSdkExporter::bucket_ready(VRay::VRayRenderer &renderer, int x, int y, const char *host, VRay::VRayImage *img, void *)
+void AppSdkExporter::bucket_ready(VRay::VRayRenderer &, int x, int y, const char *, VRay::VRayImage *img, void *)
 {
 	m_bucket_image.updateRegion(reinterpret_cast<const float *>(img->getPixelData()), x, y, img->getWidth(), img->getHeight());
 
@@ -327,7 +331,7 @@ void AppSdkExporter::set_callback_on_rt_image_updated(ExpoterCallback cb)
 void AppSdkExporter::set_callback_on_message_updated(PluginExporter::UpdateMessageCb cb)
 {
 	PluginExporter::set_callback_on_message_updated(cb);
-	if (on_message_update) {
+	if (callback_on_message_update) {
 		// m_vray->setOnProgress<AppSdkExporter, &AppSdkExporter::CbOnProgress>(*this);
 	}
 }
@@ -396,7 +400,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		           pluginDesc.pluginName.c_str());
 	}
 	else {
-		VRay::Plugin plug =  m_vray->newPlugin(pluginDesc.pluginName, pluginDesc.pluginID);
+		VRay::Plugin plug =  m_vray->getOrCreatePlugin(pluginDesc.pluginName, pluginDesc.pluginID);
 		if (NOT(plug)) {
 			PRINT_ERROR("Failed to create plugin: %s [%s]",
 			            pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str());

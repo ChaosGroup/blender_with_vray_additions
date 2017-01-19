@@ -30,11 +30,12 @@
 #include "BKE_main.h"
 #include "BKE_global.h"
 
-void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const std::string &attrName, PluginDesc &pluginDesc)
+void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const ParamDesc::AttrDesc &attrDesc, PluginDesc &pluginDesc)
 {
 	// XXX: Check if we could get rid of ID and use (ID*)propGroup->data
 	// Test with library linking
 	//
+	const std::string & attrName = attrDesc.name;
 	PropertyRNA *prop = RNA_struct_find_property(propGroup, attrName.c_str());
 	if (NOT(prop)) {
 		PRINT_ERROR("Property '%s' not found!",
@@ -73,7 +74,12 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 		}
 		else if (propType == PROP_FLOAT) {
 			if (NOT(RNA_property_array_check(prop))) {
-				pluginDesc.add(attrName, RNA_float_get(propGroup, attrName.c_str()));
+				const float value = RNA_float_get(propGroup, attrName.c_str());
+				if (attrDesc.options & ParamDesc::AttrOption_ExportAsColor) {
+					pluginDesc.add(attrName, AttrAColor(value));
+				} else {
+					pluginDesc.add(attrName, value);
+				}
 			}
 			else {
 				PropertySubType propSubType = RNA_property_subtype(prop);
@@ -128,7 +134,7 @@ void DataExporter::setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA 
 		else if (!pluginDesc.get(attrName)) {
 			// Set non-mapped attributes only
 			if (!ParamDesc::TypeHasSocket(attrType)) {
-				setAttrFromPropGroup(propGroup, (ID*)propGroup->data, attrName, pluginDesc);
+				setAttrFromPropGroup(propGroup, (ID*)propGroup->data, descIt.second, pluginDesc);
 			}
 		}
 	}

@@ -234,7 +234,7 @@ void SceneExporter::render_start()
 {
 	// TODO: check if sync is faster with manual commit
 	// m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
-	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOn);
+	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
 
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
@@ -738,7 +738,6 @@ static std::vector<int> unravel_index(int index, const std::vector<int> & dimSiz
 
 void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	const auto & nodeName = m_data_exporter.getNodeName(ob);
-	const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 	const bool visible = m_data_exporter.isObjectVisible(ob);
 
 	ObjectOverridesAttrs overrideAttrs;
@@ -948,7 +947,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 }
 
 
-void SceneExporter::sync_effects(const int &check_updated)
+void SceneExporter::sync_effects(const int &)
 {
 	NodeContext ctx;
 	m_data_exporter.exportEnvironment(ctx);

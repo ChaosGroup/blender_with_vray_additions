@@ -48,6 +48,8 @@ struct RenderImage {
 		return !!(pixels);
 	}
 
+	static void updateImageRegion(float * dest, int destW, int destH, int x, int y, const float * source, int sourceW, int sourceH, int channels);
+
 	void   updateRegion(const float *data, int x, int y, int w, int h);
 	void   flip();
 	void   clamp(float max=1.0f, float val=1.0f);
@@ -57,13 +59,13 @@ struct RenderImage {
 
 	void   resetUpdated() { updated = 0.f; }
 
-	// will hold % of updated area
-	float  updated;
+public:
 
-	float *pixels;
-	int    w;
-	int    h;
-	int    channels;
+	float *pixels; ///< data of the image
+	int    w; ///< width in pixels
+	int    h; ///< height in pixels
+	int    channels; ///< channels count (usually 1, 3 or 4)
+	float  updated;///< will hold % of updated area
 };
 
 } // namespace VRayForBlender

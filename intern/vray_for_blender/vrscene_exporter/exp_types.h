@@ -90,24 +90,35 @@ extern "C" {
 	attrType == "GEOMETRY" || \
 	attrType == "PLUGIN")
 
-#define BOOST_FORMAT_STRING(s) boost::str(boost::format("\"%s\"") % s)
-#define BOOST_FORMAT_FLOAT(f)  boost::str(boost::format("%.6g") % f)
-#define BOOST_FORMAT_TM(tm)    boost::str(boost::format("TransformHex(\"%s\")") % tm)
-#define BOOST_FORMAT_INT(i)    boost::str(boost::format("%i") % i)
-#define BOOST_FORMAT_UINT(i)   boost::str(boost::format("%u") % i)
+extern boost::format vrsceneStrFmt;
+extern boost::format vrsceneQuotedStrFmt;
+extern boost::format vrsceneFloatFmt;
+extern boost::format vrsceneTmFmt;
+extern boost::format vrsceneIntFmt;
+extern boost::format vrsceneUIntFmt;
+extern boost::format vrsceneColorFmt;
+extern boost::format vrsceneAColorFmt;
+extern boost::format vrsceneAColorNoAlphaFmt;
+extern boost::format vrsceneVectorFmt;
+extern boost::format vrsceneAsciiMatrixFmt;
+
+#define BOOST_FORMAT_STRING(s) boost::str(vrsceneQuotedStrFmt % s)
+#define BOOST_FORMAT_FLOAT(f)  boost::str(vrsceneFloatFmt % f)
+#define BOOST_FORMAT_TM(tm)    boost::str(vrsceneTmFmt % tm)
+#define BOOST_FORMAT_INT(i)    boost::str(vrsceneIntFmt % i)
+#define BOOST_FORMAT_UINT(i)   boost::str(vrsceneUIntFmt % i)
 #define BOOST_FORMAT_BOOL(i)   BOOST_FORMAT_INT(i)
 
-#define BOOST_FORMAT_COLOR(c)   boost::str(boost::format("Color(%.6g,%.6g,%.6g)")       % c[0] % c[1] % c[2]);
-#define BOOST_FORMAT_COLOR1(c)  boost::str(boost::format("Color(%.6g,%.6g,%.6g)")       % c    % c    % c);
-#define BOOST_FORMAT_ACOLOR(c)  boost::str(boost::format("AColor(%.6g,%.6g,%.6g,%.6g)") % c[0] % c[1] % c[2] % c[3]);
-#define BOOST_FORMAT_ACOLOR3(c) boost::str(boost::format("AColor(%.6g,%.6g,%.6g,1.0)")  % c[0] % c[1] % c[2]);
-#define BOOST_FORMAT_VECTOR(v)  boost::str(boost::format("Vector(%.6g,%.6g,%.6g)")      % v[0] % v[1] % v[2])
+#define BOOST_FORMAT_COLOR(c)   boost::str(vrsceneColorFmt % c[0] % c[1] % c[2]);
+#define BOOST_FORMAT_COLOR1(c)  boost::str(vrsceneColorFmt % c    % c    % c);
+#define BOOST_FORMAT_ACOLOR(c)  boost::str(vrsceneAColorFmt % c[0] % c[1] % c[2] % c[3]);
+#define BOOST_FORMAT_ACOLOR3(c) boost::str(vrsceneAColorNoAlphaFmt % c[0] % c[1] % c[2]);
+#define BOOST_FORMAT_VECTOR(v)  boost::str(vrsceneVectorFmt % v[0] % v[1] % v[2])
 
-#define BOOST_FORMAT_MATRIX(m) boost::str(boost::format( \
-	"Matrix(Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g),Vector(%.6g,%.6g,%.6g))") \
+#define BOOST_FORMAT_MATRIX(m) boost::str(vrsceneAsciiMatrixFmt \
 	% m[0][0] % m[1][0] % m[2][0] % m[0][1] % m[1][1] % m[2][1] % m[0][2] % m[1][2] % m[2][2])
 
-#define BOOST_FORMAT_LIST_JOIN_SEP(data, sep) boost::str(boost::format("%s") % boost::algorithm::join(data, sep))
+#define BOOST_FORMAT_LIST_JOIN_SEP(data, sep) boost::str(vrsceneStrFmt % boost::algorithm::join(data, sep))
 #define BOOST_FORMAT_LIST_JOIN(data)  BOOST_FORMAT_LIST_JOIN_SEP(data, ",")
 #define BOOST_FORMAT_LIST_BASE(type, data) boost::str(boost::format(type"(%s)") % boost::algorithm::join(data, ","))
 #define BOOST_FORMAT_LIST(data)       BOOST_FORMAT_LIST_BASE("List",      data)

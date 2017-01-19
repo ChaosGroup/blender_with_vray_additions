@@ -94,7 +94,6 @@ std::vector<BL::Object> DataExporter::getObjectList(const std::string ob_name, c
 
 	// check an object is a group instance and hide the group members
 	for (auto & ob : objects) {
-		const auto otype = ob.dupli_type();
 		const auto oname = ob.name();
 		if (ob.dupli_type() == BL::Object::dupli_type_GROUP) {
 			BL::Group group = ob.dupli_group();

@@ -19,6 +19,7 @@
 #include "cgr_config.h"
 
 #include <Python.h>
+#include <queue>
 
 #include "cgr_vray_for_blender_rt.h"
 #include "vfb_scene_exporter_rt.h"
@@ -35,7 +36,7 @@ std::mutex heartbeatLock;
 
 // TODO: possible data race when multiple exporters start at the same time
 std::queue<VRayForBlender::SceneExporter*> stashedExporters;
-
+namespace {
 // stash instead of delete exporters here that are marked for undo
 void stashExporter(VRayForBlender::SceneExporter* exporter)
 {
@@ -52,6 +53,7 @@ VRayForBlender::SceneExporter * tryTakeStashedExporter()
 	auto exp = stashedExporters.front();
 	stashedExporters.pop();
 	return exp;
+}
 }
 
 static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)

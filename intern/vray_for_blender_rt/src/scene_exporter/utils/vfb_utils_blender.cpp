@@ -30,7 +30,7 @@
 using namespace VRayForBlender;
 
 
-std::string Blender::GetIDName(BL::ID id, const std::string &prefix)
+std::string Blender::GetIDName(BL::ID id, const std::string &)
 {
 #if 1
 	std::string id_name = id.name();

@@ -44,7 +44,7 @@ static void jpegErrorExit(j_common_ptr cinfo) {
 }
 
 
-static void init_source(j_decompress_ptr cinfo) {}
+static void init_source(j_decompress_ptr) {}
 
 static boolean fill_input_buffer (j_decompress_ptr cinfo) {
 	unsigned char *buf = (unsigned char *) cinfo->src->next_input_byte - 2;
@@ -67,7 +67,7 @@ static void skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
     }
 }
 
-static void term_source(j_decompress_ptr cinfo) {}
+static void term_source(j_decompress_ptr) {}
 
 static void jpeg_mem_src_own(j_decompress_ptr cinfo, const unsigned char * buffer, int nbytes) {
     struct jpeg_source_mgr* src;
@@ -244,14 +244,14 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 }
 
 
-ZmqExporter::ZmqExporter():
-	m_Client(nullptr),
-	m_LastExportedFrame(-1000.f),
-	m_IsAborted(false),
-	m_Started(false),
-	m_RenderWidth(0),
-	m_RenderHeight(0),
-	m_RenderQuality(100)
+ZmqExporter::ZmqExporter()
+	: m_Client(nullptr)
+	, m_LastExportedFrame(-1000.f)
+	, m_IsAborted(false)
+	, m_Started(false)
+	, m_RenderQuality(100)
+	, m_RenderWidth(0)
+	, m_RenderHeight(0)
 {
 	checkZmqClient();
 }
@@ -291,27 +291,32 @@ RenderImage ZmqExporter::get_image() {
 }
 
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
-	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
-
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
-		if (this->on_message_update) {
+		if (this->callback_on_message_update) {
 			auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
 			auto newLine = msg.find_first_of("\n\r");
 			if (newLine != std::string::npos) {
 				msg.resize(newLine);
 			}
 
-			this->on_message_update("", msg.c_str());
+			this->callback_on_message_update("", msg.c_str());
 		}
 	} else if (msgType == VRayMessage::Type::Image) {
-		auto set = message.getValue<VRayBaseTypes::AttrImageSet>();
+		auto * set = message.getValue<VRayBaseTypes::AttrImageSet>();
 		bool ready = set->sourceType == VRayBaseTypes::ImageSourceType::ImageReady;
+		bool rtImageUpdate = false;
 		for (const auto &img : set->images) {
 			m_LayerImages[img.first].update(img.second, this, !is_viewport);
+			// for result buckets use on bucket ready, otherwise rt image updated callback
+			if (img.first == RenderChannelType::RenderChannelTypeNone && img.second.isBucket() && this->callback_on_bucket_ready) {
+				this->callback_on_bucket_ready(img.second);
+			} else {
+				rtImageUpdate = true;
+			}
 		}
 
-		if (this->callback_on_rt_image_updated) {
+		if (rtImageUpdate && this->callback_on_rt_image_updated) {
 			callback_on_rt_image_updated.cb();
 		}
 
@@ -384,6 +389,7 @@ void ZmqExporter::checkZmqClient()
 		}
 
 		if (!m_Client->good()) {
+			m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
 			m_Client.release();
 			m_Client = ClientPtr(new ZmqWrapper());
 			this->init();
@@ -502,7 +508,6 @@ void ZmqExporter::start()
 
 void ZmqExporter::stop()
 {
-	checkZmqClient();
 	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Stop));
 }
 

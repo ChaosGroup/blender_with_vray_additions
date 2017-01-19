@@ -110,7 +110,29 @@ enum PluginType {
 	PluginUvwgen,
 };
 
+enum AttrOptions {
+	AttrOption_None          = 0,
+	AttrOption_ExportAsColor = 1 << 0,
+};
+
 struct AttrDesc {
+	struct Options {
+		AttrOptions optionData;
+		Options & operator|=(AttrOptions o) {
+			optionData = static_cast<AttrOptions>(optionData | o);
+			return *this;
+		}
+
+		AttrOptions operator&(AttrOptions o) const {
+			return static_cast<AttrOptions>(optionData & o);
+		}
+
+		Options & operator=(AttrOptions o) {
+			optionData = o;
+			return *this;
+		}
+	};
+
 	struct ParmRampDesc {
 		std::string  colors;
 		std::string  positions;
@@ -125,6 +147,7 @@ struct AttrDesc {
 
 	std::string  name;
 	AttrType     type;
+	Options      options;
 };
 
 typedef std::map<std::string, AttrDesc> MapAttrDesc;
@@ -138,7 +161,6 @@ struct PluginDesc {
 	PluginType   pluginType;
 	std::string  pluginID;
 	MapAttrDesc  attributes;
-
 };
 
 

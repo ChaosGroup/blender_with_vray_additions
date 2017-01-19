@@ -128,7 +128,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 					// For lights we are interested in mappable types only in linked sockets
 					// ignore otherwize
 					if (!ParamDesc::TypeHasSocket(attrType)) {
-						setAttrFromPropGroup(&lampPropGroup, (ID*)lamp.ptr.data, attrName, pluginDesc);
+						setAttrFromPropGroup(&lampPropGroup, (ID*)lamp.ptr.data, descIt.second, pluginDesc);
 					}
 					else if (lightNode){
 						BL::NodeSocket sock = Nodes::GetSocketByAttr(lightNode, attrName);

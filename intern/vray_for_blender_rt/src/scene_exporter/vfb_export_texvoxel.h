@@ -48,9 +48,9 @@ namespace VRayForBlender {
 class TexVoxelData {
 public:
 	TexVoxelData(Object *ob)
-	    : m_ob(ob)
-	    , m_smd(nullptr)
+	    : m_smd(nullptr)
 	    , p_interpolation(0)
+	    , m_ob(ob)
 	{}
 
 	void               initName(const std::string &name);
