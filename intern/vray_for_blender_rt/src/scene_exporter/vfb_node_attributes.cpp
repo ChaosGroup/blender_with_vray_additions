@@ -217,20 +217,19 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 								uvwgenDesc.pluginID = "UVWGenChannel";
 								uvwgenDesc.add("uvw_channel", int(0));
 							}
-#if 0
-							else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eCube) {
-								uvwgenType = "UVWGenProjection";
-								uvwgenAttrs["type"] = "5";
-								uvwgenAttrs["object_space"] = "1";
+							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingCube) {
+								uvwgenDesc.pluginID = "UVWGenProjection";
+								uvwgenDesc.add("type", 5);
+								uvwgenDesc.add("object_space", 1);
 							}
-							else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eObject) {
-								uvwgenType = "UVWGenObject";
+							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingObject) {
+								uvwgenDesc.pluginID = "UVWGenObject";
 							}
-							else if (ExporterSettings::gSet.m_defaultMapping == ExporterSettings::eChannel) {
-								uvwgenType = "UVWGenChannel";
-								uvwgenAttrs["uvw_channel"] = "0";
+							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingChannel) {
+								uvwgenDesc.pluginID = "UVWGenChannel";
+								uvwgenDesc.add("uvw_channel", 0);
 							}
-#endif
+
 							socketValue = m_exporter->export_plugin(uvwgenDesc);
 						}
 #if 0
