@@ -18,33 +18,15 @@
 
 #include "vfb_node_exporter.h"
 
-// TODO:
-//AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
-AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &, BL::Node &, BL::NodeSocket &, NodeContext &)
+AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
-#if 0
-	const std::string &pluginName = NodeExporter::GetPluginName(node, ntree, context);
-
-	PluginDesc pluginAttrs;
-	NodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
-
-	// We simply need to change the pluginID
-	VRayNodePluginExporter::exportPlugin("RENDERCHANNEL", "RenderChannelColor", pluginName, pluginAttrs);
-
-	return pluginName;
-#endif
-	return AttrValue();
+	// override plugin id to be "RenderChannelColor"
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context), "RenderChannelColor");
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 
-// TODO:
-// AttrValue DataExporter::exportVRayNodeRenderChannelColor(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
-AttrValue DataExporter::exportVRayNodeRenderChannelColor(BL::NodeTree &, BL::Node &, BL::NodeSocket &, NodeContext &)
+AttrValue DataExporter::exportVRayNodeRenderChannelColor(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
-#if 0
-	PluginDesc pluginAttrs;
-	NodeExporter::getVRayNodeAttributes(pluginAttrs, ntree, node, fromSocket, context);
-
-	return NodeExporter::exportVRayNodeAuto(ntree, node, fromSocket, context, pluginAttrs);
-#endif
-	return AttrValue();
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context), DataExporter::GetNodePluginID(node));
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
