@@ -21,6 +21,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_math.h"
 #include "vfb_utils_mesh.h"
+#include "vfb_params_json.h"
 
 
 int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &, NodeContext &, PluginDesc &pluginDesc)
@@ -323,14 +324,13 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
-{
+AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context) {
 	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);
 
 	AttrListPlugin  textures;
 	AttrListInt     blend_modes;
 
-	for(int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
+	for (int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
 		static boost::format  sockTexFmt("Texture %i");
 		const std::string    &texSockName = boost::str(sockTexFmt % i);
 
@@ -341,7 +341,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 				// XXX: For some reason TexLayered doesn't like ::out_smth
 				texture.valPlugin.output.clear();
 
-				const int   blend_mode   = RNA_enum_get(&texSock.ptr, "value");
+				const int   blend_mode = RNA_enum_get(&texSock.ptr, "value");
 				const float blend_amount = RNA_float_get(&texSock.ptr, "blend");
 
 				// If blend amount is less then 1.0f we'll modify alpha
@@ -349,7 +349,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 					static boost::format  texBlendNameFmt("Tex%sBlend%i");
 					const std::string    &blendName = boost::str(texBlendNameFmt % pluginName % i);
 
-					PluginDesc blendDesc(blendName, "TexAColor");
+					PluginDesc blendDesc(blendName, "TexAColorOp");
 					blendDesc.add("color_a", texture);
 					blendDesc.add("mult_a", 1.0f);
 					blendDesc.add("mode", 0); // Mode: "result_a"
@@ -371,7 +371,24 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 	pluginDesc.add("textures", textures);
 	pluginDesc.add("blend_modes", blend_modes);
 
-	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+
+	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription("TexLayered");
+	std::unordered_set<std::string> mappableValues = {"alpha", "alpha_mult", "alpha_offset", "nouvw_color", "color_mult", "color_offset"};
+
+	for (const auto &descIt : pluginParamDesc.attributes) {
+		const auto & attrName = descIt.second.name;
+
+		if (mappableValues.find(attrName) == mappableValues.end()) {
+			continue;
+		}
+
+		BL::NodeSocket attrSock = getSocketByAttr(node, attrName);
+		if(attrSock && attrSock.is_linked()) {
+			pluginDesc.add(attrName, exportLinkedSocket(ntree, attrSock, context));
+		}
+	}
+
+	return m_exporter->export_plugin(pluginDesc);
 }
 
 
