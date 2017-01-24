@@ -218,6 +218,9 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		case ValueTypeTransform:
 			writer << KVPair<AttrTransform>(attr.attrName, attr.attrValue.valTransform);
 			break;
+		case ValueTypeMatrix:
+			writer << KVPair<AttrMatrix>(attr.attrName, attr.attrValue.valMatrix);
+			break;
 		case ValueTypeListInt:
 			writer << KVPair<AttrListInt>(attr.attrName, attr.attrValue.valListInt);
 			break;
@@ -247,7 +250,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:
-			BLI_assert("Unsupported attribute type");
+			BLI_assert(!"Unsupported attribute type");
 			break;
 		}
 	}

@@ -613,6 +613,9 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		case ValueTypeTransform:
 			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valTransform));
 			break;
+		case ValueTypeMatrix:
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valMatrix));
+			break;
 		case ValueTypeListInt:
 			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListInt));
 			break;
