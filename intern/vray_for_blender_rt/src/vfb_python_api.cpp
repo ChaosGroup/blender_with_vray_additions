@@ -86,9 +86,10 @@ static PyObject* vfb_zmq_heartbeat_stop(PyObject*)
 {
 	std::lock_guard<std::mutex> l(heartbeatLock);
 	if (heartbeatClient) {
-		PRINT_INFO_EX("Stopping hearbeat client");
+		PRINT_INFO_EX("Stopping hearbeat client... ");
 		heartbeatClient->syncStop();
 		heartbeatClient.reset();
+		PRINT_INFO_EX("... done.");
 	} else {
 		PRINT_ERROR("No zmq heartbeat client running...");
 	}
