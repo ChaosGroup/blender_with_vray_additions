@@ -174,7 +174,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
 								const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
 								if (mult != 1.0f) {
-									static boost::format multFmt("N%sS%sA%sMult");
+									boost::format multFmt("N%sS%sA%sMult");
 
 									// XXX: Name here could be an issue with group nodes
 									std::string multPluginName = boost::str(multFmt

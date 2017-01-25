@@ -120,8 +120,8 @@ void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::N
                                       PluginDesc &pluginDesc,
                                       const std::string &texAttrName, const std::string &colAttrName, const std::string &posAttrName, const std::string &typesAttrName)
 {
-	static boost::format subPluginNameFmt("%s@%s");
-	static boost::format subTexNameFmt("%sPos%i");
+	boost::format subPluginNameFmt("%s@%s");
+	boost::format subTexNameFmt("%sPos%i");
 
 	BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttrName));
 	if (tex) {
@@ -268,7 +268,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 
 			PluginAttr *uv_set_name = mappingDesc.get("uv_set_name");
 			if (uv_set_name) {
-				uv_set_name->attrValue.valString = boost::str(VRayForBlender::Mesh::UvChanNameFmt % uv_set_name->attrValue.valString);
+				uv_set_name->attrValue.valString = boost::str(boost::format(VRayForBlender::Mesh::UvChanNameFmt) % uv_set_name->attrValue.valString);
 			}
 			else {
 				mappingDesc.add("uv_set_name", "UvUVMap");
@@ -297,7 +297,7 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 	AttrListInt    textures_ids;
 
 	for(int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
-		static boost::format sockTexFmt("Texture %i");
+		boost::format sockTexFmt("Texture %i");
 
 		const std::string &texSockName = boost::str(sockTexFmt % i);
 
@@ -331,7 +331,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 	AttrListInt     blend_modes;
 
 	for (int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
-		static boost::format  sockTexFmt("Texture %i");
+		boost::format  sockTexFmt("Texture %i");
 		const std::string    &texSockName = boost::str(sockTexFmt % i);
 
 		BL::NodeSocket texSock = Nodes::GetInputSocketByName(node, texSockName);
@@ -346,7 +346,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 
 				// If blend amount is less then 1.0f we'll modify alpha
 				if (blend_amount < 1.0f) {
-					static boost::format  texBlendNameFmt("Tex%sBlend%i");
+					boost::format  texBlendNameFmt("Tex%sBlend%i");
 					const std::string    &blendName = boost::str(texBlendNameFmt % pluginName % i);
 
 					PluginDesc blendDesc(blendName, "TexAColorOp");
@@ -509,7 +509,7 @@ AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &nt
 
 	PluginAttr *channel_name = pluginDesc.get("channel_name");
 	if (channel_name) {
-		channel_name->attrValue.valString = boost::str(VRayForBlender::Mesh::ColChanNameFmt % channel_name->attrValue.valString);
+		channel_name->attrValue.valString = boost::str(boost::format(VRayForBlender::Mesh::ColChanNameFmt) % channel_name->attrValue.valString);
 	}
 
 	return m_exporter->export_plugin(pluginDesc);

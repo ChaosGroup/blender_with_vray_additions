@@ -34,7 +34,7 @@
 VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
 
-
+// TODO: possible data race when multiple exporters start at the same time
 std::queue<VRayForBlender::SceneExporter*> stashedExporters;
 namespace {
 // stash instead of delete exporters here that are marked for undo

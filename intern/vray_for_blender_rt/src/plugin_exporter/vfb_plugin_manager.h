@@ -22,6 +22,7 @@
 #include <vfb_plugin_attrs.h>
 #include <boost/unordered_map.hpp>
 
+#include <mutex>
 #include "utils/cgr_hash.h"
 
 namespace VRayForBlender {
@@ -59,6 +60,8 @@ private:
 
 	// name -> PluginDesc
 	std::unordered_map<std::string, PluginDescHash> m_cache;
+	boost::unordered_map<std::string, PluginDesc> cache;
+	mutable std::mutex cacheLock;
 };
 
 } // namespace VRayForBlender

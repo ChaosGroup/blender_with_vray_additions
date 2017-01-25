@@ -49,10 +49,11 @@ extern "C" {
 #include <random>
 #include <limits>
 #include <mutex>
+#include <atomic>
 
 using namespace VRayForBlender;
 
-
+// TODO: possible data race when multiple exporters start at the same time
 static StrSet RenderSettingsPlugins;
 static StrSet RenderGIPlugins;
 
@@ -215,6 +216,7 @@ void SceneExporter::create_exporter()
 
 void SceneExporter::free()
 {
+	m_threadManager->stop();
 	PluginDesc::cache.clear();
 	ExporterDelete(m_exporter);
 }
@@ -253,6 +255,15 @@ void SceneExporter::sync(const int &check_updated)
 		            check_updated);
 
 	clock_t begin = clock();
+
+	if (!m_threadManager && !check_updated) {
+		// lets init ThreadManager based on object count
+		if (m_scene.objects.length() > 10) {
+			m_threadManager = ThreadManager::make(2);
+		} else {
+			m_threadManager = ThreadManager::make(0);
+		}
+	}
 
 	m_data_exporter.syncStart(m_isUndoSync);
 
@@ -433,8 +444,10 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	const std::string &obName = ob.name();
 	bool add = false;
 	if (override) {
+		auto lock = m_data_exporter.raiiLock();
 		add = !m_data_exporter.m_id_cache.contains(override.id) && (!override.useInstancer || !m_data_exporter.m_id_cache.contains(ob));
 	} else {
+		auto lock = m_data_exporter.raiiLock();
 		add = !m_data_exporter.m_id_cache.contains(ob);
 	}
 	// this object's ID is already synced - skip
@@ -470,6 +483,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 
 		if (m_exporter->getPluginManager().inCache(exportName)) {
 			// lamps and clippers should be removed, others should be hidden
+			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(ob);
 			if (remove) {
 				m_exporter->remove_plugin(exportName);
@@ -500,9 +514,11 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		m_data_exporter.saveSyncedObject(ob);
 
 		if (overrideAttr) {
+			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(overrideAttr.id);
 			m_data_exporter.m_id_cache.insert(ob);
 		} else {
+			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(ob);
 		}
 
@@ -512,7 +528,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 		}
 
-		PRINT_INFO_EX("Syncing: %s...", obName.c_str());
+		//PRINT_INFO_EX("Syncing: %s...", obName.c_str());
 #if 0
 		const int data_updated = RNA_int_get(&vrayObject, "data_updated");
 		PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing [%s]\"%s\"...",
@@ -654,7 +670,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			if (!is_light && !hide_from_parent) {
 				overrideAttrs.visible = is_visible;
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+				{
+					auto lock = m_data_exporter.raiiLock();
+					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+				}
 				sync_object(dupOb, check_updated, overrideAttrs);
 			}
 			overrideAttrs.visible = true;
@@ -670,6 +689,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 			if (!is_light) {
 				// mark the duplication so we can remove in rt
+				auto lock = m_data_exporter.raiiLock();
 				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
 			}
 			sync_object(dupOb, check_updated, overrideAttrs);
@@ -693,8 +713,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 
 			dupli_instance++;
-
-			m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+			{
+				auto lock = m_data_exporter.raiiLock();
+				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
+			}
 			sync_object(dupOb, check_updated, overrideAttrs);
 
 		}
@@ -756,6 +778,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			if (!arrModData->dupliTms) {
 				// force calculation of meshes
 				const int mode = is_viewport() ? 1 : 2;
+				WRITE_LOCK_BLENDER_RAII;
 				m_data.meshes.new_from_object(m_scene, ob, /*apply_modifiers=*/true, mode, false, false);
 			}
 
@@ -843,6 +866,8 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 void SceneExporter::sync_objects(const int &check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
+	CondWaitGroup wg(m_scene.objects.length());
+
 	BL::Scene::objects_iterator obIt;
 	for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 		if (is_interrupted()) {
@@ -851,56 +876,73 @@ void SceneExporter::sync_objects(const int &check_updated) {
 
 		BL::Object ob(*obIt);
 		const auto & nodeName = m_data_exporter.getNodeName(ob);
-		m_data_exporter.m_id_track.insert(ob, nodeName);
-		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
-		const bool visible = m_data_exporter.isObjectVisible(ob);
-
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
-
-		bool has_array_mod = false;
-		if (dupli_use_instancer) {
-			for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
-				if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
-					// stop on last non array mod - we export only array mods on top of mod stack
-					break;
-				}
-				if (ob.modifiers[c].show_render()) {
-					// we found atleast one stuitable array mod
-					has_array_mod = true;
-					break;
-				}
-			}
+		{
+			auto lock = m_data_exporter.raiiLock();
+			m_data_exporter.m_id_track.insert(ob, nodeName);
 		}
 
-		if (ob.is_duplicator()) {
-			if (is_updated) {
-				sync_dupli(ob, check_updated);
-			}
-
+		m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
 			if (is_interrupted()) {
-				break;
+				return;
 			}
 
-			// As in old exporter - dont sync base if its light dupli
-			if (!Blender::IsLight(ob)) {
-				ObjectOverridesAttrs overAttrs;
+			//PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
 
-				overAttrs.override = true;
-				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overAttrs.visible = visible;
+			const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
+			const bool visible = m_data_exporter.isObjectVisible(ob);
 
-				sync_object(ob, check_updated, overAttrs);
+			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+			const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+
+			bool has_array_mod = false;
+			if (dupli_use_instancer) {
+				for (int c = ob.modifiers.length() - 1 ; c >= 0; --c) {
+					if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
+						// stop on last non array mod - we export only array mods on top of mod stack
+						break;
+					}
+					if (ob.modifiers[c].show_render()) {
+						// we found atleast one stuitable array mod
+						has_array_mod = true;
+						break;
+					}
+				}
 			}
-		}
-		else if (has_array_mod) {
-			sync_array_mod(ob, check_updated);
-		}
-		else {
-			sync_object(ob, check_updated);
-		}
+			if (ob.is_duplicator()) {
+				if (is_updated) {
+					sync_dupli(ob, check_updated);
+				}
+				if (is_interrupted()) {
+					return;
+				}
+
+				// As in old exporter - dont sync base if its light dupli
+				if (!Blender::IsLight(ob)) {
+					ObjectOverridesAttrs overAttrs;
+
+					overAttrs.override = true;
+					overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					overAttrs.visible = visible;
+
+					sync_object(ob, check_updated, overAttrs);
+				}
+			}
+			else if (has_array_mod) {
+				sync_array_mod(ob, check_updated);
+			}
+			else {
+				sync_object(ob, check_updated);
+			}
+			//PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
+			wg.done();
+		}, ThreadManager::Priority::LOW);
+	}
+
+	if (m_threadManager->workerCount()) {
+		PRINT_INFO_EX("Started export for all object - waiting for all.");
+		wg.wait();
 	}
 }
 

@@ -111,26 +111,31 @@ std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
 
 bool PluginManager::inCache(const std::string &name) const
 {
+	lock_guard<mutex> l(cacheLock);
 	return m_cache.find(name) != m_cache.end();
 }
 
 bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 {
+	lock_guard<mutex> l(cacheLock);
 	return m_cache.find(getKey(pluginDesc)) != m_cache.end();
 }
 
 void PluginManager::remove(const std::string &pluginName)
 {
+	lock_guard<mutex> l(cacheLock);
 	m_cache.erase(pluginName);
 }
 
 void PluginManager::remove(const PluginDesc &pluginDesc)
 {
+	lock_guard<mutex> l(cacheLock);
 	m_cache.erase(getKey(pluginDesc));
 }
 
 std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const 
 {
+	lock_guard<mutex> l(cacheLock);
 	const auto key = getKey(pluginDesc);
 	auto cacheEntry = m_cache.find(key);
 
@@ -208,6 +213,7 @@ PluginDesc PluginManager::differences(const PluginDesc &pluginDesc) const
 	return diffWithCache(pluginDesc, true).second;
 }
 
+
 PluginManager::PluginDescHash PluginManager::makeHash(const PluginDesc &pluginDesc) const
 {
 	PluginDescHash hash;
@@ -226,12 +232,15 @@ PluginManager::PluginDescHash PluginManager::makeHash(const PluginDesc &pluginDe
 
 void PluginManager::updateCache(const PluginDesc &update)
 {
+	lock_guard<mutex> l(cacheLock);
 	const auto key = getKey(update);
 	auto hash = makeHash(update);
 
 	m_cache[key] = hash;
 }
 
-void PluginManager::clear() {
+void PluginManager::clear()
+{
+	lock_guard<mutex> l(cacheLock);
 	m_cache.clear();
 }

@@ -25,6 +25,8 @@
 #include "vfb_render_view.h"
 #include "vfb_rna.h"
 
+#include "vfb_thread_manager.h"
+
 #include <cstdint>
 #include <mutex>
 #include <boost/thread.hpp>
@@ -131,6 +133,8 @@ protected:
 
 	bool                 m_isLocalView;
 	uint32_t             m_sceneComputedLayers;
+
+	ThreadManager::Ptr   m_threadManager;
 
 	bool                 m_isRunning;
 	bool                 m_isUndoSync;
