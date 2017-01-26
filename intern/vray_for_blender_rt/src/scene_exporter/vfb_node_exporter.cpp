@@ -24,10 +24,8 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-// boost::format is thread unsafe when used to format strings (!duh)
-// so these are wrapped in a struct that inits them when they a re to be used with
-// BOOST_FORMAT_INIT_IN_SCOPE()
-
+// boost::format's operator % is thread unsafe
+// so call BOOST_FORMAT_INIT_IN_SCOPE() to create local format objects that will not be shared among threads
 #define BOOST_FORMAT_INIT_IN_SCOPE()                           \
 	boost::format FormatFloat("%.6g");                         \
 	boost::format FormatString("\"%s\"");                      \
