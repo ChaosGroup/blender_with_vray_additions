@@ -414,6 +414,11 @@ void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img
 void ProductionExporter::cb_on_rt_image_updated()
 {
 	std::lock_guard<std::mutex> l(m_callback_mtx);
+
+	if (!m_exporter) {
+		return;
+	}
+
 	m_imageDirty = true;
 
 	for (auto & result : m_renderResultsList) {

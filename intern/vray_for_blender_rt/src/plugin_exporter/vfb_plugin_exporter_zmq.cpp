@@ -261,11 +261,14 @@ ZmqExporter::~ZmqExporter()
 {
 	free();
 
-	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
-	std::lock_guard<std::mutex> imgLock(m_ImgMutex);
+	{
+		std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
+		m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
+		m_Client.reset();
+	}
 
-	m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
-	m_Client.reset();
+	// we could be destroyed while someone is inside get_render_channel and is accessing m_LayerImges
+	// but we can't protect it from inside this class
 }
 
 RenderImage ZmqExporter::get_render_channel(RenderChannelType channelType) {
@@ -389,10 +392,8 @@ void ZmqExporter::checkZmqClient()
 		}
 
 		if (!m_Client->good()) {
-			m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
-			m_Client.release();
-			m_Client = ClientPtr(new ZmqWrapper());
-			this->init();
+			m_IsAborted = true;
+			BLI_assert(!"ZMQ client disconnected from server!");
 		}
 	}
 }
