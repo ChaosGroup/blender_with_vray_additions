@@ -105,8 +105,8 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 				BL::Node     lightNode(PointerRNA_NULL);
 				BL::NodeTree ntree = Nodes::GetNodeTree(lamp);
 				if (ntree) {
-					boost::format  lightNodeTypeFmt("VRayNode%s");
-					const std::string    &vrayNodeType = boost::str(lightNodeTypeFmt % pluginID);
+					const static std::string lightNodeType("VRayNode");
+					const std::string & vrayNodeType = lightNodeType + pluginID;
 
 					lightNode = Nodes::GetNodeByType(ntree, vrayNodeType);
 				}

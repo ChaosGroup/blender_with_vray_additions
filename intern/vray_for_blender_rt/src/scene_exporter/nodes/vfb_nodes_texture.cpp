@@ -21,6 +21,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_math.h"
 #include "vfb_utils_mesh.h"
+#include "vfb_utils_string.h"
 #include "vfb_params_json.h"
 
 
@@ -120,14 +121,13 @@ void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::N
                                       PluginDesc &pluginDesc,
                                       const std::string &texAttrName, const std::string &colAttrName, const std::string &posAttrName, const std::string &typesAttrName)
 {
-	boost::format subPluginNameFmt("%s@%s");
-	boost::format subTexNameFmt("%sPos%i");
+	const char * subPluginNameFmt("%s@%s");
+	const char * subTexNameFmt("%sPos%i");
 
 	BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttrName));
 	if (tex) {
-		const std::string &pluginName = boost::str(subPluginNameFmt
-		                                           % DataExporter::GenPluginName(node, ntree, context)
-		                                           % texAttrName);
+		char pluginName[String::MAX_PLG_LEN] = {0, };
+		snprintf(pluginName, sizeof(pluginName), subPluginNameFmt, DataExporter::GenPluginName(node, ntree, context).c_str(), texAttrName.c_str());
 
 		BL::ColorRamp ramp = tex.color_ramp();
 
@@ -149,11 +149,8 @@ void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::N
 		BL::ColorRamp::elements_iterator elIt;
 		for (ramp.elements.begin(elIt); elIt != ramp.elements.end(); ++elIt, ++elNum) {
 			BL::ColorRampElement el(*elIt);
-
-			const std::string &colPluginName = boost::str(subTexNameFmt
-			                                              % pluginName
-			                                              % elNum);
-
+			char colPluginName[String::MAX_PLG_LEN] = {0, };
+			snprintf(colPluginName, sizeof(colPluginName), subTexNameFmt, pluginName, elNum);
 			const float pos = el.position();
 
 			PluginDesc colDesc(colPluginName, "TexAColor");
@@ -297,11 +294,10 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 	AttrListInt    textures_ids;
 
 	for(int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
-		boost::format sockTexFmt("Texture %i");
+		char texSocketName[32] = {0, };
+		snprintf(texSocketName, sizeof(texSocketName), "Texture %i", i);
 
-		const std::string &texSockName = boost::str(sockTexFmt % i);
-
-		BL::NodeSocket texSock = Nodes::GetInputSocketByName(node, texSockName);
+		BL::NodeSocket texSock = Nodes::GetInputSocketByName(node, texSocketName);
 		if (texSock && texSock.is_linked()) {
 			AttrValue texture = exportLinkedSocket(ntree, texSock, context);
 
@@ -331,8 +327,8 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 	AttrListInt     blend_modes;
 
 	for (int i = 1; i <= CGR_MAX_LAYERED_TEXTURES; ++i) {
-		boost::format  sockTexFmt("Texture %i");
-		const std::string    &texSockName = boost::str(sockTexFmt % i);
+		char texSockName[32] = {0, };
+		snprintf(texSockName, sizeof(texSockName), "Texture %i", i);
 
 		BL::NodeSocket texSock = Nodes::GetInputSocketByName(node, texSockName);
 		if (texSock && texSock.is_linked()) {
@@ -346,8 +342,8 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 
 				// If blend amount is less then 1.0f we'll modify alpha
 				if (blend_amount < 1.0f) {
-					boost::format  texBlendNameFmt("Tex%sBlend%i");
-					const std::string    &blendName = boost::str(texBlendNameFmt % pluginName % i);
+					char blendName[String::MAX_PLG_LEN] = {0, };
+					snprintf(blendName, sizeof(blendName), "Tex%sBlend%i", pluginName.c_str(), i);
 
 					PluginDesc blendDesc(blendName, "TexAColorOp");
 					blendDesc.add("color_a", texture);

@@ -18,9 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
-
-#include <boost/format.hpp>
-
+#include "vfb_utils_string.h"
 
 AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &/*fromSocket*/, NodeContext &context)
 {
@@ -29,13 +27,16 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node 
 	AttrListPlugin brdfs;
 	AttrListPlugin weights;
 
-	boost::format sockBrdfFormat("BRDF %i");
-	boost::format sockWeigthFormat("Weight %i");
-	boost::format weighTexFormat(pluginName + "W%i");
+	const char * const sockBrdfFormat("BRDF %i");
+	const char * const sockWeigthFormat("Weight %i");
+	const char * const weighTexFormat("%sW%i");
 
 	for (int i = 1; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
-		const std::string &brdfSockName = boost::str(sockBrdfFormat % i);
-		const std::string &weigthSockName = boost::str(sockWeigthFormat % i);
+		char brdfSockName[32] = {0, };
+		char weigthSockName[32] = {0, };
+
+		snprintf(brdfSockName, sizeof(brdfSockName), sockBrdfFormat, i);
+		snprintf(weigthSockName, sizeof(weigthSockName), sockWeigthFormat, i);
 
 		BL::NodeSocket brdfSock = Nodes::GetInputSocketByName(node, brdfSockName);
 		if (brdfSock && brdfSock.is_linked()) {
@@ -47,7 +48,8 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node 
 				weight = exportLinkedSocket(ntree, weightSock, context);
 			}
 			else {
-				const std::string weightTexName = boost::str(weighTexFormat % i);
+				char weightTexName[String::MAX_PLG_LEN] = {0, };
+				snprintf(weightTexName, sizeof(weightTexName), weighTexFormat, pluginName.c_str(), i);
 
 				PluginDesc weigthDesc(weightTexName, "TexAColor");
 				weigthDesc.add("texture", AttrAColor(AttrColor(RNA_float_get(&weightSock.ptr, "value")), 1.0f));

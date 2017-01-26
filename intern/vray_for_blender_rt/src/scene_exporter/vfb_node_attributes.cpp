@@ -174,13 +174,15 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
 								const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
 								if (mult != 1.0f) {
-									boost::format multFmt("N%sS%sA%sMult");
+									char multPluginName[String::MAX_PLG_LEN] = {0, };
 
 									// XXX: Name here could be an issue with group nodes
-									std::string multPluginName = boost::str(multFmt
-									                                        % DataExporter::GenPluginName(node, ntree, context)
-									                                        % sock.node().name()
-									                                        % sock.name());
+									snprintf(multPluginName, sizeof(multPluginName), "N%sS%sA%sMult",
+										DataExporter::GenPluginName(node, ntree, context).c_str(),
+										sock.node().name().c_str(),
+										sock.name().c_str());
+
+
 
 									const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
 									if (is_float_socket) {

@@ -68,9 +68,10 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 	AttrListInt    ids_list(0);
 
 	for(int i = 0; i <= CGR_MAX_LAYERED_BRDFS; ++i) {
-		const std::string &mtlSockName = boost::str(boost::format("Material %i") % i);
+		char materialSocket[32] = {0, };
+		snprintf(materialSocket, sizeof(materialSocket), "Material %i", i);
 
-		BL::NodeSocket mtlSock = Nodes::GetInputSocketByName(node, mtlSockName);
+		BL::NodeSocket mtlSock = Nodes::GetInputSocketByName(node, materialSocket);
 		if (mtlSock && mtlSock.is_linked()) {
 			AttrValue material = exportLinkedSocket(ntree, mtlSock, context);
 			int materialID = RNA_int_get(&mtlSock.ptr, "value");

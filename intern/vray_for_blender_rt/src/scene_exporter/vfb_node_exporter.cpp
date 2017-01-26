@@ -16,38 +16,36 @@
  * limitations under the License.
  */
 
-#include <boost/format.hpp>
-
 #include "vfb_params_json.h"
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
 
-// boost::format's operator % is thread unsafe
-// so call BOOST_FORMAT_INIT_IN_SCOPE() to create local format objects that will not be shared among threads
-#define BOOST_FORMAT_INIT_IN_SCOPE()                           \
-	boost::format FormatFloat("%.6g");                         \
-	boost::format FormatString("\"%s\"");                      \
-	boost::format FormatTmHex("TransformHex(\"%s\")");         \
-	boost::format FormatInt("%i");                             \
-	boost::format FormatUInt("%u");                            \
-	boost::format FormatColor("Color(%.6g,%.6g,%.6g)");        \
-	boost::format FormatAColor("AColor(%.6g,%.6g,%.6g,%.6g)"); \
-	boost::format FormatVector("Vector(%.6g,%.6g,%.6g)");      \
+
+#define SPRINTF_FORMAT_INIT_IN_SCOPE()                              \
+	char formatBuff[String::MAX_PLG_LEN] = {0,};                    \
+	const char * const FormatFloat("%.6g");                         \
+	const char * const FormatString("\"%s\"");                      \
+	const char * const FormatTmHex("TransformHex(\"%s\")");         \
+	const char * const FormatInt("%i");                             \
+	const char * const FormatUInt("%u");                            \
+	const char * const FormatColor("Color(%.6g,%.6g,%.6g)");        \
+	const char * const FormatAColor("AColor(%.6g,%.6g,%.6g,%.6g)"); \
+	const char * const FormatVector("Vector(%.6g,%.6g,%.6g)");      \
 
 
-#define BOOST_FORMAT_STRING(s)  boost::str(FormatFloat  % s)
-#define BOOST_FORMAT_FLOAT(f)   boost::str(FormatString % f)
-#define BOOST_FORMAT_TM(tm)     boost::str(FormatTmHex  % tm)
-#define BOOST_FORMAT_INT(i)     boost::str(FormatInt    % i)
-#define BOOST_FORMAT_UINT(i)    boost::str(FormatUInt   % i)
-#define BOOST_FORMAT_BOOL(i)    boost::str(FormatInt    % i)
-#define BOOST_FORMAT_COLOR(c)   boost::str(FormatColor  % c[0] % c[1] % c[2]       );
-#define BOOST_FORMAT_COLOR1(c)  boost::str(FormatColor  % c    % c    % c          );
-#define BOOST_FORMAT_ACOLOR(c)  boost::str(FormatAColor % c[0] % c[1] % c[2] % c[3]);
-#define BOOST_FORMAT_ACOLOR3(c) boost::str(FormatAColor % c[0] % c[1] % c[2] % 1.0f);
-#define BOOST_FORMAT_VECTOR(v)  boost::str(FormatVector % v[0] % v[1] % v[2]       )
+#define SPRINTF_FORMAT_STRING(s)  (snprintf(formatBuff, sizeof(formatBuff), FormatFloat  , s), formatBuff)
+#define SPRINTF_FORMAT_FLOAT(f)   (snprintf(formatBuff, sizeof(formatBuff), FormatString , f), formatBuff)
+#define SPRINTF_FORMAT_TM(tm)     (snprintf(formatBuff, sizeof(formatBuff), FormatTmHex  , tm), formatBuff)
+#define SPRINTF_FORMAT_INT(i)     (snprintf(formatBuff, sizeof(formatBuff), FormatInt    , i), formatBuff)
+#define SPRINTF_FORMAT_UINT(i)    (snprintf(formatBuff, sizeof(formatBuff), FormatUInt   , i), formatBuff)
+#define SPRINTF_FORMAT_BOOL(i)    (snprintf(formatBuff, sizeof(formatBuff), FormatInt    , i), formatBuff)
+#define SPRINTF_FORMAT_COLOR(c)   (snprintf(formatBuff, sizeof(formatBuff), FormatColor  , c[0] , c[1] , c[2]       ), formatBuff)
+#define SPRINTF_FORMAT_COLOR1(c)  (snprintf(formatBuff, sizeof(formatBuff), FormatColor  , c    , c    , c          ), formatBuff)
+#define SPRINTF_FORMAT_ACOLOR(c)  (snprintf(formatBuff, sizeof(formatBuff), FormatAColor , c[0] , c[1] , c[2] , c[3]), formatBuff)
+#define SPRINTF_FORMAT_ACOLOR3(c) (snprintf(formatBuff, sizeof(formatBuff), FormatAColor , c[0] , c[1] , c[2] , 1.0f), formatBuff)
+#define SPRINTF_FORMAT_VECTOR(v)  (snprintf(formatBuff, sizeof(formatBuff), FormatVector , v[0] , v[1] , v[2]       ), formatBuff)
 
 
 using namespace VRayForBlender;
@@ -121,8 +119,9 @@ void IdTrack::reset_usage() {
 
 
 std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context) {
-	boost::format nodeNameFmt("%s|N%s");
-	std::string pluginName = boost::str(nodeNameFmt % getIdUniqueName(ntree) % node.name());
+	char basePlugiName[String::MAX_PLG_LEN] = {0, };
+	snprintf(basePlugiName, sizeof(basePlugiName), "%s|N%s", getIdUniqueName(ntree).c_str(), node.name().c_str());
+	std::string pluginName(basePlugiName);
 
 	for (NodeContext::NodeTreeVector::iterator ntIt = context.parent.begin(); ntIt != context.parent.end(); ++ntIt) {
 		BL::NodeTree &parent = *ntIt;
@@ -590,7 +589,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 
 void DataExporter::getUserAttributes(PointerRNA *ptr, StrVector &user_attributes)
 {
-	BOOST_FORMAT_INIT_IN_SCOPE();
+	SPRINTF_FORMAT_INIT_IN_SCOPE();
 	RNA_BEGIN(ptr, itemptr, "user_attributes") {
 		bool useAttr = RNA_boolean_get(&itemptr, "use");
 		if (useAttr) {
@@ -600,15 +599,15 @@ void DataExporter::getUserAttributes(PointerRNA *ptr, StrVector &user_attributes
 			UserAttributeType attrType = (UserAttributeType)RNA_enum_get(&itemptr, "value_type");
 			switch (attrType) {
 				case UserAttributeInt:
-					attrValue = BOOST_FORMAT_INT(RNA_int_get(&itemptr, "value_int"));
+					attrValue = SPRINTF_FORMAT_INT(RNA_int_get(&itemptr, "value_int"));
 					break;
 				case UserAttributeFloat:
-					attrValue = BOOST_FORMAT_FLOAT(RNA_float_get(&itemptr, "value_float"));
+					attrValue = SPRINTF_FORMAT_FLOAT(RNA_float_get(&itemptr, "value_float"));
 					break;
 				case UserAttributeColor:
 					float color[3];
 					RNA_float_get_array(&itemptr, "value_color", color);
-					attrValue = BOOST_FORMAT_COLOR(color);
+					attrValue = SPRINTF_FORMAT_COLOR(color);
 					break;
 				case UserAttributeString:
 					attrValue = RNA_std_string_get(&itemptr, "value_string");
@@ -719,39 +718,35 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 
 std::string DataExporter::getNodeName(BL::Object ob)
 {
-	boost::format obNameFormat("Node@%s");
-	return boost::str(obNameFormat % getIdUniqueName(ob));
+	return "Node@" + getIdUniqueName(ob);
 }
 
 
 std::string DataExporter::getMeshName(BL::Object ob)
 {
-	boost::format meshNameFormat("Geom@%s");
-
 	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
 	                 ? ob
 	                 : ob.data();
 
-	return boost::str(meshNameFormat % getIdUniqueName(data_id));
+	return "Geom@" + getIdUniqueName(data_id);
 }
 
 
 std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset)
 {
-	boost::format hairNameFormat("Hair@%s|%s|%s");
-
 	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
 	                ? ob
 	                : ob.data();
 
-	return boost::str(hairNameFormat % getIdUniqueName(data_id) % psys.name() % pset.name());
+	char hairName[String::MAX_PLG_LEN];
+	snprintf(hairName, sizeof(hairName), "Hair@%s|%s|%s", getIdUniqueName(data_id).c_str(), psys.name().c_str(), pset.name().c_str());
+	return hairName;
 }
 
 
 std::string DataExporter::getLightName(BL::Object ob)
 {
-	boost::format lampNameFormat("Lamp@%s");
-	return boost::str(lampNameFormat % getIdUniqueName(ob));
+	return "Lamp@" + getIdUniqueName(ob);
 }
 
 std::string DataExporter::getIdUniqueName(ID * id) {

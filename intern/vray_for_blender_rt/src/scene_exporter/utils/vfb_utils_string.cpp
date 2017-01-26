@@ -21,21 +21,18 @@
 #include "vfb_utils_blender.h"
 
 #include <Python.h>
-#include <boost/format.hpp>
 
 
 std::string VRayForBlender::String::GetUniqueName(StrSet &namesSet, const std::string &name)
 {
 	std::string uniqueName(name);
 
-	boost::format chanNameFormat("%s.%03i");
-
 	int uniqueSuffix = 0;
 	while (namesSet.count(uniqueName)) {
 		uniqueSuffix++;
-		uniqueName = boost::str(chanNameFormat
-								% name
-								% uniqueSuffix);
+		char nameBuff[String::MAX_PLG_LEN] = {0, };
+		snprintf(nameBuff, sizeof(nameBuff), "%s.%03i", name.c_str(), uniqueSuffix);
+		uniqueName = nameBuff;
 	}
 
 	namesSet.insert(uniqueName);

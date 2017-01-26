@@ -22,7 +22,6 @@
 #include "vfb_rna.h"
 #include "vfb_plugin_attrs.h"
 
-#include <boost/format.hpp>
 #include <string>
 
 namespace VRayForBlender {

@@ -26,6 +26,9 @@
 namespace VRayForBlender {
 namespace String {
 
+/// Expected max length of a name for a plugin we can generate
+const int MAX_PLG_LEN = 256;
+
 std::string GetUniqueName(StrSet &namesSet, const std::string &name);
 
 std::string StripString(std::string &str);
