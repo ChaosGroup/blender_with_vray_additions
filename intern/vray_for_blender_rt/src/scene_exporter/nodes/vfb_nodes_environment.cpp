@@ -110,12 +110,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 							pluginDesc.add("bg_tex_mult", bg_tex_mult);
 
 							// Overrides
-							static StrSet envOverrides;
-							if (envOverrides.empty()) {
-								envOverrides.insert("gi_tex");
-								envOverrides.insert("reflect_tex");
-								envOverrides.insert("refract_tex");
-							}
+							const static StrSet envOverrides = {"gi_tex", "reflect_tex", "refract_tex"};
 
 							for (StrSet::const_iterator envOverIt = envOverrides.begin(); envOverIt != envOverrides.end(); ++envOverIt) {
 								const std::string &overAttr     = *envOverIt;

@@ -201,7 +201,7 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrTransform &val)
 		pp << "Transform(" << val.m << "," << val.offs << ")";
 	}
 	else {
-		static char tmBuf[CGR_TRANSFORM_HEX_SIZE];
+		char tmBuf[CGR_TRANSFORM_HEX_SIZE];
 		TraceTransformHex tm(val);
 
 		const u_int8_t *tm8 = (const u_int8_t*)&tm;

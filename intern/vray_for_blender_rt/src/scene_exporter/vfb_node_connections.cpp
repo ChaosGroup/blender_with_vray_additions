@@ -154,7 +154,7 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 		}
 	}
 	else if(toNode.bl_idname() == "VRayNodeDebugSwitch") {
-		static boost::format FmtSwitch("Input %i");
+		boost::format FmtSwitch("Input %i");
 
 		const int inputIndex = RNA_enum_get(&toNode.ptr, "input_index");
 		const std::string inputSocketName = boost::str(FmtSwitch % inputIndex);

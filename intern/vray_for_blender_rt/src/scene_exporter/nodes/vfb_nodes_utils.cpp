@@ -69,8 +69,8 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 
 void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugins)
 {
-	static BL::NodeTree   ntree(PointerRNA_NULL);
-	static BL::NodeSocket fromSocket(PointerRNA_NULL);
+	BL::NodeTree   ntree(PointerRNA_NULL);
+	BL::NodeSocket fromSocket(PointerRNA_NULL);
 
 	if (node.bl_idname() == "VRayNodeSelectObject") {
 		NodeContext ctx;
@@ -119,8 +119,8 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 
 void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 {
-	static BL::NodeTree   ntree(PointerRNA_NULL);
-	static BL::NodeSocket fromSocket(PointerRNA_NULL);
+	BL::NodeTree   ntree(PointerRNA_NULL);
+	BL::NodeSocket fromSocket(PointerRNA_NULL);
 
 	if (node.bl_idname() == "VRayNodeSelectObject") {
 		NodeContext ctx;
