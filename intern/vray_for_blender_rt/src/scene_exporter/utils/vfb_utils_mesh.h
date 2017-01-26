@@ -23,13 +23,13 @@
 #include "vfb_plugin_attrs.h"
 
 #include <boost/format.hpp>
-
+#include <string>
 
 namespace VRayForBlender {
 namespace Mesh {
 
-extern const char * UvChanNameFmt;
-extern const char * ColChanNameFmt;
+static const std::string UvChanNamePrefix = "Uv";
+static const std::string ColChanNamePrefix = "Col";
 
 struct ExportOptions {
 	ExportOptions()
