@@ -232,7 +232,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				// NOTE: It's easier just to reexport full material
 				mtl = exportMtlMulti(ob);
 			}
-		} else if (is_updated || is_data_updated) {
+		} else if (is_updated || is_data_updated || m_layer_changed) {
 			// Export object data from node tree
 			//
 			BL::Node nodeOutput = Nodes::GetNodeByType(ntree, "VRayNodeObjectOutput");
