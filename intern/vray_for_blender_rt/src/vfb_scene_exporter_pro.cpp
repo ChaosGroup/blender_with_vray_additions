@@ -153,8 +153,6 @@ bool ProductionExporter::do_export()
 		}
 
 		const auto restore = m_scene.frame_current();
-		m_animationProgress = 0.f;
-
 
 		std::thread runner;
 		if (!is_file_export && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly) {
@@ -168,7 +166,7 @@ bool ProductionExporter::do_export()
 			m_isFirstFrame = c == 0;
 			// make first frame for camera loop be 1
 			m_frameCurrent = m_frameStep * (c + is_camera_loop);
-			m_animationProgress = (float)c / m_frameCount;
+
 
 			if (!is_file_export) {
 				std::lock_guard<std::mutex> l(m_python_state_lock);
@@ -184,8 +182,9 @@ bool ProductionExporter::do_export()
 				if (!is_camera_loop) {
 					m_scene.frame_set(m_frameCurrent, 0.f);
 				}
-				m_engine.update_progress(m_animationProgress);
-				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_animationProgress * 100), m_frameCurrent);
+
+				m_engine.update_progress(m_exporter->get_progress());
+				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_exporter->get_progress() * 100), m_frameCurrent);
 			}
 
 			res = export_animation_frame(false);
@@ -257,29 +256,22 @@ void ProductionExporter::render_frame()
 	auto now = high_resolution_clock::now();
 	if (duration_cast<milliseconds>(now - m_lastReportTime).count() > 1000) {
 		m_lastReportTime = now;
-		PRINT_INFO_EX("Rendering progress: this frame %d [%d%%], total[%d%%]", m_frameCurrent, (int)(m_progress * 100), (int)((m_animationProgress + m_progress * frame_contrib) * 100));
+		PRINT_INFO_EX("Rendering progress frame: %d [%d%%]", m_frameCurrent, m_exporter->get_progress());
 	}
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 
 	if (m_imageDirty) {
 		m_imageDirty = false;
-		float progress = 0.f;
 		if (m_settings.settings_animation.use) {
 			uLock.lock();
 			if (is_interrupted()) {
 				return;
 			}
 			python_thread_state_restore();
-
-			// for animation add frames progress + current image progress * frame contribution
-			progress = m_animationProgress + m_progress * frame_contrib;
-		} else {
-			// for singe frame - get progress from image
-			progress = m_progress;
 		}
 
-		m_engine.update_progress(progress);
+		m_engine.update_progress(m_exporter->get_progress());
 		for (auto & result : m_renderResultsList) {
 			if (result.layers.length() > 0) {
 				m_engine.update_result(result);
@@ -339,7 +331,6 @@ void ProductionExporter::render_start()
 
 		SceneExporter::render_start();
 		m_frameCount = m_frameCurrent = m_frameStep = 1;
-		m_progress = 0;
 		render_loop();
 		render_end();
 	}
@@ -401,7 +392,6 @@ void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img
 			for (int r = 0; r < result.layers[c].passes.length(); ++r) {
 				auto pass = result.layers[c].passes[r];
 				if (pass.type() == BL::RenderPass::type_COMBINED) {
-					m_progress += static_cast<float>(img.width * img.height) / std::max(1, result.resolution_x() * result.resolution_y());
 					auto * bPass = reinterpret_cast<RenderPass*>(pass.ptr.data);
 					RenderImage::updateImageRegion(bPass->rect, bPass->rectx, bPass->recty, img.x, img.y, reinterpret_cast<const float *>(img.data.get()), img.width, img.height, bPass->channels);
 					break;

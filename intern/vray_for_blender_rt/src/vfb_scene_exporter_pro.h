@@ -34,8 +34,6 @@ public:
 	    , m_renderResult(PointerRNA_NULL)
 	    , m_renderFinished(false)
 	    , m_isAnimationRunning(false)
-	    , m_progress(0.f)
-	    , m_animationProgress(0.f)
 	{}
 
 	virtual           ~ProductionExporter() override;
@@ -71,8 +69,6 @@ private:
 	bool              m_imageDirty;
 
 	bool              m_isAnimationRunning;
-	float             m_progress;
-	float             m_animationProgress;
 	int               m_frameCurrent;
 	int               m_frameStep;
 	int               m_frameCount;

@@ -329,14 +329,23 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
 
 	} else if (msgType == VRayMessage::Type::ChangeRenderer) {
 		if (message.getRendererAction() == VRayMessage::RendererAction::SetRendererState) {
-			if (!(m_IsAborted = (message.getRendererState() == VRayMessage::RendererState::Abort))) {
-				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+			m_IsAborted = false;
+			switch (message.getRendererState()) {
+			case VRayMessage::RendererState::Abort:
+				m_IsAborted = true;
+				break;
+			case VRayMessage::RendererState::Progress:
+				render_progress = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+				break;
+			case VRayMessage::RendererState::ProgressMessage:
+				progress_message = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
+				break;
+			default:
+				BLI_assert(!"Receieved unexpected RendererState message from renderer.");
+			}
 
-				// reset updated% on all images
-				std::unique_lock<std::mutex> lock(m_ImgMutex);
-				for (auto & iter : m_LayerImages) {
-					iter.second.updated = 0.f;
-				}
+			if (!m_IsAborted) {
+				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
 			}
 		}
 	}

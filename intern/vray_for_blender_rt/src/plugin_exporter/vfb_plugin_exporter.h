@@ -66,7 +66,8 @@ public:
 	typedef VRayBaseTypes::CommitAction CommitState;
 
 	PluginExporter()
-	    : is_viewport(false)
+	    : render_progress(0.f)
+	    , is_viewport(false)
 	    , is_prepass(false)
 	    , commit_state(CommitState::CommitAutoOn)
 	{}
@@ -123,6 +124,9 @@ public:
 	void                 set_is_viewport(bool flag)  { is_viewport = flag; }
 	bool                 get_is_viewport() const { return is_viewport; }
 
+	float                get_progress() const { return render_progress; }
+	const std::string &  get_progress_message() const { return progress_message; }
+
 	// if prepass is true - no exporting is done
 	void                 set_prepass(bool flag) { is_prepass = flag; }
 	bool                 get_is_prepass() const { return is_prepass; }
@@ -136,6 +140,8 @@ protected:
 	BucketReadyCb        callback_on_bucket_ready;
 	float                last_rendered_frame;
 	float                current_scene_frame;
+	float                render_progress;
+	std::string          progress_message;
 	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
 	bool                 is_prepass;
