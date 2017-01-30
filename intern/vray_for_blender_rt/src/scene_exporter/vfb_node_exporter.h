@@ -370,6 +370,11 @@ public:
 	// bits set in ObjectVisibility are used to check only some of the criteria
 	bool              isObjectVisible(BL::Object ob, ObjectVisibility ignore = HIDE_ALL);
 
+	/// Check if provided object is mesh
+	static bool       isObMesh(BL::Object ob);
+	/// Check if provided object is lamp
+	static bool       isObLamp(BL::Object ob);
+
 	void              clearMaterialCache();
 
 	void              setActiveCamera(BL::Camera camera);

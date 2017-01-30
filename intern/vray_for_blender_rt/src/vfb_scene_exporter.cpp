@@ -466,7 +466,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	if (skip_export && !overrideAttr) {
 		std::string exportName;
 		bool remove = false, isClipper = false;;
-		if (ob.type() == BL::Object::type_MESH) {
+		if (DataExporter::isObMesh(ob)) {
 			if (RNA_boolean_get(&vrayClipper, "enabled")) {
 				remove = true;
 				isClipper = true;
@@ -474,7 +474,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			} else {
 				exportName = overrideAttr.namePrefix + m_data_exporter.getNodeName(ob);
 			}
-		} else if (ob.type() == BL::Object::type_LAMP) {
+		} else if (DataExporter::isObLamp(ob)) {
 			// we cant hide lamps, so we must remove
 			exportName = overrideAttr.namePrefix + m_data_exporter.getLightName(ob);
 		}
@@ -501,9 +501,9 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		}
 
 		if (oattrs.override) {
-			if (ob.data() && ob.type() == BL::Object::type_MESH) {
+			if (ob.data() && DataExporter::isObMesh(ob)) {
 				m_data_exporter.exportObject(ob, check_updated, oattrs);
-			} else if (ob.data() && ob.type() == BL::Object::type_LAMP) {
+			} else if (ob.data() && DataExporter::isObLamp(ob)) {
 				m_data_exporter.exportLight(ob, check_updated, oattrs);
 			}
 		}
@@ -535,7 +535,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 						ob.is_updated(), ob.is_updated_data(), data_updated, check_updated,
 						override.namePrefix.c_str(), ob.name().c_str());
 #endif
-		if (ob.data() && ob.type() == BL::Object::type_MESH) {
+		if (ob.data() && DataExporter::isObMesh(ob)) {
 			if (RNA_boolean_get(&vrayClipper, "enabled")) {
 
 				if (!overrideAttr) {
@@ -568,7 +568,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			} else {
 				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 			}
-		} else if(ob.data() && ob.type() == BL::Object::type_LAMP) {
+		} else if(ob.data() && DataExporter::isObLamp(ob)) {
 			m_data_exporter.exportLight(ob, check_updated, overrideAttr);
 		}
 	}

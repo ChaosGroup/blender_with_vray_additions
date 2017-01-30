@@ -117,6 +117,18 @@ void IdTrack::reset_usage() {
 	}
 }
 
+bool DataExporter::isObMesh(BL::Object ob) {
+	auto obType = ob.type();
+	return (obType == BL::Object::type_MESH    ||
+			obType == BL::Object::type_CURVE   ||
+			obType == BL::Object::type_SURFACE ||
+			obType == BL::Object::type_FONT    ||
+			obType == BL::Object::type_META);
+}
+
+bool DataExporter::isObLamp(BL::Object ob) {
+	return (ob.type() == BL::Object::type_LAMP);
+}
 
 std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context) {
 	char basePlugiName[String::MAX_PLG_LEN] = {0, };
