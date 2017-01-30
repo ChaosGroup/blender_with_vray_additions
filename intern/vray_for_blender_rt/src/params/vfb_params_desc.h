@@ -27,6 +27,7 @@ namespace VRayForBlender {
 namespace ParamDesc {
 
 enum AttrType {
+	AttrTypeInvalid = -1,
 	AttrTypeIgnore = 0,
 
 	AttrTypeBool,
@@ -91,7 +92,10 @@ enum AttrType {
 
 inline bool TypeHasSocket(const AttrType &attrType)
 {
-	return (attrType >= AttrTypePlugin) && (attrType < AttrTypePluginEnd);
+	return (attrType >= AttrTypePlugin) && (attrType < AttrTypePluginEnd) ||
+		attrType == AttrTypeMatrix ||
+		attrType == AttrTypeTransform ||
+		attrType == AttrTypeVector;
 }
 
 enum PluginType {

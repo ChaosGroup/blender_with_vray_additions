@@ -64,7 +64,9 @@ AttrValue DataExporter::exportVRayNodeTransform(BL::NodeTree &ntree, BL::Node &n
 		copy_v3_v3(tm[3], offs);
 	}
 
-	if (RNA_boolean_get(&node.ptr, "invert")) {
+	// NOTE: old exporter always inverts transform - do the same until we decide to fix
+	const bool uiOptionInvert = RNA_boolean_get(&node.ptr, "invert");
+	if (!uiOptionInvert) { // if ui opt is on we will invert twice as per NOTE above, so invert only when it is off
 		float itm[4][4];
 		invert_m4_m4(itm, tm);
 		copy_m4_m4(tm, itm);

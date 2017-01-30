@@ -121,6 +121,7 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 						attrDesc.options |= AttrOption_ExportAsColor;
 					}
 				}
+				attrDesc.type = AttrTypeInvalid;
 
 				if (attrType == "BOOL") {
 					attrDesc.type = AttrTypeBool;
@@ -139,6 +140,12 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 				}
 				else if (attrType == "ACOLOR") {
 					attrDesc.type = AttrTypeAColor;
+				}
+				else if (attrType == "MATRIX") {
+					attrDesc.type = AttrTypeMatrix;
+				}
+				else if (attrType == "TRANSFORM") {
+					attrDesc.type = AttrTypeTransform;
 				}
 				else if (attrType == "TEXTURE") {
 					attrDesc.type = AttrTypePluginTexture;

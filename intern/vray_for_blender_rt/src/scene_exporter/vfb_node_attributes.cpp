@@ -155,6 +155,10 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 		const std::string         &attrName = attrDesc.name;
 		const ParamDesc::AttrType &attrType = attrDesc.type;
 
+		if (attrType == ParamDesc::AttrTypeInvalid) {
+			PRINT_WARN("Plugin \"%s\" has unknown param type for \"%s\" property.", pluginParamDesc.pluginID.c_str(), attrName.c_str());
+		}
+
 		if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
 			continue;
 		}
