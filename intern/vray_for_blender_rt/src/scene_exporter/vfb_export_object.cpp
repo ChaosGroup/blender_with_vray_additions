@@ -307,11 +307,36 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 			PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
 
-			if (RNA_boolean_get(&mtlRenderStats, "use")) {
-				PluginDesc genericWrapper("MtlRenderStats@" + exportName, "MtlRenderStats");
-				setAttrsFromPropGroupAuto(genericWrapper, &mtlRenderStats, "MtlRenderStats");
-				genericWrapper.add("base_mtl", mtl);
-				mtl = m_exporter->export_plugin(genericWrapper);
+			bool doExportRenderStats = false;
+			const bool useObStats = RNA_boolean_get(&mtlRenderStats, "use");
+			PluginDesc renderStats("MtlRenderStats@" + exportName, "MtlRenderStats");
+			setAttrsFromPropGroupAuto(renderStats, &mtlRenderStats, "MtlRenderStats");
+
+			const int visibilityCount = 5;
+			static const std::string cameraToObHideNames[visibilityCount][2] = {
+				{"camera_visibility", "camera"},
+				{"gi_visibility", "gi"},
+				{"shadows_visibility", "shadows"},
+				{"reflections_visibility", "reflect"},
+				{"refractions_visibility", "refract"},
+			};
+			renderStats.add("base_mtl", mtl);
+
+			for (int c = 0; c < visibilityCount; ++c) {
+				auto * attr = renderStats.get(cameraToObHideNames[c][0]);
+				if (attr) {
+					if (useObStats) {
+						attr->attrValue.valInt = attr->attrValue.valInt && !isObjectInHideList(ob, cameraToObHideNames[c][1]);
+					} else {
+						// "Render" tab is inactive on object, ignore what we got from there
+						attr->attrValue.valInt = !isObjectInHideList(ob, cameraToObHideNames[c][1]);
+					}
+					doExportRenderStats = doExportRenderStats || !attr->attrValue.valInt;
+				}
+			}
+
+			if (doExportRenderStats) {
+				mtl = m_exporter->export_plugin(renderStats);
 			}
 
 			PluginDesc nodeDesc(exportName, "Node");

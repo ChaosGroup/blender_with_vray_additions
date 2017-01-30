@@ -702,11 +702,6 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 		return false;
 	}
 
-	// hidden for current camra
-	if (has(HIDE_LIST) && isObjectInHideList(ob, "camera")) {
-		return false;
-	}
-
 	// hidden from viewport rendering
 	if (has(HIDE_VIEWPORT) && m_exporter->get_is_viewport() && ob.hide()) {
 		return false;
