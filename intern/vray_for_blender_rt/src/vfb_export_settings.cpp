@@ -118,10 +118,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 #endif
 
 	exporter_type = (ExpoterType)RNA_enum_get(&m_vrayExporter, "backend");
-	if (engine.is_preview()) {
-		exporter_type = ExpoterTypeZMQ;
-	}
-	work_mode     = (WorkMode)RNA_enum_get(&m_vrayExporter, "work_mode");
+	work_mode = (WorkMode)RNA_enum_get(&m_vrayExporter, "work_mode");
 
 	zmq_server_port    = RNA_int_get(&m_vrayExporter, "zmq_port");
 	zmq_server_address = RNA_std_string_get(&m_vrayExporter, "zmq_address");
