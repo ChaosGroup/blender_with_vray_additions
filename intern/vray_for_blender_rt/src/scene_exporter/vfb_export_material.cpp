@@ -25,6 +25,7 @@
 
 void DataExporter::clearMaterialCache()
 {
+	std::lock_guard<std::mutex> mtlLock(m_materials_mtx);
 	m_exported_materials.clear();
 }
 
@@ -65,10 +66,13 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 		return material; // null material - export default
 	}
 
-	// TODO: guard this for MT exporter
-	auto iter = m_exported_materials.find(ma);
-	if (iter != m_exported_materials.end()) {
-		return iter->second; // material exported and cached
+	{
+		// we could export 2 objects at the same time - so lock to protect read/write
+		std::lock_guard<std::mutex> mtlLock(m_materials_mtx);
+		auto iter = m_exported_materials.find(ma);
+		if (iter != m_exported_materials.end()) {
+			return iter->second; // material exported and cached
+		}
 	}
 
 	BL::NodeTree ntree(Nodes::GetNodeTree(ma));
@@ -154,7 +158,10 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 		material = m_exporter->export_plugin(genericWrapper);
 	}
 
-	m_exported_materials.insert(std::make_pair(ma, material));
+	{
+		std::lock_guard<std::mutex> mtlLock(m_materials_mtx);
+		m_exported_materials.insert(std::make_pair(ma, material));
+	}
 
 	return material;
 }

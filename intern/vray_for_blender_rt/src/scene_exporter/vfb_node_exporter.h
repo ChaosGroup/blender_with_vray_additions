@@ -431,10 +431,10 @@ private:
 
 public:
 	std::unique_lock<std::mutex> raiiLock() {
-		return std::move(std::unique_lock<std::mutex>(m_maps_lock));
+		return std::move(std::unique_lock<std::mutex>(m_maps_mtx));
 	}
 
-	std::mutex        m_maps_lock;
+	std::mutex        m_maps_mtx;
 	StrSet            RenderChannelNames;
 	IdCache           m_id_cache;
 	IdTrack           m_id_track;
@@ -466,6 +466,7 @@ private:
 
 	EvalMode          m_evalMode;
 	MaterialCache     m_exported_materials;
+	std::mutex        m_materials_mtx;
 
 };
 
