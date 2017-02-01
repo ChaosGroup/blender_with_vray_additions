@@ -612,22 +612,21 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			const bool is_light = Blender::IsLight(dupOb);
 			const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
 
-			if (!is_hidden && !is_light && supported_type) {
+			if (!is_hidden && supported_type) {
 				PointerRNA vrayObject = RNA_pointer_get(&dupOb.ptr, "vray");
 				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-				if (RNA_boolean_get(&vrayClipper, "enabled")) {
-					// if any of the duplicated objects is clipper we cant use instancer
-					num_instances = 0;
+				maxParticleId = std::max(maxParticleId, getParticleID(ob, dupliOb, num_instances++));
+
+				if (is_light || RNA_boolean_get(&vrayClipper, "enabled")) {
+					// if any of the duplicated objects is clipper or light we cant use instancer
 					dupli_use_instancer = false;
-					break;
-				} else {
-					maxParticleId = std::max(maxParticleId, getParticleID(ob, dupliOb, num_instances));
-					num_instances++;
 				}
 			}
 		}
 
-		instances.data.resize(num_instances);
+		if (dupli_use_instancer) { // this could be removed
+			instances.data.resize(num_instances);
+		}
 	}
 
 	if (is_interrupted()) {
@@ -712,14 +711,14 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			instancer_item.tm = AttrTransformFromBlTransform(tm);
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 
-			dupli_instance++;
 			{
 				auto lock = m_data_exporter.raiiLock();
 				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
 			}
 			sync_object(dupOb, check_updated, overrideAttrs);
-
 		}
+
+		dupli_instance++;
 	}
 
 	if (dupli_use_instancer && num_instances) {
