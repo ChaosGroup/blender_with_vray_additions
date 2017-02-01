@@ -105,6 +105,28 @@ private:
 	std::atomic<int> m_remaining; ///< number of remaining tasks
 };
 
+/// RAII wrapper over a task made for CondWaitGroup/BusyWaitGroup this will call
+/// the .done() method for the provided wait group object in destructor
+/// This class ensures that the done method is called for each task in threaded code so we dont
+/// block on wait group's wait call indefinitely
+template <typename WGType>
+class RAIIWaitGroupTask {
+public:
+	/// Construct with reference to a WaitGroup
+	RAIIWaitGroupTask(WGType & waitGroup)
+		: m_waitGroup(waitGroup) {}
+
+	/// Call the .done() method for the group
+	~RAIIWaitGroupTask() {
+		m_waitGroup.done();
+	}
+
+	RAIIWaitGroupTask(const RAIIWaitGroupTask &) = delete;
+	RAIIWaitGroupTask & operator=(const RAIIWaitGroupTask &) = delete;
+private:
+	WGType & m_waitGroup;
+};
+
 /// Basic thread manager able to execute tasks on different threads
 class ThreadManager {
 public:

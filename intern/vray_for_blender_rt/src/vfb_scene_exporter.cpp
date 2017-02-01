@@ -881,11 +881,11 @@ void SceneExporter::sync_objects(const int &check_updated) {
 		}
 
 		m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
+			// make wrapper to call wg.done() on function exit
+			RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
 			if (is_interrupted()) {
 				return;
 			}
-
-			//PRINT_INFO_EX("+Enter ob [%s] ...", ob.name().c_str());
 
 			const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 			const bool visible = m_data_exporter.isObjectVisible(ob);
@@ -934,8 +934,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 			else {
 				sync_object(ob, check_updated);
 			}
-			//PRINT_INFO_EX("-Exit ob [%s], %d remaining.", ob.name().c_str(), wg.remaining());
-			wg.done();
+
 		}, ThreadManager::Priority::LOW);
 	}
 
