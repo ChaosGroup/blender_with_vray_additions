@@ -180,15 +180,13 @@ std::string DataExporter::GetNodePluginID(BL::Node node)
 void DataExporter::init(PluginExporter *exporter)
 {
 	m_exporter = exporter;
-	m_evalMode = EvalModePreview;
+	m_evalMode = exporter->get_is_viewport() ? EvalModePreview : EvalModeRender;
 }
 
 
-void DataExporter::init(PluginExporter *exporter, ExporterSettings settings)
+void DataExporter::updateSettings(ExporterSettings settings)
 {
-	m_exporter = exporter;
 	m_settings = settings;
-	m_evalMode = exporter->get_is_viewport() ? EvalModePreview : EvalModeRender;
 }
 
 
@@ -283,25 +281,6 @@ void DataExporter::setComputedLayers(uint32_t layers, bool is_local_view)
 	m_computedLayers = layers;
 }
 
-
-void DataExporter::init_defaults()
-{
-	// Exporter default material
-	//
-	PluginDesc defaultBrdfDesc("DefaultBRDF", "BRDFDiffuse");
-	defaultBrdfDesc.add("color_tex", AttrColor(0.5f, 0.5f, 0.5f));
-
-	PluginDesc defaultMtlDesc("DefaultMtl", "MtlSingleBRDF");
-	defaultMtlDesc.add("brdf", m_exporter->export_plugin(defaultBrdfDesc));
-
-	m_defaults.default_material = m_exporter->export_plugin(defaultMtlDesc);
-
-	// Export override material
-	//
-	if (!m_settings.override_material.empty()) {
-		// TODO
-	}
-}
 
 void DataExporter::resetSyncState()
 {

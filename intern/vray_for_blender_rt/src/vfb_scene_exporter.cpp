@@ -157,7 +157,8 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 
 	setup_callbacks();
 
-	m_data_exporter.init(m_exporter, m_settings);
+	m_data_exporter.init(m_exporter);
+	m_data_exporter.updateSettings(m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
 
 	m_isUndoSync = true;
@@ -200,9 +201,9 @@ void SceneExporter::init() {
 
 void SceneExporter::init_data()
 {
-	m_data_exporter.init(m_exporter, m_settings);
+	m_data_exporter.init(m_exporter);
+	m_data_exporter.updateSettings(m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
-	m_data_exporter.init_defaults();
 }
 
 void SceneExporter::create_exporter()
@@ -309,7 +310,6 @@ void SceneExporter::sync(const int &check_updated)
 	}
 	m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
 
-
 	VRayBaseTypes::RenderMode renderMode = m_view3d
 		                                    ? m_settings.getViewportRenderMode()
 		                                    : m_settings.getRenderMode();
@@ -317,12 +317,14 @@ void SceneExporter::sync(const int &check_updated)
 	m_exporter->set_render_mode(renderMode);
 	m_exporter->set_viewport_quality(m_settings.viewportQuality);
 
-
-	// Export once per viewport session
 	sync_render_settings();
+	// Export once per viewport session
 	if (!check_updated && !is_viewport()) {
 		sync_render_channels();
 	}
+
+	m_data_exporter.updateSettings(m_settings);
+	m_data_exporter.exportMaterialSettings();
 
 	// First materials sync is done from "sync_objects"
 	// so run it only in update call

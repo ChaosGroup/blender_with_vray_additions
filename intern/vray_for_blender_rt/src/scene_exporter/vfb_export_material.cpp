@@ -37,91 +37,124 @@ AttrValue DataExporter::getDefaultMaterial()
 }
 
 
-AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob)
+void DataExporter::exportMaterialSettings()
+{
+	// Default material - always the same, export only once
+	if (!m_defaults.default_material) {
+		PluginDesc defaultBrdfDesc("DefaultBRDF", "BRDFDiffuse");
+		defaultBrdfDesc.add("color_tex", AttrColor(0.5f, 0.5f, 0.5f));
+
+		PluginDesc defaultMtlDesc("DefaultMtl", "MtlSingleBRDF");
+		defaultMtlDesc.add("brdf", m_exporter->export_plugin(defaultBrdfDesc));
+		m_defaults.default_material = m_exporter->export_plugin(defaultMtlDesc);
+	}
+
+	// TODO: fix for viewport/RT
+	// Override material
+	if (m_settings.override_material && !m_settings.override_material_name.empty()) {
+		m_defaults.override_material = exportMaterial(m_settings.override_material, PointerRNA_NULL, true);
+	}
+}
+
+
+AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride)
 {
 	AttrValue material = getDefaultMaterial();
 
-	if (ma) {
-		auto iter = m_exported_materials.find(ma);
-		if (iter != m_exported_materials.end()) {
-			material = iter->second;
-		}
-		else {
-			BL::NodeTree ntree(Nodes::GetNodeTree(ma));
-			if (ntree) {
-				BL::Node output(Nodes::GetNodeByType(ntree, "VRayNodeOutputMaterial"));
-				if (output) {
-					const bool use_override = m_defaults.override_material && !(RNA_boolean_get(&output.ptr, "dontOverride"));
-					if (!use_override) {
-						BL::NodeSocket materialSock(Nodes::GetInputSocketByName(output, "Material"));
-						if (materialSock && materialSock.is_linked()) {
-							NodeContext ctx(PointerRNA_NULL, PointerRNA_NULL, ob);
+	if (!ma) {
+		return material; // null material - export default
+	}
 
-							using PT = ParamDesc::PluginType;
-							auto pluginType = PT::PluginUnknown;
+	// TODO: guard this for MT exporter
+	auto iter = m_exported_materials.find(ma);
+	if (iter != m_exported_materials.end()) {
+		return iter->second; // material exported and cached
+	}
 
-							bool needExport = true;
-							if (m_settings.use_select_preview && m_is_preview) {
-								BL::Node selected = getNtreeSelectedNode(ntree);
-								if (selected && ob.name().find("preview_") != std::string::npos) {
-									BL::Node  conNode(PointerRNA_NULL);
-									AttrValue val;
-									const auto nodeClass = selected.bl_idname();
-									exportLinkedSocketEx2(ntree, materialSock, ctx, DataExporter::ExpModePlugin, conNode, val, selected);
+	BL::NodeTree ntree(Nodes::GetNodeTree(ma));
+	if (!ntree) {
+		return material; // material has no NTREE - export default
+	}
 
-									// override plugin type
-									pluginType = GetNodePluginType(selected);
+	BL::Node output(Nodes::GetNodeByType(ntree, "VRayNodeOutputMaterial"));
+	if (!output) {
+		return material; // material has ntree but it's "empty" - export default
+	}
 
-									if (pluginType == PT::PluginBRDF || pluginType == PT::PluginMaterial) {
-										PRINT_INFO_EX("Exporting selected material node only %s", nodeClass.c_str());
-										material = val;
-										needExport = false;
-									} else if (pluginType == PT::PluginTexture) {
-										PRINT_INFO_EX("Exporting selected texture node only %s", nodeClass.c_str());
-										PluginDesc brdfLightWrapper("BRDFLightWrapper@" + val.valPlugin.plugin, "BRDFLight");
-										brdfLightWrapper.add("color", val);
-										material = m_exporter->export_plugin(brdfLightWrapper);
-										needExport = false;
-									} else {
-										PRINT_INFO_EX("Selected node is of unsupported type!");
-									}
-								}
-							}
-							if (needExport) {
-								material = exportLinkedSocket(ntree, materialSock, ctx);
+	const bool is_overriden = !exportAsOverride                              && // we aren't exporting the override material itself
+	                          m_defaults.override_material                   && // we have set override material
+	                          !RNA_boolean_get(&output.ptr, "dontOverride");    // this material is not marked as no overridable
+	if (is_overriden) {
+		return m_defaults.override_material; // there is override material and this material is *not* marked as "Don't override" - export override
+	}
 
-								BL::NodeSocket toSocket(Nodes::GetConnectedSocket(materialSock));
-								if (toSocket) {
-									BL::Node toNode(toSocket.node());
-									if (toNode) {
-										pluginType = GetNodePluginType(toNode);
-									}
-								}
-							}
+	BL::NodeSocket materialSock(Nodes::GetInputSocketByName(output, "Material"));
+	if (!materialSock || !materialSock.is_linked()) {
+		return material; // there is ntree without material linked - export default
+	}
 
-							// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
-							if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial) {
+	NodeContext ctx(PointerRNA_NULL, PointerRNA_NULL, ob);
 
-								const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.valPlugin.plugin);
-								PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
-								mtlSingleWrapper.add("brdf", material.valPlugin);
+	using PT = ParamDesc::PluginType;
+	auto pluginType = PT::PluginUnknown;
 
-								material = m_exporter->export_plugin(mtlSingleWrapper);
-							}
+	bool needExport = true;
+	if (m_settings.use_select_preview && m_is_preview) {
+		BL::Node selected = getNtreeSelectedNode(ntree);
+		if (selected && ob.name().find("preview_") != std::string::npos) {
+			BL::Node  conNode(PointerRNA_NULL);
+			AttrValue val;
+			const auto nodeClass = selected.bl_idname();
+			exportLinkedSocketEx2(ntree, materialSock, ctx, DataExporter::ExpModePlugin, conNode, val, selected);
 
-							if (m_exporter->get_is_viewport()) {
-								PluginDesc genericWrapper("MtlRenderStats@" + ntree.name(), "MtlRenderStats");
-								genericWrapper.add("base_mtl", material.valPlugin);
-								material = m_exporter->export_plugin(genericWrapper);
-							}
+			// override plugin type
+			pluginType = GetNodePluginType(selected);
 
-							m_exported_materials.insert(std::make_pair(ma, material));
-						}
-					}
-				}
+			if (pluginType == PT::PluginBRDF || pluginType == PT::PluginMaterial) {
+				PRINT_INFO_EX("Exporting selected material node only %s", nodeClass.c_str());
+				material = val;
+				needExport = false;
+			} else if (pluginType == PT::PluginTexture) {
+				PRINT_INFO_EX("Exporting selected texture node only %s", nodeClass.c_str());
+				PluginDesc brdfLightWrapper("BRDFLightWrapper@" + val.valPlugin.plugin, "BRDFLight");
+				brdfLightWrapper.add("color", val);
+				material = m_exporter->export_plugin(brdfLightWrapper);
+				needExport = false;
+			} else {
+				PRINT_INFO_EX("Selected node is of unsupported type!");
 			}
 		}
 	}
+
+	if (needExport) {
+		material = exportLinkedSocket(ntree, materialSock, ctx);
+
+		BL::NodeSocket toSocket(Nodes::GetConnectedSocket(materialSock));
+		if (toSocket) {
+			BL::Node toNode(toSocket.node());
+			if (toNode) {
+				pluginType = GetNodePluginType(toNode);
+			}
+		}
+	}
+
+	// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
+	if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial) {
+
+		const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.valPlugin.plugin);
+		PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
+		mtlSingleWrapper.add("brdf", material.valPlugin);
+
+		material = m_exporter->export_plugin(mtlSingleWrapper);
+	}
+
+	if (m_exporter->get_is_viewport()) {
+		PluginDesc genericWrapper("MtlRenderStats@" + ntree.name(), "MtlRenderStats");
+		genericWrapper.add("base_mtl", material.valPlugin);
+		material = m_exporter->export_plugin(genericWrapper);
+	}
+
+	m_exported_materials.insert(std::make_pair(ma, material));
 
 	return material;
 }

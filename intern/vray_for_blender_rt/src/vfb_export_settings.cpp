@@ -24,8 +24,9 @@
 using namespace VRayForBlender;
 
 
-ExporterSettings::ExporterSettings():
-    export_meshes(true)
+ExporterSettings::ExporterSettings()
+    : export_meshes(true)
+	, override_material(PointerRNA_NULL)
 {}
 
 
@@ -97,25 +98,25 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		}
 	}
 
-#if 0
-	m_mtlOverrideName.clear();
-	m_mtlOverride = BL::Material(PointerRNA_NULL);
-	PointerRNA settingsOptions = RNA_pointer_get(&vrayScene, "SettingsOptions");
+	std::string overrideName;
+	PointerRNA settingsOptions = RNA_pointer_get(&m_vrayScene, "SettingsOptions");
 	if(RNA_boolean_get(&settingsOptions, "mtl_override_on")) {
-		const std::string &overrideName = RNA_std_string_get(&settingsOptions, "mtl_override");
-		if(NOT(overrideName.empty())) {
-			BL::BlendData::materials_iterator maIt;
-			for(b_data.materials.begin(maIt); maIt != b_data.materials.end(); ++maIt) {
-				BL::Material ma = *maIt;
-				if(ma.name() == overrideName) {
-					m_mtlOverride     = ma;
-					m_mtlOverrideName = Node::GetMaterialName((Material*)ma.ptr.data);
+		overrideName = RNA_std_string_get(&settingsOptions, "mtl_override");
+	}
+
+	if(overrideName != override_material_name) {
+		override_material_name = overrideName;
+		if (override_material_name.empty()) {
+			override_material = BL::Material(PointerRNA_NULL);
+		} else {
+			for (int c = 0; c < data.materials.length(); ++c) {
+				if (data.materials[c].name() == overrideName) {
+					override_material = data.materials[c];
 					break;
 				}
 			}
 		}
 	}
-#endif
 
 	exporter_type = (ExpoterType)RNA_enum_get(&m_vrayExporter, "backend");
 	work_mode = (WorkMode)RNA_enum_get(&m_vrayExporter, "work_mode");

@@ -167,7 +167,8 @@ struct ExporterSettings {
 	int               zmq_server_port;
 	std::string       zmq_server_address;
 
-	std::string       override_material;
+	std::string       override_material_name;
+	BL::Material      override_material;
 
 	VRayBaseTypes::RenderMode  getRenderMode() const { return m_renderMode; }
 	VRayBaseTypes::RenderMode  getViewportRenderMode() const { return m_renderModeViewport; }

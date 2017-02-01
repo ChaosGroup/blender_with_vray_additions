@@ -159,7 +159,12 @@ private:
 struct IdTrack {
 
 	enum PluginType {
-		NONE, CLIPPER, DUPLI_INSTACER, DUPLI_NODE, DUPLI_MODIFIER, HAIR
+		NONE,
+		CLIPPER,           // ID has clipper
+		DUPLI_INSTACER,    // ID has instancer
+		DUPLI_NODE,        // ID has node based duplication
+		DUPLI_MODIFIER,    // ID has duplication with array modifier
+		HAIR,              // ID has particle system that is hair type
 	};
 
 	struct PluginInfo {
@@ -295,7 +300,7 @@ public:
 	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
 	void              init(PluginExporter *exporter);
-	void              init(PluginExporter *exporter, ExporterSettings settings);
+	void              updateSettings(ExporterSettings settings);
 	void              sync();
 
 	// will reset all state that is kept for one sync, must be called after each sync
@@ -311,7 +316,8 @@ public:
 	void              syncEnd();
 
 	void              init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngine engine, BL::Context context, BL::SpaceView3D view3d);
-	void              init_defaults();
+	/// This export default material and override material, should be called on each sync so they can be updated in RT
+	void              exportMaterialSettings();
 	void              setComputedLayers(uint32_t layers, bool is_local_view);
 
 	void              setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType);
@@ -329,7 +335,7 @@ public:
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
 
-	AttrValue         exportMaterial(BL::Material ma, BL::Object ob);
+	AttrValue         exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride = false);
 	AttrValue         exportVRayClipper(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
