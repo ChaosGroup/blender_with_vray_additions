@@ -1180,7 +1180,10 @@ void draw_mesh_textured(Scene *scene, View3D *v3d, RegionView3D *rv3d,
 	/* if not cycles, or preview-modifiers, or drawing matcaps */
 	if ((draw_flags & DRAW_MODIFIERS_PREVIEW) ||
 	    (v3d->flag2 & V3D_SHOW_SOLID_MATCAP) ||
-	    (BKE_scene_use_new_shading_nodes(scene) == false) ||
+	    (
+	        BKE_scene_use_new_shading_nodes(scene) == false ||
+	        strcmp(scene->r.engine, "VRAY_RENDER_RT") == 0 // HACK: display textures even if we have bl_use_shading_nodes == True
+	    ) ||
 	    ((ob->mode & OB_MODE_TEXTURE_PAINT) && ELEM(v3d->drawtype, OB_TEXTURE, OB_SOLID)))
 	{
 		draw_mesh_textured_old(scene, v3d, rv3d, ob, dm, draw_flags);
