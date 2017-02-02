@@ -425,7 +425,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 				}
 
 				// Material ID
-				const int matID = faceIt->material_index();
+				const int matID = faceIt->material_index() + 1;
 
 				// Store face vertices
 				(*faces)[faceVertIndex++] = faceVerts[0];

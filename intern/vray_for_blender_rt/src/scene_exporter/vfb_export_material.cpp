@@ -174,15 +174,12 @@ void DataExporter::fillMtlMulti(BL::Object ob, PluginDesc &mtlMultiDesc)
 	AttrListPlugin mtls_list(numMaterials);
 	AttrListInt    ids_list(numMaterials);
 
-	int maIdx   = 0;
-	int slotIdx = 0; // For cases with empty slots
-
-	BL::Object::material_slots_iterator slotIt;
-	for (ob.material_slots.begin(slotIt); slotIt != ob.material_slots.end(); ++slotIt, ++slotIdx) {
-		BL::Material ma((*slotIt).material());
-		if (ma) {
-			(*ids_list)[maIdx]  = slotIdx;
-			(*mtls_list)[maIdx] = exportMaterial(ma, ob);
+	int maIdx = 0;
+	for (int c = 0; c < ob.material_slots.length(); ++c) {
+		BL::Material mat = ob.material_slots[c].material();
+		if (mat) {
+			(*ids_list)[maIdx]  = c + 1;
+			(*mtls_list)[maIdx] = exportMaterial(mat, ob);
 			maIdx++;
 		}
 	}
