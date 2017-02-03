@@ -36,9 +36,13 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
-			// TODO: Add check for export meshes flag
-			// AttrValue mesh = exportLinkedSocket(ntree, meshSock, context, (m_settings.export_meshes == 0));
-			AttrValue mesh = exportLinkedSocket(ntree, meshSock, context);
+			AttrValue mesh;
+			if (m_settings.export_meshes) {
+				mesh = exportLinkedSocket(ntree, meshSock, context);
+			} else {
+				mesh = getConnectedNodePluginName(ntree, meshSock, context);
+			}
+
 			if (!mesh) {
 				PRINT_ERROR("Node tree: %s => Node name: %s => Error exporting connected mesh!",
 				            ntree.name().c_str(), node.name().c_str());
@@ -109,9 +113,13 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree &ntree
 			if (m_settings.use_displace_subdiv) {
 				context.object_context.merge_uv = true;
 			}
-			// TODO: Add check for export meshes flag
-			// AttrValue mesh = exportLinkedSocket(ntree, meshSock, context, (m_settings.export_meshes == 0));
-			AttrValue mesh = exportLinkedSocket(ntree, meshSock, context);
+			AttrValue mesh;
+			if (m_settings.export_meshes) {
+				mesh = exportLinkedSocket(ntree, meshSock, context);
+			} else {
+				mesh = getConnectedNodePluginName(ntree, meshSock, context);
+			}
+
 			if (!mesh) {
 				PRINT_ERROR("Node tree: %s => Node name: %s => Error exporting connected mesh!",
 				            ntree.name().c_str(), node.name().c_str());
@@ -150,8 +158,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 		PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
 		attrValue = AttrPlugin(geomDesc.pluginName);
 
-		// TODO: Add check for export meshes flag
-		if (true /*m_settings.export_meshes*/) {
+		if (m_settings.export_meshes) {
 			VRayForBlender::Mesh::ExportOptions options;
 			options.merge_channel_vertices = context.object_context.merge_uv;
 			options.mode = m_evalMode;

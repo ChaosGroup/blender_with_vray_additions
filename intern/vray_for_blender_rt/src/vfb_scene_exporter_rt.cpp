@@ -29,8 +29,8 @@
 
 void InteractiveExporter::create_exporter()
 {
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
-		m_settings.exporter_type = ExpoterType::ExpoterTypeZMQ;
+	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile) {
+		m_settings.exporter_type = ExporterType::ExpoterTypeZMQ;
 	}
 
 	SceneExporter::create_exporter();

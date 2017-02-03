@@ -210,7 +210,7 @@ void SceneExporter::create_exporter()
 {
 	m_exporter = ExporterCreate(m_settings.exporter_type);
 	if (!m_exporter) {
-		m_exporter = ExporterCreate(m_settings.exporter_type = ExpoterType::ExporterTypeInvalid);
+		m_exporter = ExporterCreate(m_settings.exporter_type = ExporterType::ExporterTypeInvalid);
 	}
 }
 
@@ -973,7 +973,7 @@ void SceneExporter::sync_materials()
 
 void SceneExporter::sync_render_settings()
 {
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile) {
 		return;
 	}
 

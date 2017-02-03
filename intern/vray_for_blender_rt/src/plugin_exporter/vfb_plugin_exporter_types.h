@@ -13,7 +13,7 @@ struct EnumItem {
 };
 
 
-static const EnumItem ExporterTypes[] = {
+static const EnumItem ExporterTypesList[] = {
 	{"STD",    "V-Ray Standalone", ""},
 	{"ZMQ",    "V-Ray ZMQ Server", ""},
 
@@ -27,7 +27,7 @@ static const EnumItem ExporterTypes[] = {
 };
 
 
-enum ExpoterType {
+enum ExporterType {
 	ExpoterTypeFile = 0,
 	ExpoterTypeZMQ,
 
@@ -43,7 +43,7 @@ enum ExpoterType {
 };
 
 
-static_assert(ExpoterTypeLast == ArraySize(ExporterTypes), "ExporterType / ExporterTypeInfo size must match!");
+static_assert(ExpoterTypeLast == ArraySize(ExporterTypesList), "ExporterType / ExporterTypeInfo size must match!");
 
 } // namespace VRayForBlender
 

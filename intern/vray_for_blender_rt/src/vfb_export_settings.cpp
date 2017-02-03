@@ -118,7 +118,12 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		}
 	}
 
-	exporter_type = (ExpoterType)RNA_enum_get(&m_vrayExporter, "backend");
+	exporter_type = (ExporterType)RNA_enum_get(&m_vrayExporter, "backend");
+	if (exporter_type != ExporterType::ExpoterTypeFile) {
+		// there is no sense to skip meshes for other than file export
+		export_meshes = true;
+	}
+
 	work_mode = (WorkMode)RNA_enum_get(&m_vrayExporter, "work_mode");
 
 	zmq_server_port    = RNA_int_get(&m_vrayExporter, "zmq_port");

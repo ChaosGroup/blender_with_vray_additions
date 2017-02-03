@@ -173,7 +173,7 @@ RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
 }
 
 
-VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExpoterType type)
+VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExporterType type)
 {
 	PluginExporter *exporter = nullptr;
 

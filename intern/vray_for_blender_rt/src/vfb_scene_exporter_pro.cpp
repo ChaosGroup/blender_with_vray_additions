@@ -70,7 +70,7 @@ bool ProductionExporter::export_animation_frame(const int &check_updated)
 	m_settings.settings_animation.frame_current = m_frameCurrent;
 	m_exporter->set_current_frame(m_frameCurrent);
 
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile) {
+	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile) {
 		PRINT_INFO_EX("Exporting animation frame %d, in file", m_frameCurrent);
 		sync(check_updated);
 	} else {
@@ -113,7 +113,7 @@ bool ProductionExporter::do_export()
 {
 	PRINT_INFO_EX("ProductionExporter::do_export()");
 	bool res = true;
-	const bool is_file_export = m_settings.exporter_type == ExpoterType::ExpoterTypeFile;
+	const bool is_file_export = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
 
 	if (is_file_export) {
 		python_thread_state_restore();
@@ -296,7 +296,7 @@ void ProductionExporter::render_loop()
 
 void ProductionExporter::render_start()
 {
-	if (m_settings.exporter_type == ExpoterType::ExpoterTypeFile || m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly) {
+	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile || m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly) {
 		return SceneExporter::render_start();
 	}
 
@@ -327,7 +327,7 @@ void ProductionExporter::render_start()
 
 	if (!m_settings.settings_animation.use &&
 		m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly &&
-		m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
+		m_settings.exporter_type != ExporterType::ExpoterTypeFile) {
 
 		SceneExporter::render_start();
 		m_frameCount = m_frameCurrent = m_frameStep = 1;
@@ -338,7 +338,7 @@ void ProductionExporter::render_start()
 
 void ProductionExporter::render_end()
 {
-	if (m_settings.exporter_type != ExpoterType::ExpoterTypeFile) {
+	if (m_settings.exporter_type != ExporterType::ExpoterTypeFile) {
 		std::lock_guard<std::mutex> l(m_callback_mtx);
 		m_exporter->stop();
 		m_exporter->set_callback_on_image_ready(ExpoterCallback());

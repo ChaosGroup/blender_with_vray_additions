@@ -388,7 +388,7 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 		static const char *item_format = "(sss)";
 
 		PyObject *list_item = Py_BuildValue(item_format,
-											ExporterTypes[i].key, ExporterTypes[i].name, ExporterTypes[i].desc);
+											ExporterTypesList[i].key, ExporterTypesList[i].name, ExporterTypesList[i].desc);
 		PyTuple_SET_ITEM(expTypesList, i, list_item);
 	}
 

@@ -143,7 +143,7 @@ struct ExporterSettings {
 	SettingsDR        settings_dr;
 	SettingsFiles     settings_files;
 
-	ExpoterType       exporter_type;
+	ExporterType      exporter_type;
 	WorkMode          work_mode;
 
 	// Export options

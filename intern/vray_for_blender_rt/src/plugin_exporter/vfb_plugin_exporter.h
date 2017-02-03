@@ -152,7 +152,7 @@ protected:
 
 };
 
-PluginExporter* ExporterCreate(ExpoterType type);
+PluginExporter* ExporterCreate(ExporterType type);
 void            ExporterDelete(PluginExporter *exporter);
 
 } // namespace VRayForBlender
