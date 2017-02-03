@@ -610,7 +610,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			BL::DupliObject dupliOb(*dupIt);
 			BL::Object      dupOb(dupliOb.object());
 
-			const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
+			const bool is_hidden = dupliOb.hide() || (!m_exporter->get_is_viewport() && dupOb.hide_render());
 			const bool is_light = Blender::IsLight(dupOb);
 			const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
 
@@ -648,7 +648,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		BL::DupliObject dupliOb(*dupIt);
 		BL::Object      dupOb(dupliOb.object());
 
-		const bool is_hidden = m_exporter->get_is_viewport() ? dupliOb.hide() : dupOb.hide_render();
+		const bool is_hidden = dupliOb.hide() || (!m_exporter->get_is_viewport() && dupOb.hide_render());
 		const bool is_visible = !hide_from_parent && m_data_exporter.isObjectVisible(dupOb);
 
 		const bool is_light = Blender::IsLight(dupOb);
