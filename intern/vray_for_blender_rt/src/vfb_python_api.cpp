@@ -64,7 +64,7 @@ static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)
 		std::lock_guard<std::mutex> l(heartbeatLock);
 		if (!heartbeatClient) {
 			PRINT_INFO_EX("Starting hearbeat client for %s", conn_str);
-			heartbeatClient.reset(new ZmqWrapper(true));
+			heartbeatClient.reset(new ZmqClient(true));
 			heartbeatClient->connect(conn_str);
 			if (heartbeatClient->connected()) {
 				Py_RETURN_TRUE;

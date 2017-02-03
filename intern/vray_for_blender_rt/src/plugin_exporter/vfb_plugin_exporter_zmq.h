@@ -31,7 +31,7 @@
 
 namespace VRayForBlender {
 
-typedef std::unique_ptr<ZmqWrapper> ClientPtr;
+typedef std::unique_ptr<ZmqClient> ClientPtr;
 
 class ZmqExporter:
         public PluginExporter
@@ -78,7 +78,7 @@ public:
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 private:
 	void                checkZmqClient();
-	void                zmqCallback(const VRayMessage & message, ZmqWrapper * client);
+	void                zmqCallback(const VRayMessage & message, ZmqClient * client);
 
 private:
 	RenderMode          m_RenderMode;

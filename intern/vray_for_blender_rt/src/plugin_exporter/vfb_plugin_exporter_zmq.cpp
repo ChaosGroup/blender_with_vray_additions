@@ -263,7 +263,7 @@ ZmqExporter::~ZmqExporter()
 
 	{
 		std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
-		m_Client->setCallback([](const VRayMessage &, ZmqWrapper *) {});
+		m_Client->setCallback([](const VRayMessage &, ZmqClient *) {});
 		m_Client.reset();
 	}
 
@@ -293,7 +293,7 @@ RenderImage ZmqExporter::get_image() {
 	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
-void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
+void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
 		if (this->callback_on_message_update) {
@@ -391,7 +391,7 @@ void ZmqExporter::checkZmqClient()
 	std::lock_guard<std::mutex> lock(m_ZmqClientMutex);
 
 	if (!m_Client) {
-		m_Client = ClientPtr(new ZmqWrapper());
+		m_Client = ClientPtr(new ZmqClient());
 	} else {
 		if (!m_Client->connected()) {
 			m_IsAborted = true;
