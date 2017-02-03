@@ -340,12 +340,11 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqWrapper *) {
 			case VRayMessage::RendererState::ProgressMessage:
 				progress_message = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
 				break;
+			case VRayMessage::RendererState::Continue:
+				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+				break;
 			default:
 				BLI_assert(!"Receieved unexpected RendererState message from renderer.");
-			}
-
-			if (!m_IsAborted) {
-				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
 			}
 		}
 	}
