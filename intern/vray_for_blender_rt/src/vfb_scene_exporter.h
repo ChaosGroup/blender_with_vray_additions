@@ -127,8 +127,8 @@ protected:
 protected:
 
 	PluginExporter      *m_exporter;
-	DataExporter         m_data_exporter;
 	ExporterSettings     m_settings;
+	DataExporter         m_data_exporter;
 	ViewParams           m_viewParams;
 
 	bool                 m_isLocalView;

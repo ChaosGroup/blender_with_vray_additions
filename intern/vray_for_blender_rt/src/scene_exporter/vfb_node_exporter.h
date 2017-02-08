@@ -255,7 +255,7 @@ public:
 	typedef std::map<BL::Material, AttrValue> MaterialCache;
 	typedef std::unordered_map<std::string, std::vector<BL::Object>> ObjectHideMap;
 
-	DataExporter()
+	DataExporter(ExporterSettings & expSettings)
 	    : m_data(PointerRNA_NULL)
 	    , m_scene(PointerRNA_NULL)
 	    , m_engine(PointerRNA_NULL)
@@ -264,6 +264,7 @@ public:
 	    , m_is_local_view(false)
 	    , m_active_camera(PointerRNA_NULL)
 	    , m_exporter(nullptr)
+	    , m_settings(expSettings)
 	{}
 
 	// Generate unique plugin name from node
@@ -300,7 +301,6 @@ public:
 	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
 	void              init(PluginExporter *exporter);
-	void              updateSettings(ExporterSettings settings);
 	void              sync();
 
 	// will reset all state that is kept for one sync, must be called after each sync
@@ -461,7 +461,7 @@ private:
 	ObjectHideMap     m_hide_lists;
 
 	PluginExporter   *m_exporter;
-	ExporterSettings  m_settings;
+	ExporterSettings &m_settings;
 	DataDefaults      m_defaults;
 
 	EvalMode          m_evalMode;

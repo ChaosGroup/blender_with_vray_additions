@@ -184,12 +184,6 @@ void DataExporter::init(PluginExporter *exporter)
 }
 
 
-void DataExporter::updateSettings(ExporterSettings settings)
-{
-	m_settings = settings;
-}
-
-
 void DataExporter::sync()
 {
 	auto lock = raiiLock();

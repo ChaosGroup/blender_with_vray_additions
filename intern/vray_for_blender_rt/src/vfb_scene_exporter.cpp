@@ -93,6 +93,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_active_camera(view3d ? view3d.camera() : scene.camera())
     , m_python_thread_state(nullptr)
     , m_exporter(nullptr)
+    , m_data_exporter(m_settings)
     , m_isLocalView(false)
     , m_isRunning(false)
 	, m_isUndoSync(false)
@@ -158,7 +159,6 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 	setup_callbacks();
 
 	m_data_exporter.init(m_exporter);
-	m_data_exporter.updateSettings(m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
 
 	m_isUndoSync = true;
@@ -323,7 +323,6 @@ void SceneExporter::sync(const int &check_updated)
 		sync_render_channels();
 	}
 
-	m_data_exporter.updateSettings(m_settings);
 	m_data_exporter.exportMaterialSettings();
 
 	// First materials sync is done from "sync_objects"
