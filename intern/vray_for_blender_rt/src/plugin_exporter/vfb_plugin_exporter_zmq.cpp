@@ -29,6 +29,54 @@
 
 using namespace VRayForBlender;
 
+std::mutex ZmqServer::clientMtx;
+ClientPtr ZmqServer::serverCheck;
+
+bool ZmqServer::isRunning() {
+	std::lock_guard<std::mutex> lock(clientMtx);
+	return serverCheck && serverCheck->good() && serverCheck->connected();
+}
+
+bool ZmqServer::start(const char * addr) {
+	std::lock_guard<std::mutex> lock(clientMtx);
+
+	if (!serverCheck) {
+		PRINT_INFO_EX("Starting hearbeat client for %s", addr);
+		serverCheck.reset(new ZmqClient(true));
+		serverCheck->connect(addr);
+		if (serverCheck->connected()) {
+			return true;
+		}
+	} else {
+		PRINT_ERROR("Heartbeat client already running...");
+		// return true as we are running good.
+		if (serverCheck->good() && serverCheck->connected()) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool ZmqServer::stop() {
+	std::lock_guard<std::mutex> lock(clientMtx);
+
+	if (serverCheck) {
+		PRINT_INFO_EX("Stopping hearbeat client... ");
+		if (serverCheck->good() && serverCheck->connected()) {
+			serverCheck->stopServer();
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
+		serverCheck->syncStop();
+		serverCheck.reset();
+		PRINT_INFO_EX("... done.");
+		return true;
+	}
+
+	PRINT_ERROR("No zmq heartbeat client running...");
+	return false;
+}
+
 
 struct JpegErrorManager {
 	jpeg_error_mgr pub;

@@ -33,6 +33,18 @@ namespace VRayForBlender {
 
 typedef std::unique_ptr<ZmqClient> ClientPtr;
 
+
+class ZmqServer {
+public:
+	static bool isRunning();
+	static bool start(const char * addr);
+	static bool stop();
+private:
+	static std::mutex clientMtx;
+	static ClientPtr serverCheck;
+};
+
+
 class ZmqExporter:
         public PluginExporter
 {

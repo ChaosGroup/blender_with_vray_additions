@@ -22,6 +22,8 @@
 #include "RE_engine.h"
 #include "render_types.h"
 
+#include "vfb_plugin_exporter_zmq.h"
+
 #include <inttypes.h>
 
 #include <thread>
@@ -53,6 +55,10 @@ void ProductionExporter::setup_callbacks()
 int	ProductionExporter::is_interrupted()
 {
 	bool is_interrupted = SceneExporter::is_interrupted();
+
+	if (m_settings.exporter_type == ExporterType::ExpoterTypeZMQ) {
+		is_interrupted = is_interrupted || !ZmqServer::isRunning();
+	}
 
 	if (m_settings.settings_animation.use) {
 		is_interrupted = is_interrupted || !m_isAnimationRunning;
