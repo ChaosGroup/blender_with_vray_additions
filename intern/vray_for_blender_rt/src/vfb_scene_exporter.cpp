@@ -202,7 +202,6 @@ void SceneExporter::init() {
 void SceneExporter::init_data()
 {
 	m_data_exporter.init(m_exporter);
-	m_data_exporter.updateSettings(m_settings);
 	m_data_exporter.init_data(m_data, m_scene, m_engine, m_context, m_view3d);
 }
 
