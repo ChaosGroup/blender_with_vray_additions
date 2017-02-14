@@ -153,16 +153,21 @@ struct ExporterSettings {
 	DefaultMapping    default_mapping;
 	ExportFormat      export_file_format;
 
-	int               export_meshes;
-	int               export_hair;
-	int               export_fluids;
+	bool              export_meshes;
+	bool              export_hair;
+	bool              export_fluids;
 
-	int               use_hide_from_view;
-	int               use_displace_subdiv;
-	int               use_select_preview;
-	int               use_subsurf_to_osd;
+	bool              use_motion_blur;
+	bool              use_hide_from_view;
+	bool              use_displace_subdiv;
+	bool              use_select_preview;
+	bool              use_subsurf_to_osd;
 
 	bool              showViewport;
+
+	int               mb_duration;
+	float             mb_intervalCenter;
+
 	int               viewportQuality;
 	int               zmq_server_port;
 	std::string       zmq_server_address;

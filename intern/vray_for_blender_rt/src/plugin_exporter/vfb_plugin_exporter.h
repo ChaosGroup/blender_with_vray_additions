@@ -69,7 +69,7 @@ public:
 	    : render_progress(0.f)
 	    , is_viewport(false)
 	    , is_prepass(false)
-	    , commit_state(CommitState::CommitAutoOn)
+	    , commit_state(CommitState::CommitNone)
 	{}
 
 	virtual             ~PluginExporter()=0;
@@ -94,7 +94,7 @@ public:
 	int                  remove_plugin(const std::string&);
 
 	virtual float        get_last_rendered_frame() const { return last_rendered_frame; }
-	void                 set_current_frame(float val)    { current_scene_frame = val; }
+	virtual void         set_current_frame(float val)    { current_scene_frame = val; }
 	virtual bool         is_aborted() const { return false; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }

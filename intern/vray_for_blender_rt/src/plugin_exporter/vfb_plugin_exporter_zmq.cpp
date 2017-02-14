@@ -467,9 +467,7 @@ void ZmqExporter::set_settings(const ExporterSettings & settings)
 	this->m_ServerPort = settings.zmq_server_port;
 	this->m_ServerAddress = settings.zmq_server_address;
 	this->animation_settings = settings.settings_animation;
-	if (this->animation_settings.use) {
-		this->last_rendered_frame = this->animation_settings.frame_start - 1;
-	}
+	this->last_rendered_frame = this->animation_settings.frame_start - 1;
 	// set to inverted so first time we dont hit cache
 	m_vfbVisible = !settings.showViewport;
 }
@@ -486,12 +484,20 @@ void ZmqExporter::sync()
 	checkZmqClient();
 	// we send current time if there are any changes, but if exporting animation and frame has no changes
 	// frame won't be sent and we must manually update
-	if (animation_settings.use && !is_viewport) {
-		BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
-		if (m_LastExportedFrame != this->current_scene_frame) {
-			m_LastExportedFrame = this->current_scene_frame;
-			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
-		}
+
+	// BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+	//if (m_LastExportedFrame != this->current_scene_frame) {
+	//	m_LastExportedFrame = this->current_scene_frame;
+	//	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+	//}
+}
+
+void ZmqExporter::set_current_frame(float frame)
+{
+	if (frame != current_scene_frame) {
+		current_scene_frame = frame;
+		checkZmqClient();
+		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentFrame, frame));
 	}
 }
 
@@ -550,9 +556,16 @@ void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 
 void ZmqExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
 {
-	PluginExporter::set_commit_state(ca);
-	checkZmqClient();
-	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+	if (ca == CommitAction::CommitAutoOn || ca == CommitAction::CommitAutoOff) {
+		if (ca != commit_state) {
+			commit_state = ca;
+			checkZmqClient();
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+		}
+	} else {
+		checkZmqClient();
+		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+	}
 }
 
 void ZmqExporter::start()
@@ -632,13 +645,12 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 
 	m_Client->send(VRayMessage::msgPluginCreate(name, pluginDesc.pluginID));
 
-	if (checkAnimation) {
-		BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
-		if (m_LastExportedFrame != this->current_scene_frame) {
-			m_LastExportedFrame = this->current_scene_frame;
-			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
-		}
-	}
+	// BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
+	//if (m_LastExportedFrame != this->current_scene_frame) {
+	//	m_LastExportedFrame = this->current_scene_frame;
+	//	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
+	//}
+
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;

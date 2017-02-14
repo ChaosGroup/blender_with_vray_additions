@@ -63,11 +63,11 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
 	settings_animation.use  = settings_animation.mode != SettingsAnimation::AnimationMode::AnimationModeNone && !engine.is_preview();
-	if (settings_animation.use) {
-		settings_animation.frame_start   = scene.frame_start();
-		settings_animation.frame_current = scene.frame_current();
-		settings_animation.frame_step    = scene.frame_step();
-	}
+	settings_animation.frame_start   = scene.frame_start();
+	settings_animation.frame_current = scene.frame_current();
+	settings_animation.frame_step    = scene.frame_step();
+
+	use_motion_blur = false;
 
 	// Find if we need hide from view
 	if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
@@ -95,6 +95,13 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 			PointerRNA vrayCamera = RNA_pointer_get(&camera_data.ptr, "vray");
 
 			use_hide_from_view = RNA_boolean_get(&vrayCamera, "hide_from_view");
+			PointerRNA mbSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");
+
+			if (RNA_boolean_get(&mbSettings, "on")) {
+				use_motion_blur = true;
+				mb_duration = RNA_float_get(&mbSettings, "duration");
+				mb_intervalCenter = RNA_float_get(&mbSettings, "interval_center");
+			}
 		}
 	}
 

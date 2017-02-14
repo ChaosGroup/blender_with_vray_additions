@@ -52,6 +52,110 @@ extern "C" {
 #include <atomic>
 
 using namespace VRayForBlender;
+FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings)
+	: m_settings(settings)
+	, m_scene(scene)
+{
+	updateFromSettings();
+}
+
+void FrameExportManager::updateFromSettings()
+{
+	m_animationFrameStep = m_scene.frame_step();
+	m_lastFrameToRender = m_scene.frame_end();
+	m_lastExportedFrame = INT_MIN;
+
+	m_sceneSavedFrame = m_scene.frame_current();
+	m_sceneFirstFrame = m_scene.frame_start();
+
+	if (m_settings.use_motion_blur) {
+		const int framesPerRender = m_settings.mb_duration + 1; // total frames to export for single render frame
+		const int midFrame = framesPerRender * m_settings.mb_intervalCenter; // the 'render' frame
+		m_mbFramesBefore = std::max(0, midFrame - 1); // motion blur frames before 'render' frame
+
+		// if mb frames is 1, and interval center is 0.5, we want 'render' frame to be 0 and have one more mb frame after it
+		m_mbFramesAfter = std::max(0, framesPerRender - midFrame); // motion blur frames after 'render' frame
+
+	} else {
+		m_mbFramesBefore = 0;
+		m_mbFramesAfter = 0;
+	}
+
+	if (m_settings.settings_animation.use) {
+		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
+			m_frameToRender = 0;
+			m_lastExportedFrame = -1;
+
+			BL::Scene::objects_iterator obIt;
+			for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+				BL::Object ob(*obIt);
+				if (ob.type() == BL::Object::type_CAMERA) {
+					auto dataPtr = ob.data().ptr;
+					PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
+					if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+						m_loopCameras.push_back(BL::Camera(ob));
+					}
+				}
+			}
+
+			std::sort(m_loopCameras.begin(), m_loopCameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
+				return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
+			});
+		} else {
+			m_frameToRender = m_scene.frame_start();
+		}
+	} else {
+		m_animationFrameStep = 0; // we have no animation so dont move
+		m_lastFrameToRender = m_frameToRender = m_sceneSavedFrame;
+	}
+
+}
+
+void FrameExportManager::rewind()
+{
+	m_frameToRender = m_sceneSavedFrame; // we need to render the current frame
+	m_sceneFrameToExport -= (m_mbFramesBefore + 1 + m_mbFramesAfter); // rewind number of exported frames
+	m_lastExportedFrame = INT_MIN; // remove exported cache
+}
+
+void FrameExportManager::reset()
+{
+	if (m_scene.frame_current() != m_sceneSavedFrame) {
+		m_scene.frame_set(m_sceneSavedFrame, 0.f);
+	}
+	updateFromSettings();
+}
+
+void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback)
+{
+	if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
+		// for camera loop we ignore motion blur
+		m_sceneFrameToExport = m_sceneSavedFrame; // for camera loop we export only the current frame, but from different cameras
+		callback(*this);
+		m_lastExportedFrame++;
+		m_frameToRender++;
+	} else {
+		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame);
+		const int lastFrame = m_frameToRender + m_mbFramesAfter;
+
+		// this is motion blur frames so the step is always 1
+		for (int c = firstFrame; c <= lastFrame; c++) {
+			m_sceneFrameToExport = c;
+			if (!callback(*this)) {
+				break;
+			}
+			m_lastExportedFrame = c;
+		}
+
+		m_frameToRender = m_frameToRender + m_animationFrameStep;
+	}
+}
+
+BL::Camera FrameExportManager::getActiveCamera()
+{
+	return m_loopCameras[m_frameToRender];
+}
+
 
 // TODO: possible data race when multiple exporters start at the same time
 static StrSet RenderSettingsPlugins;
@@ -93,6 +197,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_active_camera(view3d ? view3d.camera() : scene.camera())
     , m_python_thread_state(nullptr)
     , m_exporter(nullptr)
+    , m_frameExporter(m_scene, m_settings)
     , m_data_exporter(m_settings)
     , m_isLocalView(false)
     , m_isRunning(false)
@@ -109,9 +214,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderSettingsPlugins.insert("SettingsDMCGI");
 		RenderSettingsPlugins.insert("SettingsRaycaster");
 		RenderSettingsPlugins.insert("SettingsRegionsGenerator");
-		if (!is_viewport()) {
-			RenderSettingsPlugins.insert("SettingsOutput");
-		}
+		RenderSettingsPlugins.insert("SettingsOutput");
 		RenderSettingsPlugins.insert("SettingsRTEngine");
 	}
 
@@ -123,6 +226,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 	}
 
 	m_settings.update(m_context, m_engine, m_data, m_scene);
+	m_frameExporter.updateFromSettings();
 }
 
 void SceneExporter::pause_for_undo()
@@ -169,21 +273,6 @@ SceneExporter::~SceneExporter()
 	free();
 }
 
-void SceneExporter::python_thread_state_save()
-{
-	assert(!m_python_thread_state && "Will overrite python thread state, recursive saves are not permitted.");
-	m_python_thread_state = (void*)PyEval_SaveThread();
-	assert(m_python_thread_state && "PyEval_SaveThread returned NULL.");
-}
-
-void SceneExporter::python_thread_state_restore()
-{
-	assert(m_python_thread_state && "Restoring null python state!");
-	PyEval_RestoreThread((PyThreadState*)m_python_thread_state);
-	m_python_thread_state = nullptr;
-}
-
-
 void SceneExporter::init() {
 	create_exporter();
 	if (!m_exporter) {
@@ -197,6 +286,18 @@ void SceneExporter::init() {
 	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
 	setup_callbacks();
+
+	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
+
+	if (!m_threadManager) {
+		// lets init ThreadManager based on object count
+		if (m_scene.objects.length() > 10) {
+			m_threadManager = ThreadManager::make(2);
+		} else {
+			// thread manager with 0 means all object will be exported from current thread
+			m_threadManager = ThreadManager::make(0);
+		}
+	}
 }
 
 void SceneExporter::init_data()
@@ -224,18 +325,13 @@ void SceneExporter::free()
 
 void SceneExporter::resize(int w, int h)
 {
-	PRINT_INFO_EX("SceneExporter::resize(%i, %i)",
-	              w, h);
+	PRINT_INFO_EX("SceneExporter::resize(%i, %i)", w, h);
 
 	m_exporter->set_render_size(w, h);
 }
 
 void SceneExporter::render_start()
 {
-	// TODO: check if sync is faster with manual commit
-	// m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
-	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
-
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		m_exporter->start();
@@ -244,26 +340,14 @@ void SceneExporter::render_start()
 	}
 }
 
-void SceneExporter::sync(const int &check_updated)
+void SceneExporter::sync(const bool check_updated)
 {
 	if (!m_syncLock.try_lock()) {
 		tag_update();
 		return;
 	}
 
-	PRINT_INFO_EX("SceneExporter::sync(%i)",
-		            check_updated);
-
-	clock_t begin = clock();
-
-	if (!m_threadManager && !check_updated) {
-		// lets init ThreadManager based on object count
-		if (m_scene.objects.length() > 10) {
-			m_threadManager = ThreadManager::make(2);
-		} else {
-			m_threadManager = ThreadManager::make(0);
-		}
-	}
+	PRINT_INFO_EX("SceneExporter::sync(%i)", check_updated);
 
 	m_data_exporter.syncStart(m_isUndoSync);
 
@@ -337,26 +421,8 @@ void SceneExporter::sync(const int &check_updated)
 	// Sync data (will remove deleted objects)
 	m_data_exporter.sync();
 
-	if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
-		m_exporter->commit_changes();
-	}
-
 	// Sync plugins
 	m_exporter->sync();
-
-	clock_t end = clock();
-
-	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-
-	PRINT_INFO_EX("Synced in %.3f sec.",
-		            elapsed_secs);
-
-	// Export stuff after sync
-	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
-		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
-		const std::string filepath = "scene_app_sdk.vrscene";
-		m_exporter->export_vrscene(filepath);
-	}
 
 	m_data_exporter.syncEnd();
 	m_isUndoSync = false;
@@ -862,7 +928,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 }
 
 
-void SceneExporter::sync_objects(const int &check_updated) {
+void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
 	CondWaitGroup wg(m_scene.objects.length());
@@ -945,7 +1011,7 @@ void SceneExporter::sync_objects(const int &check_updated) {
 }
 
 
-void SceneExporter::sync_effects(const int &)
+void SceneExporter::sync_effects(const bool)
 {
 	NodeContext ctx;
 	m_data_exporter.exportEnvironment(ctx);
@@ -977,6 +1043,9 @@ void SceneExporter::sync_render_settings()
 
 	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
 	for (const auto &pluginID : RenderSettingsPlugins) {
+		if (!RNA_struct_find_property(&vrayScene, pluginID.c_str())) {
+			continue;
+		}
 		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
 
 		PluginDesc pluginDesc(pluginID, pluginID);
@@ -994,7 +1063,7 @@ void SceneExporter::sync_render_settings()
 			const char * imgFormat = format >= 0 && format < ArraySize(formatNames) ? formatNames[format] : "";
 
 			if (imgFile) {
-				python_thread_state_restore();
+				std::lock_guard<PythonGIL> lck(m_pyGIL);
 
 				// this will call python to try to parse any time expressions so we need to restore the state
 				imgFile->attrValue.valString = String::ExpandFilenameVariables(
@@ -1004,7 +1073,6 @@ void SceneExporter::sync_render_settings()
 					m_data.filepath(),
 					imgFormat);
 
-				python_thread_state_save();
 			}
 		}
 
