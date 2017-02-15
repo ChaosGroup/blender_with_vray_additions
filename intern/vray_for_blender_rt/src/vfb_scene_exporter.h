@@ -264,7 +264,6 @@ protected:
 
 	bool                 m_isRunning;
 	bool                 m_isUndoSync;
-	bool                 m_isFirstSync;
 private:
 	int                  is_physical_view(BL::Object &cameraObject);
 	int                  is_physical_updated(ViewParams &viewParams);

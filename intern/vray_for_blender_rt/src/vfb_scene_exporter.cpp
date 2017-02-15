@@ -222,8 +222,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_data_exporter(m_settings)
     , m_isLocalView(false)
     , m_isRunning(false)
-	, m_isUndoSync(false)
-    , m_isFirstSync(true)
+    , m_isUndoSync(false)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -449,16 +448,9 @@ void SceneExporter::sync(const bool check_updated)
 		sync_materials();
 	}
 
-	bool skipObjects = false;
-	if (!m_isFirstSync && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFullCamera) {
-		skipObjects = true;
-	}
-
 	sync_view(check_updated);
-	if (!skipObjects) {
-		sync_objects(check_updated);
-		sync_effects(check_updated);
-	}
+	sync_objects(check_updated);
+	sync_effects(check_updated);
 
 	// Sync data (will remove deleted objects)
 	m_data_exporter.sync();
@@ -468,7 +460,6 @@ void SceneExporter::sync(const bool check_updated)
 
 	m_data_exporter.syncEnd();
 	m_isUndoSync = false;
-	m_isFirstSync = false;
 }
 
 
