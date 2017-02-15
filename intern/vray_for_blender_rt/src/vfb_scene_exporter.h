@@ -49,20 +49,41 @@ public:
 		}
 	}
 
+	bool try_lock() {
+		std::lock_guard<std::mutex> lock(m_mtx);
+		if (m_threadState) {
+			_lock(false);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	void lock() {
-		std::lock_guard<std::mutex> l(m_mtx);
-		BLI_assert(m_threadState && "Restoring null python state!");
-		PyEval_RestoreThread(m_threadState);
-		m_threadState = nullptr;
+		_lock(true);
 	}
 
 	void unlock() {
-		std::lock_guard<std::mutex> l(m_mtx);
+		std::lock_guard<std::mutex> lock(m_mtx);
 		BLI_assert(!m_threadState && "Will overrite python thread state, recursive saves are not permitted.");
 		m_threadState = PyEval_SaveThread();
 		BLI_assert(m_threadState && "PyEval_SaveThread returned NULL.");
 	}
 private:
+
+	void _lock(bool protect = true) {
+		if (protect) {
+			m_mtx.lock();
+		}
+		BLI_assert(m_threadState && "Restoring null python state!");
+		PyEval_RestoreThread(m_threadState);
+		m_threadState = nullptr;
+		if (protect) {
+			m_mtx.unlock();
+		}
+	}
+
+
 	std::mutex      m_mtx; ///< lock and unlock are not atomic - lock while doing it
 	PyThreadState * m_threadState; ///< pointer to the state of the thread that called the c++
 };

@@ -63,11 +63,11 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	if (engine.is_preview() || view3d) {
 		settings_animation.mode = SettingsAnimation::AnimationMode::AnimationModeNone;
-		settings_animation.use = false;
 	} else {
 		settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
-		settings_animation.use  = true;
 	}
+
+	settings_animation.use = settings_animation.mode != SettingsAnimation::AnimationModeNone;
 
 	settings_animation.frame_start   = scene.frame_start();
 	settings_animation.frame_current = scene.frame_current();

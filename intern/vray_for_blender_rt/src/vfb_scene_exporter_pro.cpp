@@ -112,13 +112,13 @@ bool ProductionExporter::export_scene(const bool)
 
 	std::unique_lock<PythonGIL> fileExportLock(m_pyGIL, std::defer_lock);
 
+	m_isAnimationRunning = m_settings.settings_animation.use;
 	if (isFileExport) {
 		fileExportLock.lock();
 	} else {
 		render_start();
 	}
 
-	m_isAnimationRunning = true;
 	std::thread renderThread;
 	if (!isFileExport && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly) {
 		renderThread = std::thread(&ProductionExporter::render_loop, this);
@@ -130,9 +130,10 @@ bool ProductionExporter::export_scene(const bool)
 		// export current render frame data
 		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isCameraLoop, isFileExport](FrameExportManager & frameExp) {
 			{
+				std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 				std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
 				if (!isFileExport) {
-					lock.lock();
+					std::lock(uLock, lock);
 				}
 				if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
 					m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
@@ -155,8 +156,12 @@ bool ProductionExporter::export_scene(const bool)
 				m_settings.export_meshes = false;
 			}
 
-			// sync(!isFirstExport);
-			sync(false); // TODO: can we make blender keep the updated/data_updated tag?
+			if (!isFirstExport && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFullCamera) {
+				sync_view(false);
+			} else {
+				// sync(!isFirstExport);
+				sync(false); // TODO: can we make blender keep the updated/data_updated tag?
+			}
 
 			isFirstExport = false;
 			return true;
@@ -177,7 +182,9 @@ bool ProductionExporter::export_scene(const bool)
 	}
 
 	if (!isFileExport) {
-		std::lock_guard<PythonGIL> lock(m_pyGIL);
+		std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
+		std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
+		std::lock(uLock, lock);
 		m_frameExporter.reset();
 	}
 
@@ -255,11 +262,10 @@ void ProductionExporter::draw()
 	if (m_imageDirty) {
 		m_imageDirty = false;
 		if (m_settings.settings_animation.use) {
-			uLock.lock();
+			std::lock(uLock, pyLock);
 			if (is_interrupted()) {
 				return;
 			}
-			pyLock.lock();
 		}
 
 		m_engine.update_progress(m_exporter->get_progress());
@@ -331,6 +337,7 @@ void ProductionExporter::render_end()
 		m_exporter->set_callback_on_image_ready(ExpoterCallback());
 		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback());
 		m_exporter->set_callback_on_bucket_ready([](const VRayBaseTypes::AttrImage &) {});
+		m_exporter->free();
 	}
 
 	std::lock_guard<PythonGIL> pLock(m_pyGIL);
@@ -342,7 +349,7 @@ void ProductionExporter::render_end()
 ProductionExporter::~ProductionExporter()
 {
 	{
-		std::lock_guard<std::mutex> l(m_python_state_lock);
+		std::lock_guard<std::mutex> uLock(m_python_state_lock);
 		if (m_settings.settings_animation.use) {
 			m_isAnimationRunning = false;
 		}

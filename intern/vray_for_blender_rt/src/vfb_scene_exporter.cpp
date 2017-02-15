@@ -112,7 +112,7 @@ void FrameExportManager::updateFromSettings()
 			m_frameToRender = 0;
 			m_animationFrameStep = 0;
 		} else {
-			m_frameToRender = m_scene.frame_start();
+			m_frameToRender = m_scene.frame_start() - m_animationFrameStep;
 		}
 	} else {
 		m_animationFrameStep = 0; // we have no animation so dont move
@@ -155,6 +155,8 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 		m_lastExportedFrame++;
 		m_frameToRender++;
 	} else {
+		m_frameToRender += m_animationFrameStep;
+
 		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame + 1);
 		const int lastFrame = m_frameToRender + m_mbFramesAfter;
 
@@ -167,7 +169,6 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 			m_lastExportedFrame = c;
 		}
 
-		m_frameToRender = m_frameToRender + m_animationFrameStep;
 	}
 }
 
