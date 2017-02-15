@@ -57,13 +57,13 @@ FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & setti
 	, m_scene(scene)
 {
 	updateFromSettings();
+	m_lastExportedFrame = INT_MIN;
 }
 
 void FrameExportManager::updateFromSettings()
 {
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();
-	m_lastExportedFrame = INT_MIN;
 
 	m_sceneSavedFrame = m_scene.frame_current();
 	m_sceneFirstFrame = m_scene.frame_start();
@@ -83,24 +83,34 @@ void FrameExportManager::updateFromSettings()
 
 	if (m_settings.settings_animation.use) {
 		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
-			m_frameToRender = 0;
-			m_lastExportedFrame = -1;
+			if (m_loopCameras.empty()) {
+				BL::Scene::objects_iterator obIt;
+				for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
+					BL::Object ob(*obIt);
+					if (ob.type() == BL::Object::type_CAMERA) {
+						auto dataPtr = ob.data().ptr;
+						PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
+						if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+							m_loopCameras.push_back(BL::Camera(ob));
+						}
+					}
+				}
 
-			BL::Scene::objects_iterator obIt;
-			for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-				BL::Object ob(*obIt);
-				if (ob.type() == BL::Object::type_CAMERA) {
-					auto dataPtr = ob.data().ptr;
-					PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
-					if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-						m_loopCameras.push_back(BL::Camera(ob));
+				std::sort(m_loopCameras.begin(), m_loopCameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
+					return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
+				});
+
+				if (m_loopCameras.empty()) {
+					PRINT_WARN("Using camera loop without any camera's marked!");
+				} else {
+					PRINT_INFO_EX("Camera loop mode, in order camera list:");
+					for (auto & c : m_loopCameras) {
+						PRINT_INFO_EX("Loop camera \"%s\"", c.name().c_str());
 					}
 				}
 			}
-
-			std::sort(m_loopCameras.begin(), m_loopCameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
-				return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
-			});
+			m_frameToRender = 0;
+			m_animationFrameStep = 0;
 		} else {
 			m_frameToRender = m_scene.frame_start();
 		}
@@ -109,6 +119,16 @@ void FrameExportManager::updateFromSettings()
 		m_lastFrameToRender = m_frameToRender = m_sceneSavedFrame;
 	}
 
+}
+
+int FrameExportManager::getRenderFrameCount() const {
+	if (m_animationFrameStep) {
+		return (m_lastFrameToRender - m_sceneFirstFrame) / m_animationFrameStep;
+	} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
+		return m_loopCameras.size();
+	} else {
+		return 1;
+	}
 }
 
 void FrameExportManager::rewind()
@@ -135,7 +155,7 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 		m_lastExportedFrame++;
 		m_frameToRender++;
 	} else {
-		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame);
+		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame + 1);
 		const int lastFrame = m_frameToRender + m_mbFramesAfter;
 
 		// this is motion blur frames so the step is always 1
@@ -202,6 +222,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_isLocalView(false)
     , m_isRunning(false)
 	, m_isUndoSync(false)
+    , m_isFirstSync(true)
 {
 	if (!RenderSettingsPlugins.size()) {
 		RenderSettingsPlugins.insert("SettingsOptions");
@@ -225,7 +246,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
 		RenderGIPlugins.insert("SettingsDMCGI");
 	}
 
-	m_settings.update(m_context, m_engine, m_data, m_scene);
+	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 	m_frameExporter.updateFromSettings();
 }
 
@@ -256,7 +277,7 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 	m_region = context.region();
 	m_active_camera = BL::Camera(m_view3d ? m_view3d.camera() : scene.camera());
 
-	m_settings.update(m_context, m_engine, m_data, m_scene);
+	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 
 	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
@@ -291,7 +312,7 @@ void SceneExporter::init() {
 
 	if (!m_threadManager) {
 		// lets init ThreadManager based on object count
-		if (m_scene.objects.length() > 10) {
+		if (m_scene.objects.length() > 100) { // TODO: change to appropriate number
 			m_threadManager = ThreadManager::make(2);
 		} else {
 			// thread manager with 0 means all object will be exported from current thread
@@ -340,24 +361,18 @@ void SceneExporter::render_start()
 	}
 }
 
-void SceneExporter::sync(const bool check_updated)
+bool SceneExporter::export_scene(const bool check_updated)
 {
-	if (!m_syncLock.try_lock()) {
-		tag_update();
-		return;
-	}
+	m_syncLock.lock();
 
 	PRINT_INFO_EX("SceneExporter::sync(%i)", check_updated);
 
-	m_data_exporter.syncStart(m_isUndoSync);
-
-	m_settings.update(m_context, m_engine, m_data, m_scene);
+	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 	if (m_settings.showViewport) {
 		m_exporter->show_frame_buffer();
 	} else {
 		m_exporter->hide_frame_buffer();
 	}
-	sync_prepass();
 
 	// duplicate cycle's logic for layers here
 	m_sceneComputedLayers = 0;
@@ -400,6 +415,23 @@ void SceneExporter::sync(const bool check_updated)
 	m_exporter->set_render_mode(renderMode);
 	m_exporter->set_viewport_quality(m_settings.viewportQuality);
 
+	m_syncLock.unlock();
+
+	return true;
+}
+
+void SceneExporter::sync(const bool check_updated)
+{
+	m_data_exporter.syncStart(m_isUndoSync);
+
+	// TODO: this is hack so we can export object dependent on effect before any other objects so we
+	// can hide/show them correctly
+	m_exporter->set_prepass(true);
+	sync_effects(false);
+	m_exporter->set_prepass(false);
+
+	sync_prepass();
+
 	sync_render_settings();
 	// Export once per viewport session
 	if (!check_updated && !is_viewport()) {
@@ -414,9 +446,16 @@ void SceneExporter::sync(const bool check_updated)
 		sync_materials();
 	}
 
+	bool skipObjects = false;
+	if (!m_isFirstSync && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFullCamera) {
+		skipObjects = true;
+	}
+
 	sync_view(check_updated);
-	sync_objects(check_updated);
-	sync_effects(check_updated);
+	if (!skipObjects) {
+		sync_objects(check_updated);
+		sync_effects(check_updated);
+	}
 
 	// Sync data (will remove deleted objects)
 	m_data_exporter.sync();
@@ -426,8 +465,7 @@ void SceneExporter::sync(const bool check_updated)
 
 	m_data_exporter.syncEnd();
 	m_isUndoSync = false;
-
-	m_syncLock.unlock();
+	m_isFirstSync = false;
 }
 
 
@@ -478,10 +516,6 @@ void SceneExporter::sync_prepass()
 			}
 		}
 	}
-
-	m_exporter->set_prepass(true);
-	sync_effects(false);
-	m_exporter->set_prepass(false);
 }
 
 void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updated)

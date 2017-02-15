@@ -103,9 +103,13 @@ bool ProductionExporter::export_scene(const bool)
 {
 	clock_t begin = clock();
 
+	SceneExporter::export_scene(false);
+
 	m_frameExporter.updateFromSettings();
 	
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
+	const auto mode = m_settings.settings_animation.mode;
+
 	const bool isCameraLoop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
 
 	std::unique_lock<PythonGIL> fileExportLock(m_pyGIL, std::defer_lock);
@@ -127,8 +131,11 @@ bool ProductionExporter::export_scene(const bool)
 	for (int c = 0; c < renderFrames; ++c) {
 		// export current render frame data
 		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isCameraLoop, isFileExport](FrameExportManager & frameExp) {
-			if (!isFileExport) {
-				std::lock_guard<PythonGIL> lock(m_pyGIL);
+			{
+				std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
+				if (!isFileExport) {
+					lock.lock();
+				}
 				if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
 					m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
 				}
@@ -137,11 +144,18 @@ bool ProductionExporter::export_scene(const bool)
 				}
 			}
 
-			m_settings.update(m_context, m_engine, m_data, m_scene);
+			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 			// set the frame to export (so values are inserted for that time)
-			m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
-			sync(false);
+			if (isCameraLoop) {
+				// for camera loop render frames == export frames
+				// and also export frame is constant
+				m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame() + 1); // frames are 1 based
+			} else {
+				m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
+			}
+			sync(!isFirstExport);
 			isFirstExport = false;
+
 			return true;
 		});
 
@@ -166,6 +180,7 @@ bool ProductionExporter::export_scene(const bool)
 
 	m_isAnimationRunning = false;
 	m_renderFinished = true;
+	m_frameExporter.reset();
 
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||

@@ -30,7 +30,7 @@ ExporterSettings::ExporterSettings()
 {}
 
 
-void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene)
+void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene, BL::SpaceView3D view3d)
 {
 	BL::Scene scene(_scene);
 	if (engine && engine.is_preview()) {
@@ -61,8 +61,18 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
 
-	settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
-	settings_animation.use  = settings_animation.mode != SettingsAnimation::AnimationMode::AnimationModeNone && !engine.is_preview();
+	if (engine.is_preview() || view3d) {
+		settings_animation.mode = SettingsAnimation::AnimationMode::AnimationModeNone;
+		settings_animation.use = false;
+	} else {
+		settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
+		settings_animation.use  = true;
+	}
+
+	if (settings_animation.mode == SettingsAnimation::AnimationMode::AnimationModeFullNoGeometry) {
+		export_meshes = false;
+	}
+
 	settings_animation.frame_start   = scene.frame_start();
 	settings_animation.frame_current = scene.frame_current();
 	settings_animation.frame_step    = scene.frame_step();

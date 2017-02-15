@@ -134,7 +134,7 @@ struct ExporterSettings {
 	};
 
 	ExporterSettings();
-	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene);
+	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d);
 
 	bool              check_data_updates();
 	bool              is_first_frame();

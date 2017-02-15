@@ -86,13 +86,7 @@ public:
 	void rewind();
 
 	/// Get the number of frames that will be rendered
-	int getRenderFrameCount() const {
-		if (m_animationFrameStep) {
-			return (m_lastFrameToRender - m_sceneFirstFrame) / m_animationFrameStep;
-		} else {
-			return 1;
-		}
-	}
+	int getRenderFrameCount() const;
 
 	/// Get the number of frames to be exported for a single render frame
 	/// NOTE: if motion blur is enabled this will be 2 frames for example
@@ -174,7 +168,7 @@ public:
 
 	/// Export all scene data to render current frame (may include exporting multiple frames for motion blur)
 	/// @check_updated - true if we need to check object's flag or just export everything
-	virtual bool         export_scene(const bool check_updated = false) = 0;
+	virtual bool         export_scene(const bool check_updated = false);
 	void                 sync_prepass();
 
 	ViewParams           get_current_view_params();
@@ -249,6 +243,7 @@ protected:
 
 	bool                 m_isRunning;
 	bool                 m_isUndoSync;
+	bool                 m_isFirstSync;
 private:
 	int                  is_physical_view(BL::Object &cameraObject);
 	int                  is_physical_updated(ViewParams &viewParams);
