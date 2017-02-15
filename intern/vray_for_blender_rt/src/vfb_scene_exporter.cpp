@@ -338,7 +338,9 @@ void SceneExporter::create_exporter()
 
 void SceneExporter::free()
 {
-	m_threadManager->stop();
+	if (m_threadManager) {
+		m_threadManager->stop();
+	}
 	PluginDesc::cache.clear();
 	ExporterDelete(m_exporter);
 }
