@@ -153,7 +153,8 @@ bool ProductionExporter::export_scene(const bool)
 			} else {
 				m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
 			}
-			sync(!isFirstExport);
+			// sync(!isFirstExport);
+			sync(false); // TODO: can we make blender keep the updated/data_updated tag?
 			isFirstExport = false;
 
 			return true;
