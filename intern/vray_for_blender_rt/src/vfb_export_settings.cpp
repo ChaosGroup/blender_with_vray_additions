@@ -69,10 +69,6 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		settings_animation.use  = true;
 	}
 
-	if (settings_animation.mode == SettingsAnimation::AnimationMode::AnimationModeFullNoGeometry) {
-		export_meshes = false;
-	}
-
 	settings_animation.frame_start   = scene.frame_start();
 	settings_animation.frame_current = scene.frame_current();
 	settings_animation.frame_step    = scene.frame_step();

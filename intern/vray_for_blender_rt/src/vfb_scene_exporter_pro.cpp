@@ -108,8 +108,6 @@ bool ProductionExporter::export_scene(const bool)
 	m_frameExporter.updateFromSettings();
 	
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
-	const auto mode = m_settings.settings_animation.mode;
-
 	const bool isCameraLoop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
 
 	std::unique_lock<PythonGIL> fileExportLock(m_pyGIL, std::defer_lock);
@@ -144,7 +142,6 @@ bool ProductionExporter::export_scene(const bool)
 				}
 			}
 
-			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 			// set the frame to export (so values are inserted for that time)
 			if (isCameraLoop) {
 				// for camera loop render frames == export frames
@@ -153,10 +150,15 @@ bool ProductionExporter::export_scene(const bool)
 			} else {
 				m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
 			}
+
+			if (!isFirstExport && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFullNoGeometry) {
+				m_settings.export_meshes = false;
+			}
+
 			// sync(!isFirstExport);
 			sync(false); // TODO: can we make blender keep the updated/data_updated tag?
-			isFirstExport = false;
 
+			isFirstExport = false;
 			return true;
 		});
 
