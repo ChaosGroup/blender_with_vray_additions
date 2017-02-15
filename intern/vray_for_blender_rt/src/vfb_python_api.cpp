@@ -56,6 +56,27 @@ VRayForBlender::SceneExporter * tryTakeStashedExporter()
 }
 }
 
+/// This is just like std::lock_guard<T> but it calls unlock first and then lock on destructor
+/// It is needed to allow c++ code to unlock GIL before export and lock it back before returning to 
+/// python code.
+template <typename LockType>
+struct ReverseRAIILock {
+	ReverseRAIILock(LockType & lock)
+		: lock(lock)
+	{
+		lock.unlock();
+	}
+
+	ReverseRAIILock(const ReverseRAIILock &) = delete;
+	ReverseRAIILock & operator=(const ReverseRAIILock &) = delete;
+
+	~ReverseRAIILock() {
+		lock.lock();
+	}
+
+	LockType & lock;
+};
+
 static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)
 {
 	const char * conn_str = nullptr;
@@ -264,12 +285,13 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 			exporter->init_data();
 		}
 
-		exporter->python_thread_state_save();
-		exporter->sync(stashed != nullptr);
+		// python locks GIL before calling C++ so we unlock to enable UI event handling
+		// and will lock when we need to change some python related data
+		ReverseRAIILock<PythonGIL> lck(exporter->m_pyGIL);
+		exporter->export_scene(stashed != nullptr);
 		if (!stashed) {
 			exporter->render_start();
 		}
-		exporter->python_thread_state_restore();
 	} else {
 		PRINT_ERROR("Failed to initialize RT exporter!");
 	}
@@ -296,61 +318,59 @@ static PyObject* vfb_free(PyObject*, PyObject *value)
 	Py_RETURN_NONE;
 }
 
-
+/// Export data from blender for production rendering
 static PyObject* vfb_update(PyObject*, PyObject *value)
 {
 	PRINT_INFO_EX("vfb_update()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
-		exporter->python_thread_state_save();
-		bool result = exporter->do_export();
-		exporter->python_thread_state_restore();
-		if (!result) {
-			Py_RETURN_FALSE;
-		}
+		//ReverseRAIILock<PythonGIL> lck(exporter->m_pyGIL);
+		//bool result = exporter->export_scene();
+		//if (!result) {
+		//	Py_RETURN_FALSE;
+		//}
 	}
 
 	Py_RETURN_NONE;
 }
 
-
-static PyObject* vfb_view_update(PyObject*, PyObject *value)
-{
-	PRINT_INFO_EX("vfb_view_update()");
-
-	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
-	if (exporter) {
-		exporter->python_thread_state_save();
-		exporter->sync(true);
-		exporter->python_thread_state_restore();
-	}
-	Py_RETURN_NONE;
-}
-
-
-static PyObject* vfb_view_draw(PyObject*, PyObject *value)
-{
-	// PRINT_INFO_EX("vfb_view_draw()");
-
-	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
-	if (exporter) {
-		exporter->draw();
-	}
-
-	Py_RETURN_NONE;
-}
-
-
+/// Start production rendering
 static PyObject* vfb_render(PyObject*, PyObject *value)
 {
 	PRINT_INFO_EX("vfb_render()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
-		exporter->python_thread_state_save();
-		exporter->render_start();
-		exporter->python_thread_state_restore();
+		ReverseRAIILock<PythonGIL> lck(exporter->m_pyGIL);
+		exporter->export_scene();
+	}
+
+	Py_RETURN_NONE;
+}
+
+/// Export data for viewport rendering
+static PyObject* vfb_view_update(PyObject*, PyObject *value)
+{
+	PRINT_INFO_EX("vfb_view_update()");
+
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		ReverseRAIILock<PythonGIL> lck(exporter->m_pyGIL);
+		exporter->export_scene(true);
+	}
+	Py_RETURN_NONE;
+}
+
+/// Draw rendered image for viewport rendering
+static PyObject* vfb_view_draw(PyObject*, PyObject *value)
+{
+	// PRINT_INFO_EX("vfb_view_draw()");
+
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		// dont allow python UI to run as this should be only image draw code
+		exporter->draw();
 	}
 
 	Py_RETURN_NONE;

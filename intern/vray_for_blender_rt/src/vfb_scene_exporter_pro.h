@@ -40,15 +40,15 @@ public:
 
 	virtual void      create_exporter() override;
 
-	bool              export_animation_frame(const int &check_updated);
+	bool              wait_for_frame_render();
 
-	virtual bool      do_export() override;
+	virtual bool      export_scene(const bool check_updated = false) override;
 	virtual void      sync_dupli(BL::Object ob, const int &check_updated=false) override;
 	virtual void      sync_object_modiefiers(BL::Object ob, const int &check_updated);
 
 	virtual void      render_start() override;
 	void              render_end();
-	void              render_frame();
+	virtual void      draw() override;
 	void              render_loop();
 
 	virtual void      setup_callbacks() override;
@@ -68,11 +68,7 @@ private:
 	int               m_renderFinished;
 	bool              m_imageDirty;
 
-	bool              m_isAnimationRunning;
-	int               m_frameCurrent;
-	int               m_frameStep;
-	int               m_frameCount;
-	bool              m_isFirstFrame;
+	bool              m_isAnimationRunning;;
 
 	time_point        m_lastReportTime;
 	RenderResults     m_renderResultsList;

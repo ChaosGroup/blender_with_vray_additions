@@ -69,158 +69,142 @@ int	ProductionExporter::is_interrupted()
 	return is_interrupted;
 }
 
-bool ProductionExporter::export_animation_frame(const int &check_updated)
+bool ProductionExporter::wait_for_frame_render()
 {
-	bool frameExported = true;
+	bool stop = false;
+	m_exporter->start();
+	PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
 
-	m_settings.settings_animation.frame_current = m_frameCurrent;
-	m_exporter->set_current_frame(m_frameCurrent);
+	auto lastTime = high_resolution_clock::now();
+	while (m_exporter->get_last_rendered_frame() != m_frameExporter.getCurrentRenderFrame()) {
+		this_thread::sleep_for(milliseconds(1));
 
-	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile) {
-		PRINT_INFO_EX("Exporting animation frame %d, in file", m_frameCurrent);
-		sync(check_updated);
-	} else {
-		PRINT_INFO_EX("Exporting animation frame %d", m_frameCurrent);
-
-		m_exporter->stop();
-		sync(check_updated);
-		if (m_isFirstFrame) {
-			render_start();
+		auto now = high_resolution_clock::now();
+		if (duration_cast<seconds>(now - lastTime).count() > 1) {
+			lastTime = now;
+			PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
 		}
-		m_exporter->start();
-		PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameCurrent, m_exporter->get_last_rendered_frame());
-
-		auto lastTime = high_resolution_clock::now();
-		while (m_exporter->get_last_rendered_frame() < m_frameCurrent) {
-			this_thread::sleep_for(milliseconds(1));
-
-			auto now = high_resolution_clock::now();
-			if (duration_cast<seconds>(now - lastTime).count() > 1) {
-				lastTime = now;
-				PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameCurrent, m_exporter->get_last_rendered_frame());
-			}
-			if (this->is_interrupted()) {
-				PRINT_INFO_EX("Interrupted - stopping animation rendering!");
-				frameExported = false;
-				break;
-			}
-			if (m_exporter->is_aborted()) {
-				PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
-				frameExported = false;
-				break;
-			}
+		if (is_interrupted()) {
+			PRINT_INFO_EX("Interrupted - stopping animation rendering!");
+			stop = true;
+			break;
+		}
+		if (m_exporter->is_aborted()) {
+			PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
+			stop = true;
+			break;
 		}
 	}
 
-	return frameExported;
+	return !stop;
 }
 
-bool ProductionExporter::do_export()
+bool ProductionExporter::export_scene(const bool)
 {
-	PRINT_INFO_EX("ProductionExporter::do_export()");
-	bool res = true;
-	const bool is_file_export = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
+	clock_t begin = clock();
 
-	if (is_file_export) {
-		python_thread_state_restore();
+	SceneExporter::export_scene(false);
+
+	m_frameExporter.updateFromSettings();
+	
+	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
+	const auto mode = m_settings.settings_animation.mode;
+
+	const bool isCameraLoop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
+
+	std::unique_lock<PythonGIL> fileExportLock(m_pyGIL, std::defer_lock);
+
+	if (isFileExport) {
+		fileExportLock.lock();
+	} else {
+		render_start();
 	}
 
-	if (m_settings.settings_animation.use) {
-		m_isAnimationRunning = true;
+	m_isAnimationRunning = true;
+	std::thread renderThread;
+	if (!isFileExport && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly) {
+		renderThread = std::thread(&ProductionExporter::render_loop, this);
+	}
 
-		const bool is_camera_loop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
-
-		std::vector<BL::Camera> loop_cameras;
-
-		if (is_camera_loop) {
-			BL::Scene::objects_iterator obIt;
-			for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-				BL::Object ob(*obIt);
-				if (ob.type() == BL::Object::type_CAMERA) {
-					auto dataPtr = ob.data().ptr;
-					PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
-					if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-						loop_cameras.push_back(BL::Camera(ob));
-					}
+	const int renderFrames = m_frameExporter.getRenderFrameCount();
+	bool isFirstExport = true;
+	for (int c = 0; c < renderFrames; ++c) {
+		// export current render frame data
+		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isCameraLoop, isFileExport](FrameExportManager & frameExp) {
+			{
+				std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
+				if (!isFileExport) {
+					lock.lock();
+				}
+				if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
+					m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+				}
+				if (isCameraLoop) {
+					m_active_camera = frameExp.getActiveCamera();
 				}
 			}
 
-			std::sort(loop_cameras.begin(), loop_cameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
-				return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
-			});
-
-			m_frameCount = loop_cameras.size();
-			m_frameStep = 1;
-			m_frameCurrent = 0;
-		} else {
-			m_frameCurrent = m_scene.frame_start();
-			m_frameStep = m_scene.frame_step();
-			m_frameCount = (m_scene.frame_end() - m_scene.frame_start()) / m_frameStep;
-		}
-
-		const auto restore = m_scene.frame_current();
-
-		std::thread runner;
-		if (!is_file_export && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly) {
-			runner = std::thread(&ProductionExporter::render_loop, this);
-		}
-
-		for (int c = 0; c < m_frameCount && res && !is_interrupted(); ++c) {
-			if (is_camera_loop) {
-				m_active_camera = loop_cameras[c];
-			}
-			m_isFirstFrame = c == 0;
-			// make first frame for camera loop be 1
-			m_frameCurrent = m_frameStep * (c + is_camera_loop);
-
-
-			if (!is_file_export) {
-				std::lock_guard<std::mutex> l(m_python_state_lock);
-				if (is_interrupted()) {
-					break;
-				}
-				python_thread_state_restore();
-				if (!is_camera_loop) {
-					m_scene.frame_set(m_frameCurrent, 0.f);
-				}
-				python_thread_state_save();
+			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+			// set the frame to export (so values are inserted for that time)
+			if (isCameraLoop) {
+				// for camera loop render frames == export frames
+				// and also export frame is constant
+				m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame() + 1); // frames are 1 based
 			} else {
-				if (!is_camera_loop) {
-					m_scene.frame_set(m_frameCurrent, 0.f);
-				}
-
-				m_engine.update_progress(m_exporter->get_progress());
-				PRINT_INFO_EX("Animation progress %d%%, frame %d", static_cast<int>(m_exporter->get_progress() * 100), m_frameCurrent);
+				m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
 			}
+			// sync(!isFirstExport);
+			sync(false); // TODO: can we make blender keep the updated/data_updated tag?
+			isFirstExport = false;
 
-			res = export_animation_frame(false);
-			while (!is_file_export && res && !m_renderFinished && !is_interrupted()) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
+			return true;
+		});
+
+		m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
+
+		if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
+			m_exporter->commit_changes();
 		}
 
-		m_isAnimationRunning = false;
-		m_renderFinished = true;
-
-		if (is_file_export) {
-			m_scene.frame_set(restore, 0.f);
-		} else {
-			runner.join();
-			python_thread_state_restore();
-			m_scene.frame_set(restore, 0.f);
-			python_thread_state_save();
-			render_end();
+		// render current frame
+		if (!isFileExport) {
+			if (!wait_for_frame_render()) {
+				break;
+			}
 		}
 	}
-	else {
-		sync(false);
+
+	if (!isFileExport) {
+		std::lock_guard<PythonGIL> lock(m_pyGIL);
+		m_frameExporter.reset();
 	}
 
-	if (is_file_export) {
-		python_thread_state_save();
+	m_isAnimationRunning = false;
+	m_renderFinished = true;
+	m_frameExporter.reset();
+
+	// Export stuff after sync
+	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
+		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+		const std::string filepath = "scene_app_sdk.vrscene";
+		m_exporter->export_vrscene(filepath);
 	}
 
-	return res;
+	if (!isFileExport) {
+		BLI_assert(renderThread.joinable() && "Render thread not joinable");
+		renderThread.join();
+		render_end();
+	}
+
+	// finally set the frame that we want to render to so we actually render the correct frame
+
+	clock_t end = clock();
+	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	PRINT_INFO_EX("Synced in %.3f sec.", elapsed_secs);
+
+	m_exporter->free();
+
+	return true;
 }
 
 
@@ -251,21 +235,20 @@ void ProductionExporter::sync_object_modiefiers(BL::Object ob, const int &check_
 }
 
 
-void ProductionExporter::render_frame()
+void ProductionExporter::draw()
 {
 	if (!m_isRunning) {
 		return;
 	}
 
-	const float frame_contrib = 1.f / m_frameCount;
-
 	auto now = high_resolution_clock::now();
 	if (duration_cast<milliseconds>(now - m_lastReportTime).count() > 1000) {
 		m_lastReportTime = now;
-		PRINT_INFO_EX("Rendering progress frame: %d [%d%%]", m_frameCurrent, m_exporter->get_progress());
+		PRINT_INFO_EX("Rendering progress frame: %d [%d%%]", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_progress());
 	}
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
+	std::unique_lock<PythonGIL> pyLock(m_pyGIL, std::defer_lock);
 
 	if (m_imageDirty) {
 		m_imageDirty = false;
@@ -274,7 +257,7 @@ void ProductionExporter::render_frame()
 			if (is_interrupted()) {
 				return;
 			}
-			python_thread_state_restore();
+			pyLock.lock();
 		}
 
 		m_engine.update_progress(m_exporter->get_progress());
@@ -282,11 +265,6 @@ void ProductionExporter::render_frame()
 			if (result.layers.length() > 0) {
 				m_engine.update_result(result);
 			}
-		}
-
-		if (m_settings.settings_animation.use) {
-			python_thread_state_save();
-			uLock.unlock();
 		}
 	}
 }
@@ -296,7 +274,7 @@ void ProductionExporter::render_loop()
 	m_lastReportTime = std::chrono::high_resolution_clock::now();
 	while (!is_interrupted()) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		render_frame();
+		draw();
 	}
 }
 
@@ -310,6 +288,8 @@ void ProductionExporter::render_start()
 		return;
 	}
 
+	const auto viewParams = get_current_view_params();
+
 	BL::RenderSettings renderSettings = m_scene.render();
 
 	BL::RenderSettings::layers_iterator rslIt;
@@ -317,29 +297,28 @@ void ProductionExporter::render_start()
 	if (rslIt != renderSettings.layers.end()) {
 		BL::SceneRenderLayer sceneRenderLayer(*rslIt);
 		if (sceneRenderLayer && !is_interrupted()) {
-			BL::RenderResult renderResult = m_engine.begin_result(0, 0, m_viewParams.renderSize.w, m_viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
+			BL::RenderResult renderResult = m_engine.begin_result(0, 0, viewParams.renderSize.w, viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
 			if (renderResult) {
 				m_renderResultsList.push_back(renderResult);
 			}
 		}
 	}
 
-	if (m_settings.showViewport) {
-		m_exporter->show_frame_buffer();
-	}
-
+	//if (m_settings.showViewport) {
+	//	m_exporter->show_frame_buffer();
+	//}
 
 	m_isRunning = true;
 
-	if (!m_settings.settings_animation.use &&
-		m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly &&
-		m_settings.exporter_type != ExporterType::ExpoterTypeFile) {
+	//if (!m_settings.settings_animation.use &&
+	//	m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly &&
+	//	m_settings.exporter_type != ExporterType::ExpoterTypeFile) {
 
-		SceneExporter::render_start();
-		m_frameCount = m_frameCurrent = m_frameStep = 1;
-		render_loop();
-		render_end();
-	}
+	//	SceneExporter::render_start();
+	//	m_frameCount = m_frameCurrent = m_frameStep = 1;
+	//	render_loop();
+	//	render_end();
+	//}
 }
 
 void ProductionExporter::render_end()
@@ -351,11 +330,11 @@ void ProductionExporter::render_end()
 		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback());
 		m_exporter->set_callback_on_bucket_ready([](const VRayBaseTypes::AttrImage &) {});
 	}
-	python_thread_state_restore();
+
+	std::lock_guard<PythonGIL> pLock(m_pyGIL);
 	for (auto & result : m_renderResultsList) {
 		m_engine.end_result(result, false, true);
 	}
-	python_thread_state_save();
 }
 
 ProductionExporter::~ProductionExporter()
@@ -364,9 +343,6 @@ ProductionExporter::~ProductionExporter()
 		std::lock_guard<std::mutex> l(m_python_state_lock);
 		if (m_settings.settings_animation.use) {
 			m_isAnimationRunning = false;
-		}
-		if (m_python_thread_state) {
-			python_thread_state_restore();
 		}
 	}
 	{
@@ -443,9 +419,8 @@ void ProductionExporter::cb_on_rt_image_updated()
 				}
 
 				if (is_preview()) {
-					python_thread_state_restore();
+					std::lock_guard<PythonGIL> pLock(m_pyGIL);
 					m_engine.update_result(result);
-					python_thread_state_save();
 				}
 			}
 		}

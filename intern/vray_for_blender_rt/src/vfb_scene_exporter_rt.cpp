@@ -49,6 +49,49 @@ void InteractiveExporter::setup_callbacks()
 }
 
 
+bool InteractiveExporter::export_scene(const bool check_updated)
+{
+	clock_t begin = clock();
+
+	SceneExporter::export_scene(check_updated);
+
+	m_frameExporter.updateFromSettings();
+
+	m_frameExporter.forEachFrameInBatch([this, check_updated](FrameExportManager & frameExp) {
+		if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
+			m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+		}
+		m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+		// set the frame to export (so values are inserted for that time)
+		m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
+		sync(check_updated);
+		return true;
+	});
+
+	m_frameExporter.reset();
+
+	// Export stuff after sync
+	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
+		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+		const std::string filepath = "scene_app_sdk.vrscene";
+		m_exporter->export_vrscene(filepath);
+	}
+
+	// finally set the frame that we want to render to so we actually render the correct frame
+	m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
+
+	if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
+		m_exporter->commit_changes();
+	}
+
+	clock_t end = clock();
+	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	PRINT_INFO_EX("Synced in %.3f sec.", elapsed_secs);
+
+	return true;
+}
+
+
 void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
 	ob.dupli_list_create(m_scene, EvalMode::EvalModePreview);
@@ -60,9 +103,10 @@ void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 void InteractiveExporter::draw()
 {
-	python_thread_state_save();
+	// TODO: is it worth it here to let python run for sync_view
+	// python_thread_state_save();
 	sync_view(true);
-	python_thread_state_restore();
+	// python_thread_state_restore();
 
 	RenderImage image = m_exporter->get_image();
 	if (!image) {

@@ -122,6 +122,24 @@ AttrPlugin DataExporter::exportCameraDefault(const ViewParams &viewParams)
 }
 
 
+AttrPlugin DataExporter::exportSettingsMotionBlur(ViewParams &viewParams)
+{
+	PluginDesc moBlurDesc("SettingsMotionBlur", "SettingsMotionBlur");
+
+	if (viewParams.cameraObject && viewParams.cameraObject.data()) {
+		BL::Camera cameraData(viewParams.cameraObject.data());
+		if (cameraData) {
+			PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+			PointerRNA moblurSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");
+			
+			setAttrsFromPropGroupAuto(moBlurDesc, &moblurSettings, "SettingsMotionBlur");
+		}
+	}
+
+	return m_exporter->export_plugin(moBlurDesc);
+}
+
+
 AttrPlugin DataExporter::exportSettingsCameraDof(ViewParams &viewParams)
 {
 	PluginDesc camDofDesc(ViewParams::settingsCameraDofPluginName, "SettingsCameraDof");
@@ -389,10 +407,9 @@ void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cam
 }
 
 
-void SceneExporter::sync_view(int check_updated)
+ViewParams SceneExporter::get_current_view_params()
 {
 	ViewParams viewParams;
-
 	if (m_view3d) {
 		get_view_from_viewport(viewParams);
 
@@ -408,6 +425,13 @@ void SceneExporter::sync_view(int check_updated)
 			get_view_from_camera(viewParams, sceneCamera);
 		}
 	}
+	return viewParams;
+}
+
+
+void SceneExporter::sync_view(const bool check_updated)
+{
+	ViewParams viewParams = get_current_view_params();
 
 	viewParams.usePhysicalCamera = is_physical_view(viewParams.cameraObject);
 
@@ -448,6 +472,7 @@ void SceneExporter::sync_view(int check_updated)
 		m_exporter->set_camera_plugin(physCam.plugin);
 	}
 	else {
+		m_data_exporter.exportSettingsMotionBlur(viewParams);
 		defCam = m_data_exporter.exportCameraDefault(viewParams);
 		m_exporter->set_camera_plugin(defCam.plugin);
 	}
