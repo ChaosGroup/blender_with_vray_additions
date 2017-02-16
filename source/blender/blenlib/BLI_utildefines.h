@@ -635,7 +635,11 @@ extern bool BLI_memory_is_zero(const void *arr, const size_t arr_size);
 #ifndef NDEBUG
 #  include "BLI_system.h"
 #  ifdef WITH_ASSERT_ABORT
-#    define _BLI_DUMMY_ABORT abort
+#    ifdef _WIN32
+#      define _BLI_DUMMY_ABORT __debugbreak
+#    else
+#      define _BLI_DUMMY_ABORT abort
+#    endif
 #  else
 #    define _BLI_DUMMY_ABORT() (void)0
 #  endif
@@ -671,7 +675,11 @@ extern bool BLI_memory_is_zero(const void *arr, const size_t arr_size);
 #  define BLI_STATIC_ASSERT(a, msg) __extension__ _Static_assert(a, msg);
 #else
    /* TODO msvc, clang */
+#ifdef WIN32
+#  define BLI_STATIC_ASSERT(a, msg) static_assert(a, msg);
+#else
 #  define BLI_STATIC_ASSERT(a, msg)
+#endif
 #endif
 
 /* hints for branch prediction, only use in code that runs a _lot_ where */
