@@ -101,12 +101,13 @@ bool ProductionExporter::wait_for_frame_render()
 
 bool ProductionExporter::export_scene(const bool)
 {
+	using AnimMode = SettingsAnimation::AnimationMode;
+
 	clock_t begin = clock();
 
 	SceneExporter::export_scene(false);
-
 	m_frameExporter.updateFromSettings();
-	
+
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
 	const bool isCameraLoop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
 
@@ -128,7 +129,8 @@ bool ProductionExporter::export_scene(const bool)
 	bool isFirstExport = true;
 	for (int c = 0; c < renderFrames; ++c) {
 		// export current render frame data
-		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isCameraLoop, isFileExport](FrameExportManager & frameExp) {
+		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
+			const auto aMode = m_settings.settings_animation.mode;
 			{
 				std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 				std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
@@ -138,13 +140,13 @@ bool ProductionExporter::export_scene(const bool)
 				if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
 					m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
 				}
-				if (isCameraLoop) {
+				if (aMode == AnimMode::AnimationModeCameraLoop) {
 					m_active_camera = frameExp.getActiveCamera();
 				}
 			}
 
 			// set the frame to export (so values are inserted for that time)
-			if (isCameraLoop) {
+			if (aMode == AnimMode::AnimationModeCameraLoop) {
 				// for camera loop render frames == export frames
 				// and also export frame is constant
 				m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame() + 1); // frames are 1 based
@@ -152,11 +154,11 @@ bool ProductionExporter::export_scene(const bool)
 				m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
 			}
 
-			if (!isFirstExport && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFullNoGeometry) {
+			if (!isFirstExport && aMode == AnimMode::AnimationModeFullNoGeometry) {
 				m_settings.export_meshes = false;
 			}
 
-			if (!isFirstExport && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFullCamera) {
+			if (!isFirstExport && (aMode == AnimMode::AnimationModeFullCamera || aMode == AnimMode::AnimationModeCameraLoop)) {
 				sync_view(false);
 			} else {
 				// sync(!isFirstExport);

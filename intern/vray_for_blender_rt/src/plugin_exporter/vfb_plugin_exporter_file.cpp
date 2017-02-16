@@ -35,6 +35,7 @@ VrsceneExporter::VrsceneExporter()
     : m_ExportFormat(ExporterSettings::ExportFormatHEX)
     , m_SeparateFiles(false)
     , m_Synced(false)
+    , m_isDR(false)
 {
 
 }
@@ -91,6 +92,7 @@ void VrsceneExporter::set_settings(const ExporterSettings &st)
 	}
 	animation_settings = st.settings_animation;
 	m_SeparateFiles = st.settings_files.use_separate;
+	m_isDR = st.settings_dr.use;
 }
 
 
@@ -174,7 +176,8 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	}
 
 	PluginWriter & writer = *writerPtr;
-	bool setFrame = !m_SeparateFiles || writer != *m_Writers[ParamDesc::PluginSettings];
+	// dont set frame for settings file when DR is off and seperate files is on and current file is Settings
+	bool setFrame = !(!m_isDR && m_SeparateFiles && writer == *m_Writers[ParamDesc::PluginSettings]);
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
 	if (animation_settings.use) {

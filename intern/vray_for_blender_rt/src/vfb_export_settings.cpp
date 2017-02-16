@@ -37,6 +37,8 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		scene = context.scene();
 	}
 
+	settings_dr.init(scene);
+
 	m_vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
 	m_vrayExporter = RNA_pointer_get(&m_vrayScene, "Exporter");
 
@@ -197,6 +199,8 @@ void SettingsDR::init(BL::Scene scene)
 {
 	PointerRNA vrayScene = RNA_pointer_get(&scene.ptr, "vray");
 	PointerRNA vrayDR = RNA_pointer_get(&vrayScene, "VRayDR");
+
+	use = RNA_boolean_get(&vrayDR, "on");
 
 	share_name = RNA_std_string_get(&vrayDR, "share_name");
 

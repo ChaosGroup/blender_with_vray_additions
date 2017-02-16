@@ -59,6 +59,7 @@ private:
 	TypeToWriterMap               m_Writers;
 	ThreadManager::Ptr            m_threadManager;
 	bool                          m_SeparateFiles;
+	bool                          m_isDR;
 	bool                          m_ReexportMeshes;
 	bool                          m_Synced;
 	bool                          m_SplitFiles;
