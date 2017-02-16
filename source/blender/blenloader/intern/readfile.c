@@ -2159,16 +2159,20 @@ void IDP_ID_Tag(IDProperty * prop, short tag, bool set)
 	for (loop = prop->data.group.first; loop; loop = loop->next) {
 		switch (loop->type) {
 		case IDP_ID: /* DatablockProperty */
-			if (set) {
-				IDP_Id(loop)->tag |= tag;
-			} else {
-				IDP_Id(loop)->tag &= ~tag;
+			if (IDP_Id(loop)) {
+				if (set) {
+					IDP_Id(loop)->tag |= tag;
+				} else {
+					IDP_Id(loop)->tag &= ~tag;
+				}
 			}
 			break;
 		case IDP_IDPARRAY: /* CollectionProperty */
-			idp_array = IDP_Array(loop);
-			for (i = 0; i < loop->totallen; i++) {
-				IDP_ID_Tag(&(idp_array[i]), tag, set);
+			if (IDP_Array(loop)) {
+				idp_array = IDP_Array(loop);
+				for (i = 0; i < loop->totallen; i++) {
+					IDP_ID_Tag(&(idp_array[i]), tag, set);
+				}
 			}
 			break;
 		case IDP_GROUP: /* PointerProperty */
