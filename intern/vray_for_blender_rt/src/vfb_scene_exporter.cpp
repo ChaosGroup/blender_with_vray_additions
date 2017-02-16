@@ -312,7 +312,7 @@ void SceneExporter::init() {
 
 	if (!m_threadManager) {
 		// lets init ThreadManager based on object count
-		if (m_scene.objects.length() > 100) { // TODO: change to appropriate number
+		if (m_scene.objects.length() > 10) { // TODO: change to appropriate number
 			m_threadManager = ThreadManager::make(2);
 		} else {
 			// thread manager with 0 means all object will be exported from current thread
