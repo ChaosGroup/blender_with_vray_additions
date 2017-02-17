@@ -300,7 +300,7 @@ public:
 	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
 	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
-	void              init(PluginExporter *exporter);
+	void              init(PluginExporter::Ptr exporter);
 	void              sync();
 
 	// will reset all state that is kept for one sync, must be called after each sync
@@ -462,7 +462,7 @@ private:
 	uint32_t          m_scene_layers;
 	ObjectHideMap     m_hide_lists;
 
-	PluginExporter   *m_exporter;
+	PluginExporter::Ptr m_exporter;
 	ExporterSettings &m_settings;
 	DataDefaults      m_defaults;
 

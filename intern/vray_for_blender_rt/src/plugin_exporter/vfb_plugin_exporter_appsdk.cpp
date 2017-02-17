@@ -132,8 +132,9 @@ AppSDKRenderImage::AppSDKRenderImage(const VRay::VRayImage *image, VRay::RenderE
 }
 
 
-AppSdkExporter::AppSdkExporter()
-    : m_vray(nullptr)
+AppSdkExporter::AppSdkExporter(const ExporterSettings & settings)
+	: PluginExporter(settings)
+    , m_vray(nullptr)
     , m_started(false)
 {
 }

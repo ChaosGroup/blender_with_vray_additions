@@ -71,7 +71,7 @@ class AppSdkExporter
 	static AppSdkInit    vrayInit;
 
 public:
-	AppSdkExporter();
+	AppSdkExporter(const ExporterSettings & settings);
 	virtual             ~AppSdkExporter();
 
 public:

@@ -54,7 +54,7 @@ public:
 	{}
 
 	void               initName(const std::string &name);
-	AttrValue          export_plugins(PluginExporter *exporter);
+	AttrValue          export_plugins(PluginExporter::Ptr exporter);
 
 	void               init(SmokeModifierData *smd);
 	void               setInterpolation(int value);

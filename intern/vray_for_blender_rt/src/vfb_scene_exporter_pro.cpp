@@ -40,7 +40,6 @@ void ProductionExporter::create_exporter()
 
 	if (m_exporter) {
 		m_exporter->set_is_viewport(false);
-		m_exporter->set_settings(m_settings);
 	}
 }
 
@@ -82,7 +81,9 @@ bool ProductionExporter::wait_for_frame_render()
 		auto now = high_resolution_clock::now();
 		if (duration_cast<seconds>(now - lastTime).count() > 1) {
 			lastTime = now;
-			PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+			if (m_settings.settings_animation.use) {
+				PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+			}
 		}
 		if (is_interrupted()) {
 			PRINT_INFO_EX("Interrupted - stopping animation rendering!");
@@ -255,7 +256,9 @@ void ProductionExporter::draw()
 	auto now = high_resolution_clock::now();
 	if (duration_cast<milliseconds>(now - m_lastReportTime).count() > 1000) {
 		m_lastReportTime = now;
-		PRINT_INFO_EX("Rendering progress frame: %d [%d%%]", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_progress());
+		if (m_settings.settings_animation.use) {
+			PRINT_INFO_EX("Rendering progress frame: %d [%d%%]", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_progress());
+		}
 	}
 
 	std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
@@ -314,21 +317,7 @@ void ProductionExporter::render_start()
 		}
 	}
 
-	//if (m_settings.showViewport) {
-	//	m_exporter->show_frame_buffer();
-	//}
-
 	m_isRunning = true;
-
-	//if (!m_settings.settings_animation.use &&
-	//	m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly &&
-	//	m_settings.exporter_type != ExporterType::ExpoterTypeFile) {
-
-	//	SceneExporter::render_start();
-	//	m_frameCount = m_frameCurrent = m_frameStep = 1;
-	//	render_loop();
-	//	render_end();
-	//}
 }
 
 void ProductionExporter::render_end()
@@ -358,7 +347,7 @@ ProductionExporter::~ProductionExporter()
 	}
 	{
 		std::lock_guard<std::mutex> l(m_callback_mtx);
-		delete m_exporter;
+		m_exporter.reset();
 		m_exporter = nullptr;
 	}
 }

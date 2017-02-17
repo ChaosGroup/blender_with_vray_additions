@@ -292,8 +292,9 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 }
 
 
-ZmqExporter::ZmqExporter()
-    : m_Client(nullptr)
+ZmqExporter::ZmqExporter(const ExporterSettings & settings)
+	: PluginExporter(settings)
+    , m_Client(nullptr)
     , m_vfbVisible(false)
     , m_isDirty(true)
     , m_LastExportedFrame(-1000.f)
@@ -304,6 +305,8 @@ ZmqExporter::ZmqExporter()
     , m_RenderHeight(0)
 {
 	checkZmqClient();
+	// set to inverted so first time we dont hit cache
+	m_vfbVisible = !settings.showViewport;
 }
 
 
@@ -411,23 +414,24 @@ void ZmqExporter::init()
 
 		if (!m_Client->connected()) {
 			char portStr[32];
-			snprintf(portStr, 32, ":%d", this->m_ServerPort);
-			m_Client->connect(("tcp://" + this->m_ServerAddress + portStr).c_str());
+			snprintf(portStr, 32, ":%d", exporter_settings.zmq_server_port);
+			std::string addr = exporter_settings.zmq_server_address.empty() ? "127.0.0.1" : exporter_settings.zmq_server_address;
+			m_Client->connect(("tcp://" + addr + portStr).c_str());
 		}
 
 		if (m_Client->connected()) {
-			auto mode = this->animation_settings.use && !this->is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
-			if (mode == VRayMessage::RendererType::Animation || !this->is_viewport) {
+			auto mode = exporter_settings.settings_animation.use && !is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
+			if (mode == VRayMessage::RendererType::Animation || !is_viewport) {
 				PRINT_INFO_EX("Setting RenderMode::RenderModeProduction");
 				m_RenderMode = RenderMode::RenderModeProduction;
 			}
 			m_Client->send(VRayMessage::msgRendererType(mode));
 			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Init));
 			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_RenderMode)));
-			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewportQuality));
 
 			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
-			if (!is_viewport && !this->animation_settings.use) {
+			if (!is_viewport && !exporter_settings.settings_animation.use) {
 				m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
 			}
 		}
@@ -455,25 +459,6 @@ void ZmqExporter::checkZmqClient()
 		}
 	}
 }
-
-void ZmqExporter::set_settings(const ExporterSettings & settings)
-{
-	PluginExporter::set_settings(settings);
-
-	if (this->is_viewport) {
-		this->m_RenderMode = settings.getViewportRenderMode();
-	} else {
-		this->m_RenderMode = settings.getRenderMode();
-	}
-	this->m_RenderQuality = settings.viewportQuality;
-	this->m_ServerPort = settings.zmq_server_port;
-	this->m_ServerAddress = settings.zmq_server_address;
-	this->animation_settings = settings.settings_animation;
-	this->last_rendered_frame = this->animation_settings.frame_start - 1;
-	// set to inverted so first time we dont hit cache
-	m_vfbVisible = !settings.showViewport;
-}
-
 
 void ZmqExporter::free()
 {
@@ -518,7 +503,7 @@ void ZmqExporter::hide_frame_buffer()
 
 void ZmqExporter::set_viewport_quality(int quality)
 {
-	if (quality != m_RenderQuality) {
+	if (quality != exporter_settings.viewportQuality) {
 		m_RenderQuality = quality;
 		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
 		m_isDirty = true;
@@ -614,7 +599,6 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 		return AttrPlugin();
 	}
 
-	const bool checkAnimation = animation_settings.use && !is_viewport;
 	const std::string & name = pluginDesc.pluginName;
 	AttrPlugin plugin(name);
 
@@ -696,14 +680,11 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valMapChannels));
 			break;
 		case ValueTypeInstancer:
-			if (checkAnimation && attr.attrValue.valInstancer.frameNumber != this->current_scene_frame) {
-				PRINT_WARN("Exporting instancer in frame %d, while it has %d frame", static_cast<int>(current_scene_frame), attr.attrValue.valInstancer.frameNumber);
-				const_cast<PluginAttr&>(attr).attrValue.valInstancer.frameNumber = current_scene_frame;
-			}
+			BLI_assert(attr.attrValue.valInstancer.frameNumber == current_scene_frame && "Instancer's frame mismatching scene frame");
 			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valInstancer));
 			break;
 		default:
-			BLI_assert("Unsupported attribute type");
+			BLI_assert(!"Unsupported attribute type");
 			break;
 		}
 	}

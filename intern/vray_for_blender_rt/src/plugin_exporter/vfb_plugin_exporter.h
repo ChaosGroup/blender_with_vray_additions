@@ -61,12 +61,14 @@ struct ExpoterCallback {
 class PluginExporter
 {
 public:
+	typedef std::shared_ptr<PluginExporter> Ptr;
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
 	typedef boost::function<void(const VRayBaseTypes::AttrImage &)> BucketReadyCb;
 	typedef VRayBaseTypes::CommitAction CommitState;
 
-	PluginExporter()
-	    : render_progress(0.f)
+	PluginExporter(const ExporterSettings & settings)
+		: exporter_settings(settings)
+	    , render_progress(0.f)
 	    , is_viewport(false)
 	    , is_prepass(false)
 	    , commit_state(CommitState::CommitNone)
@@ -76,8 +78,6 @@ public:
 
 	virtual void         init()=0;
 	virtual void         free()=0;
-
-	virtual void         set_settings(const ExporterSettings &st);
 
 	virtual void         sync()  {}
 	virtual void         start() {}
@@ -134,6 +134,8 @@ public:
 	PluginManager       &getPluginManager() { return m_pluginManager; }
 
 protected:
+	const ExporterSettings &exporter_settings;
+
 	ExpoterCallback      callback_on_image_ready;
 	ExpoterCallback      callback_on_rt_image_updated;
 	UpdateMessageCb      callback_on_message_update;
@@ -142,7 +144,6 @@ protected:
 	float                current_scene_frame;
 	float                render_progress;
 	std::string          progress_message;
-	SettingsAnimation    animation_settings;
 	bool                 is_viewport;
 	bool                 is_prepass;
 	CommitState          commit_state;
@@ -152,8 +153,7 @@ protected:
 
 };
 
-PluginExporter* ExporterCreate(ExporterType type);
-void            ExporterDelete(PluginExporter *exporter);
+PluginExporter::Ptr ExporterCreate(ExporterType type, const ExporterSettings & settings);
 
 } // namespace VRayForBlender
 

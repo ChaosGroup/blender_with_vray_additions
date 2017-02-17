@@ -34,7 +34,7 @@ class VrsceneExporter:
         public PluginExporter
 {
 public:
-	VrsceneExporter();
+	VrsceneExporter(const ExporterSettings & settings);
 	virtual            ~VrsceneExporter();
 
 public:
@@ -46,20 +46,16 @@ public:
 
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 	virtual void        set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file);
-	virtual void        set_settings(const ExporterSettings &st);
 private:
 
 private:
 	typedef std::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> TypeToWriterMap;
 	typedef std::unordered_map<intptr_t, std::shared_ptr<PluginWriter>> FileToWriterMap;
 
-	ExporterSettings::ExportFormat m_ExportFormat;
 
 	FileToWriterMap               m_fileWritersMap;
 	TypeToWriterMap               m_Writers;
 	ThreadManager::Ptr            m_threadManager;
-	bool                          m_SeparateFiles;
-	bool                          m_isDR;
 	bool                          m_ReexportMeshes;
 	bool                          m_Synced;
 	bool                          m_SplitFiles;

@@ -31,11 +31,9 @@ namespace fs = boost::filesystem;
 using namespace VRayForBlender;
 
 
-VrsceneExporter::VrsceneExporter()
-    : m_ExportFormat(ExporterSettings::ExportFormatHEX)
-    , m_SeparateFiles(false)
+VrsceneExporter::VrsceneExporter(const ExporterSettings & settings)
+	: PluginExporter(settings)
     , m_Synced(false)
-    , m_isDR(false)
 {
 
 }
@@ -48,7 +46,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 
 		if (iter == m_fileWritersMap.end()) {
 			// ensure only one PluginWriter is instantiated for a file
-			writer.reset(new PluginWriter(m_threadManager, file, m_ExportFormat));
+			writer.reset(new PluginWriter(m_threadManager, file, exporter_settings.export_file_format));
 			if (!writer) {
 				BLI_assert("Failed to create PluginWriter for python file!");
 				return;
@@ -84,18 +82,6 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 	}
 }
 
-void VrsceneExporter::set_settings(const ExporterSettings &st)
-{
-	m_ExportFormat = st.export_file_format;
-	for (auto & w : m_fileWritersMap) {
-		w.second->setFormat(m_ExportFormat);
-	}
-	animation_settings = st.settings_animation;
-	m_SeparateFiles = st.settings_files.use_separate;
-	m_isDR = st.settings_dr.use;
-}
-
-
 VrsceneExporter::~VrsceneExporter()
 {
 }
@@ -105,6 +91,9 @@ void VrsceneExporter::init()
 {
 	PRINT_INFO_EX("Initting VrsceneExporter");
 	m_threadManager = ThreadManager::make(2);
+	for (auto & w : m_fileWritersMap) {
+		w.second->setFormat(exporter_settings.export_file_format);
+	}
 }
 
 
@@ -177,10 +166,14 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 	PluginWriter & writer = *writerPtr;
 	// dont set frame for settings file when DR is off and seperate files is on and current file is Settings
-	bool setFrame = !(!m_isDR && m_SeparateFiles && writer == *m_Writers[ParamDesc::PluginSettings]);
+	bool setFrame = !(
+	    !exporter_settings.settings_dr.use              &&
+	    exporter_settings.settings_files.use_separate   &&
+	    writer == *m_Writers[ParamDesc::PluginSettings]
+	);
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
-	if (animation_settings.use) {
+	if (exporter_settings.settings_animation.use || exporter_settings.use_motion_blur) {
 		if (setFrame) {
 			writer.setAnimationFrame(this->current_scene_frame);
 		} else {
@@ -243,10 +236,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			writer << KVPair<AttrMapChannels>(attr.attrName, attr.attrValue.valMapChannels);
 			break;
 		case ValueTypeInstancer:
-			if (animation_settings.use && attr.attrValue.valInstancer.frameNumber != current_scene_frame) {
-				PRINT_WARN("Exporting instancer in frame %d, while it has %d frame", static_cast<int>(current_scene_frame), attr.attrValue.valInstancer.frameNumber);
-				const_cast<PluginAttr&>(attr).attrValue.valInstancer.frameNumber = current_scene_frame;
-			}
+			BLI_assert(attr.attrValue.valInstancer.frameNumber == current_scene_frame && "Instancer's frame mismatching scene frame");
 			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
 			break;
 		default:

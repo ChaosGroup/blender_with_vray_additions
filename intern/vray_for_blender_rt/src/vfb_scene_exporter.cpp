@@ -296,11 +296,10 @@ SceneExporter::~SceneExporter()
 
 void SceneExporter::init() {
 	create_exporter();
-	if (!m_exporter) {
-		PRINT_INFO_EX("Failed to create exporter!");
-	}
-	assert(m_exporter && "Failed to create exporter!");
+	BLI_assert(m_exporter && "Failed to create exporter!");
 
+	// make sure we update settings before exporter - it will read from settings
+	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 	m_exporter->init();
 
 	// directly bind to the engine
@@ -329,9 +328,9 @@ void SceneExporter::init_data()
 
 void SceneExporter::create_exporter()
 {
-	m_exporter = ExporterCreate(m_settings.exporter_type);
+	m_exporter = ExporterCreate(m_settings.exporter_type, m_settings);
 	if (!m_exporter) {
-		m_exporter = ExporterCreate(m_settings.exporter_type = ExporterType::ExporterTypeInvalid);
+		m_exporter = ExporterCreate(m_settings.exporter_type = ExporterType::ExporterTypeInvalid, m_settings);
 	}
 }
 
@@ -342,7 +341,6 @@ void SceneExporter::free()
 		m_threadManager->stop();
 	}
 	PluginDesc::cache.clear();
-	ExporterDelete(m_exporter);
 }
 
 

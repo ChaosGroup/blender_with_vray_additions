@@ -30,6 +30,9 @@ class NullExporter:
         public PluginExporter
 {
 public:
+	NullExporter(const ExporterSettings & settings)
+		: PluginExporter(settings)
+	{}
 	virtual            ~NullExporter() {}
 	virtual void        init() {}
 	virtual void        free() {}
@@ -39,12 +42,6 @@ public:
 
 PluginExporter::~PluginExporter() {}
 
-
-void PluginExporter::set_settings(const ExporterSettings &st)
-{
-	this->animation_settings = st.settings_animation;
-	this->current_scene_frame = this->last_rendered_frame = -1000;
-}
 
 int PluginExporter::remove_plugin(const std::string &name) {
 	std::lock_guard<std::recursive_mutex> lock(m_exportMtx);
@@ -70,7 +67,7 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 	bool isDifferentId = inCache ? m_pluginManager.differsId(pluginDesc) : false;
 	AttrPlugin plg(pluginDesc.pluginName);
 
-	if (is_viewport || !animation_settings.use) {
+	if (is_viewport || !exporter_settings.settings_animation.use) {
 		if (!inCache) {
 			plg = this->export_plugin_impl(pluginDesc);
 			m_pluginManager.updateCache(pluginDesc);
@@ -173,40 +170,34 @@ RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
 }
 
 
-VRayForBlender::PluginExporter* VRayForBlender::ExporterCreate(VRayForBlender::ExporterType type)
+VRayForBlender::PluginExporter::Ptr VRayForBlender::ExporterCreate(VRayForBlender::ExporterType type, const ExporterSettings & settings)
 {
-	PluginExporter *exporter = nullptr;
+	PluginExporter::Ptr exporter{nullptr};
 
 	switch (type) {
 		case ExpoterTypeFile:
-			exporter = new VrsceneExporter();
+			exporter.reset(new VrsceneExporter(settings));
 			break;
 
 #ifdef USE_BLENDER_VRAY_CLOUD
 		case ExpoterTypeCloud:
-			exporter = new NullExporter();
+			exporter.reset(new NullExporter(settings));
 			break;
 #endif
 		case ExpoterTypeZMQ:
-			exporter = new ZmqExporter();
+			exporter.reset(new ZmqExporter(settings));
 			break;
 
 #ifdef USE_BLENDER_VRAY_APPSDK
 		case ExpoterTypeAppSDK:
-			exporter = new AppSdkExporter();
+			exporter.reset(new AppSdkExporter(settings));
 			break;
 #endif
 		case ExporterTypeInvalid:
 			/* fall-through */
 		default:
-			exporter = new NullExporter();
+			exporter.reset(new NullExporter(settings));
 	}
 
 	return exporter;
-}
-
-
-void VRayForBlender::ExporterDelete(VRayForBlender::PluginExporter *exporter)
-{
-	FreePtr(exporter);
 }

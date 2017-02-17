@@ -177,7 +177,7 @@ public:
 	virtual void         init();
 	        void         init_data();
 	void                 free();
-	PluginExporter      *get_plugin_exporter() { return m_exporter; };
+	PluginExporter::Ptr  get_plugin_exporter() { return m_exporter; };
 
 public:
 
@@ -251,7 +251,7 @@ protected:
 	// lock before python_thread_state_restore and unlock after python_thread_state_save
 	std::mutex           m_python_state_lock;
 protected:
-	PluginExporter      *m_exporter;
+	PluginExporter::Ptr  m_exporter;
 	ExporterSettings     m_settings;
 	FrameExportManager   m_frameExporter;
 	DataExporter         m_data_exporter;

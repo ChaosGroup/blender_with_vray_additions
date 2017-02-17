@@ -57,12 +57,11 @@ public:
 
 	typedef std::unordered_map<RenderChannelType, ZmqRenderImage, std::hash<int>> ImageMap;
 
-	ZmqExporter();
+	ZmqExporter(const ExporterSettings & settings);
 	virtual            ~ZmqExporter();
 
 public:
 	virtual void        init();
-	virtual void        set_settings(const ExporterSettings &);
 
 	virtual void        export_vrscene(const std::string &filepath);
 
@@ -97,8 +96,6 @@ private:
 private:
 	RenderMode          m_RenderMode;
 
-	int                 m_ServerPort;
-	std::string         m_ServerAddress;
 	ClientPtr           m_Client;
 
 	// some cached values to reduce trafix

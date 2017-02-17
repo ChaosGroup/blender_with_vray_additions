@@ -37,7 +37,6 @@ void InteractiveExporter::create_exporter()
 
 	if (m_exporter) {
 		m_exporter->set_is_viewport(true);
-		m_exporter->set_settings(m_settings);
 	}
 }
 
