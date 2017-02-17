@@ -257,12 +257,14 @@ protected:
 	DataExporter         m_data_exporter;
 	ViewParams           m_viewParams;
 
-	bool                 m_isLocalView;
 	uint32_t             m_sceneComputedLayers;
 
 	ThreadManager::Ptr   m_threadManager;
 
-	bool                 m_isRunning;
+	int                  m_renderWidth;
+	int                  m_renderHeight;
+
+	bool                 m_isLocalView;
 	bool                 m_isUndoSync;
 private:
 	int                  is_physical_view(BL::Object &cameraObject);

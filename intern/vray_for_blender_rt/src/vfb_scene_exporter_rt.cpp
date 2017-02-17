@@ -53,21 +53,26 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 {
 	clock_t begin = clock();
 
-	SceneExporter::export_scene(check_updated);
+	const auto frameBefore = m_frameExporter.getCurrentRenderFrame();
 
+	SceneExporter::export_scene(check_updated);
 	m_frameExporter.updateFromSettings();
 
-	m_frameExporter.forEachFrameInBatch([this, check_updated](FrameExportManager & frameExp) {
+	const auto frameAfter = m_frameExporter.getCurrentRenderFrame();
+	const bool check = check_updated && frameBefore == frameAfter;
+
+	m_frameExporter.forEachFrameInBatch([this, check](FrameExportManager & frameExp) {
 		if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
 			m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
 		}
 		m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 		// set the frame to export (so values are inserted for that time)
 		m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
-		sync(check_updated);
+		sync(check);
 		return true;
 	});
 
+	m_frameExporter.rewind();
 	m_frameExporter.reset();
 
 	// Export stuff after sync

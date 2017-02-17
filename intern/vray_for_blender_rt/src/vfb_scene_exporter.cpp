@@ -57,7 +57,6 @@ FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & setti
 	, m_scene(scene)
 {
 	updateFromSettings();
-	m_lastExportedFrame = INT_MIN;
 }
 
 void FrameExportManager::updateFromSettings()
@@ -220,8 +219,9 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_exporter(nullptr)
     , m_frameExporter(m_scene, m_settings)
     , m_data_exporter(m_settings)
+	, m_renderWidth(-1)
+	, m_renderHeight(-1)
     , m_isLocalView(false)
-    , m_isRunning(false)
     , m_isUndoSync(false)
 {
 	if (!RenderSettingsPlugins.size()) {
@@ -346,11 +346,17 @@ void SceneExporter::free()
 }
 
 
-void SceneExporter::resize(int w, int h)
-{
+void SceneExporter::resize(int w, int h) {
 	PRINT_INFO_EX("SceneExporter::resize(%i, %i)", w, h);
 
-	m_exporter->set_render_size(w, h);
+	if (m_renderHeight == -1 || m_renderWidth == -1) {
+		m_exporter->set_render_size(w, h);
+	} else if (m_renderHeight != h || m_renderWidth != w) {
+		m_exporter->set_render_size(w, h);
+	}
+
+	m_renderWidth = w;
+	m_renderHeight = h;
 }
 
 void SceneExporter::render_start()
@@ -974,7 +980,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 			m_data_exporter.m_id_track.insert(ob, nodeName);
 		}
 
-		m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
+		m_threadManager->addTask([this, check_updated, ob, &wg, nodeName](int, const volatile bool &) mutable {
 			// make wrapper to call wg.done() on function exit
 			RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
 			if (is_interrupted()) {

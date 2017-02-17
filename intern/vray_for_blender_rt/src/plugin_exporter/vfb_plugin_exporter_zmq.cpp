@@ -293,13 +293,15 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 
 
 ZmqExporter::ZmqExporter()
-	: m_Client(nullptr)
-	, m_LastExportedFrame(-1000.f)
-	, m_IsAborted(false)
-	, m_Started(false)
-	, m_RenderQuality(100)
-	, m_RenderWidth(0)
-	, m_RenderHeight(0)
+    : m_Client(nullptr)
+    , m_vfbVisible(false)
+    , m_isDirty(true)
+    , m_LastExportedFrame(-1000.f)
+    , m_IsAborted(false)
+    , m_Started(false)
+    , m_RenderQuality(100)
+    , m_RenderWidth(0)
+    , m_RenderHeight(0)
 {
 	checkZmqClient();
 }
@@ -481,15 +483,7 @@ void ZmqExporter::free()
 
 void ZmqExporter::sync()
 {
-	checkZmqClient();
-	// we send current time if there are any changes, but if exporting animation and frame has no changes
-	// frame won't be sent and we must manually update
-
-	// BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
-	//if (m_LastExportedFrame != this->current_scene_frame) {
-	//	m_LastExportedFrame = this->current_scene_frame;
-	//	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
-	//}
+	set_commit_state(CommitAction::CommitNow);
 }
 
 void ZmqExporter::set_current_frame(float frame)
@@ -498,6 +492,7 @@ void ZmqExporter::set_current_frame(float frame)
 		current_scene_frame = frame;
 		checkZmqClient();
 		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentFrame, frame));
+		m_isDirty = true;
 	}
 }
 
@@ -526,6 +521,7 @@ void ZmqExporter::set_viewport_quality(int quality)
 	if (quality != m_RenderQuality) {
 		m_RenderQuality = quality;
 		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
+		m_isDirty = true;
 	}
 }
 
@@ -536,7 +532,7 @@ void ZmqExporter::set_render_size(const int &w, const int &h)
 		m_RenderWidth = w;
 		m_RenderHeight = h;
 	}
-
+	m_isDirty = true;
 	checkZmqClient();
 	m_Client->send(VRayMessage::msgRendererResize(w, h));
 }
@@ -550,6 +546,7 @@ void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 			return;
 		}
 	}
+	m_isDirty = true;
 	checkZmqClient();
 	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 }
@@ -563,8 +560,11 @@ void ZmqExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
 			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
 		}
 	} else {
-		checkZmqClient();
-		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+		if (m_isDirty) {
+			checkZmqClient();
+			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCommitAction, static_cast<int>(ca)));
+			m_isDirty = false;
+		}
 	}
 }
 
@@ -589,6 +589,7 @@ void ZmqExporter::export_vrscene(const std::string &filepath)
 
 int ZmqExporter::remove_plugin_impl(const std::string &name)
 {
+	m_isDirty = true;
 	checkZmqClient();
 	m_Client->send(VRayMessage::msgPluginAction(name, VRayMessage::PluginAction::Remove));
 	return PluginExporter::remove_plugin_impl(name);
@@ -596,6 +597,7 @@ int ZmqExporter::remove_plugin_impl(const std::string &name)
 
 void ZmqExporter::replace_plugin(const std::string & oldPlugin, const std::string & newPlugin)
 {
+	m_isDirty = true;
 	checkZmqClient();
 	m_Client->send(VRayMessage::msgPluginReplace(oldPlugin, newPlugin));
 }
@@ -603,6 +605,7 @@ void ZmqExporter::replace_plugin(const std::string & oldPlugin, const std::strin
 
 AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 {
+	m_isDirty = true;
 	checkZmqClient();
 
 	if (pluginDesc.pluginID.empty()) {

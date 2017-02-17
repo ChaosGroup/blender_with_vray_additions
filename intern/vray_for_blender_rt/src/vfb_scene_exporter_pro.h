@@ -33,6 +33,7 @@ public:
 	    : SceneExporter(context, engine, data, scene)
 	    , m_renderResult(PointerRNA_NULL)
 	    , m_renderFinished(false)
+	    , m_isRunning(false)
 	    , m_isAnimationRunning(false)
 	{}
 
@@ -67,7 +68,7 @@ private:
 	// used to signal a frame has been rendered
 	int               m_renderFinished;
 	bool              m_imageDirty;
-
+	bool              m_isRunning;
 	bool              m_isAnimationRunning;;
 
 	time_point        m_lastReportTime;

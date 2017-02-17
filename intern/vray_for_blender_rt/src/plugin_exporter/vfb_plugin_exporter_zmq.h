@@ -104,6 +104,7 @@ private:
 	// some cached values to reduce trafix
 	std::string         m_activeCamera;
 	bool                m_vfbVisible;
+	bool                m_isDirty; ///< if true we have some change sent to server after last commit, so next commit will go trough
 
 	// ensures the image is not changed while it is read
 	std::mutex          m_ImgMutex;
