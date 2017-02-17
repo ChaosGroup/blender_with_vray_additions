@@ -103,6 +103,24 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 	return m_exporter->export_plugin(mtlMultiDesc);
 }
 
+AttrValue DataExporter::exportVRayNodeBRDFBumpMtl(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	const std::string &brdfBumpName = "BRDFBump@" + DataExporter::GenPluginName(node, ntree, context);
+
+	PluginDesc brdfBump(brdfBumpName, "BRDFBump");
+
+	setAttrsFromNode(ntree, node, fromSocket, context, brdfBump, "BRDFBump", ParamDesc::PluginBRDF);
+
+	BL::NodeSocket sockBump   = Nodes::GetSocketByAttr(node, "bump_tex_float");
+	BL::NodeSocket sockNormal = Nodes::GetSocketByAttr(node, "bump_tex_color");
+	if (sockBump && sockBump.is_linked()) {
+		brdfBump.del("bump_tex_color");
+	} else {
+		brdfBump.del("bump_tex_float");
+	}
+
+	return m_exporter->export_plugin(brdfBump);
+}
 
 AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {

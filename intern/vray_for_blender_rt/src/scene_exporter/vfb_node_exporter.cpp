@@ -488,6 +488,9 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeMetaStandardMaterial") {
 		attrValue = exportVRayNodeMetaStandardMaterial(ntree, node, fromSocket, context);
 	}
+	else if (nodeClass == "VRayNodeBRDFBump") {
+		attrValue = exportVRayNodeBRDFBumpMtl(ntree, node, fromSocket, context);
+	}
 
 	// Math
 	//
