@@ -84,6 +84,9 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 
 	// finally set the frame that we want to render to so we actually render the correct frame
 	m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
+	if (frameBefore != frameAfter) {
+		m_exporter->start();
+	}
 
 	if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
 		m_exporter->commit_changes();
