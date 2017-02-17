@@ -630,13 +630,6 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			{"RenderChannelRenderID", RenderChannelType::RenderChannelTypeVfbRenderID},
 			{"RenderChannelVelocity", RenderChannelType::RenderChannelTypeVfbVelocity},
 			{"RenderChannelZDepth", RenderChannelType::RenderChannelTypeVfbZdepth},
-			// {"RenderChannelColorModo", }
-			// {"RenderChannelCoverage", }
-			// {"RenderChannelExtraTex", }
-			// {"RenderChannelGlossiness", }
-			// {"RenderChannelLightSelect", }
-			// {"RenderChannelMultiMatte", }
-			// {"RenderChannelObjectSelect", }
 		};
 
 		for (int c = 0; c < sizeof(channelMap) / sizeof(channelMap[0]); ++c) {
@@ -647,13 +640,6 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	}
 
 	m_Client->send(VRayMessage::msgPluginCreate(name, pluginDesc.pluginID));
-
-	// BLI_assert(m_LastExportedFrame <= this->current_scene_frame && "Exporting out of order frames!");
-	//if (m_LastExportedFrame != this->current_scene_frame) {
-	//	m_LastExportedFrame = this->current_scene_frame;
-	//	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentTime, this->current_scene_frame));
-	//}
-
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
