@@ -122,7 +122,7 @@ void FrameExportManager::updateFromSettings()
 
 int FrameExportManager::getRenderFrameCount() const {
 	if (m_animationFrameStep) {
-		return (m_lastFrameToRender - m_sceneFirstFrame) / m_animationFrameStep;
+		return ((m_lastFrameToRender + 1) - m_sceneFirstFrame) / m_animationFrameStep;
 	} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		return m_loopCameras.size();
 	} else {
