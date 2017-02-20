@@ -253,6 +253,11 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 					AttrMatrix matrix = AttrTransformFromBlTransform(obMat).m;
 
 					mappingDesc.add("uvw_matrix", matrix);
+				} else if (!context.object_context.object) {
+					AttrMatrix matx;
+					memset(&matx, 0, sizeof(matx));
+					matx.v0.x = matx.v1.y = matx.v2.z = 1.f;
+					mappingDesc.add("uvw_matrix", matx);
 				}
 
 				mappingDesc.add("mapping_type", EnvironmentMappingType[mapping_type]);
