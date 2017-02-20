@@ -61,17 +61,21 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 	}
 
 	std::lock_guard<std::recursive_mutex> lock(m_exportMtx);
+	const bool hasFrames = exporter_settings.settings_animation.use || exporter_settings.use_motion_blur;
+
+	// force replace off for animation, because repalce will wipe all animation data up until current frame
+	replace = hasFrames ? false : replace;
 
 	bool inCache = m_pluginManager.inCache(pluginDesc);
 	bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;
 	bool isDifferentId = inCache ? m_pluginManager.differsId(pluginDesc) : false;
 	AttrPlugin plg(pluginDesc.pluginName);
 
-	if (is_viewport || !exporter_settings.settings_animation.use) {
+	if (is_viewport || hasFrames) {
 		if (!inCache) {
 			plg = this->export_plugin_impl(pluginDesc);
 			m_pluginManager.updateCache(pluginDesc);
-		} else if (inCache && isDifferent) {
+		} else if (replace || inCache && isDifferent) {
 
 			if (isDifferentId) {
 				// copy the name, since cachedPlugin is reference from inside the manager
