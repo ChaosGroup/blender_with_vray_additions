@@ -189,11 +189,12 @@ bool ProductionExporter::export_scene(const bool)
 		std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
 		std::lock(uLock, lock);
 		m_frameExporter.reset();
+	} else {
+		m_frameExporter.reset();
 	}
 
 	m_isAnimationRunning = false;
 	m_renderFinished = true;
-	m_frameExporter.reset();
 
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||

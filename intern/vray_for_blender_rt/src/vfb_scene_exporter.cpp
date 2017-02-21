@@ -61,6 +61,7 @@ FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & setti
 
 void FrameExportManager::updateFromSettings()
 {
+	m_lastExportedFrame = INT_MIN; // remove exported cache
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();
 
@@ -369,7 +370,7 @@ void SceneExporter::render_start()
 
 bool SceneExporter::export_scene(const bool check_updated)
 {
-	m_syncLock.lock();
+	std::lock_guard<std::mutex> lock(m_syncLock);
 
 	PRINT_INFO_EX("SceneExporter::sync(%i)", check_updated);
 
@@ -420,8 +421,6 @@ bool SceneExporter::export_scene(const bool check_updated)
 
 	m_exporter->set_render_mode(renderMode);
 	m_exporter->set_viewport_quality(m_settings.viewportQuality);
-
-	m_syncLock.unlock();
 
 	return true;
 }

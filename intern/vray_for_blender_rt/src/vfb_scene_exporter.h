@@ -271,8 +271,8 @@ private:
 	int                  is_physical_updated(ViewParams &viewParams);
 
 private:
-	boost::mutex         m_viewLock;
-	boost::mutex         m_syncLock;
+	std::mutex           m_viewLock;
+	std::mutex           m_syncLock;
 };
 
 }
