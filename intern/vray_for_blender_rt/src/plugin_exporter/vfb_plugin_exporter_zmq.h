@@ -64,7 +64,7 @@ public:
 	virtual void        init();
 
 	virtual void        export_vrscene(const std::string &filepath);
-
+	virtual void        clear_frame_data(float upTo);
 	virtual void        free();
 	virtual void        sync();
 	virtual void        start();

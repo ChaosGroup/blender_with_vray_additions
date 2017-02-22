@@ -466,6 +466,12 @@ void ZmqExporter::free()
 	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Free));
 }
 
+void ZmqExporter::clear_frame_data(float upTo)
+{
+	checkZmqClient();
+	m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ClearFrameValues, upTo));
+}
+
 void ZmqExporter::sync()
 {
 	set_commit_state(CommitAction::CommitNow);

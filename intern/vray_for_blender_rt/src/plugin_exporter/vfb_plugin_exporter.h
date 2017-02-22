@@ -72,6 +72,7 @@ public:
 	    , is_viewport(false)
 	    , is_prepass(false)
 	    , commit_state(CommitState::CommitNone)
+		, last_rendered_frame(-1.f)
 	{}
 
 	virtual             ~PluginExporter()=0;
@@ -79,6 +80,7 @@ public:
 	virtual void         init()=0;
 	virtual void         free()=0;
 
+	virtual void         clear_frame_data(float upTo) {};
 	virtual void         sync()  {}
 	virtual void         start() {}
 	virtual void         stop()  {}

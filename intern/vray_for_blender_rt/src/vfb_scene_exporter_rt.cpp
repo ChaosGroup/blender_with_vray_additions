@@ -52,27 +52,60 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 {
 	clock_t begin = clock();
 
-	const auto frameBefore = m_frameExporter.getCurrentRenderFrame();
+	struct FrameStateCheck {
+		int renderFrame;
+		bool useMotionBlur;
+		float mbDuration;
+		float mbInterval;
+
+		FrameStateCheck(const ExporterSettings & settings, const FrameExportManager & frameExp)
+			: renderFrame(frameExp.getCurrentRenderFrame())
+			, useMotionBlur(settings.use_motion_blur)
+			, mbDuration(settings.mb_duration)
+			, mbInterval(settings.mb_intervalCenter)
+		{}
+
+		bool operator!=(const FrameStateCheck & o) const {
+			return renderFrame != o.renderFrame ||
+			       useMotionBlur != o.useMotionBlur ||
+			       mbDuration != o.mbDuration ||
+			       mbInterval != o.mbInterval;
+		}
+
+	};
+
+	FrameStateCheck beforeState(m_settings, m_frameExporter);
 
 	SceneExporter::export_scene(check_updated);
 	m_frameExporter.updateFromSettings();
 
-	const auto frameAfter = m_frameExporter.getCurrentRenderFrame();
-	const bool check = check_updated && frameBefore == frameAfter;
+	FrameStateCheck afterState(m_settings, m_frameExporter);
+	const bool needFullSync = !check_updated || beforeState != afterState;
 
-	m_frameExporter.forEachFrameInBatch([this, check](FrameExportManager & frameExp) {
-		if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
-			m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+	if (!needFullSync) {
+		sync(true);
+	} else {
+		if (check_updated) {
+			// this means we are not first frame but we need to sycn everything, so we should clear frame data
+			m_exporter->clear_frame_data(0);
+			m_exporter->getPluginManager().clear();
 		}
-		m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-		// set the frame to export (so values are inserted for that time)
-		m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
-		sync(check);
-		return true;
-	});
 
-	m_frameExporter.rewind();
-	m_frameExporter.reset();
+		m_frameExporter.forEachFrameInBatch([this](FrameExportManager & frameExp) {
+			if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
+				m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+			}
+			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+			// set the frame to export (so values are inserted for that time)
+			m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
+			sync(false);
+			return true;
+		});
+
+		m_frameExporter.rewind();
+		m_frameExporter.reset();
+	}
+
 
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
@@ -82,8 +115,8 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	}
 
 	// finally set the frame that we want to render to so we actually render the correct frame
-	m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
-	if (frameBefore != frameAfter) {
+	if (needFullSync) {
+		m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
 		m_exporter->start();
 	}
 
