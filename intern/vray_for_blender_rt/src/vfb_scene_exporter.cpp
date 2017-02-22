@@ -111,6 +111,10 @@ void FrameExportManager::updateFromSettings()
 			}
 			m_frameToRender = 0;
 			m_animationFrameStep = 0;
+		} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
+			// frae by frame is actually not animation and we need to export current frame only
+			m_frameToRender = m_scene.frame_current(); // only current frame
+			m_animationFrameStep = 0; // no animation
 		} else {
 			m_frameToRender = m_scene.frame_start() - m_animationFrameStep;
 		}
