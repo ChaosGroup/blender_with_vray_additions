@@ -72,7 +72,9 @@ bool ProductionExporter::wait_for_frame_render()
 {
 	bool stop = false;
 	m_exporter->start();
-	PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+	if (m_settings.settings_animation.use) {
+		PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+	}
 
 	auto lastTime = high_resolution_clock::now();
 	while (m_exporter->get_last_rendered_frame() != m_frameExporter.getCurrentRenderFrame()) {
