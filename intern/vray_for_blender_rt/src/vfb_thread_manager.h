@@ -46,8 +46,13 @@ public:
 
 	/// Mark one task as done (substract 1 from counter)
 	void done() {
-		std::lock_guard<std::mutex> lock(m_mtx);
-		if (--m_remaining == 0) {
+		bool notify = false;
+		{
+			std::lock_guard<std::mutex> lock(m_mtx);
+			--m_remaining;
+			notify = m_remaining == 0;
+		}
+		if (notify) {
 			m_condVar.notify_all();
 		}
 	}
@@ -60,7 +65,9 @@ public:
 	/// Block until all tasks are done
 	void wait() {
 		std::unique_lock<std::mutex> lock(m_mtx);
-		m_condVar.wait(lock, [this]() { return this->m_remaining == 0; });
+		if (m_remaining > 0) {
+			m_condVar.wait(lock, [this]() { return this->m_remaining == 0; });
+		}
 	}
 
 
