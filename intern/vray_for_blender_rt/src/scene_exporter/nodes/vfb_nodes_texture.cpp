@@ -314,14 +314,22 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 	PluginDesc pluginDesc(pluginName, "TexMulti");
 	pluginDesc.add("textures_list", textures);
 	pluginDesc.add("ids_list", textures_ids);
-	pluginDesc.add("mode", RNA_enum_get(&node.ptr, "mode"));
+	pluginDesc.add("interpolate", RNA_boolean_get(&node.ptr, "interpolate"));
+	const int modeIdx = RNA_enum_get(&node.ptr, "mode");
+	const int modeValueMap[] = {0, 1, 2, 3, 4, 6, 30};
+	const int mode = modeValueMap[Math::clamp<int>(modeIdx, 0, sizeof(modeValueMap) - 1)];
 
 	BL::NodeSocket textureDefaultSock = Nodes::GetInputSocketByName(node, "Default");
-	if (textureDefaultSock && textureDefaultSock.is_linked()) {
-		pluginDesc.add("default_texture", exportLinkedSocket(ntree, textureDefaultSock, context));
+	if (textureDefaultSock) {
+		pluginDesc.add("default_texture", exportSocket(ntree, textureDefaultSock, context));
 	}
 
-	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+	BL::NodeSocket idGenTex = Nodes::GetSocketByAttr(node, "id_gen_tex");
+	if (idGenTex && idGenTex.is_linked() && mode == 30) {
+		pluginDesc.add("id_gen_tex", exportLinkedSocket(ntree, idGenTex, context));
+	}
+
+	return m_exporter->export_plugin(pluginDesc);
 }
 
 
