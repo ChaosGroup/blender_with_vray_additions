@@ -312,12 +312,16 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 	}
 
 	PluginDesc pluginDesc(pluginName, "TexMulti");
-	pluginDesc.add("textures_list", textures);
-	pluginDesc.add("ids_list", textures_ids);
+	if (!textures.empty()) {
+		pluginDesc.add("textures_list", textures);
+		pluginDesc.add("ids_list", textures_ids);
+	}
 	pluginDesc.add("interpolate", RNA_boolean_get(&node.ptr, "interpolate"));
+
 	const int modeIdx = RNA_enum_get(&node.ptr, "mode");
 	const int modeValueMap[] = {0, 1, 2, 3, 4, 6, 30};
 	const int mode = modeValueMap[Math::clamp<int>(modeIdx, 0, sizeof(modeValueMap) - 1)];
+	pluginDesc.add("mode", mode);
 
 	BL::NodeSocket textureDefaultSock = Nodes::GetInputSocketByName(node, "Default");
 	if (textureDefaultSock) {
