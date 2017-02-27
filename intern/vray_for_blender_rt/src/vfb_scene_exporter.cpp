@@ -1076,38 +1076,51 @@ void SceneExporter::sync_render_settings()
 		return;
 	}
 
-	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
+	PointerRNA vrayObject = RNA_pointer_get(&m_scene.ptr, "vray");
+	PointerRNA vrayExporter = RNA_pointer_get(&vrayObject, "Exporter");
 	for (const auto &pluginID : RenderSettingsPlugins) {
-		if (!RNA_struct_find_property(&vrayScene, pluginID.c_str())) {
+		if (!RNA_struct_find_property(&vrayObject, pluginID.c_str())) {
 			continue;
 		}
-		PointerRNA propGroup = RNA_pointer_get(&vrayScene, pluginID.c_str());
+		PointerRNA propGroup = RNA_pointer_get(&vrayObject, pluginID.c_str());
 
 		PluginDesc pluginDesc(pluginID, pluginID);
 
 		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
 
 		if (pluginID == "SettingsOutput") {
-			if (!RNA_boolean_get(&vrayScene, "auto_save_render")) {
+			if (!RNA_boolean_get(&vrayExporter, "auto_save_render")) {
 				continue;
 			}
 
-			auto * imgFile = pluginDesc.get("img_file");
-			int format = RNA_int_get(&propGroup, "img_format");
+			int format = RNA_enum_get(&propGroup, "img_format");
 			const char * formatNames[] = {"png", "jpg", "tiff", "tga", "sgi", "exr", "vrimg"};
 			const char * imgFormat = format >= 0 && format < ArraySize(formatNames) ? formatNames[format] : "";
 
-			if (imgFile) {
+			auto * imgFile = pluginDesc.get("img_file");
+			auto * imgDir = pluginDesc.get("img_dir");
+			if (imgFile || imgDir) {
+				// this will call python to try to parse any time expressions so we need to restore the state
 				std::lock_guard<PythonGIL> lck(m_pyGIL);
 
-				// this will call python to try to parse any time expressions so we need to restore the state
-				imgFile->attrValue.valString = String::ExpandFilenameVariables(
-					imgFile->attrValue.valString,
-					m_active_camera ? m_active_camera.name() : "Untitled",
-					m_scene.name(),
-					m_data.filepath(),
-					imgFormat);
+				if (imgFile) {
+					imgFile->attrValue.valString = String::ExpandFilenameVariables(
+						imgFile->attrValue.valString,
+						m_active_camera ? m_active_camera.name() : "Untitled",
+						m_scene.name(),
+						m_data.filepath(),
+						imgFormat);
+				}
 
+				if (imgDir) {
+					imgDir->attrValue.valString = String::ExpandFilenameVariables(
+						imgDir->attrValue.valString,
+						m_active_camera ? m_active_camera.name() : "Untitled",
+						m_scene.name(),
+						m_data.filepath());
+
+					imgDir->attrValue.valString = String::AbsFilePath(imgDir->attrValue.valString, m_data.filepath());
+				}
 			}
 		}
 
