@@ -66,10 +66,13 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 		{}
 
 		bool operator!=(const FrameStateCheck & o) const {
-			return renderFrame != o.renderFrame ||
-			       useMotionBlur != o.useMotionBlur ||
-			       mbDuration != o.mbDuration ||
-			       mbInterval != o.mbInterval;
+			if (renderFrame != o.renderFrame) {
+				return true;
+			} else if (useMotionBlur != o.useMotionBlur) {
+				return true;
+			} else {
+				return mbDuration != o.mbDuration || mbInterval != o.mbInterval;
+			}
 		}
 
 	};
