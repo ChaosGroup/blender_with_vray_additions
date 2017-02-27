@@ -348,6 +348,7 @@ public:
 	AttrValue         exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs &);
 	AttrValue         exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSystemModifier psm);
 	AttrPlugin        exportRenderView(ViewParams &viewParams);
+	AttrPlugin        exportBakeView(ViewParams &viewParams);
 	AttrPlugin        exportSettingsCameraDof(ViewParams &viewParams);
 	AttrPlugin        exportSettingsMotionBlur(ViewParams &viewParams);
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);

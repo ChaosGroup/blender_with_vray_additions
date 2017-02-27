@@ -118,9 +118,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	if (needFullSync) {
 		m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
 		m_exporter->start();
-	}
-
-	if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
+	} else if (m_exporter->get_commit_state() != VRayBaseTypes::CommitAction::CommitAutoOn) {
 		m_exporter->commit_changes();
 	}
 

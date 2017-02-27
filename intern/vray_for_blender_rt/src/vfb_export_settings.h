@@ -164,6 +164,7 @@ struct ExporterSettings {
 	bool              use_subsurf_to_osd;
 
 	bool              showViewport;
+	bool              use_bake_view;
 
 	int               mb_duration;
 	float             mb_intervalCenter;
@@ -174,6 +175,7 @@ struct ExporterSettings {
 
 	std::string       override_material_name;
 	BL::Material      override_material;
+	BL::Object        current_bake_object;
 
 	VRayBaseTypes::RenderMode  getRenderMode() const { return m_renderMode; }
 	VRayBaseTypes::RenderMode  getViewportRenderMode() const { return m_renderModeViewport; }

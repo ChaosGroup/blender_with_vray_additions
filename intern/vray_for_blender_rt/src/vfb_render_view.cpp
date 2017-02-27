@@ -91,6 +91,27 @@ static void AspectCorrectFovOrtho(ViewParams &viewParams)
 }
 
 
+AttrPlugin DataExporter::exportBakeView(ViewParams &viewParams)
+{
+	PluginDesc bakeView("bakeView", "BakeView");
+
+	PointerRNA vray = RNA_pointer_get(&m_scene.ptr, "vray");
+	PointerRNA bakeViewData = RNA_pointer_get(&vray, "BakeView");
+
+	setAttrsFromPropGroupAuto(bakeView, &bakeViewData, "BakeView");
+	bakeView.add("fov", viewParams.renderView.fov);
+	bakeView.add("bake_node", AttrPlugin(getNodeName(m_settings.current_bake_object)));
+
+	PluginDesc uvBakeView("UVWbakeView", "UVWGenChannel");
+	uvBakeView.add("uvw_channel", RNA_int_get(&bakeViewData, "uv_channel"));
+	uvBakeView.add("uvw_transform", AttrTransform::identity());
+
+	bakeView.add("bake_uvwgen", m_exporter->export_plugin(uvBakeView));
+
+	return m_exporter->export_plugin(bakeView);
+}
+
+
 AttrPlugin DataExporter::exportRenderView(ViewParams &viewParams)
 {
 	PluginDesc viewDesc(ViewParams::renderViewPluginName, "RenderView");
@@ -432,6 +453,7 @@ ViewParams SceneExporter::get_current_view_params()
 void SceneExporter::sync_view(const bool check_updated)
 {
 	ViewParams viewParams = get_current_view_params();
+	const bool isBake = m_settings.use_bake_view;
 
 	viewParams.usePhysicalCamera = is_physical_view(viewParams.cameraObject);
 
@@ -462,24 +484,30 @@ void SceneExporter::sync_view(const bool check_updated)
 	AttrPlugin physCam;
 	AttrPlugin defCam;
 
-	if (!viewParams.renderView.ortho &&
-	    !viewParams.usePhysicalCamera) {
-		m_data_exporter.exportSettingsCameraDof(viewParams);
-	}
+	if (!isBake) {
+		if (!viewParams.renderView.ortho &&
+			!viewParams.usePhysicalCamera) {
+			m_data_exporter.exportSettingsCameraDof(viewParams);
+		}
 
-	if (viewParams.usePhysicalCamera) {
-		physCam = m_data_exporter.exportCameraPhysical(viewParams);
-		m_exporter->set_camera_plugin(physCam.plugin);
-	}
-	else {
-		m_data_exporter.exportSettingsMotionBlur(viewParams);
+		if (viewParams.usePhysicalCamera) {
+			physCam = m_data_exporter.exportCameraPhysical(viewParams);
+			m_exporter->set_camera_plugin(physCam.plugin);
+		}
+		else {
+			m_data_exporter.exportSettingsMotionBlur(viewParams);
+			defCam = m_data_exporter.exportCameraDefault(viewParams);
+			m_exporter->set_camera_plugin(defCam.plugin);
+		}
+
+		const bool paramsChanged = m_viewParams.changedParams(viewParams);
+		if (needReset || paramsChanged) {
+			renView = m_data_exporter.exportRenderView(viewParams);
+		}
+	} else {
 		defCam = m_data_exporter.exportCameraDefault(viewParams);
 		m_exporter->set_camera_plugin(defCam.plugin);
-	}
-
-	const bool paramsChanged = m_viewParams.changedParams(viewParams);
-	if (needReset || paramsChanged) {
-		renView = m_data_exporter.exportRenderView(viewParams);
+		renView = m_data_exporter.exportBakeView(viewParams);
 	}
 
 	if (needReset) {

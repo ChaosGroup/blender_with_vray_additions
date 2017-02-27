@@ -26,7 +26,8 @@ using namespace VRayForBlender;
 
 ExporterSettings::ExporterSettings()
     : export_meshes(true)
-	, override_material(PointerRNA_NULL)
+    , override_material(PointerRNA_NULL)
+    , current_bake_object(PointerRNA_NULL)
 {}
 
 
@@ -36,6 +37,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	if (engine && engine.is_preview()) {
 		scene = context.scene();
 	}
+	const bool isViewport = !!view3d;
 
 	settings_dr.init(scene);
 
@@ -51,6 +53,14 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&m_vrayExporter, "data_format");
 	export_meshes       = RNA_boolean_get(&m_vrayExporter, "auto_meshes");
 
+
+	PointerRNA BakeView = RNA_pointer_get(&m_vrayScene, "BakeView");
+	use_bake_view = RNA_boolean_get(&BakeView, "use") && !isViewport; // no bake in viewport
+	if (use_bake_view) {
+		PointerRNA bakeObj = RNA_pointer_get(&m_vrayExporter, "currentBakeObject");
+		current_bake_object = BL::Object(bakeObj);
+	}
+
 	settings_files.use_separate  = RNA_boolean_get(&m_vrayExporter, "useSeparateFiles");
 	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&m_vrayExporter, "output");
 	settings_files.output_dir    = RNA_std_string_get(&m_vrayExporter, "output_dir");
@@ -63,7 +73,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
 
-	if (engine.is_preview() || view3d) {
+	if (engine.is_preview() || isViewport || use_bake_view) {
 		settings_animation.mode = SettingsAnimation::AnimationMode::AnimationModeNone;
 	} else {
 		settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
@@ -92,8 +102,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 				}
 			}
 		}
-	}
-	else {
+	} else {
 		BL::Object camera(scene.camera());
 		// NOTE: Could happen if scene has no camera and we initing exporter for
 		// proxy export, for example.
@@ -112,6 +121,9 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 			}
 		}
 	}
+
+	// disable motion blur for bake render
+	use_motion_blur = use_motion_blur && !use_bake_view;
 
 	std::string overrideName;
 	PointerRNA settingsOptions = RNA_pointer_get(&m_vrayScene, "SettingsOptions");

@@ -455,8 +455,15 @@ void SceneExporter::sync(const bool check_updated)
 		sync_materials();
 	}
 
-	sync_view(check_updated);
-	sync_objects(check_updated);
+	if (m_settings.use_bake_view) {
+		// for bake view we want objects firts becasue the BakeView plugin references the baked object
+		sync_objects(check_updated);
+		sync_view(check_updated);
+	} else {
+		sync_objects(check_updated);
+		sync_view(check_updated);
+	}
+
 	sync_effects(check_updated);
 
 	// Sync data (will remove deleted objects)
