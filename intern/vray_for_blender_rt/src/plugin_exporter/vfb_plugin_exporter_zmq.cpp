@@ -297,7 +297,6 @@ ZmqExporter::ZmqExporter(const ExporterSettings & settings)
     , m_Client(nullptr)
     , m_vfbVisible(false)
     , m_isDirty(true)
-    , m_LastExportedFrame(-1000.f)
     , m_IsAborted(false)
     , m_Started(false)
     , m_RenderQuality(100)
@@ -421,9 +420,10 @@ void ZmqExporter::init()
 
 		if (m_Client->connected()) {
 			auto mode = exporter_settings.settings_animation.use && !is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
-			if (mode == VRayMessage::RendererType::Animation || !is_viewport) {
-				PRINT_INFO_EX("Setting RenderMode::RenderModeProduction");
-				m_RenderMode = RenderMode::RenderModeProduction;
+			if (is_viewport) {
+				m_RenderMode = exporter_settings.getViewportRenderMode();
+			} else {
+				m_RenderMode = exporter_settings.getRenderMode();
 			}
 			m_Client->send(VRayMessage::msgRendererType(mode));
 			m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Init));

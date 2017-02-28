@@ -72,7 +72,8 @@ public:
 	    , is_viewport(false)
 	    , is_prepass(false)
 	    , commit_state(CommitState::CommitNone)
-		, last_rendered_frame(-1.f)
+	    , last_rendered_frame(-1.f)
+	    , current_scene_frame(-1.f)
 	{}
 
 	virtual             ~PluginExporter()=0;

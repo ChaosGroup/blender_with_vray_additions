@@ -108,7 +108,6 @@ private:
 	std::mutex          m_ZmqClientMutex;
 	ZmqRenderImage      m_CurrentImage;
 	ImageMap            m_LayerImages;
-	float               m_LastExportedFrame;
 	bool                m_IsAborted;
 	bool                m_Started;
 
