@@ -474,7 +474,8 @@ void ZmqExporter::clear_frame_data(float upTo)
 
 void ZmqExporter::sync()
 {
-	set_commit_state(CommitAction::CommitNow);
+	// call commit explicitly else will often commit before calling startSync which is not needed
+	// set_commit_state(CommitAction::CommitNow);
 }
 
 void ZmqExporter::set_current_frame(float frame)

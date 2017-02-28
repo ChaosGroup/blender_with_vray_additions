@@ -90,7 +90,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	} else {
 		if (check_updated) {
 			// this means we are not first frame but we need to sync everything, so we should clear frame data
-			m_exporter->clear_frame_data(0);
+			// m_exporter->clear_frame_data(0);
 			m_exporter->getPluginManager().clear();
 		}
 

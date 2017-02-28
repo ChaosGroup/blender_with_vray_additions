@@ -163,8 +163,8 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	m_renderMode = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "rendering_mode");
-	if (engine.is_preview()) {
-		m_renderMode = VRayBaseTypes::RenderModeRtCpu;
+	if (engine.is_preview() || settings_animation.use) {
+		m_renderMode = VRayBaseTypes::RenderModeProduction;
 	}
 
 	m_renderModeViewport = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode");
