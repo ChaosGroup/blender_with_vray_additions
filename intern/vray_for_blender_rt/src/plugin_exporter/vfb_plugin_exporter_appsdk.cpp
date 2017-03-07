@@ -419,66 +419,66 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 					continue;
 				}
 				else if (p.attrValue.type == ValueTypeInt) {
-					plug.setValue(p.attrName, p.attrValue.valInt);
+					plug.setValue(p.attrName, p.attrValue.as<AttrSimpleType<int>>());
 				}
 				else if (p.attrValue.type == ValueTypeFloat) {
-					plug.setValue(p.attrName, p.attrValue.valFloat);
+					plug.setValue(p.attrName, p.attrValue.as<AttrSimpleType<float>>());
 				}
 				else if (p.attrValue.type == ValueTypeColor) {
-					plug.setValue(p.attrName, to_vray_color(p.attrValue.valColor));
+					plug.setValue(p.attrName, to_vray_color(p.attrValue.as<AttrColor>()));
 				}
 				else if (p.attrValue.type == ValueTypeVector) {
-					plug.setValue(p.attrName, to_vray_vector(p.attrValue.valVector));
+					plug.setValue(p.attrName, to_vray_vector(p.attrValue.as<AttrVector>()));
 				}
 				else if (p.attrValue.type == ValueTypeAColor) {
-					plug.setValue(p.attrName, to_vray_acolor(p.attrValue.valAColor));
+					plug.setValue(p.attrName, to_vray_acolor(p.attrValue.as<AttrAColor>()));
 				}
 				else if (p.attrValue.type == ValueTypePlugin) {
-					std::string pluginName = p.attrValue.valPlugin.plugin;
-					if (NOT(p.attrValue.valPlugin.output.empty())) {
+					std::string pluginName = p.attrValue.as<AttrPlugin>().plugin;
+					if (NOT(p.attrValue.as<AttrPlugin>().output.empty())) {
 						pluginName.append("::");
-						pluginName.append(p.attrValue.valPlugin.output);
+						pluginName.append(p.attrValue.as<AttrPlugin>().output);
 					}
 
 					plug.setValueAsString(p.attrName, pluginName);
 				}
 				else if (p.attrValue.type == ValueTypeTransform) {
-					plug.setValue(p.attrName, to_vray_transform(p.attrValue.valTransform));
+					plug.setValue(p.attrName, to_vray_transform(p.attrValue.as<AttrTransform>()));
 				}
 				else if (p.attrValue.type == ValueTypeString) {
-					plug.setValue(p.attrName, p.attrValue.valString);
+					plug.setValue(p.attrName, p.attrValue.as<AttrSimpleType<std::string>>());
 				}
 				else if (p.attrValue.type == ValueTypeListInt) {
 					plug.setValue(p.attrName,
-					              (void*)*p.attrValue.valListInt,
-					              p.attrValue.valListInt.getBytesCount());
+					              (void*)*p.attrValue.as<AttrListInt>(),
+					              p.attrValue.as<AttrListInt>().getBytesCount());
 				}
 				else if (p.attrValue.type == ValueTypeListFloat) {
 					plug.setValue(p.attrName,
-					              (void*)*p.attrValue.valListFloat,
-					              p.attrValue.valListFloat.getBytesCount());
+					              (void*)*p.attrValue.as<AttrListFloat>(),
+					              p.attrValue.as<AttrListFloat>().getBytesCount());
 				}
 				else if (p.attrValue.type == ValueTypeListVector) {
 					plug.setValue(p.attrName,
-					              (void*)*p.attrValue.valListVector,
-					              p.attrValue.valListVector.getBytesCount());
+					              (void*)*p.attrValue.as<AttrListVector>(),
+					              p.attrValue.as<AttrListVector>().getBytesCount());
 				}
 				else if (p.attrValue.type == ValueTypeListColor) {
 					plug.setValue(p.attrName,
-					              (void*)*p.attrValue.valListColor,
-					              p.attrValue.valListColor.getBytesCount());
+					              (void*)*p.attrValue.as<AttrListColor>(),
+					              p.attrValue.as<AttrListColor>().getBytesCount());
 				}
 				else if (p.attrValue.type == ValueTypeListPlugin) {
 					VRay::ValueList pluginList;
-					for (int i = 0; i < p.attrValue.valListPlugin.getCount(); ++i) {
-						pluginList.push_back(VRay::Value((*p.attrValue.valListPlugin)[i].plugin));
+					for (int i = 0; i < p.attrValue.as<AttrListPlugin>().getCount(); ++i) {
+						pluginList.push_back(VRay::Value((*p.attrValue.as<AttrListPlugin>())[i].plugin));
 					}
 					plug.setValue(p.attrName, VRay::Value(pluginList));
 				}
 				else if (p.attrValue.type == ValueTypeListString) {
 					VRay::ValueList string_list;
-					for (int i = 0; i < p.attrValue.valListString.getCount(); ++i) {
-						string_list.push_back(VRay::Value((*p.attrValue.valListString)[i]));
+					for (int i = 0; i < p.attrValue.as<AttrListString>().getCount(); ++i) {
+						string_list.push_back(VRay::Value((*p.attrValue.as<AttrListString>())[i]));
 					}
 					plug.setValue(p.attrName, VRay::Value(string_list));
 				}
@@ -486,7 +486,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 					VRay::ValueList map_channels;
 
 					int i = 0;
-					for (const auto &mcIt : p.attrValue.valMapChannels.data) {
+					for (const auto &mcIt : p.attrValue.as<AttrMapChannels>().data) {
 						const AttrMapChannels::AttrMapChannel &map_channel_data = mcIt.second;
 
 						VRay::ValueList map_channel;
@@ -510,10 +510,10 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 				}
 				else if (p.attrValue.type == ValueTypeInstancer) {
 					VRay::ValueList instancer;
-					instancer.push_back(VRay::Value(p.attrValue.valInstancer.frameNumber));
+					instancer.push_back(VRay::Value(p.attrValue.as<AttrInstancer>().frameNumber));
 
-					for (int i = 0; i < p.attrValue.valInstancer.data.getCount(); ++i) {
-						const AttrInstancer::Item &item = (*p.attrValue.valInstancer.data)[i];
+					for (int i = 0; i < p.attrValue.as<AttrInstancer>().data.getCount(); ++i) {
+						const AttrInstancer::Item &item = (*p.attrValue.as<AttrInstancer>().data)[i];
 
 						VRay::ValueList instance;
 						instance.push_back(VRay::Value(item.index));

@@ -33,37 +33,37 @@ MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 	MHash valHash = seed;
 	switch (value.type) {
 		case ValueTypeInt:
-			return value.valInt;
+			return value.as<AttrSimpleType<int>>().value;
 		case ValueTypeFloat:
-			return *reinterpret_cast<const MHash*>(&value.valFloat);
+			return *reinterpret_cast<const MHash*>(&value.as<AttrSimpleType<float>>().value);
 		case ValueTypeString:
-			return getValueHash(value.valString);
+			return getValueHash(value.as<AttrSimpleType<std::string>>().value);
 		case ValueTypeColor:
-			return getValueHash(value.valColor);
+			return getValueHash(value.as<AttrColor>());
 		case ValueTypeAColor:
-			return getValueHash(value.valAColor);
+			return getValueHash(value.as<AttrAColor>());
 		case ValueTypeVector:
-			return getValueHash(value.valVector);
+			return getValueHash(value.as<AttrVector>());
 		case ValueTypePlugin:
-			valHash = getValueHash(value.valPlugin.plugin);
-			if (!value.valPlugin.output.empty()) {
-				valHash = getValueHash(value.valPlugin.output, valHash);
+			valHash = getValueHash(value.as<AttrPlugin>().plugin);
+			if (!value.as<AttrPlugin>().output.empty()) {
+				valHash = getValueHash(value.as<AttrPlugin>().output, valHash);
 			}
 			return valHash;
 		case ValueTypeTransform:
-			return getValueHash(value.valTransform);
+			return getValueHash(value.as<AttrTransform>());
 		case ValueTypeListInt:
-			return getValueHash(value.valListInt);
+			return getValueHash(value.as<AttrListInt>());
 		case ValueTypeListFloat:
-			return getValueHash(value.valListFloat);
+			return getValueHash(value.as<AttrListFloat>());
 		case ValueTypeListVector:
-			return getValueHash(value.valListVector);
+			return getValueHash(value.as<AttrListVector>());
 		case ValueTypeListColor:
-			return getValueHash(value.valListColor);
+			return getValueHash(value.as<AttrListColor>());
 		case ValueTypeInstancer:
-			valHash = getValueHash(value.valInstancer.frameNumber);
-			for (int c = 0; c < value.valInstancer.data.getCount(); c++) {
-				const auto &rd = (*value.valInstancer.data)[c];
+			valHash = getValueHash(value.as<AttrInstancer>().frameNumber);
+			for (int c = 0; c < value.as<AttrInstancer>().data.getCount(); c++) {
+				const auto &rd = (*value.as<AttrInstancer>().data)[c];
 
 				valHash = getValueHash(rd.tm, valHash);
 				valHash = getValueHash(rd.vel, valHash);
@@ -72,8 +72,8 @@ MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 			}
 			return valHash;
 		case ValueTypeListPlugin:
-			for (int c = 0; c < value.valListPlugin.getCount(); ++c) {
-				const auto & rPlugin = value.valListPlugin.getData()->at(c);
+			for (int c = 0; c < value.as<AttrListPlugin>().getCount(); ++c) {
+				const auto & rPlugin = value.as<AttrListPlugin>().getData()->at(c);
 				valHash = getValueHash(rPlugin.plugin, valHash);
 				if (!rPlugin.output.empty()) {
 					valHash = getValueHash(rPlugin.output, valHash);
@@ -81,12 +81,12 @@ MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 			}
 			return valHash;
 		case ValueTypeListString:
-			for (int c = 0; c < value.valListString.getCount(); ++c) {
-				valHash = getValueHash(value.valListString.getData()->at(c), valHash);
+			for (int c = 0; c < value.as<AttrListString>().getCount(); ++c) {
+				valHash = getValueHash(value.as<AttrListString>().getData()->at(c), valHash);
 			}
 			return valHash;
 		case ValueTypeMapChannels:
-			for (const auto & iter : value.valMapChannels.data) {
+			for (const auto & iter : value.as<AttrMapChannels>().data) {
 				auto & map = iter.second;
 				valHash = getValueHash(map.name, valHash);
 				valHash = getValueHash(map.faces, valHash);

@@ -1111,8 +1111,8 @@ void SceneExporter::sync_render_settings()
 				std::lock_guard<PythonGIL> lck(m_pyGIL);
 
 				if (imgFile) {
-					imgFile->attrValue.valString = String::ExpandFilenameVariables(
-						imgFile->attrValue.valString,
+					imgFile->attrValue.as<AttrSimpleType<std::string>>() = String::ExpandFilenameVariables(
+						imgFile->attrValue.as<AttrSimpleType<std::string>>(),
 						m_active_camera ? m_active_camera.name() : "Untitled",
 						m_scene.name(),
 						m_data.filepath(),
@@ -1120,13 +1120,13 @@ void SceneExporter::sync_render_settings()
 				}
 
 				if (imgDir) {
-					imgDir->attrValue.valString = String::ExpandFilenameVariables(
-						imgDir->attrValue.valString,
+					imgDir->attrValue.as<AttrSimpleType<std::string>>() = String::ExpandFilenameVariables(
+						imgDir->attrValue.as<AttrSimpleType<std::string>>(),
 						m_active_camera ? m_active_camera.name() : "Untitled",
 						m_scene.name(),
 						m_data.filepath());
 
-					imgDir->attrValue.valString = String::AbsFilePath(imgDir->attrValue.valString, m_data.filepath());
+					imgDir->attrValue.as<AttrSimpleType<std::string>>() = String::AbsFilePath(imgDir->attrValue.as<AttrSimpleType<std::string>>(), m_data.filepath());
 				}
 			}
 		}

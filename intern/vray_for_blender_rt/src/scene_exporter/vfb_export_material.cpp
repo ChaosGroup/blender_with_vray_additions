@@ -120,7 +120,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 				needExport = false;
 			} else if (pluginType == PT::PluginTexture) {
 				PRINT_INFO_EX("Exporting selected texture node only %s", nodeClass.c_str());
-				PluginDesc brdfLightWrapper("BRDFLightWrapper@" + val.valPlugin.plugin, "BRDFLight");
+				PluginDesc brdfLightWrapper("BRDFLightWrapper@" + val.as<AttrPlugin>().plugin, "BRDFLight");
 				brdfLightWrapper.add("color", val);
 				material = m_exporter->export_plugin(brdfLightWrapper);
 				needExport = false;
@@ -145,16 +145,16 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 	// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
 	if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial) {
 
-		const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.valPlugin.plugin);
+		const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.as<AttrPlugin>().plugin);
 		PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
-		mtlSingleWrapper.add("brdf", material.valPlugin);
+		mtlSingleWrapper.add("brdf", material.as<AttrPlugin>());
 
 		material = m_exporter->export_plugin(mtlSingleWrapper);
 	}
 
 	if (m_exporter->get_is_viewport()) {
 		PluginDesc genericWrapper("MtlRenderStats@" + ntree.name(), "MtlRenderStats");
-		genericWrapper.add("base_mtl", material.valPlugin);
+		genericWrapper.add("base_mtl", material.as<AttrPlugin>());
 		material = m_exporter->export_plugin(genericWrapper);
 	}
 

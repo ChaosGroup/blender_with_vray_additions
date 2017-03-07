@@ -58,8 +58,8 @@ AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node 
 				weight = m_exporter->export_plugin(weigthDesc);
 			}
 
-			brdfs.append(brdf.valPlugin);
-			weights.append(weight.valPlugin);
+			brdfs.append(brdf.as<AttrPlugin>());
+			weights.append(weight.as<AttrPlugin>());
 		}
 	}
 

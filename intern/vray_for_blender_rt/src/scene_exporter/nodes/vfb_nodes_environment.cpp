@@ -76,7 +76,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 								if (RNA_boolean_get(&inSock.ptr, "use")) {
 									AttrValue effect = exportSocket(worldTree, inSock, context);
 									if (effect) {
-										environment_volume.append(effect.valPlugin);
+										environment_volume.append(effect.as<AttrPlugin>());
 									}
 								}
 							}

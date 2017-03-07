@@ -323,12 +323,12 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				auto * attr = renderStats.get(cameraToObHideNames[c][0]);
 				if (attr) {
 					if (useObStats) {
-						attr->attrValue.valInt = attr->attrValue.valInt && !isObjectInHideList(ob, cameraToObHideNames[c][1]);
+						attr->attrValue.as<AttrSimpleType<int>>() = attr->attrValue.as<AttrSimpleType<int>>() && !isObjectInHideList(ob, cameraToObHideNames[c][1]);
 					} else {
 						// "Render" tab is inactive on object, ignore what we got from there
-						attr->attrValue.valInt = !isObjectInHideList(ob, cameraToObHideNames[c][1]);
+						attr->attrValue.as<AttrSimpleType<int>>() = !isObjectInHideList(ob, cameraToObHideNames[c][1]);
 					}
-					doExportRenderStats = doExportRenderStats || !attr->attrValue.valInt;
+					doExportRenderStats = doExportRenderStats || !attr->attrValue.as<AttrSimpleType<int>>();
 				}
 			}
 

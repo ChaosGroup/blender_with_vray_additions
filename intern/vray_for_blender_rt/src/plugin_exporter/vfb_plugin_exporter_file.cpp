@@ -188,56 +188,56 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		case ValueTypeUnknown:
 			break;
 		case ValueTypeInt:
-			writer << KVPair<int>(attr.attrName, attr.attrValue.valInt);
+			writer << KVPair<int>(attr.attrName, attr.attrValue.as<AttrSimpleType<int>>());
 			break;
 		case ValueTypeFloat:
-			writer << KVPair<float>(attr.attrName, attr.attrValue.valFloat);
+			writer << KVPair<float>(attr.attrName, attr.attrValue.as<AttrSimpleType<float>>());
 			break;
 		case ValueTypeString:
-			writer << KVPair<std::string>(attr.attrName, attr.attrValue.valString);
+			writer << KVPair<std::string>(attr.attrName, attr.attrValue.as<AttrSimpleType<std::string>>());
 			break;
 		case ValueTypeColor:
-			writer << KVPair<AttrColor>(attr.attrName, attr.attrValue.valColor);
+			writer << KVPair<AttrColor>(attr.attrName, attr.attrValue.as<AttrColor>());
 			break;
 		case ValueTypeVector:
-			writer << KVPair<AttrVector>(attr.attrName, attr.attrValue.valVector);
+			writer << KVPair<AttrVector>(attr.attrName, attr.attrValue.as<AttrVector>());
 			break;
 		case ValueTypeAColor:
-			writer << KVPair<AttrAColor>(attr.attrName, attr.attrValue.valAColor);
+			writer << KVPair<AttrAColor>(attr.attrName, attr.attrValue.as<AttrAColor>());
 			break;
 		case ValueTypePlugin:
-			writer << KVPair<AttrPlugin>(attr.attrName, attr.attrValue.valPlugin);
+			writer << KVPair<AttrPlugin>(attr.attrName, attr.attrValue.as<AttrPlugin>());
 			break;
 		case ValueTypeTransform:
-			writer << KVPair<AttrTransform>(attr.attrName, attr.attrValue.valTransform);
+			writer << KVPair<AttrTransform>(attr.attrName, attr.attrValue.as<AttrTransform>());
 			break;
 		case ValueTypeMatrix:
-			writer << KVPair<AttrMatrix>(attr.attrName, attr.attrValue.valMatrix);
+			writer << KVPair<AttrMatrix>(attr.attrName, attr.attrValue.as<AttrMatrix>());
 			break;
 		case ValueTypeListInt:
-			writer << KVPair<AttrListInt>(attr.attrName, attr.attrValue.valListInt);
+			writer << KVPair<AttrListInt>(attr.attrName, attr.attrValue.as<AttrListInt>());
 			break;
 		case ValueTypeListFloat:
-			writer << KVPair<AttrListFloat>(attr.attrName, attr.attrValue.valListFloat);
+			writer << KVPair<AttrListFloat>(attr.attrName, attr.attrValue.as<AttrListFloat>());
 			break;
 		case ValueTypeListVector:
-			writer << KVPair<AttrListVector>(attr.attrName, attr.attrValue.valListVector);
+			writer << KVPair<AttrListVector>(attr.attrName, attr.attrValue.as<AttrListVector>());
 			break;
 		case ValueTypeListColor:
-			writer << KVPair<AttrListColor>(attr.attrName, attr.attrValue.valListColor);
+			writer << KVPair<AttrListColor>(attr.attrName, attr.attrValue.as<AttrListColor>());
 			break;
 		case ValueTypeListPlugin:
-			writer << KVPair<AttrListPlugin>(attr.attrName, attr.attrValue.valListPlugin);
+			writer << KVPair<AttrListPlugin>(attr.attrName, attr.attrValue.as<AttrListPlugin>());
 			break;
 		case ValueTypeListString:
-			writer << KVPair<AttrListString>(attr.attrName, attr.attrValue.valListString);
+			writer << KVPair<AttrListString>(attr.attrName, attr.attrValue.as<AttrListString>());
 			break;
 		case ValueTypeMapChannels:
-			writer << KVPair<AttrMapChannels>(attr.attrName, attr.attrValue.valMapChannels);
+			writer << KVPair<AttrMapChannels>(attr.attrName, attr.attrValue.as<AttrMapChannels>());
 			break;
 		case ValueTypeInstancer:
-			BLI_assert(attr.attrValue.valInstancer.frameNumber == current_scene_frame && "Instancer's frame mismatching scene frame");
-			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.valInstancer);
+			BLI_assert(attr.attrValue.as<AttrInstancer>().frameNumber == current_scene_frame && "Instancer's frame mismatching scene frame");
+			writer << KVPair<AttrInstancer>(attr.attrName, attr.attrValue.as<AttrInstancer>());
 			break;
 		default:
 			BLI_assert(!"Unsupported attribute type");

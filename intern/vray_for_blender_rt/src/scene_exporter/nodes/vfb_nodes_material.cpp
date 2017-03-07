@@ -76,7 +76,7 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 			AttrValue material = exportLinkedSocket(ntree, mtlSock, context);
 			int materialID = RNA_int_get(&mtlSock.ptr, "value");
 
-			mtls_list.append(material.valPlugin);
+			mtls_list.append(material.as<AttrPlugin>());
 			ids_list.append(materialID);
 		}
 	}

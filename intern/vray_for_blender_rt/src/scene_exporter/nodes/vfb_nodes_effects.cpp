@@ -231,7 +231,7 @@ AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::N
 			for(ObList::const_iterator obIt = domainObList.begin(); obIt != domainObList.end(); ++obIt) {
 				BL::Object domainOb(*obIt);
 				if (isObjectVisible(domainOb)) {
-					domains.append(exportVRayNodeSmokeDomain(ntree, node, domainOb, context).valPlugin);
+					domains.append(exportVRayNodeSmokeDomain(ntree, node, domainOb, context).as<AttrPlugin>());
 				}
 			}
 		}
@@ -262,7 +262,7 @@ AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::No
 				}
 				else {
 					gizmos = exportSocket(ntree, gizmosSock, context);
-					if (!gizmos || (gizmos.type == ValueTypeListPlugin && gizmos.valListPlugin.empty())) {
+					if (!gizmos || (gizmos.type == ValueTypeListPlugin && gizmos.as<AttrListPlugin>().empty())) {
 						// If socket is linked it means user have attached the gizmo node,
 						// but if gizmos list is empty it means gizmo object is invisible.
 						// We don't need to export the whole effect at all because it will cover the whole
@@ -441,7 +441,7 @@ AttrValue DataExporter::exportVRayNodeSphereFade(BL::NodeTree &ntree, BL::Node &
 			if (connNode && connNode.bl_idname() == "VRayNodeSphereFadeGizmo") {
 				AttrValue sphereFadeGizmo = exportLinkedSocket(ntree, inSock, context);
 				if (sphereFadeGizmo && sphereFadeGizmo.type == ValueTypePlugin) {
-					gizmos.append(sphereFadeGizmo.valPlugin);
+					gizmos.append(sphereFadeGizmo.as<AttrPlugin>());
 				}
 			}
 		}

@@ -180,7 +180,7 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 					if (!(conSockAttrName == "uvwgen" ||
 							conSockAttrName == "bitmap"))
 					{
-						outPlugin.valPlugin.output = conSockAttrName;
+						outPlugin.as<AttrPlugin>().output = conSockAttrName;
 					}
 				}
 			}

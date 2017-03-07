@@ -177,7 +177,10 @@ AttrValue DataExporter::exportVRayNodeTexEdges(BL::NodeTree &ntree, BL::Node &no
 
 	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 
-	pluginDesc.add("world_width", pluginDesc.get("pixel_width"));
+	auto * attr = pluginDesc.get("pixel_width");
+	if (attr) {
+		pluginDesc.add("world_width", attr->attrValue);
+	}
 
 	return m_exporter->export_plugin(pluginDesc);
 }
@@ -267,7 +270,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 
 			PluginAttr *uv_set_name = mappingDesc.get("uv_set_name");
 			if (uv_set_name) {
-				uv_set_name->attrValue.valString = VRayForBlender::Mesh::UvChanNamePrefix + uv_set_name->attrValue.valString;
+				uv_set_name->attrValue.as<AttrSimpleType<std::string>>() = VRayForBlender::Mesh::UvChanNamePrefix + uv_set_name->attrValue.as<AttrSimpleType<std::string>>().value;
 			}
 			else {
 				mappingDesc.add("uv_set_name", "UvUVMap");
@@ -276,8 +279,8 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 			mappingPlugin = m_exporter->export_plugin(mappingDesc);
 		}
 
-		pluginDesc.add("bitmap", bitmapPlugin.valPlugin);
-		pluginDesc.add("uvwgen", mappingPlugin.valPlugin);
+		pluginDesc.add("bitmap", bitmapPlugin.as<AttrPlugin>());
+		pluginDesc.add("uvwgen", mappingPlugin.as<AttrPlugin>());
 
 		setAttrsFromNode(ntree, node, fromSocket, context, pluginDesc, "TexBitmap", ParamDesc::PluginTexture);
 
@@ -303,7 +306,7 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 		if (texSock && texSock.is_linked()) {
 			AttrValue texture = exportLinkedSocket(ntree, texSock, context);
 
-			textures.append(texture.valPlugin);
+			textures.append(texture.as<AttrPlugin>());
 			textures_ids.append(RNA_int_get(&texSock.ptr, "value"));
 		}
 	}
@@ -349,7 +352,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 			AttrValue texture = exportLinkedSocket(ntree, texSock, context);
 			if (texture) {
 				// XXX: For some reason TexLayered doesn't like ::out_smth
-				texture.valPlugin.output.clear();
+				texture.as<AttrPlugin>().output.clear();
 
 				const int   blend_mode = RNA_enum_get(&texSock.ptr, "value");
 				const float blend_amount = RNA_float_get(&texSock.ptr, "blend");
@@ -368,7 +371,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 					texture = m_exporter->export_plugin(blendDesc);
 				}
 
-				textures.append(texture.valPlugin);
+				textures.append(texture.as<AttrPlugin>());
 				blend_modes.append(blend_mode);
 			}
 		}
@@ -519,7 +522,7 @@ AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &nt
 
 	PluginAttr *channel_name = pluginDesc.get("channel_name");
 	if (channel_name) {
-		channel_name->attrValue.valString = VRayForBlender::Mesh::ColChanNamePrefix + channel_name->attrValue.valString;
+		channel_name->attrValue.as<AttrSimpleType<std::string>>() = VRayForBlender::Mesh::ColChanNamePrefix + channel_name->attrValue.as<AttrSimpleType<std::string>>().value;
 	}
 
 	return m_exporter->export_plugin(pluginDesc);

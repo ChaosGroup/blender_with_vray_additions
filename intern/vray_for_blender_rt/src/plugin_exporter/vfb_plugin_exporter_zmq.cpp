@@ -349,7 +349,7 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
 		if (this->callback_on_message_update) {
-			auto msg = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
+			std::string msg = *message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>();
 			auto newLine = msg.find_first_of("\n\r");
 			if (newLine != std::string::npos) {
 				msg.resize(newLine);
@@ -387,13 +387,13 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 				m_IsAborted = true;
 				break;
 			case VRayMessage::RendererState::Progress:
-				render_progress = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+				render_progress = *message.getValue<VRayBaseTypes::AttrSimpleType<float>>();
 				break;
 			case VRayMessage::RendererState::ProgressMessage:
-				progress_message = message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->m_Value;
+				progress_message = *message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>();
 				break;
 			case VRayMessage::RendererState::Continue:
-				this->last_rendered_frame = message.getValue<VRayBaseTypes::AttrSimpleType<float>>()->m_Value;
+				this->last_rendered_frame = *message.getValue<VRayBaseTypes::AttrSimpleType<float>>();
 				break;
 			default:
 				BLI_assert(!"Receieved unexpected RendererState message from renderer.");
@@ -634,65 +634,8 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
-
-		switch (attr.attrValue.type) {
-		case ValueTypeUnknown:
-			break;
-		case ValueTypeInt:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, VRayBaseTypes::AttrSimpleType<int>(attr.attrValue.valInt)));
-			break;
-		case ValueTypeFloat:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, VRayBaseTypes::AttrSimpleType<float>(attr.attrValue.valFloat)));
-			break;
-		case ValueTypeString:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, VRayBaseTypes::AttrSimpleType<std::string>(attr.attrValue.valString)));
-			break;
-		case ValueTypeColor:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valColor));
-			break;
-		case ValueTypeVector:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valVector));
-			break;
-		case ValueTypeAColor:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valAColor));
-			break;
-		case ValueTypePlugin:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valPlugin));
-			break;
-		case ValueTypeTransform:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valTransform));
-			break;
-		case ValueTypeMatrix:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valMatrix));
-			break;
-		case ValueTypeListInt:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListInt));
-			break;
-		case ValueTypeListFloat:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListFloat));
-			break;
-		case ValueTypeListVector:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListVector));
-			break;
-		case ValueTypeListColor:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListColor));
-			break;
-		case ValueTypeListPlugin:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListPlugin));
-			break;
-		case ValueTypeListString:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valListString));
-			break;
-		case ValueTypeMapChannels:
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valMapChannels));
-			break;
-		case ValueTypeInstancer:
-			BLI_assert(attr.attrValue.valInstancer.frameNumber == current_scene_frame && "Instancer's frame mismatching scene frame");
-			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue.valInstancer));
-			break;
-		default:
-			BLI_assert(!"Unsupported attribute type");
-			break;
+		if (attr.attrValue.getType() != ValueTypeUnknown) {
+			m_Client->send(VRayMessage::msgPluginSetProperty(name, attr.attrName, attr.attrValue));
 		}
 	}
 

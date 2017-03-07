@@ -183,16 +183,16 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 					}
 
 					const auto shadowRadius = pluginDesc.get("shadowRadius");
-					if (shadowRadius && shadowRadius->attrValue.valFloat != 0.f) {
+					if (shadowRadius && shadowRadius->attrValue.as<AttrSimpleType<float>>() != 0.f) {
 						const auto sr1 = pluginDesc.get("shadowRadius1");
 						const auto sr2 = pluginDesc.get("shadowRadius2");
 
-						if (sr1 && sr1->attrValue.valFloat == 0.f) {
-							pluginDesc.add("shadowRadius1", shadowRadius->attrValue.valFloat);
+						if (sr1 && sr1->attrValue.as<AttrSimpleType<float>>() == 0.f) {
+							pluginDesc.add("shadowRadius1", shadowRadius->attrValue.as<AttrSimpleType<float>>());
 						}
 
-						if (sr2 && sr2->attrValue.valFloat == 0.f) {
-							pluginDesc.add("shadowRadius2", shadowRadius->attrValue.valFloat);
+						if (sr2 && sr2->attrValue.as<AttrSimpleType<float>>() == 0.f) {
+							pluginDesc.add("shadowRadius2", shadowRadius->attrValue.as<AttrSimpleType<float>>());
 						}
 					}
 				}
