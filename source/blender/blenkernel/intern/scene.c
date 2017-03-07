@@ -56,6 +56,7 @@
 #include "BLI_utildefines.h"
 #include "BLI_callbacks.h"
 #include "BLI_string.h"
+#include "BLI_string_utils.h"
 #include "BLI_threads.h"
 #include "BLI_task.h"
 
@@ -286,13 +287,16 @@ Scene *BKE_scene_copy(Main *bmain, Scene *sce, int type)
 		ts->imapaint.paintcursor = NULL;
 		id_us_plus((ID *)ts->imapaint.stencil);
 		ts->particle.paintcursor = NULL;
+		
 		/* duplicate Grease Pencil Drawing Brushes */
 		BLI_listbase_clear(&ts->gp_brushes);
 		for (bGPDbrush *brush = sce->toolsettings->gp_brushes.first; brush; brush = brush->next) {
 			bGPDbrush *newbrush = BKE_gpencil_brush_duplicate(brush);
 			BLI_addtail(&ts->gp_brushes, newbrush);
 		}
-
+		
+		/* duplicate Grease Pencil interpolation curve */
+		ts->gp_interpolate.custom_ipo = curvemapping_copy(ts->gp_interpolate.custom_ipo);
 	}
 	
 	/* make a private copy of the avicodecdata */
@@ -439,12 +443,17 @@ void BKE_scene_free(Scene *sce)
 			BKE_paint_free(&sce->toolsettings->uvsculpt->paint);
 			MEM_freeN(sce->toolsettings->uvsculpt);
 		}
+		BKE_paint_free(&sce->toolsettings->imapaint.paint);
+		
 		/* free Grease Pencil Drawing Brushes */
 		BKE_gpencil_free_brushes(&sce->toolsettings->gp_brushes);
 		BLI_freelistN(&sce->toolsettings->gp_brushes);
-
-		BKE_paint_free(&sce->toolsettings->imapaint.paint);
-
+		
+		/* free Grease Pencil interpolation curve */
+		if (sce->toolsettings->gp_interpolate.custom_ipo) {
+			curvemapping_free(sce->toolsettings->gp_interpolate.custom_ipo);
+		}
+		
 		MEM_freeN(sce->toolsettings);
 		sce->toolsettings = NULL;
 	}
@@ -1501,8 +1510,6 @@ static void scene_update_object_func(TaskPool * __restrict pool, void *taskdata,
 		if (add_to_stats) {
 			StatisicsEntry *entry;
 
-			BLI_assert(threadid < BLI_pool_get_num_threads(pool));
-
 			entry = MEM_mallocN(sizeof(StatisicsEntry), "update thread statistics");
 			entry->object = object;
 			entry->start_time = start_time;
@@ -2042,6 +2049,8 @@ bool BKE_scene_remove_render_layer(Main *bmain, Scene *scene, SceneRenderLayer *
 		/* ensure 1 layer is kept */
 		return false;
 	}
+
+	BKE_freestyle_config_free(&srl->freestyleConfig);
 
 	BLI_remlink(&scene->r.layers, srl);
 	MEM_freeN(srl);

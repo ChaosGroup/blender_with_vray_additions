@@ -15,6 +15,7 @@
  */
 
 #include <climits>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -130,7 +131,7 @@ public:
 	{
 		if(first_error) {
 			fprintf(stderr, "\nRefer to the Cycles GPU rendering documentation for possible solutions:\n");
-			fprintf(stderr, "http://www.blender.org/manual/render/cycles/gpu_rendering.html\n\n");
+			fprintf(stderr, "https://docs.blender.org/manual/en/dev/render/cycles/gpu_rendering.html\n\n");
 			first_error = false;
 		}
 	}
