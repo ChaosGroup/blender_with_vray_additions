@@ -435,11 +435,11 @@ void SceneExporter::sync(const bool check_updated)
 
 	// TODO: this is hack so we can export object dependent on effect before any other objects so we
 	// can hide/show them correctly
+	sync_prepass();
 	m_exporter->set_prepass(true);
 	sync_effects(false);
 	m_exporter->set_prepass(false);
 
-	sync_prepass();
 
 	sync_render_settings();
 	// Export once per viewport session
