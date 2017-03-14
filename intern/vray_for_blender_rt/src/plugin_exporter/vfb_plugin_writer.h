@@ -209,6 +209,12 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<T
 	return pp << val.value;
 }
 
+template <> inline
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<std::string> &val)
+{
+	return pp << "\"" << val.value << "\"";
+}
+
 template <typename T>
 PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val, const char *listName, bool newLine = false)
 {
