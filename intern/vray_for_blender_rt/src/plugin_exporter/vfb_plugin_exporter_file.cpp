@@ -172,7 +172,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	    writer == *m_Writers[ParamDesc::PluginSettings]
 	);
 
-	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << "{\n";
+	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << " {\n";
 	if (exporter_settings.settings_animation.use || exporter_settings.use_motion_blur) {
 		if (setFrame) {
 			writer.setAnimationFrame(this->current_scene_frame);
