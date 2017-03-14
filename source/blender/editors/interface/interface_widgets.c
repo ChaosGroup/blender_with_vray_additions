@@ -1554,11 +1554,15 @@ static void widget_draw_text_icon(uiFontStyle *fstyle, uiWidgetColors *wcol, uiB
 	/* Icons on the left with optional text label on the right */
 	else if (but->flag & UI_HAS_ICON || show_menu_icon) {
 		const BIFIconID icon = (but->flag & UI_HAS_ICON) ? but->icon + but->iconadd : ICON_NONE;
-		const float icon_size = ICON_DEFAULT_WIDTH;
+		const float icon_size = ICON_DEFAULT_WIDTH_SCALE;
 
 		/* menu item - add some more padding so menus don't feel cramped. it must
 		 * be part of the button so that this area is still clickable */
-		if (ui_block_is_menu(but->block) && !ui_block_is_pie_menu(but->block))
+		if (ui_block_is_pie_menu(but->block)) {
+			if (but->dt == UI_EMBOSS_RADIAL)
+				rect->xmin += 0.3f * U.widget_unit;
+		}
+		else if (ui_block_is_menu(but->block))
 			rect->xmin += 0.3f * U.widget_unit;
 
 		widget_draw_icon(but, icon, alpha, rect, show_menu_icon);
