@@ -14,6 +14,7 @@
 	path = intern/vray_for_blender_rt/extern/vray-zmq-wrapper
 	url = ../vray-zmq-wrapper.git
 	branch = master
+	ignore = all
 [submodule "source/tools"]
 	path = source/tools
 	url = http://git.blender.org/blender-dev-tools.git
