@@ -140,7 +140,10 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	auto writerType = pluginParamDesc.pluginType;
 
 	// redirect all geom plugins which are not static to nodes file
-	if (writerType == ParamDesc::PluginGeometry && pluginDesc.pluginID != "GeomStaticMesh") {
+	if (writerType == ParamDesc::PluginGeometry &&
+		pluginDesc.pluginID != "GeomStaticMesh" &&
+		pluginDesc.pluginID != "GeomMayaHair")
+	{
 		writerType = ParamDesc::PluginObject;
 	}
 
