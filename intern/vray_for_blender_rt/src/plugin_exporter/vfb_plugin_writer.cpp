@@ -266,9 +266,8 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrListValue &v
 		for (++iter; iter != val.getData()->cend(); ++iter) {
 			pp << "," << *iter;
 		}
-		pp << ")";
 	}
-	return pp;
+	return pp << ")";
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
