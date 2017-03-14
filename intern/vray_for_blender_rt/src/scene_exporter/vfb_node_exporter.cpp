@@ -117,6 +117,19 @@ void IdTrack::reset_usage() {
 	}
 }
 
+std::unordered_set<std::string> IdTrack::getAllObjectPlugins(BL::Object ob) const {
+	auto iter = data.find(DataExporter::getIdUniqueName(ob));
+	if (iter == data.end()) {
+		return {};
+	}
+
+	std::unordered_set<std::string> set;
+	// get all plugins for selected object
+	std::transform(iter->second.plugins.begin(), iter->second.plugins.end(), std::inserter(set, set.begin()),
+		std::bind(&std::unordered_map<std::string, PluginInfo>::value_type::first, std::placeholders::_1));
+	return set;
+}
+
 bool DataExporter::isObMesh(BL::Object ob) {
 	auto obType = ob.type();
 	return (obType == BL::Object::type_MESH    ||
@@ -818,7 +831,7 @@ void DataExporter::syncEnd()
 	auto lock = raiiLock();
 	if (m_is_undo_sync) {
 		if (m_undo_stack.size() < 2) {
-			BLI_assert(!"Trying to do undo/redo but stach did not have enought states");
+			BLI_assert(!"Trying to do undo/redo but stack did not have enought states");
 			m_undo_stack.clear();
 		} else {
 			m_undo_stack.pop_back(); // pop the state then we were undo-ing stuff

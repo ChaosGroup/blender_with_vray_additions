@@ -150,12 +150,12 @@ const char * PluginWriter::indentation()
 	}
 }
 
-PluginWriter &operator<<(PluginWriter &pp, const int &val)
+PluginWriter &operator<<(PluginWriter &pp, int val)
 {
 	FormatAndAdd(pp, "%d", val);
 }
 
-PluginWriter &operator<<(PluginWriter &pp, const float &val)
+PluginWriter &operator<<(PluginWriter &pp, float val)
 {
 	FormatAndAdd(pp, "%g", val);
 }
@@ -255,6 +255,48 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrInstancer &val)
 	}
 
 	return pp << "\n" << pp.indentation() << ")";
+}
+
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrListValue &val)
+{
+	pp << "List(";
+	if (!val.empty()) {
+		auto iter = val.getData()->cbegin();
+		pp << *iter;
+		for (++iter; iter != val.getData()->cend(); ++iter) {
+			pp << "," << *iter;
+		}
+		pp << ")";
+	}
+	return pp;
+}
+
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
+{
+	switch (val.type) {
+	case ValueTypeInt: return pp << val.as<AttrSimpleType<int>>();
+	case ValueTypeFloat: return pp << val.as<AttrSimpleType<float>>();
+	case ValueTypeString: return pp <<  val.as<AttrSimpleType<std::string>>();
+	case ValueTypeColor: return pp << val.as<AttrColor>();
+	case ValueTypeVector: return pp << val.as<AttrVector>();
+	case ValueTypeAColor: return pp << val.as<AttrAColor>();
+	case ValueTypePlugin: return pp << val.as<AttrPlugin>();
+	case ValueTypeTransform: return pp << val.as<AttrTransform>();
+	case ValueTypeMatrix: return pp << val.as<AttrMatrix>();
+	case ValueTypeListInt: return pp << val.as<AttrListInt>();
+	case ValueTypeListFloat: return pp << val.as<AttrListFloat>();
+	case ValueTypeListVector: return pp << val.as<AttrListVector>();
+	case ValueTypeListColor: return pp << val.as<AttrListColor>();
+	case ValueTypeListPlugin: return pp << val.as<AttrListPlugin>();
+	case ValueTypeListString: return pp << val.as<AttrListString>();
+	case ValueTypeMapChannels: return pp << val.as<AttrMapChannels>();
+	case ValueTypeInstancer: return pp << val.as<AttrInstancer>();
+	case ValueTypeListValue: return pp << val.as<AttrListValue>();
+	default:
+		BLI_assert(!"Unsupported attribute type");
+		break;
+	}
+	return pp;
 }
 
 } // VRayForBlender

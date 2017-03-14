@@ -210,7 +210,7 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 	}
 
 	// Exclude object from Node creation
-	m_hide_lists["export"].push_back(domainOb);
+	m_hide_lists["export"].insert(domainOb);
 
 	return smoke;
 }

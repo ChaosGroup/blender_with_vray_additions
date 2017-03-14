@@ -468,6 +468,8 @@ void SceneExporter::sync(const bool check_updated)
 
 	// Sync data (will remove deleted objects)
 	m_data_exporter.sync();
+	// must be after sync so we update plugins appropriately
+	m_data_exporter.exportLightLinker();
 
 	// Sync plugins
 	m_exporter->sync();
@@ -561,6 +563,20 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	// this object's ID is already synced - skip
 	if (!add) {
 		return;
+	}
+
+	{
+		auto lock = m_data_exporter.raiiLock();
+		auto pluginName = override.namePrefix;
+		if (DataExporter::isObMesh(ob)) {
+			pluginName += m_data_exporter.getNodeName(ob);
+		} else if (DataExporter::isObLamp(ob)) {
+			pluginName += m_data_exporter.getLightName(ob);
+		}
+
+		if (!pluginName.empty()) {
+			m_data_exporter.m_id_track.insert(ob, pluginName);
+		}
 	}
 
 	bool skip_export = !m_data_exporter.isObjectVisible(ob) || m_data_exporter.isObjectInHideList(ob, "export");
@@ -777,10 +793,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			if (!is_light && !hide_from_parent) {
 				overrideAttrs.visible = is_visible;
 				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-				{
-					auto lock = m_data_exporter.raiiLock();
-					m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
-				}
 				sync_object(dupOb, check_updated, overrideAttrs);
 			}
 			overrideAttrs.visible = true;
@@ -818,11 +830,6 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			instancer_item.node = m_data_exporter.getNodeName(dupOb);
 			instancer_item.tm = AttrTransformFromBlTransform(tm);
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
-
-			{
-				auto lock = m_data_exporter.raiiLock();
-				m_data_exporter.m_id_track.insert(ob, m_data_exporter.getNodeName(dupOb));
-			}
 			sync_object(dupOb, check_updated, overrideAttrs);
 		}
 
@@ -982,19 +989,14 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}
 
 		BL::Object ob(*obIt);
-		const auto & nodeName = m_data_exporter.getNodeName(ob);
-		{
-			auto lock = m_data_exporter.raiiLock();
-			m_data_exporter.m_id_track.insert(ob, nodeName);
-		}
-
-		m_threadManager->addTask([this, check_updated, ob, &wg, nodeName](int, const volatile bool &) mutable {
+		m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
 			// make wrapper to call wg.done() on function exit
 			RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
 			if (is_interrupted()) {
 				return;
 			}
 
+			const auto obName = ob.name();
 			const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 			const bool visible = m_data_exporter.isObjectVisible(ob);
 

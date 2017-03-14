@@ -153,6 +153,13 @@ private:
 
 };
 
+namespace std {
+	template <> struct hash<BL::Object> {
+		size_t operator()(BL::Object ob) {
+			return std::hash<std::string>()(ob.name());
+		}
+	};
+};
 
 // Used to track object deletion / creation
 //
@@ -184,8 +191,35 @@ struct IdTrack {
 	void              insert(BL::Object ob, const std::string &plugin, PluginType type = PluginType::NONE);
 	void              reset_usage();
 
+	std::unordered_set<std::string> getAllObjectPlugins(BL::Object ob) const;
+
 	typedef std::map<std::string, IdDep> TrackMap;
 	TrackMap data;
+};
+
+
+struct SettingsLightLinker {
+	struct LightLink {
+		enum ExcludeType : short {
+			Illumination = 1 << 0,
+			Shadows      = 1 << 1,
+			Both         = (Illumination | Shadows)
+		};
+
+		/// True if objectList contains objects to be hidden from this light
+		/// False if objectList contains only objects to be included for this light
+		bool                           isExcludeList;
+		std::unordered_set<BL::Object> objectList;
+		ExcludeType                    excludeType;
+	};
+
+	/// Set the LightLink for a given light plugin, steals the link object
+	void addLightLink(const std::string & lightPlugin, LightLink && link) {
+		lightsMap.insert(std::make_pair(lightPlugin, std::move(link)));
+	}
+
+	/// Maps light plugin name to a list of include or exlude objects
+	std::unordered_map<std::string, LightLink> lightsMap;
 };
 
 
@@ -253,7 +287,7 @@ public:
 	};
 
 	typedef std::map<BL::Material, AttrValue> MaterialCache;
-	typedef std::unordered_map<std::string, std::vector<BL::Object>> ObjectHideMap;
+	typedef std::unordered_map<std::string, std::unordered_set<BL::Object>> ObjectHideMap;
 
 	DataExporter(ExporterSettings & expSettings)
 	    : m_data(PointerRNA_NULL)
@@ -286,7 +320,7 @@ public:
 
 	static void              tag_ntree(BL::NodeTree ntree, bool updated=true);
 
-	std::vector<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
+	std::unordered_set<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
 
 	void              fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
 	void              fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
@@ -301,15 +335,17 @@ public:
 	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
 	void              init(PluginExporter::Ptr exporter);
+	/// Go trough IdTrack and find all unused plugins and remove them
+	/// Export SettingsLightLinker
 	void              sync();
 
-	// will reset all state that is kept for one sync, must be called after each sync
+	/// Reset all state that is kept for one sync, must be called after each sync
 	void              resetSyncState();
 
 	bool              isObjectInThisSync(BL::Object ob);
-	// checks if we are currently in undo sync and if yes, checks if the object passed was changed in the sync we are unding currently
+	/// Check if we are currently in undo sync and if yes, checks if the object passed was changed in the sync we are undoing currently
 	bool              shouldSyncUndoneObject(BL::Object ob);
-	// saves that this object was synced on current sync
+	/// Save that this object was synced on current sync
 	void              saveSyncedObject(BL::Object ob);
 
 	void              syncStart(bool isUndoSync);
@@ -342,6 +378,7 @@ public:
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
 	AttrValue         exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm = false);
 	void              exportEnvironment(NodeContext &context);
+	void              exportLightLinker();
 
 	AttrValue         exportSingleMaterial(BL::Object &ob);
 	AttrValue         exportMtlMulti(BL::Object ob);
@@ -433,18 +470,25 @@ private:
 	AttrValue         exportBlenderNodeNormal(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
 public:
+
+	/// lock protecting m_id_track, m_undo_stack, m_light_linker
 	std::unique_lock<std::mutex> raiiLock() {
 		return std::move(std::unique_lock<std::mutex>(m_maps_mtx));
 	}
 
 	std::mutex        m_maps_mtx;
 	StrSet            RenderChannelNames;
+
+	/// Caches ID's pointers for every sync, if ID is in the cache it is skipped (object & data)
 	IdCache           m_id_cache;
+
+	/// Maintains map from ID to list of plugins and their types. Used to remove plugins depending
+	/// on some non direct relations to IDs (e.g Instancers, Hair, etc)
 	IdTrack           m_id_track;
 
 	bool              m_is_undo_sync;
 	UndoStack         m_undo_stack;
-
+	SettingsLightLinker m_light_linker;
 
 private:
 	BL::BlendData     m_data;

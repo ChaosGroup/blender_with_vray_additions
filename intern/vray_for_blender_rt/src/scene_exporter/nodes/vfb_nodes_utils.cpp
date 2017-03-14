@@ -143,3 +143,41 @@ void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 		}
 	}
 }
+
+
+std::unordered_set<BL::Object> DataExporter::getObjectList(const std::string ob_name, const std::string group_name)
+{
+	std::unordered_set<BL::Object> objects, additional;
+
+	for (int c = 0; c < m_scene.objects.length(); ++c) {
+		if (m_scene.objects[c].name() == ob_name) {
+			objects.insert(m_scene.objects[c]);
+			break;
+		}
+	}
+
+	for (int c = 0; c < m_data.groups.length(); ++c) {
+		if (m_data.groups[c].name() == group_name) {
+			for (int r = 0; r < m_data.groups[c].objects.length(); ++r) {
+				objects.insert(m_data.groups[c].objects[r]);
+			}
+			break;
+		}
+	}
+
+	// check an object is a group instance and hide the group members
+	for (auto ob : objects) {
+		if (ob.dupli_type() == BL::Object::dupli_type_GROUP) {
+			BL::Group group = ob.dupli_group();
+
+			for (int c = 0; c < group.objects.length(); ++c) {
+				additional.insert(group.objects[c]);
+			}
+		}
+	}
+
+	// merge objects
+	std::copy(additional.begin(), additional.end(), std::inserter(objects, objects.end()));
+
+	return objects;
+}

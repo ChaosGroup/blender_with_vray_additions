@@ -158,8 +158,9 @@ private:
 	PluginWriter &operator=(const PluginWriter&) = delete;
 };
 
-PluginWriter &operator<<(PluginWriter &pp, const int &val);
-PluginWriter &operator<<(PluginWriter &pp, const float &val);
+PluginWriter &operator<<(PluginWriter &pp, char val); /// Intentonally not implemeted - call the const char * version
+PluginWriter &operator<<(PluginWriter &pp, int val);
+PluginWriter &operator<<(PluginWriter &pp, float val);
 PluginWriter &operator<<(PluginWriter &pp, const char *val);
 PluginWriter &operator<<(PluginWriter &pp, const std::string &val);
 
@@ -172,6 +173,8 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrTransform &v
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrPlugin &val);
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrMapChannels &val);
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrInstancer &val);
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrListValue &val);
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val);
 
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const PluginWriter::AsyncZipTask<T> &task)
@@ -203,7 +206,7 @@ PluginWriter &operator<<(PluginWriter &pp, const KVPair<std::string> &val)
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<T> &val)
 {
-	return pp << val.m_Value;
+	return pp << val.value;
 }
 
 template <typename T>
