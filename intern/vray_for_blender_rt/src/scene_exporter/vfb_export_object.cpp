@@ -250,6 +250,15 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		if (!isMeshLight && geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 			PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
+			PointerRNA mtlWrapper = RNA_pointer_get(&vrayObject, "MtlWrapper");
+
+			if (RNA_boolean_get(&mtlWrapper, "use")) {
+				PluginDesc wrapper("MtlWrapper@" + exportName, "MtlWrapper");
+				wrapper.add("base_material", mtl);
+				setAttrsFromPropGroupAuto(wrapper, &mtlWrapper, "MtlWrapper");
+				mtl = m_exporter->export_plugin(wrapper);
+			}
+
 
 			bool doExportRenderStats = false;
 			const bool useObStats = RNA_boolean_get(&mtlRenderStats, "use");
@@ -266,6 +275,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			};
 			renderStats.add("base_mtl", mtl);
 
+			// this complicated code merges hide from Object tab "Render" and camera visibility lists
 			for (int c = 0; c < visibilityCount; ++c) {
 				auto * attr = renderStats.get(cameraToObHideNames[c][0]);
 				if (attr) {
