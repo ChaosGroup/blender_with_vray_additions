@@ -420,7 +420,7 @@ static PyMethodDef methods[] = {
 
 static struct PyModuleDef module = {
 	PyModuleDef_HEAD_INIT,
-	"_vray_for_blender",
+	"_vray_for_blender_rt",
 	"V-Ray For Blender Translator Module",
 	-1,
 	methods,
