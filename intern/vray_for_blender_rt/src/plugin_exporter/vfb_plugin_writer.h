@@ -17,7 +17,8 @@
 
 namespace VRayForBlender {
 
-#define VRSCENE_INDENT "    "
+#define VRSCENE_INDENT "\t"
+
 class PluginWriter {
 public:
 	PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
