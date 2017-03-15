@@ -218,38 +218,14 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<s
 template <typename T>
 PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val, const char *listName, bool newLine = false)
 {
-	if (!val.empty()) {
-		pp << "List" << listName;
-		if (listName[0] == '\0' || pp.format() == ExporterSettings::ExportFormatASCII) {
-			pp << "(\n" << pp.indent() << (*val)[0];
-			for (int c = 1; c < val.getCount(); c++) {
-				pp << ",";
-				if (newLine) {
-					pp << "\n" << pp.indentation();
-				} else {
-					pp << " ";
-				}
-				pp << (*val)[c];
-			}
-			pp.unindent();
-			pp << "\n" << pp.indentation() << ")";
-		} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
-			pp << "Hex(\"" << PluginWriter::AsyncZipTask<T>(val) << "\")";
-		} else {
-			char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
-			pp << "Hex(\"" << zipData << "\")";
-			delete[] zipData;
-		}
-	}
-	return pp;
-}
+	pp << "List" << listName;
 
-template <> inline
-PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
-{
-	if (!val.empty()) {
-		pp << "List" << listName;
-		pp << "(\n" << pp.indent() << "\"" << StripString((*val)[0]) << "\"";
+	if (val.empty()) {
+		return pp << "()";
+	}
+
+	if (listName[0] == '\0' || pp.format() == ExporterSettings::ExportFormatASCII) {
+		pp << "(\n" << pp.indent() << (*val)[0];
 		for (int c = 1; c < val.getCount(); c++) {
 			pp << ",";
 			if (newLine) {
@@ -257,11 +233,42 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 			} else {
 				pp << " ";
 			}
-			pp <<"\"" << StripString((*val)[c]) << "\"";
+			pp << (*val)[c];
 		}
 		pp.unindent();
 		pp << "\n" << pp.indentation() << ")";
+	} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
+		pp << "Hex(\"" << PluginWriter::AsyncZipTask<T>(val) << "\")";
+	} else {
+		char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
+		pp << "Hex(\"" << zipData << "\")";
+		delete[] zipData;
 	}
+
+	return pp;
+}
+
+template <> inline
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
+{
+	pp << "List" << listName;
+
+	if (val.empty()) {
+		return pp << "()";
+	}
+
+	pp << "(\n" << pp.indent() << "\"" << StripString((*val)[0]) << "\"";
+	for (int c = 1; c < val.getCount(); c++) {
+		pp << ",";
+		if (newLine) {
+			pp << "\n" << pp.indentation();
+		} else {
+			pp << " ";
+		}
+		pp <<"\"" << StripString((*val)[c]) << "\"";
+	}
+	pp.unindent();
+	pp << "\n" << pp.indentation() << ")";
 	return pp;
 }
 

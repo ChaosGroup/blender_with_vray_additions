@@ -45,6 +45,8 @@ extern "C" {
 
 namespace VRayForBlender {
 
+void GetDomainTransform(Object *ob, SmokeDomainSettings *sds, float tm[4][4]);
+
 class TexVoxelData {
 public:
 	TexVoxelData(Object *ob)

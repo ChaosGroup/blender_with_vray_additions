@@ -534,10 +534,10 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeVolumeVRayToon") {
 		attrValue = exportVRayNodeVolumeVRayToon(ntree, node, fromSocket, context);
 	}
-#if 0
 	else if (nodeClass == "VRayNodeTexVoxelData") {
 		attrValue = exportVRayNodeTexVoxelData(ntree, node, fromSocket, context);
 	}
+#if 0
 	else if (nodeClass == "VRayNodeTexMayaFluid") {
 		attrValue = exportVRayNodeTexMayaFluid(ntree, node, fromSocket, context);
 	}

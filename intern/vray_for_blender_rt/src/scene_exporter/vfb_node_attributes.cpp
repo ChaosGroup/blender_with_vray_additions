@@ -230,6 +230,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 							}
 							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingObject) {
 								uvwgenDesc.pluginID = "UVWGenObject";
+								uvwgenDesc.add("uvw_transform", AttrTransform::identity());
 							}
 							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingChannel) {
 								uvwgenDesc.pluginID = "UVWGenChannel";

@@ -148,6 +148,9 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 		}
 	}
 
+	AttrValue geomPlg;
+	PluginDesc fogMesh(pluginName, "EnvFogMeshGizmo");
+
 	// This is a smoke simulation
 	if(smokeMod) {
 		PluginDesc smokeDomain("Geom" + pluginName, "GeomStaticMesh");
@@ -174,8 +177,11 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 		smokeDomain.add("vertices", vertices);
 		smokeDomain.add("faces", faces);
 
-		m_exporter->export_plugin(smokeDomain);
+		float tm[4][4];
+		GetDomainTransform(reinterpret_cast<Object*>(domainOb.ptr.data), reinterpret_cast<SmokeDomainSettings*>(smokeMod.domain_settings().ptr.data), tm);
 
+		fogMesh.add("transform", AttrTransformFromBlTransform(tm));
+		fogMesh.add("geometry", m_exporter->export_plugin(smokeDomain));
 	}
 	// This is just a container - export as mesh
 	else {
@@ -191,23 +197,16 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 		if (err) {
 			return smoke;
 		}
-
-		AttrValue geom = m_exporter->export_plugin(geomDesc);
-
-		PluginDesc fogMesh(pluginName, "EnvFogMeshGizmo");
-
-		PointerRNA EnvFogMeshGizmo = RNA_pointer_get(&node.ptr, "EnvFogMeshGizmo");
-
-		fogMesh.add("geometry", geom);
 		fogMesh.add("transform", AttrTransformFromBlTransform(((Object*)domainOb.ptr.data)->obmat));
+		fogMesh.add("geometry", m_exporter->export_plugin(geomDesc));
+		PointerRNA EnvFogMeshGizmo = RNA_pointer_get(&node.ptr, "EnvFogMeshGizmo");
 		fogMesh.add("fade_out_radius", RNA_float_get(&EnvFogMeshGizmo, "fade_out_radius"));
-
-		if (hasLights) {
-			fogMesh.add("lights", lightsList);
-		}
-
-		smoke = m_exporter->export_plugin(fogMesh);
 	}
+
+	if (hasLights) {
+		fogMesh.add("lights", lightsList);
+	}
+	smoke = m_exporter->export_plugin(fogMesh);
 
 	// Exclude object from Node creation
 	m_hide_lists["export"].insert(domainOb);
@@ -231,7 +230,8 @@ AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::N
 			for(ObList::const_iterator obIt = domainObList.begin(); obIt != domainObList.end(); ++obIt) {
 				BL::Object domainOb(*obIt);
 				if (isObjectVisible(domainOb)) {
-					domains.append(exportVRayNodeSmokeDomain(ntree, node, domainOb, context).as<AttrPlugin>());
+					auto res = exportVRayNodeSmokeDomain(ntree, node, domainOb, context);
+					domains.append(res.as<AttrPlugin>());
 				}
 			}
 		}

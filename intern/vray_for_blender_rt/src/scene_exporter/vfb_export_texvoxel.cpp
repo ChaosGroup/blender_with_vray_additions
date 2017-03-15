@@ -33,55 +33,58 @@ using namespace VRayForBlender;
 	a[1] = b[1];\
 	a[2] = b[2];
 
+
+
 namespace {
 
-	void GetDomainBounds(SmokeDomainSettings *sds, float p0[3], float p1[3]) {
-		if (sds->flags & MOD_SMOKE_ADAPTIVE_DOMAIN) {
-			p0[0] = sds->p0[0] + sds->cell_size[0] * sds->res_min[0];
-			p0[1] = sds->p0[1] + sds->cell_size[1] * sds->res_min[1];
-			p0[2] = sds->p0[2] + sds->cell_size[2] * sds->res_min[2];
-			p1[0] = sds->p0[0] + sds->cell_size[0] * sds->res_max[0];
-			p1[1] = sds->p0[1] + sds->cell_size[1] * sds->res_max[1];
-			p1[2] = sds->p0[2] + sds->cell_size[2] * sds->res_max[2];
-		} else {
-			p0[0] = -1.0f;
-			p0[1] = -1.0f;
-			p0[2] = -1.0f;
-			p1[0] = 1.0f;
-			p1[1] = 1.0f;
-			p1[2] = 1.0f;
-		}
+void GetDomainBounds(SmokeDomainSettings *sds, float p0[3], float p1[3])
+{
+	if(sds->flags & MOD_SMOKE_ADAPTIVE_DOMAIN) {
+		p0[0] = sds->p0[0] + sds->cell_size[0] * sds->res_min[0];
+		p0[1] = sds->p0[1] + sds->cell_size[1] * sds->res_min[1];
+		p0[2] = sds->p0[2] + sds->cell_size[2] * sds->res_min[2];
+		p1[0] = sds->p0[0] + sds->cell_size[0] * sds->res_max[0];
+		p1[1] = sds->p0[1] + sds->cell_size[1] * sds->res_max[1];
+		p1[2] = sds->p0[2] + sds->cell_size[2] * sds->res_max[2];
 	}
-
-
-	// Represents transformation of base domain to adaptive domain
-	//
-	void GetBaseToAdaptiveTransform(SmokeDomainSettings *sds, float tm[4][4]) {
-		float p0[3];
-		float p1[3];
-
-		GetDomainBounds(sds, p0, p1);
-
-		unit_m4(tm);
-
-		tm[0][0] = fabs(p1[0] - p0[0]) / 2.0f;
-		tm[1][1] = fabs(p1[1] - p0[1]) / 2.0f;
-		tm[2][2] = fabs(p1[2] - p0[2]) / 2.0f;
-
-		tm[3][0] = (p0[0] + p1[0]) / 2.0f;
-		tm[3][1] = (p0[1] + p1[1]) / 2.0f;
-		tm[3][2] = (p0[2] + p1[2]) / 2.0f;
+	else {
+		p0[0] = -1.0f;
+		p0[1] = -1.0f;
+		p0[2] = -1.0f;
+		p1[0] =  1.0f;
+		p1[1] =  1.0f;
+		p1[2] =  1.0f;
 	}
+}
 
 
-	void GetDomainTransform(Object *ob, SmokeDomainSettings *sds, float tm[4][4]) {
-		unit_m4(tm);
+// Represents transformation of base domain to adaptive domain
+//
+void GetBaseToAdaptiveTransform(SmokeDomainSettings *sds, float tm[4][4]) {
+	float p0[3];
+	float p1[3];
 
-		float domainToAdaptiveTM[4][4];
-		GetBaseToAdaptiveTransform(sds, domainToAdaptiveTM);
+	GetDomainBounds(sds, p0, p1);
 
-		mul_m4_m4m4(tm, ob->obmat, domainToAdaptiveTM);
-	}
+	unit_m4(tm);
+
+	tm[0][0] = fabs(p1[0] - p0[0]) / 2.0f;
+	tm[1][1] = fabs(p1[1] - p0[1]) / 2.0f;
+	tm[2][2] = fabs(p1[2] - p0[2]) / 2.0f;
+
+	tm[3][0] = (p0[0] + p1[0]) / 2.0f;
+	tm[3][1] = (p0[1] + p1[1]) / 2.0f;
+	tm[3][2] = (p0[2] + p1[2]) / 2.0f;
+}
+}
+
+void VRayForBlender::GetDomainTransform(Object *ob, SmokeDomainSettings *sds, float tm[4][4]) {
+	unit_m4(tm);
+
+	float domainToAdaptiveTM[4][4];
+	GetBaseToAdaptiveTransform(sds, domainToAdaptiveTM);
+
+	mul_m4_m4m4(tm, ob->obmat, domainToAdaptiveTM);
 }
 
 void TexVoxelData::initName(const std::string &name)
@@ -130,12 +133,11 @@ void TexVoxelData::initUvTransform()
 }
 
 
-void TexVoxelData::initSmoke()
-{
+void TexVoxelData::initSmoke() {
 	SmokeDomainSettings *sds = m_smd->domain;
 
-	if(NOT(sds && sds->fluid)) {
-		PRINT_ERROR("Object: %s => Domain and / or fluid data not found!", m_ob->id.name+2);
+	if (NOT(sds && sds->fluid)) {
+		PRINT_ERROR("Object: %s => Domain and / or fluid data not found!", m_ob->id.name + 2);
 		return;
 	}
 
@@ -155,14 +157,13 @@ void TexVoxelData::initSmoke()
 	unsigned char *obstacles;
 	float *tcu, *tcv, *tcw;
 
-	if(sds->flags & MOD_SMOKE_HIGHRES) {
+	if (sds->flags & MOD_SMOKE_HIGHRES) {
 		COPY_VECTOR_3_3(m_res_high, sds->res_wt);
 #if CGR_USE_HEAT
 		COPY_VECTOR_3_3(m_res_low,  sds->res);
 #endif
 		smoke_turbulence_export(sds->wt, &dens, &react, &flame, &fuel, &r, &g, &b, &tcu, &tcv, &tcw);
-	}
-	else {
+	} else {
 		COPY_VECTOR_3_3(m_res_high, sds->res);
 #if CGR_USE_HEAT
 		COPY_VECTOR_3_3(m_res_low,  sds->res);
@@ -202,17 +203,23 @@ void TexVoxelData::initSmoke()
 	}
 	PRINT_INFO_EX("Density range: [%.3f-%.3f]", min_dens, max_dens);
 #endif
-
-	m_dens.resize(tot_res_high);
-	m_flame.resize(tot_res_high);
-	m_fuel.resize(tot_res_high);
-
-	std::copy(dens, dens + tot_res_high, m_dens.getData()->begin());
-	std::copy(flame, flame + tot_res_high, m_flame.getData()->begin());
-	std::copy(fuel, fuel + tot_res_high, m_fuel.getData()->begin());
+	if (dens) {
+		m_dens.resize(tot_res_high);
+		std::copy(dens, dens + tot_res_high, m_dens.getData()->begin());
+	}
+	if (flame) {
+		m_flame.resize(tot_res_high);
+		std::copy(flame, flame + tot_res_high, m_flame.getData()->begin());
+	}
+	if (fuel) {
+		m_fuel.resize(tot_res_high);
+		std::copy(fuel, fuel + tot_res_high, m_fuel.getData()->begin());
+	}
 #if CGR_USE_HEAT
-	m_heat.resize(tot_res_low);
-	std::copy(heat, heat + tot_res_low, m_heat.getData()->begin());
+	if (heat) {
+		m_heat.resize(tot_res_low);
+		std::copy(heat, heat + tot_res_low, m_heat.getData()->begin());
+	}
 #endif
 }
 
@@ -222,10 +229,10 @@ AttrValue TexVoxelData::export_plugins(PluginExporter::Ptr exporter)
 	PluginDesc uvPlanarWorld("UVW" + m_name, "UVWGenPlanarWorld");
 	uvPlanarWorld.add("uvw_transform", AttrTransformFromBlTransform(m_uvw_transform));
 
-	exporter->export_plugin(uvPlanarWorld);
+	auto uvwGenPlg = exporter->export_plugin(uvPlanarWorld);
 
 	PluginDesc voxelData(m_name, "TexVoxelData");
-	voxelData.add("uvwgen", AttrPlugin(m_name));
+	voxelData.add("uvwgen", uvwGenPlg);
 	voxelData.add("interpolation", p_interpolation);
 	voxelData.add("resolution", AttrVector(m_res_high[0], m_res_high[1], m_res_high[2]));
 	voxelData.add("density", m_dens);
