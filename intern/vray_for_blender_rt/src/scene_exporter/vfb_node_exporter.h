@@ -155,7 +155,7 @@ private:
 
 namespace std {
 	template <> struct hash<BL::Object> {
-		size_t operator()(BL::Object ob) {
+		size_t operator()(BL::Object ob) const {
 			return std::hash<std::string>()(ob.name());
 		}
 	};

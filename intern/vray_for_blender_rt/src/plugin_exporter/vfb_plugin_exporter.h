@@ -67,13 +67,13 @@ public:
 	typedef VRayBaseTypes::CommitAction CommitState;
 
 	PluginExporter(const ExporterSettings & settings)
-		: exporter_settings(settings)
+	    : exporter_settings(settings)
+	    , last_rendered_frame(-1.f)
+	    , current_scene_frame(-1.f)
 	    , render_progress(0.f)
 	    , is_viewport(false)
 	    , is_prepass(false)
 	    , commit_state(CommitState::CommitNone)
-	    , last_rendered_frame(-1.f)
-	    , current_scene_frame(-1.f)
 	{}
 
 	virtual             ~PluginExporter()=0;
