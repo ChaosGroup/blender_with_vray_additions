@@ -38,6 +38,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		scene = context.scene();
 	}
 	const bool isViewport = !!view3d;
+	const bool isPreview = engine.is_preview();
 
 	settings_dr.init(scene);
 
@@ -58,7 +59,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	PointerRNA BakeView = RNA_pointer_get(&m_vrayScene, "BakeView");
-	use_bake_view = RNA_boolean_get(&BakeView, "use") && !isViewport; // no bake in viewport
+	use_bake_view = RNA_boolean_get(&BakeView, "use") && !isViewport && !isPreview; // no bake in viewport
 	if (use_bake_view) {
 		PointerRNA bakeObj = RNA_pointer_get(&m_vrayExporter, "currentBakeObject");
 		current_bake_object = BL::Object(bakeObj);
@@ -76,7 +77,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
 
-	if (engine.is_preview() || isViewport || use_bake_view) {
+	if (isPreview || isViewport || use_bake_view) {
 		settings_animation.mode = SettingsAnimation::AnimationMode::AnimationModeNone;
 	} else {
 		settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
