@@ -380,11 +380,12 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 	AttrMapChannels map_channels;
 
 	MapChannelBase *channels_data = nullptr;
+	MapChannelMerge mergeMapChannel(mesh, numFaces);
+	MapChannelRaw rawMapChannel(mesh, numFaces);
 	if (options.merge_channel_vertices) {
-		channels_data = new MapChannelMerge(mesh, numFaces);
-	}
-	else {
-		channels_data = new MapChannelRaw(mesh, numFaces);
+		channels_data = &mergeMapChannel;
+	} else {
+		channels_data = &rawMapChannel;
 	}
 	channels_data->init();
 	channels_data->init_attributes(map_channels_names, map_channels);
