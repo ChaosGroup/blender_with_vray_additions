@@ -129,7 +129,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	// disable motion blur for bake render
-	use_motion_blur = use_motion_blur && !use_bake_view;
+	use_motion_blur = use_motion_blur && !use_bake_view && !isPreview;
 
 	std::string overrideName;
 	PointerRNA settingsOptions = RNA_pointer_get(&m_vrayScene, "SettingsOptions");
