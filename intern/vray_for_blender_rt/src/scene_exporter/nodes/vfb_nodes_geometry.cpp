@@ -58,8 +58,9 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 					PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 					                      "GeomDisplacedMesh");
 					pluginDesc.add("mesh", mesh);
-					pluginDesc.add("displace_2d",         (displace_type == 0));
-					pluginDesc.add("vector_displacement", (displace_type == 2));
+					pluginDesc.add("displace_2d",         (displace_type == 1));
+					// map 0, 1 -> 0; 2 -> 1; 3 -> 2; 4 -> 3
+					pluginDesc.add("vector_displacement", displace_type > 1 ? displace_type - 1 : 0);
 
 					if (displace_type == 2) {
 						BL::NodeSocket texSock = Nodes::GetSocketByAttr(node, "displacement_tex_color");

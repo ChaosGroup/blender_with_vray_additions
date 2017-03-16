@@ -148,7 +148,7 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 					attrDesc.type = AttrTypeTransform;
 				}
 				else if (attrType == "VECTOR") {
-					attrDesc.type = AttrTypeTransform;
+					attrDesc.type = AttrTypeVector;
 				}
 				else if (attrType == "TEXTURE") {
 					attrDesc.type = AttrTypePluginTexture;

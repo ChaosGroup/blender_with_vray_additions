@@ -239,16 +239,12 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 
 							socketValue = m_exporter->export_plugin(uvwgenDesc);
 						}
-#if 0
-						else if (attrType == "TRANSFORM" ||
-						         attrType == "TRANSFORM_TEXTURE") {
-							pluginAttrs[attrName] = "TransformHex(\"" CGR_IDENTITY_TM  "\")";
+						else if (attrType == ParamDesc::AttrTypeTransform /*|| attrType == "TRANSFORM_TEXTURE"*/) {
+							socketValue = AttrTransform::identity();
 						}
-						else if (attrType == "MATRIX" ||
-						         attrType == "MATRIX_TEXTURE") {
-							pluginAttrs[attrName] = "Matrix(Vector(1,0,0),Vector(0,1,0),Vector(0,0,1))";
+						else if (attrType == ParamDesc::AttrTypeMatrix /*|| attrType == "MATRIX_TEXTURE"*/) {
+							socketValue = AttrTransform::identity().m;
 						}
-#endif
 					}
 
 					pluginDesc.add(attrName, socketValue);
