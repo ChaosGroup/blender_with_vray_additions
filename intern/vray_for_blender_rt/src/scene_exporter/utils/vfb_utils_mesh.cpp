@@ -306,230 +306,268 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 	int err = 0;
 	WRITE_LOCK_BLENDER_RAII;
 
+	struct ResetModOnExit {
+		~ResetModOnExit() {
+			if (mod) {
+				mod.show_render(showRender);
+				mod.show_viewport(showViewport);
+			}
+		}
+
+		bool showRender;
+		bool showViewport;
+		BL::Modifier mod;
+	} modReseter = { false, false, BL::Modifier(PointerRNA_NULL) };
+
+	if (options.use_subsurf_to_osd && ob.modifiers.length() > 0) {
+		auto lastMod = ob.modifiers[ob.modifiers.length() - 1];
+		if (lastMod && lastMod.type() == BL::Modifier::type_SUBSURF) {
+			modReseter.showRender = lastMod.show_render();
+			modReseter.showViewport = lastMod.show_viewport();
+			modReseter.mod = lastMod;
+
+			// disable them so mesh data does not have this already done
+			lastMod.show_render(false);
+			lastMod.show_viewport(false);
+
+			BL::SubsurfModifier subS(lastMod);
+			if (options.mode == EvalMode::EvalModePreview) {
+				pluginDesc.add("osd_subdiv_level", subS.levels());
+			} else {
+				pluginDesc.add("osd_subdiv_level", subS.render_levels());
+			}
+			pluginDesc.add("osd_subdiv_type", subS.subdivision_type() == BL::SubsurfModifier::subdivision_type_CATMULL_CLARK ? 0 : 1);
+			pluginDesc.add("osd_subdiv_uvs", subS.use_subsurf_uv());
+			pluginDesc.add("osd_subdiv_enable", true);
+		}
+	}
+
 	BL::Mesh mesh = data.meshes.new_from_object(scene, ob, true, options.mode, false, false);
 	if (!mesh) {
 		PRINT_ERROR("Object: %s => Incorrect mesh!",
-		            ob.name().c_str());
-		err = 1;
+			ob.name().c_str());
+		return 1;
+	}
+
+
+	const int useAutoSmooth = mesh.use_auto_smooth();
+	if (useAutoSmooth) {
+		mesh.calc_normals_split();
+	}
+	mesh.calc_tessface(true);
+
+	BL::Mesh::tessfaces_iterator faceIt;
+	int numFaces  = 0;
+	for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt) {
+		BlFace faceVerts = faceIt->vertices_raw();
+
+		// If face is quad we split it into 2 tris
+		numFaces += faceVerts[3] ? 2 : 1;
+	}
+
+	if (numFaces == 0) {
+		return err;
+	}
+
+	AttrListVector  vertices(mesh.vertices.length());
+	AttrListInt     faces(numFaces * 3);
+	AttrListVector  normals(numFaces * 3);
+	AttrListInt     faceNormals(numFaces * 3);
+	AttrListInt     face_mtlIDs(numFaces);
+	AttrListInt     edge_visibility(numFaces / 10 + ((numFaces % 10 > 0) ? 1 : 0));
+
+	AttrListString  map_channels_names;
+	AttrMapChannels map_channels;
+
+	MapChannelBase *channels_data = nullptr;
+	if (options.merge_channel_vertices) {
+		channels_data = new MapChannelMerge(mesh, numFaces);
 	}
 	else {
-		const int useAutoSmooth = mesh.use_auto_smooth();
+		channels_data = new MapChannelRaw(mesh, numFaces);
+	}
+	channels_data->init();
+	channels_data->init_attributes(map_channels_names, map_channels);
+
+	memset((*edge_visibility), 0, edge_visibility.getBytesCount());
+
+	BL::Mesh::vertices_iterator vertIt;
+	int vertexIndex = 0;
+	for (mesh.vertices.begin(vertIt); vertIt != mesh.vertices.end(); ++vertIt, ++vertexIndex) {
+		(*vertices)[vertexIndex].x = vertIt->co()[0];
+		(*vertices)[vertexIndex].y = vertIt->co()[1];
+		(*vertices)[vertexIndex].z = vertIt->co()[2];
+	}
+
+	int normalIndex   = 0;
+	int faceNormIndex = 0;
+	int faceVertIndex = 0;
+	int faceCount     = 0;
+	int edgeVisIndex  = 0;
+	int chanVertIndex = 0;
+	int faceIdx       = 0;
+	for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
+		BlFace faceVerts = faceIt->vertices_raw();
+
+		// Normals
+		float n0[3] = {0.0f, 0.0f, 0.0f};
+		float n1[3] = {0.0f, 0.0f, 0.0f};
+		float n2[3] = {0.0f, 0.0f, 0.0f};
+		float n3[3] = {0.0f, 0.0f, 0.0f};
+
 		if (useAutoSmooth) {
-			mesh.calc_normals_split();
+			const BL::Array<float, 12> &autoNo = faceIt->split_normals();
+
+			copy_v3_v3(n0, &autoNo.data[0 * 3]);
+			copy_v3_v3(n1, &autoNo.data[1 * 3]);
+			copy_v3_v3(n2, &autoNo.data[2 * 3]);
+			if (faceVerts[3]) {
+				copy_v3_v3(n3, &autoNo.data[3 * 3]);
+			}
 		}
-		mesh.calc_tessface(true);
-
-		BL::Mesh::tessfaces_iterator faceIt;
-		int numFaces  = 0;
-		for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt) {
-			BlFace faceVerts = faceIt->vertices_raw();
-
-			// If face is quad we split it into 2 tris
-			numFaces += faceVerts[3] ? 2 : 1;
-		}
-
-		if (numFaces) {
-			AttrListVector  vertices(mesh.vertices.length());
-			AttrListInt     faces(numFaces * 3);
-			AttrListVector  normals(numFaces * 3);
-			AttrListInt     faceNormals(numFaces * 3);
-			AttrListInt     face_mtlIDs(numFaces);
-			AttrListInt     edge_visibility(numFaces / 10 + ((numFaces % 10 > 0) ? 1 : 0));
-
-			AttrListString  map_channels_names;
-			AttrMapChannels map_channels;
-
-			MapChannelBase *channels_data = nullptr;
-			if (options.merge_channel_vertices) {
-				channels_data = new MapChannelMerge(mesh, numFaces);
+		else {
+			if (faceIt->use_smooth()) {
+				copy_v3_v3(n0, &mesh.vertices[faceVerts[0]].normal().data[0]);
+				copy_v3_v3(n1, &mesh.vertices[faceVerts[1]].normal().data[0]);
+				copy_v3_v3(n2, &mesh.vertices[faceVerts[2]].normal().data[0]);
+				if (faceVerts[3]) {
+					copy_v3_v3(n3, &mesh.vertices[faceVerts[3]].normal().data[0]);
+				}
 			}
 			else {
-				channels_data = new MapChannelRaw(mesh, numFaces);
-			}
-			channels_data->init();
-			channels_data->init_attributes(map_channels_names, map_channels);
+				float fno[3];
+				copy_v3_v3(fno, &faceIt->normal().data[0]);
 
-			memset((*edge_visibility), 0, edge_visibility.getBytesCount());
-
-			BL::Mesh::vertices_iterator vertIt;
-			int vertexIndex = 0;
-			for (mesh.vertices.begin(vertIt); vertIt != mesh.vertices.end(); ++vertIt, ++vertexIndex) {
-				(*vertices)[vertexIndex].x = vertIt->co()[0];
-				(*vertices)[vertexIndex].y = vertIt->co()[1];
-				(*vertices)[vertexIndex].z = vertIt->co()[2];
-			}
-
-			int normalIndex   = 0;
-			int faceNormIndex = 0;
-			int faceVertIndex = 0;
-			int faceCount     = 0;
-			int edgeVisIndex  = 0;
-			int chanVertIndex = 0;
-			int faceIdx       = 0;
-			for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
-				BlFace faceVerts = faceIt->vertices_raw();
-
-				// Normals
-				float n0[3] = {0.0f, 0.0f, 0.0f};
-				float n1[3] = {0.0f, 0.0f, 0.0f};
-				float n2[3] = {0.0f, 0.0f, 0.0f};
-				float n3[3] = {0.0f, 0.0f, 0.0f};
-
-				if (useAutoSmooth) {
-					const BL::Array<float, 12> &autoNo = faceIt->split_normals();
-
-					copy_v3_v3(n0, &autoNo.data[0 * 3]);
-					copy_v3_v3(n1, &autoNo.data[1 * 3]);
-					copy_v3_v3(n2, &autoNo.data[2 * 3]);
-					if (faceVerts[3]) {
-						copy_v3_v3(n3, &autoNo.data[3 * 3]);
-					}
-				}
-				else {
-					if (faceIt->use_smooth()) {
-						copy_v3_v3(n0, &mesh.vertices[faceVerts[0]].normal().data[0]);
-						copy_v3_v3(n1, &mesh.vertices[faceVerts[1]].normal().data[0]);
-						copy_v3_v3(n2, &mesh.vertices[faceVerts[2]].normal().data[0]);
-						if (faceVerts[3]) {
-							copy_v3_v3(n3, &mesh.vertices[faceVerts[3]].normal().data[0]);
-						}
-					}
-					else {
-						float fno[3];
-						copy_v3_v3(fno, &faceIt->normal().data[0]);
-
-						copy_v3_v3(n0, fno);
-						copy_v3_v3(n1, fno);
-						copy_v3_v3(n2, fno);
-
-						if (faceVerts[3]) {
-							copy_v3_v3(n3, fno);
-						}
-					}
-				}
-
-				// Store normals / face normals
-				(*faceNormals)[faceNormIndex++] = normalIndex;
-				(*normals)[normalIndex++] = n0;
-				(*faceNormals)[faceNormIndex++] = normalIndex;
-				(*normals)[normalIndex++] = n1;
-				(*faceNormals)[faceNormIndex++] = normalIndex;
-				(*normals)[normalIndex++] = n2;
-				if (faceVerts[3]) {
-					(*faceNormals)[faceNormIndex++] = normalIndex;
-					(*normals)[normalIndex++] = n0;
-					(*faceNormals)[faceNormIndex++] = normalIndex;
-					(*normals)[normalIndex++] = n2;
-					(*faceNormals)[faceNormIndex++] = normalIndex;
-					(*normals)[normalIndex++] = n3;
-				}
-
-				// Material ID
-				const int matID = faceIt->material_index() + 1;
-
-				// Store face vertices
-				(*faces)[faceVertIndex++] = faceVerts[0];
-				(*faces)[faceVertIndex++] = faceVerts[1];
-				(*faces)[faceVertIndex++] = faceVerts[2];
-
-				(*face_mtlIDs)[faceCount++] = matID;
+				copy_v3_v3(n0, fno);
+				copy_v3_v3(n1, fno);
+				copy_v3_v3(n2, fno);
 
 				if (faceVerts[3]) {
-					(*faces)[faceVertIndex++] = faceVerts[0];
-					(*faces)[faceVertIndex++] = faceVerts[2];
-					(*faces)[faceVertIndex++] = faceVerts[3];
-
-					(*face_mtlIDs)[faceCount++] = matID;
+					copy_v3_v3(n3, fno);
 				}
-
-				// Store edge visibility
-				if (faceVerts[3]) {
-					(*edge_visibility)[edgeVisIndex/10] |= (3 << ((edgeVisIndex%10)*3));
-					edgeVisIndex++;
-					(*edge_visibility)[edgeVisIndex/10] |= (6 << ((edgeVisIndex%10)*3));
-					edgeVisIndex++;
-				}
-				else {
-					(*edge_visibility)[edgeVisIndex/10] |= (7 << ((edgeVisIndex%10)*3));
-					edgeVisIndex++;
-				}
-
-				// Store UV / vertex colors
-				if (channels_data->numChannels() && channels_data->needProcessFaces()) {
-					int channel_vert_index = chanVertIndex;
-
-					BL::Mesh::tessface_uv_textures_iterator uvIt;
-					for (mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
-						BL::MeshTextureFaceLayer uvLayer(*uvIt);
-
-						const std::string &layerName = VRayForBlender::Mesh::UvChanNamePrefix + uvLayer.name();
-
-						AttrListInt &uvData = map_channels.data[layerName].faces;
-
-						const int v0 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv1()));
-						const int v1 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv2()));
-						const int v2 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv3()));
-
-						(*uvData)[channel_vert_index+0] = v0;
-						(*uvData)[channel_vert_index+1] = v1;
-						(*uvData)[channel_vert_index+2] = v2;
-
-						if (faceVerts[3]) {
-							const int v3 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv4()));
-
-							(*uvData)[channel_vert_index+3] = v0;
-							(*uvData)[channel_vert_index+4] = v2;
-							(*uvData)[channel_vert_index+5] = v3;
-						}
-					}
-
-					BL::Mesh::tessface_vertex_colors_iterator colIt;
-					for (mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
-						BL::MeshColorLayer colLayer(*colIt);
-
-						const std::string &layerName = VRayForBlender::Mesh::ColChanNamePrefix + colLayer.name();
-
-						AttrListInt &colData = map_channels.data[layerName].faces;
-
-						const int v0 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color1()));
-						const int v1 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color2()));
-						const int v2 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color3()));
-
-						(*colData)[channel_vert_index+0] = v0;
-						(*colData)[channel_vert_index+1] = v1;
-						(*colData)[channel_vert_index+2] = v2;
-
-						if (faceVerts[3]) {
-							const int v3 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color4()));
-
-							(*colData)[channel_vert_index+3] = v0;
-							(*colData)[channel_vert_index+4] = v2;
-							(*colData)[channel_vert_index+5] = v3;
-						}
-					}
-
-					chanVertIndex += faceVerts[3] ? 6 : 3;
-				}
-			}
-
-			data.meshes.remove(mesh, false);
-
-			pluginDesc.add("vertices", vertices);
-			pluginDesc.add("faces", faces);
-			pluginDesc.add("normals", normals);
-			pluginDesc.add("faceNormals", faceNormals);
-			pluginDesc.add("face_mtlIDs", face_mtlIDs);
-			pluginDesc.add("edge_visibility", edge_visibility);
-
-			if (channels_data->numChannels()) {
-				pluginDesc.add("map_channels_names", map_channels_names);
-				pluginDesc.add("map_channels",       map_channels);
-			}
-
-			if (options.force_dynamic_geometry) {
-				pluginDesc.add("dynamic_geometry", true);
 			}
 		}
+
+		// Store normals / face normals
+		(*faceNormals)[faceNormIndex++] = normalIndex;
+		(*normals)[normalIndex++] = n0;
+		(*faceNormals)[faceNormIndex++] = normalIndex;
+		(*normals)[normalIndex++] = n1;
+		(*faceNormals)[faceNormIndex++] = normalIndex;
+		(*normals)[normalIndex++] = n2;
+		if (faceVerts[3]) {
+			(*faceNormals)[faceNormIndex++] = normalIndex;
+			(*normals)[normalIndex++] = n0;
+			(*faceNormals)[faceNormIndex++] = normalIndex;
+			(*normals)[normalIndex++] = n2;
+			(*faceNormals)[faceNormIndex++] = normalIndex;
+			(*normals)[normalIndex++] = n3;
+		}
+
+		// Material ID
+		const int matID = faceIt->material_index() + 1;
+
+		// Store face vertices
+		(*faces)[faceVertIndex++] = faceVerts[0];
+		(*faces)[faceVertIndex++] = faceVerts[1];
+		(*faces)[faceVertIndex++] = faceVerts[2];
+
+		(*face_mtlIDs)[faceCount++] = matID;
+
+		if (faceVerts[3]) {
+			(*faces)[faceVertIndex++] = faceVerts[0];
+			(*faces)[faceVertIndex++] = faceVerts[2];
+			(*faces)[faceVertIndex++] = faceVerts[3];
+
+			(*face_mtlIDs)[faceCount++] = matID;
+		}
+
+		// Store edge visibility
+		if (faceVerts[3]) {
+			(*edge_visibility)[edgeVisIndex/10] |= (3 << ((edgeVisIndex%10)*3));
+			edgeVisIndex++;
+			(*edge_visibility)[edgeVisIndex/10] |= (6 << ((edgeVisIndex%10)*3));
+			edgeVisIndex++;
+		}
+		else {
+			(*edge_visibility)[edgeVisIndex/10] |= (7 << ((edgeVisIndex%10)*3));
+			edgeVisIndex++;
+		}
+
+		// Store UV / vertex colors
+		if (channels_data->numChannels() && channels_data->needProcessFaces()) {
+			int channel_vert_index = chanVertIndex;
+
+			BL::Mesh::tessface_uv_textures_iterator uvIt;
+			for (mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
+				BL::MeshTextureFaceLayer uvLayer(*uvIt);
+
+				const std::string &layerName = VRayForBlender::Mesh::UvChanNamePrefix + uvLayer.name();
+
+				AttrListInt &uvData = map_channels.data[layerName].faces;
+
+				const int v0 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv1()));
+				const int v1 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv2()));
+				const int v2 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv3()));
+
+				(*uvData)[channel_vert_index+0] = v0;
+				(*uvData)[channel_vert_index+1] = v1;
+				(*uvData)[channel_vert_index+2] = v2;
+
+				if (faceVerts[3]) {
+					const int v3 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(uvLayer.data[faceIdx].uv4()));
+
+					(*uvData)[channel_vert_index+3] = v0;
+					(*uvData)[channel_vert_index+4] = v2;
+					(*uvData)[channel_vert_index+5] = v3;
+				}
+			}
+
+			BL::Mesh::tessface_vertex_colors_iterator colIt;
+			for (mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
+				BL::MeshColorLayer colLayer(*colIt);
+
+				const std::string &layerName = VRayForBlender::Mesh::ColChanNamePrefix + colLayer.name();
+
+				AttrListInt &colData = map_channels.data[layerName].faces;
+
+				const int v0 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color1()));
+				const int v1 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color2()));
+				const int v2 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color3()));
+
+				(*colData)[channel_vert_index+0] = v0;
+				(*colData)[channel_vert_index+1] = v1;
+				(*colData)[channel_vert_index+2] = v2;
+
+				if (faceVerts[3]) {
+					const int v3 = channels_data->get_map_face_vertex_index(layerName, ChanVertex(colLayer.data[faceIdx].color4()));
+
+					(*colData)[channel_vert_index+3] = v0;
+					(*colData)[channel_vert_index+4] = v2;
+					(*colData)[channel_vert_index+5] = v3;
+				}
+			}
+
+			chanVertIndex += faceVerts[3] ? 6 : 3;
+		}
+	}
+
+	data.meshes.remove(mesh, false);
+
+	pluginDesc.add("vertices", vertices);
+	pluginDesc.add("faces", faces);
+	pluginDesc.add("normals", normals);
+	pluginDesc.add("faceNormals", faceNormals);
+	pluginDesc.add("face_mtlIDs", face_mtlIDs);
+	pluginDesc.add("edge_visibility", edge_visibility);
+
+	if (channels_data->numChannels()) {
+		pluginDesc.add("map_channels_names", map_channels_names);
+		pluginDesc.add("map_channels",       map_channels);
+	}
+
+	if (options.force_dynamic_geometry) {
+		pluginDesc.add("dynamic_geometry", true);
 	}
 
 	return err;

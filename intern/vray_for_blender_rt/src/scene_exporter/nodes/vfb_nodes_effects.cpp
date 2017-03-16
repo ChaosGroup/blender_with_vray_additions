@@ -192,6 +192,7 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 		VRayForBlender::Mesh::ExportOptions options;
 		options.merge_channel_vertices = false;
 		options.mode = m_evalMode;
+		options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 
 		int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, domainOb, options, geomDesc);
 		if (err) {

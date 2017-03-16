@@ -33,14 +33,16 @@ ExporterSettings::ExporterSettings()
 
 void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene, BL::SpaceView3D view3d)
 {
+	const bool isViewport = !!view3d;
+	const bool isPreview = engine && engine.is_preview();
+
 	BL::Scene scene(_scene);
-	if (engine && engine.is_preview()) {
+	if (isPreview) {
 		scene = context.scene();
 	}
-	const bool isViewport = !!view3d;
-	const bool isPreview = engine.is_preview();
 
 	settings_dr.init(scene);
+	settings_dr.use = settings_dr.use && !isPreview; // && !isViewport; viewport DR?
 
 	m_vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
 	m_vrayExporter = RNA_pointer_get(&m_vrayScene, "Exporter");
@@ -53,7 +55,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&m_vrayExporter, "default_mapping");
 	export_meshes       = RNA_boolean_get(&m_vrayExporter, "auto_meshes");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&m_vrayExporter, "data_format");
-	if (engine.is_preview()) {
+	if (isPreview) {
 		// force zip for preview so it can be faster if we are writing to file
 		export_file_format = ExportFormat::ExportFormatZIP;
 	}

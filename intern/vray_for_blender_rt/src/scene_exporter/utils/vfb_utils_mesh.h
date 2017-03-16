@@ -35,11 +35,13 @@ struct ExportOptions {
 	    : mode(EvalModeRender)
 	    , merge_channel_vertices(false)
 	    , force_dynamic_geometry(false)
+	    , use_subsurf_to_osd(false)
 	{}
 
 	EvalMode mode;
-	int      merge_channel_vertices;
-	int      force_dynamic_geometry;
+	bool     merge_channel_vertices;
+	bool     force_dynamic_geometry;
+	bool     use_subsurf_to_osd;
 };
 
 int FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, ExportOptions options, PluginDesc &pluginDesc);

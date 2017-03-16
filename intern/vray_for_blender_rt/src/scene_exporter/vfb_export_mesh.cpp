@@ -34,6 +34,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 	VRayForBlender::Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;
 	options.mode = m_evalMode;
+	options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 	options.force_dynamic_geometry = (renderMode == RenderModeRtGpuOpenCL) ||
 	                                 (renderMode == RenderModeRtGpuCUDA) ||
 	                                 (renderMode == RenderModeRtGpu) ||

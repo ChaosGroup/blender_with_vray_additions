@@ -162,6 +162,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 			VRayForBlender::Mesh::ExportOptions options;
 			options.merge_channel_vertices = context.object_context.merge_uv;
 			options.mode = m_evalMode;
+			options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 
 			int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 			if (!err) {
