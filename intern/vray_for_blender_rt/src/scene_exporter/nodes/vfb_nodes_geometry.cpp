@@ -166,8 +166,20 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 
 			int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 			if (!err) {
-				// Set additional attributes from the node
-				setAttrsFromNodeAuto(ntree, node, fromSocket, context, geomDesc);
+				PointerRNA geomStaticMesh = RNA_pointer_get(&node.ptr, "GeomStaticMesh");
+
+				geomDesc.add("dynamic_geometry", RNA_boolean_get(&geomStaticMesh, "dynamic_geometry"));
+				geomDesc.add("environment_geometry", RNA_boolean_get(&geomStaticMesh, "environment_geometry"));
+				geomDesc.add("primary_visibility", RNA_boolean_get(&geomStaticMesh, "primary_visibility"));
+				geomDesc.add("smooth_uv", RNA_boolean_get(&geomStaticMesh, "smooth_uv"));
+				geomDesc.add("smooth_uv_borders", RNA_boolean_get(&geomStaticMesh, "smooth_uv_borders"));
+
+				if (!m_settings.use_subsurf_to_osd) {
+					geomDesc.add("osd_subdiv_type", RNA_enum_get(&geomStaticMesh, "osd_subdiv_type"));
+					geomDesc.add("osd_subdiv_level", RNA_int_get(&geomStaticMesh, "osd_subdiv_level"));
+					geomDesc.add("osd_subdiv_uvs", RNA_boolean_get(&geomStaticMesh, "osd_subdiv_uvs"));
+				}
+				geomDesc.add("weld_threshold", RNA_float_get(&geomStaticMesh, "weld_threshold"));
 
 				attrValue = m_exporter->export_plugin(geomDesc);
 			}
