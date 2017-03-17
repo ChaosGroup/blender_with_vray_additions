@@ -144,7 +144,15 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 				else if (attrType == "MATRIX") {
 					attrDesc.type = AttrTypeMatrix;
 				}
+				else if (attrType == "MATRIX_TEXTURE") {
+					// this is texture that samples matricies but can also accept a single matrix
+					attrDesc.type = AttrTypeMatrix;
+				}
 				else if (attrType == "TRANSFORM") {
+					attrDesc.type = AttrTypeTransform;
+				}
+				else if (attrType == "TRANSFORM_TEXTURE") {
+					// this is texture that samples transforms but can also accept a single transfrom
 					attrDesc.type = AttrTypeTransform;
 				}
 				else if (attrType == "VECTOR") {
