@@ -415,10 +415,12 @@ public:
 	// bits set in ObjectVisibility are used to check only some of the criteria
 	bool              isObjectVisible(BL::Object ob, ObjectVisibility ignore = HIDE_ALL);
 
-	/// Check if provided object is mesh
+	/// Check if ob is a mesh
 	static bool       isObMesh(BL::Object ob);
-	/// Check if provided object is lamp
+	/// Check if ob is a lamp
 	static bool       isObLamp(BL::Object ob);
+	/// Check if ob is a group instance (BL::Object::type_EMPTY)
+	static bool       isObGroupInstance(BL::Object ob);
 
 	void              clearMaterialCache();
 

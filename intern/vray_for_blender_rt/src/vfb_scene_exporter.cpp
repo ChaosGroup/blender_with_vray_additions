@@ -568,7 +568,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	{
 		auto lock = m_data_exporter.raiiLock();
 		auto pluginName = override.namePrefix;
-		if (DataExporter::isObMesh(ob)) {
+		if (DataExporter::isObMesh(ob) || DataExporter::isObGroupInstance(ob)) {
 			pluginName += m_data_exporter.getNodeName(ob);
 		} else if (DataExporter::isObLamp(ob)) {
 			pluginName += m_data_exporter.getLightName(ob);

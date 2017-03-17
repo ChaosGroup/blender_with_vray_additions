@@ -140,7 +140,11 @@ bool DataExporter::isObMesh(BL::Object ob) {
 }
 
 bool DataExporter::isObLamp(BL::Object ob) {
-	return (ob.type() == BL::Object::type_LAMP);
+	return ob.type() == BL::Object::type_LAMP;
+}
+
+bool DataExporter::isObGroupInstance(BL::Object ob) {
+	return ob.type() == BL::Object::type_EMPTY;
 }
 
 std::string DataExporter::GenPluginName(BL::Node node, BL::NodeTree ntree, NodeContext &context) {
