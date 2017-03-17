@@ -380,7 +380,7 @@ void node_select_single(bContext *C, bNode *node)
 
 /* ****** Click Select ****** */
  
-static int node_mouse_select(Main *bmain, SpaceNode *snode, ARegion *ar, const int mval[2], short extend)
+static int node_mouse_select(bContext *C, Main *bmain, SpaceNode *snode, ARegion *ar, const int mval[2], short extend)
 {
 	bNode *node, *tnode;
 	bNodeSocket *sock, *tsock;
@@ -440,8 +440,15 @@ static int node_mouse_select(Main *bmain, SpaceNode *snode, ARegion *ar, const i
 		node = node_under_mouse_select(snode->edittree, cursor[0], cursor[1]);
 		
 		if (node) {
+			bNode * prevSelect = NULL;
 			for (tnode = snode->edittree->nodes.first; tnode; tnode = tnode->next) {
+				if (tnode->flag & NODE_SELECT) {
+					prevSelect = tnode;
+				}
 				nodeSetSelected(tnode, false);
+			}
+			if (node != prevSelect) {
+				CTX_preview_set_is_dirty(C, true);
 			}
 			nodeSetSelected(node, true);
 			ED_node_set_active(bmain, snode->edittree, node);
@@ -473,7 +480,7 @@ static int node_select_exec(bContext *C, wmOperator *op)
 	extend = RNA_boolean_get(op->ptr, "extend");
 	
 	/* perform the select */
-	if (node_mouse_select(bmain, snode, ar, mval, extend)) {
+	if (node_mouse_select(C, bmain, snode, ar, mval, extend)) {
 		/* send notifiers */
 		WM_event_add_notifier(C, NC_NODE | NA_SELECTED, NULL);
 		

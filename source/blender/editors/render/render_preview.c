@@ -640,13 +640,15 @@ void ED_preview_draw(const bContext *C, void *idp, void *parentp, void *slotp, r
 		/* start a new preview render job if signalled through sbuts->preview,
 		 * if no render result was found and no preview render job is running,
 		 * or if the job is running and the size of preview changed */
-		if ((sbuts != NULL && sbuts->preview) ||
+		if (CTX_preview_is_dirty(C) ||
+		    (sbuts != NULL && sbuts->preview) ||
 		    (!ok && !WM_jobs_test(wm, sa, WM_JOB_TYPE_RENDER_PREVIEW)) ||
 		    (sp && (ABS(sp->sizex - newx) >= 2 || ABS(sp->sizey - newy) > 2)))
 		{
 			if (sbuts != NULL) {
 				sbuts->preview = 0;
 			}
+			CTX_preview_set_is_dirty((bContext*)C, false);
 			ED_preview_shader_job(C, sa, id, parent, slot, newx, newy, PR_BUTS_RENDER);
 		}
 	}

@@ -241,6 +241,9 @@ struct Main *CTX_data_main(const bContext *C);
 struct Scene *CTX_data_scene(const bContext *C);
 struct ToolSettings *CTX_data_tool_settings(const bContext *C);
 
+bool CTX_preview_is_dirty(const bContext *C);
+void CTX_preview_set_is_dirty(bContext *C, bool flag);
+
 const char *CTX_data_mode_string(const bContext *C);
 int CTX_data_mode_enum(const bContext *C);
 

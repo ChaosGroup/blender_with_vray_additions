@@ -83,7 +83,13 @@ struct bContext {
 		int py_init; /* true if python is initialized */
 		void *py_context;
 	} data;
-	
+
+	/* for the lack of better place to put this */
+	/* TODO: find propper place for this flag or trigger preview redraw in some other way */
+	struct {
+		bool dirty_preview; /* will be set to true when node selection code runs and different node is selected */
+	} preview;
+
 	/* data evaluation */
 #if 0
 	struct {
@@ -866,6 +872,14 @@ void CTX_wm_operator_poll_msg_set(bContext *C, const char *msg)
 const char *CTX_wm_operator_poll_msg_get(bContext *C)
 {
 	return IFACE_(C->wm.operator_poll_msg);
+}
+
+bool CTX_preview_is_dirty(const bContext *C) {
+	return C->preview.dirty_preview;
+}
+
+void CTX_preview_set_is_dirty(bContext *C, bool flag) {
+	C->preview.dirty_preview = flag;
 }
 
 /* data context */
