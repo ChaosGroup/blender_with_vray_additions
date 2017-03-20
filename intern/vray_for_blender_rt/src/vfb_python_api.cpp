@@ -31,8 +31,6 @@
 #include "zmq_wrapper.hpp"
 #include "vfb_plugin_exporter_zmq.h"
 
-#include "BKE_context.h"
-
 VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
 
