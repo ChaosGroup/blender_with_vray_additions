@@ -643,12 +643,15 @@ void ED_preview_draw(const bContext *C, void *idp, void *parentp, void *slotp, r
 		if (CTX_preview_is_dirty(C)) {
 			PointerRNA scene, vray, exp;
 			Scene * sc = CTX_data_scene(C);
-
-			RNA_id_pointer_create((ID*)sc, &scene);
-			vray = RNA_pointer_get(&scene, "vray");
-			exp = RNA_pointer_get(&vray, "Exporter");
-			if (RNA_boolean_get(&exp, "select_node_preview")) {
-				force_node_preview = true;
+			if (sc) {
+				RNA_id_pointer_create((ID*)sc, &scene);
+				vray = RNA_pointer_get(&scene, "vray");
+				if (vray.data) {
+					exp = RNA_pointer_get(&vray, "Exporter");
+					if (exp.data && RNA_boolean_get(&exp, "select_node_preview")) {
+						force_node_preview = true;
+					}
+				}
 			}
 		}
 
