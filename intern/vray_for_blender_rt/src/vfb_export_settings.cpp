@@ -175,6 +175,8 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	m_viewportResolution = RNA_int_get(&m_vrayExporter, "viewport_resolution") / 100.0f;
 	viewportQuality = RNA_int_get(&m_vrayExporter, "viewport_jpeg_quality");
 	showViewport = !isViewport && work_mode != WorkMode::WorkModeExportOnly && !isPreview && RNA_boolean_get(&m_vrayExporter, "display");
+
+	verboseLevel = static_cast<VRayVerboseLevel>(RNA_enum_get(&m_vrayExporter, "verboseLevel"));
 }
 
 

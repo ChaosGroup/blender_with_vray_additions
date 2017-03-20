@@ -345,9 +345,38 @@ RenderImage ZmqExporter::get_image() {
 	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
+
+enum MessageLevel {
+	MessageError = 9999,
+	MessageWarning = 19999,
+	MessageInfo = 29999
+};
+
+const char * vrayLogLevelToString(int lvl, ExporterSettings::VRayVerboseLevel stsLevel) {
+	if (lvl > MessageLevel::MessageInfo) {
+		return stsLevel >= ExporterSettings::LevelAll ? "Debug" : nullptr;
+	} else if (lvl > MessageLevel::MessageWarning) {
+		return stsLevel >= ExporterSettings::LevelProgress ? "Info" : nullptr;
+	} else if (lvl > MessageLevel::MessageError) {
+		return stsLevel >= ExporterSettings::LevelWarnings ? "Warning" : nullptr;
+	} else if (lvl > 0) {
+		return stsLevel >= ExporterSettings::LevelErrors ? "Error" : nullptr;
+	} else {
+		return stsLevel >= ExporterSettings::LevelAll ? "N/A" : nullptr;
+	}
+}
+
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
-	if (msgType == VRayMessage::Type::SingleValue && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeString) {
+	if (msgType == VRayMessage::Type::VRayLog) {
+		int level = message.getLogLevel();
+		const char * lvlStr = vrayLogLevelToString(message.getLogLevel(), exporter_settings.verboseLevel);
+
+		if (lvlStr) {
+			fprintf(stdout, "VRay%s: %s\n", lvlStr, message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->value.c_str());
+			fflush(stdout);
+		}
+
 		if (this->callback_on_message_update) {
 			std::string msg = *message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>();
 			auto newLine = msg.find_first_of("\n\r");

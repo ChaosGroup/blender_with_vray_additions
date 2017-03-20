@@ -133,6 +133,14 @@ struct ExporterSettings {
 		ActiveLayersCustom
 	};
 
+	enum VRayVerboseLevel {
+		LevelNoInfo = 0,
+		LevelErrors,
+		LevelWarnings,
+		LevelProgress,
+		LevelAll
+	};
+
 	ExporterSettings();
 	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d);
 
@@ -169,6 +177,7 @@ struct ExporterSettings {
 	int               mb_duration;
 	float             mb_intervalCenter;
 
+	VRayVerboseLevel  verboseLevel;
 	int               viewportQuality;
 	int               zmq_server_port;
 	std::string       zmq_server_address;
