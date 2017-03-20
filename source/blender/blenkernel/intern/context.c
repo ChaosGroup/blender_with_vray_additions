@@ -874,11 +874,13 @@ const char *CTX_wm_operator_poll_msg_get(bContext *C)
 	return IFACE_(C->wm.operator_poll_msg);
 }
 
-bool CTX_preview_is_dirty(const bContext *C) {
+bool CTX_preview_is_dirty(const bContext *C)
+{
 	return C->preview.dirty_preview;
 }
 
-void CTX_preview_set_is_dirty(bContext *C, bool flag) {
+void CTX_preview_set_is_dirty(bContext *C, bool flag)
+{
 	C->preview.dirty_preview = flag;
 }
 

@@ -60,6 +60,9 @@
 #include "DNA_brush_types.h"
 #include "DNA_screen_types.h"
 
+#include "RNA_access.h"
+#include "RNA_types.h"
+
 #include "BKE_appdir.h"
 #include "BKE_brush.h"
 #include "BKE_context.h"
@@ -618,7 +621,7 @@ void ED_preview_draw(const bContext *C, void *idp, void *parentp, void *slotp, r
 		SpaceButs *sbuts = CTX_wm_space_buts(C);
 		ShaderPreview *sp = WM_jobs_customdata(wm, sa);
 		rcti newrect;
-		int ok;
+		int ok, force_node_preview = false;
 		int newx = BLI_rcti_size_x(rect);
 		int newy = BLI_rcti_size_y(rect);
 
@@ -637,10 +640,22 @@ void ED_preview_draw(const bContext *C, void *idp, void *parentp, void *slotp, r
 		if (ok)
 			*rect = newrect;
 
+		if (CTX_preview_is_dirty(C)) {
+			PointerRNA scene, vray, exp;
+			Scene * sc = CTX_data_scene(C);
+
+			RNA_id_pointer_create((ID*)sc, &scene);
+			vray = RNA_pointer_get(&scene, "vray");
+			exp = RNA_pointer_get(&vray, "Exporter");
+			if (RNA_boolean_get(&exp, "select_node_preview")) {
+				force_node_preview = true;
+			}
+		}
+
 		/* start a new preview render job if signalled through sbuts->preview,
 		 * if no render result was found and no preview render job is running,
 		 * or if the job is running and the size of preview changed */
-		if (CTX_preview_is_dirty(C) ||
+		if (force_node_preview ||
 		    (sbuts != NULL && sbuts->preview) ||
 		    (!ok && !WM_jobs_test(wm, sa, WM_JOB_TYPE_RENDER_PREVIEW)) ||
 		    (sp && (ABS(sp->sizex - newx) >= 2 || ABS(sp->sizey - newy) > 2)))
