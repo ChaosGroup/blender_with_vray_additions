@@ -176,7 +176,12 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 					if (sock.is_linked()) {
 						if (socketValue.type == ValueTypePlugin) {
 							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
-								const float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
+								float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
+
+								if (attrDesc.options & ParamDesc::attrOptionInvertMultiplier) {
+									mult = std::max(0.0f, 1.0f - mult);
+								}
+
 								if (mult != 1.0f) {
 									char multPluginName[String::MAX_PLG_LEN] = {0, };
 

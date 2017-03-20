@@ -120,6 +120,10 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 					if (v.second.get_child("options").data().find("EXPORT_AS_ACOLOR")) {
 						attrDesc.options |= AttrOption_ExportAsColor;
 					}
+
+					if (v.second.get_child("options").data().find("INVERT_MULTIPLIER")) {
+						attrDesc.options |= attrOptionInvertMultiplier;
+					}
 				}
 				attrDesc.type = AttrTypeInvalid;
 
