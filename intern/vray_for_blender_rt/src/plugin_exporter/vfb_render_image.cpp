@@ -176,13 +176,14 @@ void RenderImage::cropTo(int width, int height)
 	pixels = newImg;
 }
 
+namespace {
 
 struct JpegErrorManager {
 	jpeg_error_mgr pub;
 	jmp_buf setjmp_buffer;
 };
 
-static void jpegErrorExit(j_common_ptr cinfo) {
+void jpegErrorExit(j_common_ptr cinfo) {
 	JpegErrorManager * myerr = (JpegErrorManager*)cinfo->err;
 	char jpegErrMsg[JMSG_LENGTH_MAX + 1];
 	(*cinfo->err->format_message) (cinfo, jpegErrMsg);
@@ -191,13 +192,13 @@ static void jpegErrorExit(j_common_ptr cinfo) {
 }
 
 
-static void init_source(j_decompress_ptr) {}
+void init_source(j_decompress_ptr) {}
 
-static boolean fill_input_buffer (j_decompress_ptr cinfo) {
-	unsigned char *buf = (unsigned char *) cinfo->src->next_input_byte - 2;
+boolean fill_input_buffer(j_decompress_ptr cinfo) {
+	unsigned char *buf = (unsigned char *)cinfo->src->next_input_byte - 2;
 
-	buf[0] = (JOCTET) 0xFF;
-	buf[1] = (JOCTET) JPEG_EOI;
+	buf[0] = (JOCTET)0xFF;
+	buf[1] = (JOCTET)JPEG_EOI;
 
 	cinfo->src->next_input_byte = buf;
 	cinfo->src->bytes_in_buffer = 2;
@@ -205,37 +206,38 @@ static boolean fill_input_buffer (j_decompress_ptr cinfo) {
 	return TRUE;
 }
 
-static void skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
-    struct jpeg_source_mgr* src = (struct jpeg_source_mgr*) cinfo->src;
+void skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
+	struct jpeg_source_mgr* src = (struct jpeg_source_mgr*) cinfo->src;
 
-    if (num_bytes > 0) {
-        src->next_input_byte += (size_t) num_bytes;
-        src->bytes_in_buffer -= (size_t) num_bytes;
-    }
+	if (num_bytes > 0) {
+		src->next_input_byte += (size_t)num_bytes;
+		src->bytes_in_buffer -= (size_t)num_bytes;
+	}
 }
 
-static void term_source(j_decompress_ptr) {}
+void term_source(j_decompress_ptr) {}
 
-static void jpeg_mem_src_own(j_decompress_ptr cinfo, const unsigned char * buffer, int nbytes) {
-    struct jpeg_source_mgr* src;
+void jpeg_mem_src_own(j_decompress_ptr cinfo, const unsigned char * buffer, int nbytes) {
+	struct jpeg_source_mgr* src;
 
-    if (cinfo->src == NULL) {   /* first time for this JPEG object? */
-        cinfo->src = (struct jpeg_source_mgr *)
-            (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-            sizeof(struct jpeg_source_mgr));
-    }
+	if (cinfo->src == NULL) {   /* first time for this JPEG object? */
+		cinfo->src = (struct jpeg_source_mgr *)
+			(*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_PERMANENT,
+			sizeof(struct jpeg_source_mgr));
+	}
 
-    src = (struct jpeg_source_mgr*) cinfo->src;
-    src->init_source = init_source;
-    src->fill_input_buffer = fill_input_buffer;
-    src->skip_input_data = skip_input_data;
-    src->resync_to_restart = jpeg_resync_to_restart; /* use default method */
-    src->term_source = term_source;
-    src->bytes_in_buffer = nbytes;
-    src->next_input_byte = (JOCTET*)buffer;
+	src = (struct jpeg_source_mgr*) cinfo->src;
+	src->init_source = init_source;
+	src->fill_input_buffer = fill_input_buffer;
+	src->skip_input_data = skip_input_data;
+	src->resync_to_restart = jpeg_resync_to_restart; /* use default method */
+	src->term_source = term_source;
+	src->bytes_in_buffer = nbytes;
+	src->next_input_byte = (JOCTET*)buffer;
+}
 }
 
-float * jpegToPixelData(unsigned char * data, int size, int &channels) {
+float * VRayForBlender::jpegToPixelData(unsigned char * data, int size, int &channels) {
 	jpeg_decompress_struct jpegInfo;
 	JpegErrorManager jpegError;
 
