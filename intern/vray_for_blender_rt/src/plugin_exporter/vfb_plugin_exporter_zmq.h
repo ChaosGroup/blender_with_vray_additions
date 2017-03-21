@@ -94,6 +94,7 @@ private:
 	void                zmqCallback(const VRayMessage & message, ZmqClient * client);
 
 private:
+	using ImageType = VRayBaseTypes::AttrImage::ImageType;
 	RenderMode          m_RenderMode;
 
 	ClientPtr           m_Client;
@@ -111,6 +112,7 @@ private:
 	bool                m_IsAborted;
 	bool                m_Started;
 
+	ImageType           m_ViewportImageType;
 	int                 m_RenderQuality;
 	int                 m_RenderWidth;
 	int                 m_RenderHeight;

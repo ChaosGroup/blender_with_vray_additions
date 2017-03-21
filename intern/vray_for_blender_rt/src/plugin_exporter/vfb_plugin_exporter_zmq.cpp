@@ -299,6 +299,7 @@ ZmqExporter::ZmqExporter(const ExporterSettings & settings)
     , m_isDirty(true)
     , m_IsAborted(false)
     , m_Started(false)
+    , m_ViewportImageType(ImageType::JPG)
     , m_RenderQuality(100)
     , m_RenderWidth(0)
     , m_RenderHeight(0)
@@ -503,8 +504,18 @@ void ZmqExporter::clear_frame_data(float upTo)
 
 void ZmqExporter::sync()
 {
+	checkZmqClient();
 	// call commit explicitly else will often commit before calling startSync which is not needed
 	// set_commit_state(CommitAction::CommitNow);
+	if (exporter_settings.viewportImageType != m_ViewportImageType) {
+		m_ViewportImageType = exporter_settings.viewportImageType;
+		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(m_ViewportImageType)));
+	}
+
+	if (exporter_settings.viewportQuality != m_RenderQuality) {
+		m_RenderQuality = exporter_settings.viewportQuality;
+		m_Client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_RenderQuality));
+	}
 }
 
 void ZmqExporter::set_current_frame(float frame)

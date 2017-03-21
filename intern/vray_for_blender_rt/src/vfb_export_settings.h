@@ -141,6 +141,8 @@ struct ExporterSettings {
 		LevelAll
 	};
 
+	using ImageType = VRayBaseTypes::AttrImage::ImageType;
+
 	ExporterSettings();
 	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d);
 
@@ -178,6 +180,7 @@ struct ExporterSettings {
 	float             mb_intervalCenter;
 
 	VRayVerboseLevel  verboseLevel;
+	ImageType         viewportImageType;
 	int               viewportQuality;
 	int               zmq_server_port;
 	std::string       zmq_server_address;
