@@ -68,6 +68,8 @@ public:
 	float  updated;///< will hold % of updated area
 };
 
+float * jpegToPixelData(unsigned char * data, int size, int &channels);
+
 } // namespace VRayForBlender
 
 #endif // VRAY_FOR_BLENDER_RENDER_IMAGE_H
