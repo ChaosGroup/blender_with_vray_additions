@@ -35,7 +35,7 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 			if (image) {
 				std::string absFilepath = Blender::GetFilepath(image.filepath(), (ID*)ntree.ptr.data);
 				//absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
-#if 0
+
 				if(image.source() == BL::Image::source_SEQUENCE) {
 					BL::ImageUser imageUser = imageTexture.image_user();
 
@@ -46,18 +46,16 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 					int seqStart  = imageUser.frame_start();
 					int seqEnd    = seqLength - seqStart + 1;
 
-					if(imageUser.use_cyclic()) {
-						seqFrame = ((ExporterSettings::gSet.m_frameCurrent - seqStart) % seqLength) + 1;
+					if (imageUser.use_cyclic()) {
+						seqFrame = ((m_settings.settings_animation.frame_current - seqStart) % seqLength) + 1;
 					}
 					else {
-						if(ExporterSettings::gSet.m_frameCurrent < seqStart){
+						if (m_settings.settings_animation.frame_current < seqStart){
 							seqFrame = seqStart;
-						}
-						else if(ExporterSettings::gSet.m_frameCurrent > seqEnd) {
+						} else if (m_settings.settings_animation.frame_current > seqEnd) {
 							seqFrame = seqEnd;
-						}
-						else {
-							seqFrame = seqStart + ExporterSettings::gSet.m_frameCurrent - 1;
+						} else {
+							seqFrame = seqStart + m_settings.settings_animation.frame_current - 1;
 						}
 					}
 					if(seqOffset < 0) {
@@ -70,25 +68,24 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 					pluginDesc.add("frame_offset", seqOffset);
 					pluginDesc.add("frame_number", seqFrame);
 				}
-#endif
+
 				pluginDesc.add("file", absFilepath);
 			}
-#if 0
-			PointerRNA vrayScene = RNA_pointer_get(&ExporterSettings::gSet.b_scene.ptr, "vray");
+
+			PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
 			PointerRNA settingsColorMapping = RNA_pointer_get(&vrayScene, "SettingsColorMapping");
 
 			PointerRNA bitmapBuffer = RNA_pointer_get(&node.ptr, "BitmapBuffer");
 			bool use_input_gamma = RNA_boolean_get(&bitmapBuffer, "use_input_gamma") &&
 			                       RNA_boolean_get(&settingsColorMapping, "use_input_gamma");
 			if(use_input_gamma) {
-				pluginDesc["gamma"] = BOOST_FORMAT_FLOAT(RNA_float_get(&settingsColorMapping, "input_gamma"));
-				pluginDesc["color_space"] = "1";
+				pluginDesc.add("gamma", RNA_float_get(&settingsColorMapping, "input_gamma"));
+				pluginDesc.add("color_space", 1);
 
 				PRINT_INFO_EX("Node tree: %s => Node name: %s => \"Use Input Gamma\" is used. "
 				              "\"Color Space\" is forced to \"Gamma Corrected\"",
 				              ntree.name().c_str(), node.name().c_str());
 			}
-#endif
 		}
 	}
 

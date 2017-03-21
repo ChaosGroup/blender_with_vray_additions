@@ -147,6 +147,8 @@ bool ProductionExporter::export_scene(const bool)
 					m_active_camera = frameExp.getActiveCamera();
 				}
 			}
+			// set this on the settings obj so it is accessible from data exporter
+			m_settings.settings_animation.frame_current = m_frameExporter.getSceneFrameToExport();
 
 			// set the frame to export (so values are inserted for that time)
 			if (aMode == AnimMode::AnimationModeCameraLoop) {
