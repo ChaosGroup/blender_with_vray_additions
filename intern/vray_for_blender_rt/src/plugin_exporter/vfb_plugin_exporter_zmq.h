@@ -73,7 +73,7 @@ public:
 	virtual void        show_frame_buffer();
 	virtual void        hide_frame_buffer();
 
-	virtual bool        is_running() const { return m_Started; }
+	virtual bool        is_running() const { return m_started; }
 
 	virtual RenderImage get_image();
 	virtual RenderImage get_render_channel(RenderChannelType channelType);
@@ -84,7 +84,7 @@ public:
 	virtual void        set_current_frame(float frame);
 
 	virtual void        set_viewport_quality(int quality);
-	virtual bool        is_aborted() const { return m_IsAborted; }
+	virtual bool        is_aborted() const { return m_isAborted; }
 
 	virtual void        replace_plugin(const std::string & oldPlugin, const std::string & newPlugin);
 	virtual int         remove_plugin_impl(const std::string&);
@@ -95,9 +95,9 @@ private:
 
 private:
 	using ImageType = VRayBaseTypes::AttrImage::ImageType;
-	RenderMode          m_RenderMode;
+	RenderMode          m_renderMode;
 
-	ClientPtr           m_Client;
+	ClientPtr           m_client;
 
 	// some cached values to reduce trafix
 	std::string         m_activeCamera;
@@ -105,17 +105,17 @@ private:
 	bool                m_isDirty; ///< if true we have some change sent to server after last commit, so next commit will go trough
 
 	// ensures the image is not changed while it is read
-	std::mutex          m_ImgMutex;
-	std::mutex          m_ZmqClientMutex;
-	ZmqRenderImage      m_CurrentImage;
-	ImageMap            m_LayerImages;
-	bool                m_IsAborted;
-	bool                m_Started;
+	std::mutex          m_imgMutex;
+	std::mutex          m_zmqClientMutex;
+	ZmqRenderImage      m_currentImage;
+	ImageMap            m_layerImages;
+	bool                m_isAborted;
+	bool                m_started;
 
-	ImageType           m_ViewportImageType;
-	int                 m_RenderQuality;
-	int                 m_RenderWidth;
-	int                 m_RenderHeight;
+	ImageType           m_viewportImageType;
+	int                 m_renderQuality;
+	int                 m_renderWidth;
+	int                 m_renderHeight;
 };
 } // namespace VRayForBlender
 
