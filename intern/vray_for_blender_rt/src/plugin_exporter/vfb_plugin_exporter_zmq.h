@@ -21,6 +21,7 @@
 #define VRAY_FOR_BLENDER_PLUGIN_EXPORTER_ZMQ_H
 
 #include "vfb_plugin_exporter.h"
+#include "vfb_utils_object.h"
 
 #include "zmq_wrapper.hpp"
 #include "zmq_message.hpp"
@@ -70,9 +71,6 @@ public:
 	virtual void        start();
 	virtual void        stop();
 
-	virtual void        show_frame_buffer();
-	virtual void        hide_frame_buffer();
-
 	virtual bool        is_running() const { return m_started; }
 
 	virtual RenderImage get_image();
@@ -82,8 +80,6 @@ public:
 	virtual void        set_commit_state(VRayBaseTypes::CommitAction ca);
 
 	virtual void        set_current_frame(float frame);
-
-	virtual void        set_viewport_quality(int quality);
 	virtual bool        is_aborted() const { return m_isAborted; }
 
 	virtual void        replace_plugin(const std::string & oldPlugin, const std::string & newPlugin);
@@ -95,27 +91,32 @@ private:
 
 private:
 	using ImageType = VRayBaseTypes::AttrImage::ImageType;
-	RenderMode          m_renderMode;
 
+	struct ValueCache {
+		int renderWidth;
+		int renderHeight;
+		std::string activeCamera;
+
+		int viewport_image_quality;
+		ImageType viewport_image_type;
+		bool show_vfb;
+	};
+
+	RenderMode          m_renderMode;
 	ClientPtr           m_client;
 
 	// some cached values to reduce trafix
-	std::string         m_activeCamera;
-	bool                m_vfbVisible;
 	bool                m_isDirty; ///< if true we have some change sent to server after last commit, so next commit will go trough
+	bool                m_isAborted;
+	bool                m_started;
 
 	// ensures the image is not changed while it is read
 	std::mutex          m_imgMutex;
 	std::mutex          m_zmqClientMutex;
 	ZmqRenderImage      m_currentImage;
 	ImageMap            m_layerImages;
-	bool                m_isAborted;
-	bool                m_started;
 
-	ImageType           m_viewportImageType;
-	int                 m_renderQuality;
-	int                 m_renderWidth;
-	int                 m_renderHeight;
+	ValueCache          m_cachedValues;
 };
 } // namespace VRayForBlender
 

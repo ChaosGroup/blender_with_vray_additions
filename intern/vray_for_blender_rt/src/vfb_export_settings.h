@@ -173,15 +173,15 @@ struct ExporterSettings {
 	bool              use_select_preview;
 	bool              use_subsurf_to_osd;
 
-	bool              showViewport;
+	bool              show_vfb;
 	bool              use_bake_view;
 
 	int               mb_duration;
 	float             mb_intervalCenter;
 
-	VRayVerboseLevel  verboseLevel;
-	ImageType         viewportImageType;
-	int               viewportQuality;
+	VRayVerboseLevel  verbose_level;
+	ImageType         viewport_image_type;
+	int               viewport_image_quality;
 	int               zmq_server_port;
 	std::string       zmq_server_address;
 

@@ -86,8 +86,8 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 		if (!pixels) {
 			std::unique_lock<std::mutex> lock(exp->m_imgMutex);
 			if (!pixels) {
-				w = exp->m_renderWidth;
-				h = exp->m_renderHeight;
+				w = exp->m_cachedValues.renderWidth;
+				h = exp->m_cachedValues.renderHeight;
 				channels = 4;
 
 				pixels = new float[w * h * channels];
@@ -180,18 +180,11 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 ZmqExporter::ZmqExporter(const ExporterSettings & settings)
     : PluginExporter(settings)
     , m_client(nullptr)
-    , m_vfbVisible(false)
     , m_isDirty(true)
     , m_isAborted(false)
     , m_started(false)
-    , m_viewportImageType(ImageType::JPG)
-    , m_renderQuality(100)
-    , m_renderWidth(0)
-    , m_renderHeight(0)
 {
 	checkZmqClient();
-	// set to inverted so first time we dont hit cache
-	m_vfbVisible = !settings.showViewport;
 }
 
 
@@ -256,7 +249,7 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::VRayLog) {
 		int level = message.getLogLevel();
-		const char * lvlStr = vrayLogLevelToString(message.getLogLevel(), exporter_settings.verboseLevel);
+		const char * lvlStr = vrayLogLevelToString(message.getLogLevel(), exporter_settings.verbose_level);
 
 		if (lvlStr) {
 			fprintf(stdout, "VRay%s: %s\n", lvlStr, message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->value.c_str());
@@ -340,15 +333,23 @@ void ZmqExporter::init()
 			} else {
 				m_renderMode = exporter_settings.getRenderMode();
 			}
+
 			m_client->send(VRayMessage::msgRendererType(mode));
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Init));
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_renderMode)));
-			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewportQuality));
 
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
 			if (!is_viewport && !exporter_settings.settings_animation.use) {
 				m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeVfbRealcolor)));
 			}
+
+			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, exporter_settings.show_vfb));
+			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewport_image_quality));
+			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(exporter_settings.viewport_image_type)));
+
+			m_cachedValues.show_vfb = exporter_settings.show_vfb;
+			m_cachedValues.viewport_image_quality = exporter_settings.viewport_image_quality;
+			m_cachedValues.viewport_image_type = exporter_settings.viewport_image_type;
 		}
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
@@ -389,18 +390,20 @@ void ZmqExporter::clear_frame_data(float upTo)
 
 void ZmqExporter::sync()
 {
-	checkZmqClient();
-	// call commit explicitly else will often commit before calling startSync which is not needed
-	// set_commit_state(CommitAction::CommitNow);
-	if (exporter_settings.viewportImageType != m_viewportImageType) {
-		m_viewportImageType = exporter_settings.viewportImageType;
-		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(m_viewportImageType)));
+#define CHECK_UPDATE(name, upd)\
+	if (m_cachedValues.name != exporter_settings.name) {\
+		upd;\
+		m_cachedValues.name = exporter_settings.name;\
 	}
 
-	if (exporter_settings.viewportQuality != m_renderQuality) {
-		m_renderQuality = exporter_settings.viewportQuality;
-		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_renderQuality));
-	}
+	checkZmqClient();
+	CHECK_UPDATE(show_vfb, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, exporter_settings.show_vfb)));
+	CHECK_UPDATE(viewport_image_quality, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewport_image_quality)));
+	CHECK_UPDATE(viewport_image_type, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(exporter_settings.viewport_image_type))));
+
+#undef CHECK_UPDATE
+	// call commit explicitly else will often commit before calling startSync which is not needed
+	// set_commit_state(CommitAction::CommitNow);
 }
 
 void ZmqExporter::set_current_frame(float frame)
@@ -409,63 +412,27 @@ void ZmqExporter::set_current_frame(float frame)
 		current_scene_frame = frame;
 		checkZmqClient();
 		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentFrame, frame));
-		m_isDirty = true;
-	}
-}
-
-void ZmqExporter::show_frame_buffer()
-{
-	if (m_vfbVisible) {
-		return;
-	}
-	checkZmqClient();
-	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(true)));
-	m_vfbVisible = true;
-}
-
-void ZmqExporter::hide_frame_buffer()
-{
-	if (!m_vfbVisible) {
-		return;
-	}
-	checkZmqClient();
-	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, static_cast<int>(false)));
-	m_vfbVisible = false;
-}
-
-void ZmqExporter::set_viewport_quality(int quality)
-{
-	if (quality != exporter_settings.viewportQuality) {
-		m_renderQuality = quality;
-		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, m_renderQuality));
-		m_isDirty = true;
 	}
 }
 
 void ZmqExporter::set_render_size(const int &w, const int &h)
 {
-	{
-		std::unique_lock<std::mutex> lock(m_imgMutex);
-		m_renderWidth = w;
-		m_renderHeight = h;
+	std::unique_lock<std::mutex> lock(m_imgMutex);
+	if (w != m_cachedValues.renderWidth || h != m_cachedValues.renderHeight) {
+		m_cachedValues.renderWidth = w;
+		m_cachedValues.renderHeight = h;
+		checkZmqClient();
+		m_client->send(VRayMessage::msgRendererResize(w, h));
 	}
-	m_isDirty = true;
-	checkZmqClient();
-	m_client->send(VRayMessage::msgRendererResize(w, h));
 }
 
 void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 {
-	if (m_activeCamera == "") {
-		m_activeCamera = pluginName;
-	} else {
-		if (m_activeCamera == pluginName) {
-			return;
-		}
+	if (m_cachedValues.activeCamera != pluginName) {
+		m_isDirty = true;
+		checkZmqClient();
+		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 	}
-	m_isDirty = true;
-	checkZmqClient();
-	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 }
 
 void ZmqExporter::set_commit_state(VRayBaseTypes::CommitAction ca)

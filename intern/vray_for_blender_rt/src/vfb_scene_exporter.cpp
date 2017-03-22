@@ -379,11 +379,6 @@ bool SceneExporter::export_scene(const bool check_updated)
 	PRINT_INFO_EX("SceneExporter::sync(%i)", check_updated);
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-	if (m_settings.showViewport) {
-		m_exporter->show_frame_buffer();
-	} else {
-		m_exporter->hide_frame_buffer();
-	}
 
 	// duplicate cycle's logic for layers here
 	m_sceneComputedLayers = 0;
@@ -424,7 +419,6 @@ bool SceneExporter::export_scene(const bool check_updated)
 		                                    : m_settings.getRenderMode();
 
 	m_exporter->set_render_mode(renderMode);
-	m_exporter->set_viewport_quality(m_settings.viewportQuality);
 
 	return true;
 }
