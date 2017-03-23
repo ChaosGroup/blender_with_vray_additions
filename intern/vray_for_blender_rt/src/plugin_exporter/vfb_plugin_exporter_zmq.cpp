@@ -433,6 +433,7 @@ void ZmqExporter::set_camera_plugin(const std::string &pluginName)
 	if (m_cachedValues.activeCamera != pluginName) {
 		m_isDirty = true;
 		checkZmqClient();
+		m_cachedValues.activeCamera = pluginName;
 		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentCamera, pluginName));
 	}
 }
