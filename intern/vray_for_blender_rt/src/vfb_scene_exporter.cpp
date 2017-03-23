@@ -380,6 +380,20 @@ bool SceneExporter::export_scene(const bool check_updated)
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 
+	VRayBaseTypes::RenderMode renderMode = m_view3d
+		                                    ? m_settings.getViewportRenderMode()
+		                                    : m_settings.getRenderMode();
+
+	m_exporter->set_render_mode(renderMode);
+
+	return true;
+}
+
+void SceneExporter::sync(const bool check_updated)
+{
+	m_data_exporter.syncStart(m_isUndoSync);
+	sync_prepass();
+
 	// duplicate cycle's logic for layers here
 	m_sceneComputedLayers = 0;
 	m_isLocalView = m_view3d && m_view3d.local_view();
@@ -414,22 +428,8 @@ bool SceneExporter::export_scene(const bool check_updated)
 	}
 	m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
 
-	VRayBaseTypes::RenderMode renderMode = m_view3d
-		                                    ? m_settings.getViewportRenderMode()
-		                                    : m_settings.getRenderMode();
-
-	m_exporter->set_render_mode(renderMode);
-
-	return true;
-}
-
-void SceneExporter::sync(const bool check_updated)
-{
-	m_data_exporter.syncStart(m_isUndoSync);
-
 	// TODO: this is hack so we can export object dependent on effect before any other objects so we
 	// can hide/show them correctly
-	sync_prepass();
 	m_exporter->set_prepass(true);
 	sync_effects(false);
 	m_exporter->set_prepass(false);
