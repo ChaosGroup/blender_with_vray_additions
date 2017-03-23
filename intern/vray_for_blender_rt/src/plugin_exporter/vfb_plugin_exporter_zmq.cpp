@@ -403,6 +403,11 @@ void ZmqExporter::sync()
 	CHECK_UPDATE(viewport_image_quality, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewport_image_quality)));
 	CHECK_UPDATE(viewport_image_type, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(exporter_settings.viewport_image_type))));
 
+
+	if (is_viewport && m_renderMode != exporter_settings.getViewportRenderMode()) {
+		m_renderMode = exporter_settings.getViewportRenderMode();
+		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_renderMode)));
+	}
 #undef CHECK_UPDATE
 	// call commit explicitly else will often commit before calling startSync which is not needed
 	// set_commit_state(CommitAction::CommitNow);
