@@ -350,6 +350,8 @@ void ZmqExporter::init()
 			m_cachedValues.show_vfb = exporter_settings.show_vfb;
 			m_cachedValues.viewport_image_quality = exporter_settings.viewport_image_quality;
 			m_cachedValues.viewport_image_type = exporter_settings.viewport_image_type;
+			m_cachedValues.renderHeight = 0;
+			m_cachedValues.renderWidth = 0;
 		}
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
