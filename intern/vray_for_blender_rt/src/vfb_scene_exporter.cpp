@@ -723,17 +723,17 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	if (dupli_use_instancer) {
 		BL::Object::dupli_list_iterator dupIt;
 		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
-			BL::DupliObject dupliOb(*dupIt);
-			BL::Object      dupOb(dupliOb.object());
+			BL::DupliObject instance(*dupIt);
+			BL::Object      parentOb(instance.object());
 
-			const bool is_hidden = dupliOb.hide() || (!m_exporter->get_is_viewport() && dupOb.hide_render());
-			const bool is_light = Blender::IsLight(dupOb);
-			const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
+			const bool is_hidden = instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render());
+			const bool is_light = Blender::IsLight(parentOb);
+			const bool supported_type = Blender::IsGeometry(parentOb) || is_light;
 
 			if (!is_hidden && supported_type) {
-				PointerRNA vrayObject = RNA_pointer_get(&dupOb.ptr, "vray");
+				PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
 				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-				maxParticleId = std::max(maxParticleId, getParticleID(ob, dupliOb, num_instances++));
+				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, num_instances++));
 
 				if (is_light || RNA_boolean_get(&vrayClipper, "enabled")) {
 					// if any of the duplicated objects is clipper or light we cant use instancer
@@ -751,7 +751,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		return;
 	}
 
-	int dupli_instance = 0;
+	int dupliIdx = 0;
 	// if parent is empty or it is hidden in some way, do not show base objects
 	const bool hide_from_parent = !m_data_exporter.isObjectVisible(ob) || ob.type() == BL::Object::type_EMPTY;
 
@@ -761,24 +761,25 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			return;
 		}
 
-		BL::DupliObject dupliOb(*dupIt);
-		BL::Object      dupOb(dupliOb.object());
+		BL::DupliObject instance(*dupIt);
+		BL::Object      parentOb(instance.object());
 
-		const bool is_hidden = dupliOb.hide() || (!m_exporter->get_is_viewport() && dupOb.hide_render());
-		const bool is_visible = !hide_from_parent && m_data_exporter.isObjectVisible(dupOb);
+		const bool is_hidden = instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render());
+		const bool is_visible = !hide_from_parent && m_data_exporter.isObjectVisible(parentOb);
 
-		const bool is_light = Blender::IsLight(dupOb);
-		const bool supported_type = Blender::IsGeometry(dupOb) || is_light;
+		const bool is_light = Blender::IsLight(parentOb);
+		const bool supported_type = Blender::IsGeometry(parentOb) || is_light;
 
 		if (!supported_type || is_hidden) {
 			continue;
 		}
 
 		MHash persistendID;
-		persistendID = maxParticleId - getParticleID(ob, dupliOb, dupli_instance);
+		persistendID = maxParticleId - getParticleID(ob, instance, dupliIdx);
 
 		ObjectOverridesAttrs overrideAttrs;
 		overrideAttrs.override = true;
+		overrideAttrs.dupliEmitter = ob;
 
 		if (is_light || !dupli_use_instancer) {
 			overrideAttrs.useInstancer = false;
@@ -786,12 +787,12 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			// sync dupli base object
 			if (!is_light && !hide_from_parent) {
 				overrideAttrs.visible = is_visible;
-				overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-				sync_object(dupOb, check_updated, overrideAttrs);
+				overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
+				sync_object(parentOb, check_updated, overrideAttrs);
 			}
 			overrideAttrs.visible = true;
 			overrideAttrs.override = true;
-			overrideAttrs.tm = AttrTransformFromBlTransform(dupliOb.matrix());
+			overrideAttrs.tm = AttrTransformFromBlTransform(instance.matrix());
 			overrideAttrs.id = persistendID;
 
 			char namePrefix[255] = {0, };
@@ -803,31 +804,31 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			if (!is_light) {
 				// mark the duplication so we can remove in rt
 				auto lock = m_data_exporter.raiiLock();
-				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(dupOb), IdTrack::DUPLI_NODE);
+				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(parentOb), IdTrack::DUPLI_NODE);
 			}
-			sync_object(dupOb, check_updated, overrideAttrs);
+			sync_object(parentOb, check_updated, overrideAttrs);
 		} else {
 
 			overrideAttrs.visible = is_visible;
-			overrideAttrs.tm = AttrTransformFromBlTransform(dupOb.matrix_world());
-			overrideAttrs.id = reinterpret_cast<intptr_t>(dupOb.ptr.data);
+			overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
+			overrideAttrs.id = reinterpret_cast<intptr_t>(parentOb.ptr.data);
 
 			float inverted[4][4];
-			copy_m4_m4(inverted, ((Object*)dupOb.ptr.data)->obmat);
+			copy_m4_m4(inverted, ((Object*)parentOb.ptr.data)->obmat);
 			invert_m4(inverted);
 
 			float tm[4][4];
-			mul_m4_m4m4(tm, ((DupliObject*)dupliOb.ptr.data)->mat, inverted);
+			mul_m4_m4m4(tm, ((DupliObject*)instance.ptr.data)->mat, inverted);
 
-			AttrInstancer::Item &instancer_item = (*instances.data)[dupli_instance];
+			AttrInstancer::Item &instancer_item = (*instances.data)[dupliIdx];
 			instancer_item.index = persistendID;
-			instancer_item.node = m_data_exporter.getNodeName(dupOb);
+			instancer_item.node = m_data_exporter.getNodeName(parentOb);
 			instancer_item.tm = AttrTransformFromBlTransform(tm);
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
-			sync_object(dupOb, check_updated, overrideAttrs);
+			sync_object(parentOb, check_updated, overrideAttrs);
 		}
 
-		dupli_instance++;
+		dupliIdx++;
 	}
 
 	if (dupli_use_instancer && num_instances) {
@@ -855,6 +856,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	overrideAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
 	overrideAttrs.visible = false;
 	overrideAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+	overrideAttrs.dupliEmitter = ob; // array mod is self emitter
 
 	if (!visible) {
 		// we have array mod but OB is not rendereable, remove mod

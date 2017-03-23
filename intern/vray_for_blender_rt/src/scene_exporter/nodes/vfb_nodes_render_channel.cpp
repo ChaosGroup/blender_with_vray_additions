@@ -17,11 +17,30 @@
  */
 
 #include "vfb_node_exporter.h"
+#include "vfb_utils_nodes.h"
 
 AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	// override plugin id to be "RenderChannelColor"
-	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context), "RenderChannelColor");
+	const auto plgName = DataExporter::GenPluginName(node, ntree, context);
+	PluginDesc pluginDesc(plgName, "RenderChannelColor");
+
+	PointerRNA chanGroup = RNA_pointer_get(&node.ptr, "RenderChannelLightSelect");
+
+	auto type = static_cast<LightSelect::ChannelType>(RNA_enum_get(&chanGroup, "type"));
+
+	BL::NodeSocket lightsSock = Nodes::GetInputSocketByName(node, "Lights");
+	if (lightsSock && lightsSock.is_linked()) {
+		BL::Node selectNode = Nodes::GetConnectedNode(lightsSock);
+		if (selectNode) {
+			ObList lights;
+			getSelectorObjectList(selectNode, lights);
+			for (const auto & lamp : lights) {
+				m_light_select_channel.addLightSelect(lamp, type, plgName);
+			}
+		}
+	}
+
 	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
 

@@ -223,6 +223,36 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 			pluginDesc.add("objectID", ob.pass_index());
 		}
 
+		BL::Object checkOb = ob;
+		if (override && override.dupliEmitter.ptr.data) {
+			checkOb = override.dupliEmitter;
+		}
+
+		auto lightSelectIter = m_light_select_channel.lightSelectMap.find(checkOb);
+		if (lightSelectIter != m_light_select_channel.lightSelectMap.end()) {
+			// current lamp that we are exporting is product of the selected object
+			//  - it is either the object itself
+			//  - the selected object is duplicator and current ob is child of it
+			// find in which channels this plugin should be present
+			for (const auto & chanTypeMap : lightSelectIter->second) {
+				const LightSelect::ChannelType type = chanTypeMap.first;
+				std::string typeName;
+				switch (type) {
+				case LightSelect::ChannelType::Raw: typeName = "channels_raw"; break;
+				case LightSelect::ChannelType::Diffuse: typeName = "channels_diffuse"; break;
+				case LightSelect::ChannelType::Specular: typeName = "channels_specular"; break;
+				}
+				AttrListPlugin plList;
+				for (const auto & chanName : chanTypeMap.second) {
+					plList.append(chanName);
+				}
+
+				if (!plList.empty()) {
+					pluginDesc.add(typeName, plList);
+				}
+			}
+		}
+
 		plugin = m_exporter->export_plugin(pluginDesc);
 	}
 

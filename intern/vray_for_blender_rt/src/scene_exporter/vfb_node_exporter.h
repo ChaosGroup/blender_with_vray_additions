@@ -209,8 +209,8 @@ struct SettingsLightLinker {
 		/// True if objectList contains objects to be hidden from this light
 		/// False if objectList contains only objects to be included for this light
 		bool                           isExcludeList;
-		std::unordered_set<BL::Object> objectList;
 		ExcludeType                    excludeType;
+		std::unordered_set<BL::Object> objectList;
 	};
 
 	/// Set the LightLink for a given light plugin, steals the link object
@@ -222,6 +222,21 @@ struct SettingsLightLinker {
 	std::unordered_map<std::string, LightLink> lightsMap;
 };
 
+
+struct LightSelect {
+	enum ChannelType {
+		Raw,
+		Diffuse,
+		Specular
+	};
+
+	void addLightSelect(BL::Object lamp, ChannelType chType, const std::string & chName) {
+		lightSelectMap[lamp][chType].push_back(chName);
+	}
+
+	/// map lamb object to list of pairs: [Lamp -> [ChanType -> [chan1, chan2]]]
+	std::unordered_map<BL::Object, std::unordered_map<ChannelType, std::vector<std::string>, std::hash<int>>> lightSelectMap;
+};
 
 struct DataDefaults {
 	DataDefaults()
@@ -240,7 +255,7 @@ struct ObjectOverridesAttrs {
 	    , override(false)
 	    , visible(true)
 	    , id(0)
-	    , dupliHolder(PointerRNA_NULL)
+	    , dupliEmitter(PointerRNA_NULL)
 	{}
 
 	operator bool() const {
@@ -252,7 +267,7 @@ struct ObjectOverridesAttrs {
 	int            visible;
 	AttrTransform  tm;
 	int            id;
-	BL::Object     dupliHolder;
+	BL::Object     dupliEmitter;
 	std::string    namePrefix;
 };
 
@@ -366,6 +381,7 @@ public:
 	BL::Node          getConnectedNode(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         getConnectedNodePluginName(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
 
+	/// TODO: fix this or deprecate it - it is unreliable
 	void              getSelectorObjectNames(BL::Node node, AttrListPlugin & names);
 	void              getSelectorObjectList(BL::Node node, ObList &obList);
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
@@ -491,6 +507,7 @@ public:
 	bool              m_is_undo_sync;
 	UndoStack         m_undo_stack;
 	SettingsLightLinker m_light_linker;
+	LightSelect       m_light_select_channel;
 
 private:
 	BL::BlendData     m_data;
