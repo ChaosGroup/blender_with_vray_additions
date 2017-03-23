@@ -513,6 +513,5 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		nodeWrapper.add("transform", tm);
 	}
 
-	// TODO: remove true flag which forces replace for node since appsdk does not update when we only change the Instancer plugin!
-	return m_exporter->export_plugin(nodeWrapper, true);
+	return m_exporter->export_plugin(nodeWrapper);
 }
