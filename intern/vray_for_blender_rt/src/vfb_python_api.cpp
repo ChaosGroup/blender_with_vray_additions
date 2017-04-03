@@ -451,6 +451,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		for (int c = 0; c < sizeof(texSockets) / sizeof(texSockets[0]); c++) {
 			auto socket = b_node.outputs[texSockets[c]];
 			BLI_assert(!!socket && "Missing texture socket on TexOSL");
+			PRINT_ERROR("Missing socket \"%s\" on TexOSL", texSockets[c].c_str());
 			used_sockets.insert(socket.ptr.data);
 		}
 	}
@@ -605,18 +606,17 @@ static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
 {
 	OIIO_NAMESPACE_USING
 	using namespace std;
-	const char *inputfile = NULL, *outputfile = NULL;
+	const char *inputfile = nullptr, *outputfile = nullptr, *stdoslfile = nullptr;
 
-	if (!PyArg_ParseTuple(args, "ss", &inputfile, &outputfile))
-		return NULL;
+	if (!PyArg_ParseTuple(args, "sss", &inputfile, &outputfile, &stdoslfile)) {
+		return nullptr;
+	}
 
 	vector<string> options;
-	string stdosl_path;
+	string stdosl_path = stdoslfile;
 
 	options.push_back("-o");
 	options.push_back(outputfile);
-
-	stdosl_path = "D:\\libs\\vray-appsdk\\20170307\\windows\\bin\\stdosl.h";
 
 	/* compile */
 	bool ok = false;
@@ -628,6 +628,7 @@ static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
 	if (ok) {
 		Py_RETURN_TRUE;
 	}
+	PRINT_WARN("OSL compilation failed using \"\" path for stdosl.h", stdoslfile);
 	Py_RETURN_FALSE;
 }
 
