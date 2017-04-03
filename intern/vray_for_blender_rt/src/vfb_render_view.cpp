@@ -26,6 +26,7 @@
 #include "DNA_view3d_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
+#include "DNA_constraint_types.h"
 
 
 using namespace VRayForBlender;
@@ -37,8 +38,17 @@ const std::string VRayForBlender::ViewParams::defaultCameraPluginName("cameraDef
 const std::string VRayForBlender::ViewParams::settingsCameraDofPluginName("settingsCameraDof");
 const std::string VRayForBlender::ViewParams::settingsCameraPluginName("settingsCamera");
 
+namespace {
 
-static float GetLensShift(BL::Object &ob)
+BL::Object getConstraintObject(BL::Constraint cn) {
+	bConstraint * bCn = reinterpret_cast<bConstraint*>(cn.ptr.data);
+	Object * targetOb = *reinterpret_cast<Object**>(bCn->data);
+	PointerRNA ob;
+	RNA_id_pointer_create(reinterpret_cast<ID*>(targetOb), &ob);
+	return ob;
+}
+
+float GetLensShift(BL::Object &ob)
 {
 	float shift = 0.0f;
 
@@ -58,8 +68,10 @@ static float GetLensShift(BL::Object &ob)
 	}
 
 	if (constraint) {
-		BL::ConstraintTarget ct(constraint);
-		BL::Object target(ct.target());
+		// This does not work and references some invalid pointer - investgate why
+		// BL::ConstraintTarget ct(constraint);
+		// BL::Object target(ct.target());
+		BL::Object target = getConstraintObject(constraint);
 		if (target) {
 			const float z_shift = ob.matrix_world().data[14] - target.matrix_world().data[14];
 			const float l = Blender::GetDistanceObOb(ob, target);
@@ -80,6 +92,7 @@ static float GetLensShift(BL::Object &ob)
 	return shift;
 }
 
+} // namespace
 
 static void AspectCorrectFovOrtho(ViewParams &viewParams)
 {
