@@ -341,6 +341,9 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 		PRINT_ERROR("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
 		            ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
 	}
+	else if (socketVRayType == "VRaySocketPlugin") {
+		attrValue = AttrPlugin("");
+	}
 	// These sockets do not have default value, they must be linked or skipped otherwise.
 	//
 	else if (socketVRayType == "VRaySocketTransform") {}
@@ -490,6 +493,9 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeTexMeshVertexColorChannel") {
 		attrValue = exportVRayNodeTexMeshVertexColorChannel(ntree, node, fromSocket, context);
 	}
+	else if (nodeClass == "VRayNodeTexOSL") {
+		attrValue = exportVRayNodeShaderScript(ntree, node, fromSocket, context);
+	}
 
 	// Material / BRDF
 	//
@@ -507,6 +513,9 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	}
 	else if (nodeClass == "VRayNodeBRDFBump") {
 		attrValue = exportVRayNodeBRDFBumpMtl(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeMtlOSL") {
+		attrValue = exportVRayNodeShaderScript(ntree, node, fromSocket, context);
 	}
 
 	// Math

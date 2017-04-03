@@ -40,6 +40,11 @@ set(INC
 	src/scene_exporter/utils
 
 	extern/vray-zmq-wrapper/include
+	${LIBDIR}/osl/include
+	${OPENIMAGEIO_INCLUDE_DIRS}
+	${OPENIMAGEIO_INCLUDE_DIRS}/OpenImageIO
+	${OPENEXR_INCLUDE_DIR}
+	${OPENEXR_INCLUDE_DIRS}
 )
 
 if (WIN32)
@@ -84,7 +89,7 @@ endif()
 if (UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++11")
 endif()
-
+list(REMOVE_DUPLICATES INC)
 blender_add_lib(vray_for_blender_rt "${HEADERS};${SOURCES}" "${INC}" "${INC_SYS}")
 
 add_dependencies(vray_for_blender_rt bf_rna)

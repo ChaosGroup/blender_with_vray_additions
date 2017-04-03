@@ -43,11 +43,15 @@ std::string VRayForBlender::RNA_path_get(PointerRNA *ptr, const std::string &att
 
 std::string VRayForBlender::RNA_std_string_get(PointerRNA *ptr, const std::string &attrName)
 {
-	char buf[512] = "";
+	std::string result;
 
-	RNA_string_get(ptr, attrName.c_str(), buf);
+	const int len = RNA_string_length(ptr, attrName.c_str());
+	char * dest = new char[len + 1];
+	RNA_string_get(ptr, attrName.c_str(), dest);
+	result = dest;
+	delete[] dest;
 
-	return buf;
+	return result;
 }
 
 

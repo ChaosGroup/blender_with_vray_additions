@@ -215,7 +215,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 						}
 					}
 					else {
-						if ((pluginType == ParamDesc::PluginTexture) &&
+						if ((pluginType == ParamDesc::PluginTexture || pluginType == ParamDesc::PluginMaterial) &&
 						    (attrType == ParamDesc::AttrTypePluginUvwgen)) {
 							const std::string uvwgenName = "UVW@" + DataExporter::GenPluginName(node, ntree, context);
 							std::string       uvwgenType = "UVWGenObject";

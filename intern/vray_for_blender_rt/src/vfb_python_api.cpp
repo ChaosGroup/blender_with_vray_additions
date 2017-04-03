@@ -31,6 +31,16 @@
 #include "zmq_wrapper.hpp"
 #include "vfb_plugin_exporter_zmq.h"
 
+// OSL
+#include <OSL/oslquery.h>
+#include <OSL/oslconfig.h>
+#include <OSL/oslcomp.h>
+#include <OSL/oslexec.h>
+
+// OIIO
+#include <errorhandler.h>
+#include <string_view.h>
+
 VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
 
@@ -395,6 +405,233 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 }
 
 
+static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
+{
+	OIIO_NAMESPACE_USING
+	using namespace std;
+	PyObject *pynodegroup, *pynode;
+	const char *filepath = NULL;
+
+	if (!PyArg_ParseTuple(args, "OOs", &pynodegroup, &pynode, &filepath)) {
+		return NULL;
+	}
+
+	enum ErrorType {
+		None = 0,
+		Warning = 0,
+		Error = 0,
+	};
+
+	auto makeErr = [](ErrorType type, const char * err) {
+		return Py_BuildValue("(is)", static_cast<int>(type), err);
+	};
+
+	/* RNA */
+	PointerRNA nodeptr;
+	RNA_pointer_create((ID*)PyLong_AsVoidPtr(pynodegroup), &RNA_ShaderNodeScript, (void*)PyLong_AsVoidPtr(pynode), &nodeptr);
+	BL::ShaderNodeScript b_node(nodeptr);
+
+	OSL::OSLQuery query;
+	if (!query.open(filepath, "")) {
+		string errStr = "OSL query failed to open ";
+		errStr += filepath;
+		return makeErr(Error, errStr.c_str());
+	}
+
+	ErrorType returnErrType = None;
+	const char * returnErrStr = nullptr;
+	const bool isMtl = RNA_std_string_get(&nodeptr, "vray_type") == "MATERIAL";
+
+	set<void*> used_sockets;
+	if (isMtl) {
+		static const std::string ciName = "Ci";
+		used_sockets.insert(b_node.outputs[ciName].ptr.data);
+	} else {
+		static const std::string texSockets[] = {"Color", "Transparency", "Alpha", "Intensity"};
+		for (int c = 0; c < sizeof(texSockets) / sizeof(texSockets[0]); c++) {
+			auto socket = b_node.outputs[texSockets[c]];
+			BLI_assert(!!socket && "Missing texture socket on TexOSL");
+			used_sockets.insert(socket.ptr.data);
+		}
+	}
+
+	static const std::string uvwGenSockName = "Uvwgen";
+	used_sockets.insert(b_node.inputs[string(uvwGenSockName)].ptr.data);
+
+
+	for(int i = 0; i < query.nparams(); i++) {
+		const OSL::OSLQuery::Parameter *param = query.getparam(i);
+
+		/* skip unsupported types */
+		if (param->varlenarray || param->isstruct || param->type.arraylen > 1) {
+			continue;
+		}
+
+		/* determine socket type */
+		string socket_type;
+		BL::NodeSocket::type_enum data_type = BL::NodeSocket::type_VALUE;
+		float default_float4[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+		float default_float = 0.0f;
+		int default_int = 0;
+		string default_string = "";
+
+		if (param->isclosure && param->isoutput) {
+			if (!isMtl) {
+				returnErrType = Warning;
+				returnErrStr = "Closure output is not supported for TexOSL";
+				continue;
+			} else {
+				socket_type = "VRaySocketMtl";
+				data_type = BL::NodeSocket::type_SHADER;
+			}
+		} else if (param->type.vecsemantics == TypeDesc::COLOR) {
+			socket_type = "VRaySocketColor";
+			data_type = BL::NodeSocket::type_RGBA;
+
+			if (param->validdefault) {
+				default_float4[0] = param->fdefault[0];
+				default_float4[1] = param->fdefault[1];
+				default_float4[2] = param->fdefault[2];
+			}
+		} else if (param->type.vecsemantics == TypeDesc::POINT ||
+		        param->type.vecsemantics == TypeDesc::VECTOR ||
+		        param->type.vecsemantics == TypeDesc::NORMAL) {
+
+			socket_type = "VRaySocketVector";
+			data_type = BL::NodeSocket::type_VECTOR;
+
+			if (param->validdefault) {
+				default_float4[0] = param->fdefault[0];
+				default_float4[1] = param->fdefault[1];
+				default_float4[2] = param->fdefault[2];
+			}
+		} else if (param->type.aggregate == TypeDesc::SCALAR) {
+			if (param->type.basetype == TypeDesc::INT) {
+				socket_type = "VRaySocketInt";
+				data_type = BL::NodeSocket::type_INT;
+				if (param->validdefault)
+					default_int = param->idefault[0];
+			} else if (param->type.basetype == TypeDesc::FLOAT) {
+				socket_type = "VRaySocketFloat";
+				data_type = BL::NodeSocket::type_VALUE;
+				if (param->validdefault)
+					default_float = param->fdefault[0];
+			} else if (param->type.basetype == TypeDesc::STRING) {
+				// TODO: strings are only for plugin inputs
+				socket_type = "VRaySocketPlugin";
+				data_type = BL::NodeSocket::type_STRING;
+				if (param->validdefault) {
+					default_string = param->sdefault[0];
+				}
+			} else {
+				continue;
+			}
+		} else {
+			continue;
+		}
+
+		/* find socket socket */
+		BL::NodeSocket b_sock(PointerRNA_NULL);
+		if (param->isoutput) {
+			b_sock = b_node.outputs[param->name.string()];
+			/* remove if type no longer matches */
+			if (b_sock && b_sock.bl_idname() != socket_type) {
+				b_node.outputs.remove(b_sock);
+				b_sock = BL::NodeSocket(PointerRNA_NULL);
+			}
+		} else {
+			b_sock = b_node.inputs[param->name.string()];
+			/* remove if type no longer matches */
+			if (b_sock && b_sock.bl_idname() != socket_type) {
+				b_node.inputs.remove(b_sock);
+				b_sock = BL::NodeSocket(PointerRNA_NULL);
+			}
+		}
+
+		if (!b_sock) {
+			/* create new socket */
+			if (param->isoutput) {
+				b_sock = b_node.outputs.create(socket_type.c_str(), param->name.c_str(), param->name.c_str());
+			} else {
+				b_sock = b_node.inputs.create(socket_type.c_str(), param->name.c_str(), param->name.c_str());
+			}
+
+			if(data_type == BL::NodeSocket::type_VALUE) {
+				RNA_float_set(&b_sock.ptr, "value", default_float);
+			} else if(data_type == BL::NodeSocket::type_INT) {
+				RNA_int_set(&b_sock.ptr, "value", default_int);
+			} else if(data_type == BL::NodeSocket::type_RGBA) {
+				RNA_float_set_array(&b_sock.ptr, "value", default_float4);
+			} else if(data_type == BL::NodeSocket::type_VECTOR) {
+				RNA_float_set_array(&b_sock.ptr, "value", default_float4);
+			} else if(data_type == BL::NodeSocket::type_STRING) {
+				RNA_string_set(&b_sock.ptr, "value", default_string.c_str());
+			}
+		}
+
+		used_sockets.insert(b_sock.ptr.data);
+	}
+
+	/* remove unused parameters */
+	bool removed;
+
+	do {
+		BL::Node::inputs_iterator b_input;
+		BL::Node::outputs_iterator b_output;
+
+		removed = false;
+
+		for (b_node.inputs.begin(b_input); b_input != b_node.inputs.end(); ++b_input) {
+			if (used_sockets.find(b_input->ptr.data) == used_sockets.end()) {
+				b_node.inputs.remove(*b_input);
+				removed = true;
+				break;
+			}
+		}
+
+		for (b_node.outputs.begin(b_output); b_output != b_node.outputs.end(); ++b_output) {
+			if (used_sockets.find(b_output->ptr.data) == used_sockets.end()) {
+				b_node.outputs.remove(*b_output);
+				removed = true;
+				break;
+			}
+		}
+	} while(removed);
+
+	return makeErr(returnErrType, returnErrStr);
+}
+
+static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
+{
+	OIIO_NAMESPACE_USING
+	using namespace std;
+	const char *inputfile = NULL, *outputfile = NULL;
+
+	if (!PyArg_ParseTuple(args, "ss", &inputfile, &outputfile))
+		return NULL;
+
+	vector<string> options;
+	string stdosl_path;
+
+	options.push_back("-o");
+	options.push_back(outputfile);
+
+	stdosl_path = "D:\\libs\\vray-appsdk\\20170307\\windows\\bin\\stdosl.h";
+
+	/* compile */
+	bool ok = false;
+	{
+		OSL::OSLCompiler compiler(&OSL::ErrorHandler::default_handler());
+		ok = compiler.compile(string_view(inputfile), options, string_view(stdosl_path));
+	}
+
+	if (ok) {
+		Py_RETURN_TRUE;
+	}
+	Py_RETURN_FALSE;
+}
+
+
 static PyMethodDef methods[] = {
     { "load",                vfb_load,   METH_VARARGS, ""},
     { "unload", (PyCFunction)vfb_unload, METH_NOARGS,  ""},
@@ -413,6 +650,9 @@ static PyMethodDef methods[] = {
 	{ "zmq_heartbeat_check", (PyCFunction)vfb_zmq_heartbeat_check, METH_NOARGS,  ""},
 
     { "getExporterTypes", vfb_get_exporter_types, METH_NOARGS, "" },
+
+    {"osl_update_node", vfb_osl_update_node_func, METH_VARARGS, ""},
+    {"osl_compile", vfb_osl_compile_func, METH_VARARGS, ""},
 
     {NULL, NULL, 0, NULL},
 };
