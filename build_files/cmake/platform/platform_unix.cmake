@@ -336,7 +336,7 @@ if(WITH_LLVM)
 		set(WITH_LLVM OFF)
 		message(STATUS "LLVM not found")
 	else()
-		file(GLOB LLVM_LIBRARIES "${LLVM_LIBPATH}/*.a")
+		set(LLVM_LIBRARIES "LLVMLTO LLVMLinker LLVMipo LLVMVectorize LLVMBitWriter LLVMTableGen LLVMDebugInfo LLVMOption LLVMX86Disassembler LLVMX86AsmParser LLVMX86CodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMX86Desc LLVMX86Info LLVMX86AsmPrinter LLVMX86Utils LLVMIRReader LLVMBitReader LLVMAsmParser LLVMMCDisassembler LLVMMCParser LLVMInstrumentation LLVMInterpreter LLVMMCJIT LLVMJIT LLVMCodeGen LLVMObjCARCOpts LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMRuntimeDyld LLVMExecutionEngine LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport")
 	endif()
 endif()
 
