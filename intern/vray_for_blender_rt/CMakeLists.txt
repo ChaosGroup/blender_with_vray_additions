@@ -89,6 +89,7 @@ endif()
 
 if (UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++11")
+	target_link_libraries(vray_for_blender_rt ${OSL_LIBRARIES})
 endif()
 list(REMOVE_DUPLICATES INC)
 blender_add_lib(vray_for_blender_rt "${HEADERS};${SOURCES}" "${INC}" "${INC_SYS}")
