@@ -295,6 +295,8 @@ if(WITH_OPENIMAGEIO)
 	endif()
 
 	set(OPENIMAGEIO_LIBRARIES
+		webp
+		gif
 		${OPENIMAGEIO_LIBRARIES}
 		${PNG_LIBRARIES}
 		${JPEG_LIBRARIES}
@@ -332,11 +334,10 @@ endif()
 
 if(WITH_LLVM)
 	find_package_wrapper(LLVM)
+
 	if(NOT LLVM_FOUND)
 		set(WITH_LLVM OFF)
 		message(STATUS "LLVM not found")
-	else()
-		set(LLVM_LIBRARIES "LLVMLTO LLVMLinker LLVMipo LLVMVectorize LLVMBitWriter LLVMTableGen LLVMDebugInfo LLVMOption LLVMX86Disassembler LLVMX86AsmParser LLVMX86CodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMX86Desc LLVMX86Info LLVMX86AsmPrinter LLVMX86Utils LLVMIRReader LLVMBitReader LLVMAsmParser LLVMMCDisassembler LLVMMCParser LLVMInstrumentation LLVMInterpreter LLVMMCJIT LLVMJIT LLVMCodeGen LLVMObjCARCOpts LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMRuntimeDyld LLVMExecutionEngine LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport")
 	endif()
 endif()
 
