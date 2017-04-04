@@ -143,7 +143,11 @@ if(WITH_CODEC_SNDFILE)
 endif()
 
 if(WITH_CODEC_FFMPEG)
-	set(FFMPEG /usr CACHE PATH "FFMPEG Directory")
+	if (NOT FFMPEG_ROOT_DIR)
+		set(FFMPEG /usr CACHE PATH "FFMPEG Directory")
+	else()
+		set(FFMPEG ${FFMPEG_ROOT_DIR})
+	endif()
 	set(FFMPEG_LIBRARIES avformat avcodec avutil avdevice swscale CACHE STRING "FFMPEG Libraries")
 
 	mark_as_advanced(FFMPEG)
