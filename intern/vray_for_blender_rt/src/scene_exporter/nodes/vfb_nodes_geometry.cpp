@@ -175,7 +175,13 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 				geomDesc.add("smooth_uv", RNA_boolean_get(&geomStaticMesh, "smooth_uv"));
 				geomDesc.add("smooth_uv_borders", RNA_boolean_get(&geomStaticMesh, "smooth_uv_borders"));
 
-				if (!m_settings.use_subsurf_to_osd) {
+				// having osd level attr means that it was added by Mesh::FillMeshData, and it will be added only if
+				// m_settings.use_subsurf_to_osd == 1 and the object has sub surface mod
+				auto * osdLevelAttr = geomDesc.get("osd_subdiv_level");
+				if (osdLevelAttr) {
+					// if we have OSD already just add the level so we can have both blender and vray subdivide the mesh
+					osdLevelAttr->attrValue.as<AttrSimpleType<int>>().value += RNA_int_get(&geomStaticMesh, "osd_subdiv_level");
+				} else {
 					geomDesc.add("osd_subdiv_type", RNA_enum_get(&geomStaticMesh, "osd_subdiv_type"));
 					geomDesc.add("osd_subdiv_level", RNA_int_get(&geomStaticMesh, "osd_subdiv_level"));
 					geomDesc.add("osd_subdiv_uvs", RNA_boolean_get(&geomStaticMesh, "osd_subdiv_uvs"));
