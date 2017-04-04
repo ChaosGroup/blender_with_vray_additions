@@ -486,7 +486,7 @@ function(setup_liblinks
 		target_link_libraries(${target} ${LAPACK_LIBRARIES})
 	endif()
 	if(WITH_LLVM)
-		target_link_libraries(${target} ${LLVM_LIBRARY})
+		target_link_libraries(${target} ${LLVM_LIBRARIES})
 	endif()
 	if(WIN32 AND NOT UNIX)
 		target_link_libraries(${target} ${PTHREADS_LIBRARIES})

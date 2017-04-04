@@ -332,10 +332,11 @@ endif()
 
 if(WITH_LLVM)
 	find_package_wrapper(LLVM)
-
 	if(NOT LLVM_FOUND)
 		set(WITH_LLVM OFF)
 		message(STATUS "LLVM not found")
+	else()
+		file(GLOB LLVM_LIBRARIES "${LLVM_LIBPATH}/*.a")
 	endif()
 endif()
 
