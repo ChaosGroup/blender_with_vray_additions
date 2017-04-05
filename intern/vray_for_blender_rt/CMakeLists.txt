@@ -40,7 +40,6 @@ set(INC
 	src/scene_exporter/utils
 
 	extern/vray-zmq-wrapper/include
-	${LIBDIR}/osl/include
 	${OPENIMAGEIO_INCLUDE_DIRS}
 	${OPENIMAGEIO_INCLUDE_DIRS}/OpenImageIO
 	${OPENEXR_INCLUDE_DIR}
