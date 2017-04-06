@@ -122,8 +122,9 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 			num_hair_vertices.resize(child_total);
 
 			for (int p = 0; p < child_total; ++p) {
-				const int seg_verts = child_cache[p]->segments;
-				tot_verts += seg_verts;
+				// segments is -1 when current particle is virtual
+				const int seg_verts = std::max(0, child_cache[p]->segments);
+				tot_verts += std::max(0, seg_verts);
 
 				(*num_hair_vertices)[p] = seg_verts;
 			}
@@ -159,7 +160,7 @@ AttrValue DataExporter::exportGeomMayaHair(BL::Object ob, BL::ParticleSystem psy
 					hair_vert_index++;
 				}
 
-				if (has_uv) {
+				if (has_uv && child_steps > 0) {
 					float *uv = (float*)&(*strand_uvw)[p];
 
 					ChildParticle *cpa = ps->child + p;
