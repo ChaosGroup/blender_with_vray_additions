@@ -178,7 +178,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
 								float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
 
-								if (attrDesc.options & ParamDesc::attrOptionInvertMultiplier) {
+								if (attrDesc.options & ParamDesc::AttrOptionInvertMultiplier) {
 									mult = std::max(0.0f, 1.0f - mult);
 								}
 

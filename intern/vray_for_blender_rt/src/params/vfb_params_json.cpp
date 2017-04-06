@@ -115,14 +115,14 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 
 				AttrDesc &attrDesc = pluginDesc.attributes[attrName];
 				attrDesc.name = attrName;
-				attrDesc.options = AttrOption_None;
+				attrDesc.options = AttrOptionNone;
 				if (v.second.count("options")) {
 					if (v.second.get_child("options").data().find("EXPORT_AS_ACOLOR")) {
-						attrDesc.options |= AttrOption_ExportAsColor;
+						attrDesc.options |= AttrOptionExportAsColor;
 					}
 
 					if (v.second.get_child("options").data().find("INVERT_MULTIPLIER")) {
-						attrDesc.options |= attrOptionInvertMultiplier;
+						attrDesc.options |= AttrOptionInvertMultiplier;
 					}
 				}
 				attrDesc.type = AttrTypeInvalid;

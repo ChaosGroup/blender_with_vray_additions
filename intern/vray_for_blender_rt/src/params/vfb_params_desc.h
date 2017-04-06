@@ -115,9 +115,9 @@ enum PluginType {
 };
 
 enum AttrOptions {
-	AttrOption_None          = 0,
-	AttrOption_ExportAsColor = 1 << 0,
-	attrOptionInvertMultiplier = (1 << 1),
+	AttrOptionNone          = 0,
+	AttrOptionExportAsColor = 1 << 0,
+	AttrOptionInvertMultiplier = (1 << 1),
 };
 
 struct AttrDesc {
