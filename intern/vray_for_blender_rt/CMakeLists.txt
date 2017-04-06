@@ -44,9 +44,15 @@ set(INC
 	${OPENIMAGEIO_INCLUDE_DIRS}/OpenImageIO
 	${OPENEXR_INCLUDE_DIR}
 	${OPENEXR_INCLUDE_DIRS}
-	${OSL_INCLUDE_DIR}
 )
 
+if (WIN32)
+	list(APPEND INC ${LIBDIR}/osl/include)
+else()
+	list(APPEND INC ${OSL_INCLUDE_DIR})
+endif()
+
+# generate good folder structure for Visual Studio
 if (WIN32)
 	macro(GroupSources curdir ignore_prefix)
 		file(GLOB children RELATIVE ${PROJECT_SOURCE_DIR}/${curdir} ${PROJECT_SOURCE_DIR}/${curdir}/*)
