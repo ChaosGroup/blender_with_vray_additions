@@ -377,6 +377,7 @@ public:
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
 
+	bool              objectIsMeshLight(BL::Object ob);
 	AttrValue         exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride = false);
 	AttrValue         exportVRayClipper(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
@@ -448,7 +449,7 @@ private:
 	AttrValue         exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
-	AttrValue         exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
+	AttrValue         exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportVRayNodeMatrix(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);

@@ -18,7 +18,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 
-AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, const ObjectOverridesAttrs & override)
 {
 	AttrValue attrValue;
 
@@ -38,12 +38,21 @@ AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &n
 		return attrValue;
 	}
 
-	const auto pluginName = "MeshLight@" + GenPluginName(node, ntree, context);
+	std::string prefix = "";
+	if (override && !override.useInstancer) {
+		prefix = override.namePrefix;
+	}
+
+	const auto pluginName = prefix + "MeshLight@" + GenPluginName(node, ntree, context);
 	PluginDesc pluginDesc(pluginName, "LightMesh");
 	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 
 	pluginDesc.add("geometry", exportLinkedSocket(ntree, geomSock, context));
-	pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	if (override) {
+		pluginDesc.add("transform", override.tm);
+	} else {
+		pluginDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	}
 	pluginDesc.add("use_tex", pluginDesc.contains("tex"));
 
 	return m_exporter->export_plugin(pluginDesc);

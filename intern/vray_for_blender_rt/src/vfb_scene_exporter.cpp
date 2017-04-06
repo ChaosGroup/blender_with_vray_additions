@@ -734,10 +734,16 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
 				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, num_instances++));
+				// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
 
-				if (is_light || RNA_boolean_get(&vrayClipper, "enabled")) {
+				// check only if we havent found any particle objects not suitable for instancer
+				if (dupli_use_instancer) {
 					// if any of the duplicated objects is clipper or light we cant use instancer
-					dupli_use_instancer = false;
+					if (is_light || RNA_boolean_get(&vrayClipper, "enabled")) {
+						dupli_use_instancer = false;
+					} else if (m_data_exporter.objectIsMeshLight(parentOb)) {
+						dupli_use_instancer = false;
+					}
 				}
 			}
 		}
@@ -781,6 +787,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		overrideAttrs.override = true;
 		overrideAttrs.dupliEmitter = ob;
 
+		// we dont check here for mesh light since data exporter will not export nodes for mesh lights
+		// TODO: if we check here it might be faster to skip the redundent call to sync_object
 		if (is_light || !dupli_use_instancer) {
 			overrideAttrs.useInstancer = false;
 

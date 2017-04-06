@@ -117,197 +117,229 @@ bool DataExporter::isObjectInHideList(BL::Object ob, const std::string listName)
 	return false;
 }
 
+bool DataExporter::objectIsMeshLight(BL::Object ob)
+{
+	// ob must have ntree
+	BL::NodeTree ntree = Nodes::GetNodeTree(ob);
+	if (!ntree) {
+		return false;
+	}
+
+	// ntree must have output node
+	BL::Node nodeOutput = Nodes::GetNodeByType(ntree, "VRayNodeObjectOutput");
+	if (!nodeOutput) {
+		return false;
+	}
+
+	// output must have geom linked socket
+	BL::NodeSocket geometrySocket = Nodes::GetInputSocketByName(nodeOutput, "Geometry");
+	if (!geometrySocket || !geometrySocket.is_linked()) {
+		return false;
+	}
+
+	NodeContext context(m_data, m_scene, ob);
+	auto geomNode = getConnectedNode(ntree, geometrySocket, context);
+	if (!geomNode || geomNode.mute()) {
+		return false;
+	}
+
+	return geomNode.bl_idname() == "VRayNodeLightMesh";
+}
+
 AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {
-	AttrPlugin  node;
+	AttrPlugin node;
 
 	BL::ID data(ob.data());
-	if (data) {
-		AttrPlugin  geom;
-		AttrPlugin  mtl;
+	if (!data) {
+		return node;
+	}
 
-		bool is_updated      = check_updated ? ob.is_updated()      : true;
-		bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+	AttrPlugin  geom;
+	AttrPlugin  mtl;
 
-		// we are syncing dupli, without instancer -> we need to export the node
-		if (override && !override.useInstancer) {
-			is_updated = true;
-		}
+	bool is_updated      = check_updated ? ob.is_updated()      : true;
+	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
 
-		// we are syncing "undo" state so check if this object was changed in the "do" state
-		if (!is_updated && shouldSyncUndoneObject(ob)) {
-			is_updated = true;
-		}
+	// we are syncing dupli, without instancer -> we need to export the node
+	if (override && !override.useInstancer) {
+		is_updated = true;
+	}
 
-		if (!is_updated && ob.parent()) {
-			BL::Object parent(ob.parent());
-			is_updated = parent.is_updated();
-		}
-		if (!is_data_updated && ob.parent()) {
-			BL::Object parent(ob.parent());
-			is_data_updated = parent.is_updated_data();
-		}
+	// we are syncing "undo" state so check if this object was changed in the "do" state
+	if (!is_updated && shouldSyncUndoneObject(ob)) {
+		is_updated = true;
+	}
 
-		BL::NodeTree ntree = Nodes::GetNodeTree(ob);
-		if (ntree) {
-			is_data_updated |= ntree.is_updated();
-			DataExporter::tag_ntree(ntree, false);
-		}
+	if (!is_updated && ob.parent()) {
+		BL::Object parent(ob.parent());
+		is_updated = parent.is_updated();
+	}
+	if (!is_data_updated && ob.parent()) {
+		BL::Object parent(ob.parent());
+		is_data_updated = parent.is_updated_data();
+	}
 
-		bool isMeshLight = false;
+	BL::NodeTree ntree = Nodes::GetNodeTree(ob);
+	if (ntree) {
+		is_data_updated |= ntree.is_updated();
+		DataExporter::tag_ntree(ntree, false);
+	}
 
-		// XXX: Check for valid mesh?
-		if (!ntree) {
-			if (!is_data_updated && !m_layer_changed || !m_settings.export_meshes) {
-				// nothing changed just get the name
-				geom = AttrPlugin(getMeshName(ob));
-			} else if (is_data_updated) {
-				// data was updated - must export mesh
+	bool isMeshLight = false;
+
+	// XXX: Check for valid mesh?
+	if (!ntree) {
+		if (!is_data_updated && !m_layer_changed || !m_settings.export_meshes) {
+			// nothing changed just get the name
+			geom = AttrPlugin(getMeshName(ob));
+		} else if (is_data_updated) {
+			// data was updated - must export mesh
+			geom = exportGeomStaticMesh(ob, override);
+			if (!geom) {
+				PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
+			}
+		} else if (m_layer_changed) {
+			// changed layer, maybe this object's geom is still not exported
+			const auto name = getMeshName(ob);
+			if (m_exporter->getPluginManager().inCache(name)) {
+				geom = AttrPlugin(name);
+			} else {
 				geom = exportGeomStaticMesh(ob, override);
 				if (!geom) {
 					PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
 				}
-			} else if (m_layer_changed) {
-				// changed layer, maybe this object's geom is still not exported
-				const auto name = getMeshName(ob);
-				if (m_exporter->getPluginManager().inCache(name)) {
-					geom = AttrPlugin(name);
-				} else {
-					geom = exportGeomStaticMesh(ob, override);
-					if (!geom) {
-						PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
-					}
-				}
 			}
+		}
 
-			if (is_updated || m_layer_changed) {
-				// NOTE: It's easier just to reexport full material
-				mtl = exportMtlMulti(ob);
-			}
-		} else if (is_updated || is_data_updated || m_layer_changed) {
-			// Export object data from node tree
-			//
-			BL::Node nodeOutput = Nodes::GetNodeByType(ntree, "VRayNodeObjectOutput");
-			if (!nodeOutput) {
-				PRINT_ERROR("Object: %s Node tree: %s => Output node not found!",
+		if (is_updated || m_layer_changed) {
+			// NOTE: It's easier just to reexport full material
+			mtl = exportMtlMulti(ob);
+		}
+	} else if (is_updated || is_data_updated || m_layer_changed) {
+		// Export object data from node tree
+		//
+		BL::Node nodeOutput = Nodes::GetNodeByType(ntree, "VRayNodeObjectOutput");
+		if (!nodeOutput) {
+			PRINT_ERROR("Object: %s Node tree: %s => Output node not found!",
+				ob.name().c_str(), ntree.name().c_str());
+		}
+		else {
+			BL::NodeSocket geometrySocket = Nodes::GetInputSocketByName(nodeOutput, "Geometry");
+			if (!(geometrySocket && geometrySocket.is_linked())) {
+				PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!",
 					ob.name().c_str(), ntree.name().c_str());
 			}
 			else {
-				BL::NodeSocket geometrySocket = Nodes::GetInputSocketByName(nodeOutput, "Geometry");
-				if (!(geometrySocket && geometrySocket.is_linked())) {
-					PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!",
+				NodeContext context(m_data, m_scene, ob);
+				BL::Node geometryNode = DataExporter::getConnectedNode(ntree, geometrySocket, context);
+				isMeshLight = geometryNode.bl_idname() == "VRayNodeLightMesh";
+
+				if (isMeshLight && override) {
+					// this is mesh light with override - must export manually since we need to pass our override
+					geom = exportVRayNodeLightMesh(ntree, geometryNode, geometrySocket, context, override);
+				} else {
+					geom = DataExporter::exportSocket(ntree, geometrySocket, context);
+				}
+
+				if (!geom) {
+					PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!", ob.name().c_str(), ntree.name().c_str());
+					return node;
+				}
+				// Check if connected node is a LightMesh,
+				// if so there is no need to export materials
+				if (isMeshLight) {
+					// Add LightMesh plugin to plugins generated by current object
+					auto lock = raiiLock();
+					m_id_track.insert(ob, geom.plugin);
+					return node; // nothing left to do
+				}
+				BL::NodeSocket materialSocket = Nodes::GetInputSocketByName(nodeOutput, "Material");
+				if (!(materialSocket && materialSocket.is_linked())) {
+					PRINT_ERROR("Object: %s Node tree: %s => Material node is `not set! Using object materials.",
 						ob.name().c_str(), ntree.name().c_str());
+
+					// Use existing object materials
+					mtl = exportMtlMulti(ob);
 				}
 				else {
-					NodeContext context(m_data, m_scene, ob);
-
-					geom = DataExporter::exportSocket(ntree, geometrySocket, context);
-					if (!geom) {
-						PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!",
+					mtl = DataExporter::exportSocket(ntree, materialSocket, context);
+					if (!mtl) {
+						PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
 							ob.name().c_str(), ntree.name().c_str());
 					}
-					else {
-						BL::Node geometryNode = DataExporter::getConnectedNode(ntree, geometrySocket, context);
-
-						isMeshLight = geometryNode.bl_idname() == "VRayNodeLightMesh";
-
-						// Check if connected node is a LightMesh,
-						// if so there is no need to export materials
-						if (isMeshLight) {
-							// Add LightMesh plugin to plugins generated by current object
-							auto lock = raiiLock();
-							m_id_track.insert(ob, geom.plugin);
-						}
-						else {
-							BL::NodeSocket materialSocket = Nodes::GetInputSocketByName(nodeOutput, "Material");
-							if (!(materialSocket && materialSocket.is_linked())) {
-								PRINT_ERROR("Object: %s Node tree: %s => Material node is not set! Using object materials.",
-									ob.name().c_str(), ntree.name().c_str());
-
-								// Use existing object materials
-								mtl = exportMtlMulti(ob);
-							}
-							else {
-								mtl = DataExporter::exportSocket(ntree, materialSocket, context);
-								if (!mtl) {
-									PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
-										ob.name().c_str(), ntree.name().c_str());
-								}
-							}
-						}
-					}
 				}
 			}
 		}
+	}
 
-		const std::string & exportName = override.namePrefix + getNodeName(ob);
+	const std::string & exportName = override.namePrefix + getNodeName(ob);
 
-		// If no material is generated use default or override
-		if (!mtl) {
-			mtl = getDefaultMaterial();
+	// If no material is generated use default or override
+	if (!mtl) {
+		mtl = getDefaultMaterial();
+	}
+
+	if (!isMeshLight && geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
+		PointerRNA mtlWrapper = RNA_pointer_get(&vrayObject, "MtlWrapper");
+
+		if (RNA_boolean_get(&mtlWrapper, "use")) {
+			PluginDesc wrapper("MtlWrapper@" + exportName, "MtlWrapper");
+			wrapper.add("base_material", mtl);
+			setAttrsFromPropGroupAuto(wrapper, &mtlWrapper, "MtlWrapper");
+			mtl = m_exporter->export_plugin(wrapper);
 		}
 
-		if (!isMeshLight && geom && mtl && (is_updated || is_data_updated || m_layer_changed)) {
-			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-			PointerRNA mtlRenderStats = RNA_pointer_get(&vrayObject, "MtlRenderStats");
-			PointerRNA mtlWrapper = RNA_pointer_get(&vrayObject, "MtlWrapper");
 
-			if (RNA_boolean_get(&mtlWrapper, "use")) {
-				PluginDesc wrapper("MtlWrapper@" + exportName, "MtlWrapper");
-				wrapper.add("base_material", mtl);
-				setAttrsFromPropGroupAuto(wrapper, &mtlWrapper, "MtlWrapper");
-				mtl = m_exporter->export_plugin(wrapper);
-			}
+		bool doExportRenderStats = false;
+		const bool useObStats = RNA_boolean_get(&mtlRenderStats, "use");
+		PluginDesc renderStats("MtlRenderStats@" + exportName, "MtlRenderStats");
+		setAttrsFromPropGroupAuto(renderStats, &mtlRenderStats, "MtlRenderStats");
 
+		const int visibilityCount = 5;
+		static const std::string cameraToObHideNames[visibilityCount][2] = {
+			{"camera_visibility", "camera"},
+			{"gi_visibility", "gi"},
+			{"shadows_visibility", "shadows"},
+			{"reflections_visibility", "reflect"},
+			{"refractions_visibility", "refract"},
+		};
+		renderStats.add("base_mtl", mtl);
 
-			bool doExportRenderStats = false;
-			const bool useObStats = RNA_boolean_get(&mtlRenderStats, "use");
-			PluginDesc renderStats("MtlRenderStats@" + exportName, "MtlRenderStats");
-			setAttrsFromPropGroupAuto(renderStats, &mtlRenderStats, "MtlRenderStats");
-
-			const int visibilityCount = 5;
-			static const std::string cameraToObHideNames[visibilityCount][2] = {
-				{"camera_visibility", "camera"},
-				{"gi_visibility", "gi"},
-				{"shadows_visibility", "shadows"},
-				{"reflections_visibility", "reflect"},
-				{"refractions_visibility", "refract"},
-			};
-			renderStats.add("base_mtl", mtl);
-
-			// this complicated code merges hide from Object tab "Render" and camera visibility lists
-			for (int c = 0; c < visibilityCount; ++c) {
-				auto * attr = renderStats.get(cameraToObHideNames[c][0]);
-				if (attr) {
-					if (useObStats) {
-						attr->attrValue.as<AttrSimpleType<int>>() = attr->attrValue.as<AttrSimpleType<int>>() && !isObjectInHideList(ob, cameraToObHideNames[c][1]);
-					} else {
-						// "Render" tab is inactive on object, ignore what we got from there
-						attr->attrValue.as<AttrSimpleType<int>>() = !isObjectInHideList(ob, cameraToObHideNames[c][1]);
-					}
-					doExportRenderStats = doExportRenderStats || !attr->attrValue.as<AttrSimpleType<int>>();
+		// this complicated code merges hide from Object tab "Render" and camera visibility lists
+		for (int c = 0; c < visibilityCount; ++c) {
+			auto * attr = renderStats.get(cameraToObHideNames[c][0]);
+			if (attr) {
+				if (useObStats) {
+					attr->attrValue.as<AttrSimpleType<int>>() = attr->attrValue.as<AttrSimpleType<int>>() && !isObjectInHideList(ob, cameraToObHideNames[c][1]);
+				} else {
+					// "Render" tab is inactive on object, ignore what we got from there
+					attr->attrValue.as<AttrSimpleType<int>>() = !isObjectInHideList(ob, cameraToObHideNames[c][1]);
 				}
+				doExportRenderStats = doExportRenderStats || !attr->attrValue.as<AttrSimpleType<int>>();
 			}
-
-			if (doExportRenderStats) {
-				mtl = m_exporter->export_plugin(renderStats);
-			}
-
-			PluginDesc nodeDesc(exportName, "Node");
-			nodeDesc.add("geometry", geom);
-			nodeDesc.add("material", mtl);
-			nodeDesc.add("objectID", ob.pass_index());
-			if (override) {
-				nodeDesc.add("visible", override.visible);
-				nodeDesc.add("transform", override.tm);
-			}
-			else {
-				nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
-				nodeDesc.add("visible", isObjectVisible(ob));
-			}
-
-			node = m_exporter->export_plugin(nodeDesc);
 		}
+
+		if (doExportRenderStats) {
+			mtl = m_exporter->export_plugin(renderStats);
+		}
+
+		PluginDesc nodeDesc(exportName, "Node");
+		nodeDesc.add("geometry", geom);
+		nodeDesc.add("material", mtl);
+		nodeDesc.add("objectID", ob.pass_index());
+		if (override) {
+			nodeDesc.add("visible", override.visible);
+			nodeDesc.add("transform", override.tm);
+		}
+		else {
+			nodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+			nodeDesc.add("visible", isObjectVisible(ob));
+		}
+
+		node = m_exporter->export_plugin(nodeDesc);
 	}
 
 	return node;
