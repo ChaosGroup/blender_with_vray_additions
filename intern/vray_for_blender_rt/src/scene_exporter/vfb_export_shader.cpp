@@ -81,8 +81,6 @@ AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Nod
 }
 
 AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context) {
-	// this node is pure blender's node so it has no "vray" property
-
 	BL::NodeSocket toSocket(Nodes::GetConnectedSocket(fromSocket));
 	if (!toSocket) {
 		// this should not happen since we get here if toSocket is valid

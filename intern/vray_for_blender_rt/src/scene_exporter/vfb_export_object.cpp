@@ -87,7 +87,7 @@ void DataExporter::refreshHideLists()
 	}
 
 	static const std::string typeNames[] = {"camera", "gi", "reflect", "refract", "shadows"};
-	std::unordered_set<BL::Object> autoObjects;
+	HashSet<BL::Object> autoObjects;
 	bool autoObjectsInit = false;
 
 	for (const auto & type : typeNames) {

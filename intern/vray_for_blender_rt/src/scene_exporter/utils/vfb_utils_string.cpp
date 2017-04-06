@@ -25,7 +25,7 @@
 #include <Python.h>
 
 
-std::string VRayForBlender::String::GetUniqueName(StrSet &namesSet, const std::string &name)
+std::string VRayForBlender::String::GetUniqueName(HashSet<std::string> &namesSet, const std::string &name)
 {
 	std::string uniqueName(name);
 

@@ -383,7 +383,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 
 
 	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription("TexLayered");
-	std::unordered_set<std::string> mappableValues = {"alpha", "alpha_mult", "alpha_offset", "nouvw_color", "color_mult", "color_offset"};
+	HashSet<std::string> mappableValues = {"alpha", "alpha_mult", "alpha_offset", "nouvw_color", "color_mult", "color_offset"};
 
 	for (const auto &descIt : pluginParamDesc.attributes) {
 		const auto & attrName = descIt.second.name;

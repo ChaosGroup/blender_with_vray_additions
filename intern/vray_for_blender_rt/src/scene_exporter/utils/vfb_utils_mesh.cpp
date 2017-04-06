@@ -19,12 +19,9 @@
 #include "vfb_utils_mesh.h"
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
+#include "vfb_typedefs.h"
 
 #include "utils/cgr_hash.h"
-
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-
 
 using namespace VRayForBlender;
 
@@ -60,8 +57,8 @@ struct MapVertexHash {
 	}
 };
 
-typedef boost::unordered_set<ChanVertex, MapVertexHash>  ChanSet;
-typedef boost::unordered_map<std::string, ChanSet>       ChanMap;
+typedef HashSet<ChanVertex, MapVertexHash>  ChanSet;
+typedef HashMap<std::string, ChanSet>       ChanMap;
 
 
 struct MapChannelBase {

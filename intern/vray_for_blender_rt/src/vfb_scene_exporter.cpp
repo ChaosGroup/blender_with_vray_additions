@@ -183,8 +183,8 @@ BL::Camera FrameExportManager::getActiveCamera()
 
 
 // TODO: possible data race when multiple exporters start at the same time
-static StrSet RenderSettingsPlugins;
-static StrSet RenderGIPlugins;
+static HashSet<std::string> RenderSettingsPlugins;
+static HashSet<std::string> RenderGIPlugins;
 
 namespace {
 MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)

@@ -30,9 +30,6 @@
 
 #include "BLI_math.h"
 
-#include <boost/shared_ptr.hpp>
-#include <boost/unordered_map.hpp>
-
 
 namespace VRayForBlender {
 
@@ -115,10 +112,10 @@ struct PluginAttr {
 	AttrValue    attrValue;
 	double       time;
 };
-typedef boost::unordered_map<std::string, PluginAttr> PluginAttrs;
+typedef HashMap<std::string, PluginAttr> PluginAttrs;
 
 struct PluginDesc {
-	typedef boost::unordered_map<std::string, PluginDesc> PluginAttrsCache;
+	typedef HashMap<std::string, PluginDesc> PluginAttrsCache;
 	static PluginAttrsCache cache;
 
 	std::string  pluginName;

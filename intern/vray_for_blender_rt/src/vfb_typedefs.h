@@ -19,11 +19,38 @@
 #ifndef VRAY_FOR_BLENDER_STD_TYPEDEFS_H
 #define VRAY_FOR_BLENDER_STD_TYPEDEFS_H
 
-#include <set>
+#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 #include <string>
 
-typedef std::set<std::string>     StrSet;
-typedef std::vector<std::string>  StrVector;
+#include "vfb_rna.h"
+
+// do this here so it is availabe everywhere we might use hash map/set
+namespace std {
+	template <> struct hash<BL::Object> {
+		size_t operator()(BL::Object ob) const {
+			return std::hash<std::string>()(ob.name());
+		}
+	};
+
+	template <> struct hash<BL::Material> {
+		size_t operator()(BL::Material mat) const {
+			return std::hash<std::string>()(mat.name());
+		}
+	};
+};
+
+typedef std::vector<std::string> StrVector;
+
+template <typename KeyT, typename HashT = std::hash<KeyT>>
+using HashSet = std::unordered_set<KeyT, HashT>;
+
+template <typename KeyT, typename ValT, typename HashT = std::hash<KeyT>>
+using HashMap = std::unordered_map<KeyT, ValT, HashT>;
+
+
+typedef HashSet<std::string> StringHashSet;
+
 
 #endif // VRAY_FOR_BLENDER_STD_TYPEDEFS_H

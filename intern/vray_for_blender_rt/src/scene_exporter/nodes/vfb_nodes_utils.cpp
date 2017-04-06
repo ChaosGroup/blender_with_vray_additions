@@ -145,9 +145,9 @@ void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 }
 
 
-std::unordered_set<BL::Object> DataExporter::getObjectList(const std::string ob_name, const std::string group_name)
+HashSet<BL::Object> DataExporter::getObjectList(const std::string ob_name, const std::string group_name)
 {
-	std::unordered_set<BL::Object> objects, additional;
+	HashSet<BL::Object> objects, additional;
 
 	for (int c = 0; c < m_scene.objects.length(); ++c) {
 		if (m_scene.objects[c].name() == ob_name) {

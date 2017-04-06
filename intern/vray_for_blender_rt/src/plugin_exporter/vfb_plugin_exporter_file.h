@@ -25,7 +25,6 @@
 #include "vfb_export_settings.h"
 #include "vfb_thread_manager.h"
 
-#include <unordered_map>
 
 namespace VRayForBlender {
 
@@ -49,8 +48,8 @@ public:
 private:
 
 private:
-	typedef std::unordered_map<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> TypeToWriterMap;
-	typedef std::unordered_map<intptr_t, std::shared_ptr<PluginWriter>> FileToWriterMap;
+	typedef HashMap<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> TypeToWriterMap;
+	typedef HashMap<intptr_t, std::shared_ptr<PluginWriter>> FileToWriterMap;
 
 
 	FileToWriterMap               m_fileWritersMap;

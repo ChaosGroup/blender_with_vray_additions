@@ -20,7 +20,6 @@
 #define VRAY_FOR_BLENDER_PLUGIN_MANAGER_H
 
 #include <vfb_plugin_attrs.h>
-#include <boost/unordered_map.hpp>
 
 #include <mutex>
 #include "utils/cgr_hash.h"
@@ -51,7 +50,7 @@ private:
 		std::string                              m_name;
 		std::string                              m_id;
 		MHash                                    m_allHash;
-		std::unordered_map<std::string, MHash> m_values;
+		HashMap<std::string, MHash> m_values;
 	};
 
 	PluginDescHash makeHash(const PluginDesc &pluginDesc) const;
@@ -59,8 +58,8 @@ private:
 	std::pair<bool, PluginDesc> diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const;
 
 	// name -> PluginDesc
-	std::unordered_map<std::string, PluginDescHash> m_cache;
-	boost::unordered_map<std::string, PluginDesc> cache;
+	HashMap<std::string, PluginDescHash> m_cache;
+	HashMap<std::string, PluginDesc> cache;
 	mutable std::mutex cacheLock;
 };
 

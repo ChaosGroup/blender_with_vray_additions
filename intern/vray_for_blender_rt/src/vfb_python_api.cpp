@@ -442,7 +442,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 	const char * returnErrStr = nullptr;
 	const bool isMtl = RNA_std_string_get(&nodeptr, "vray_type") == "MATERIAL";
 
-	set<void*> used_sockets;
+	HashSet<void*> used_sockets;
 	if (isMtl) {
 		static const std::string ciName = "Ci";
 		used_sockets.insert(b_node.outputs[ciName].ptr.data);

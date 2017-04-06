@@ -26,7 +26,6 @@
 #include "zmq_wrapper.hpp"
 #include "zmq_message.hpp"
 
-#include <unordered_map>
 #include <stack>
 #include <vector>
 
@@ -56,7 +55,7 @@ public:
 		void update(const VRayBaseTypes::AttrImage &img, ZmqExporter * exp, bool fixImage);
 	};
 
-	typedef std::unordered_map<RenderChannelType, ZmqRenderImage, std::hash<int>> ImageMap;
+	typedef HashMap<RenderChannelType, ZmqRenderImage, std::hash<int>> ImageMap;
 
 	ZmqExporter(const ExporterSettings & settings);
 	virtual            ~ZmqExporter();

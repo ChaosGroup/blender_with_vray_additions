@@ -117,16 +117,16 @@ void IdTrack::reset_usage() {
 	}
 }
 
-std::unordered_set<std::string> IdTrack::getAllObjectPlugins(BL::Object ob) const {
+HashSet<std::string> IdTrack::getAllObjectPlugins(BL::Object ob) const {
 	auto iter = data.find(DataExporter::getIdUniqueName(ob));
 	if (iter == data.end()) {
-		return {};
+		return HashSet<std::string>();
 	}
 
-	std::unordered_set<std::string> set;
+	HashSet<std::string> set;
 	// get all plugins for selected object
 	std::transform(iter->second.plugins.begin(), iter->second.plugins.end(), std::inserter(set, set.begin()),
-		std::bind(&std::unordered_map<std::string, PluginInfo>::value_type::first, std::placeholders::_1));
+		std::bind(&HashMap<std::string, PluginInfo>::value_type::first, std::placeholders::_1));
 	return set;
 }
 

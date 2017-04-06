@@ -26,8 +26,6 @@
 #include "vfb_render_view.h"
 
 #include "DNA_ID.h"
-#include <map>
-#include <unordered_set>
 #include <stack>
 #include <vector>
 #include <deque>
@@ -151,16 +149,8 @@ struct IdCache {
 	}
 
 private:
-	std::set<void*> m_data;
+	HashSet<void*> m_data;
 
-};
-
-namespace std {
-	template <> struct hash<BL::Object> {
-		size_t operator()(BL::Object ob) const {
-			return std::hash<std::string>()(ob.name());
-		}
-	};
 };
 
 // Used to track object deletion / creation
@@ -183,7 +173,7 @@ struct IdTrack {
 
 	struct IdDep {
 		IdDep(): object(PointerRNA_NULL) {}
-		std::unordered_map<std::string, PluginInfo> plugins;
+		HashMap<std::string, PluginInfo> plugins;
 		BL::Object object;
 		int used;
 	};
@@ -193,7 +183,7 @@ struct IdTrack {
 	void              insert(BL::Object ob, const std::string &plugin, PluginType type = PluginType::NONE);
 	void              reset_usage();
 
-	std::unordered_set<std::string> getAllObjectPlugins(BL::Object ob) const;
+	HashSet<std::string> getAllObjectPlugins(BL::Object ob) const;
 
 	typedef std::map<std::string, IdDep> TrackMap;
 	TrackMap data;
@@ -212,7 +202,7 @@ struct SettingsLightLinker {
 		/// False if objectList contains only objects to be included for this light
 		bool                           isExcludeList;
 		ExcludeType                    excludeType;
-		std::unordered_set<BL::Object> objectList;
+		HashSet<BL::Object> objectList;
 	};
 
 	/// Set the LightLink for a given light plugin, steals the link object
@@ -221,7 +211,7 @@ struct SettingsLightLinker {
 	}
 
 	/// Maps light plugin name to a list of include or exlude objects
-	std::unordered_map<std::string, LightLink> lightsMap;
+	HashMap<std::string, LightLink> lightsMap;
 };
 
 
@@ -237,7 +227,7 @@ struct LightSelect {
 	}
 
 	/// map lamb object to list of pairs: [Lamp -> [ChanType -> [chan1, chan2]]]
-	std::unordered_map<BL::Object, std::unordered_map<ChannelType, std::vector<std::string>, std::hash<int>>> lightSelectMap;
+	HashMap<BL::Object, HashMap<ChannelType, std::vector<std::string>, std::hash<int>>> lightSelectMap;
 };
 
 struct DataDefaults {
@@ -276,7 +266,7 @@ struct ObjectOverridesAttrs {
 
 class DataExporter {
 	// one state hold all objects that were exported on a given sync
-	typedef std::unordered_set<std::string> UndoStateObjects;
+	typedef StringHashSet UndoStateObjects;
 	typedef std::deque<UndoStateObjects> UndoStack;
 public:
 	enum ObjectVisibility {
@@ -303,8 +293,8 @@ public:
 		UserAttributeString,
 	};
 
-	typedef std::map<BL::Material, AttrValue> MaterialCache;
-	typedef std::unordered_map<std::string, std::unordered_set<BL::Object>> ObjectHideMap;
+	typedef HashMap<BL::Material, AttrValue> MaterialCache;
+	typedef HashMap<std::string, HashSet<BL::Object>> ObjectHideMap;
 
 	DataExporter(ExporterSettings & expSettings)
 	    : m_data(PointerRNA_NULL)
@@ -337,7 +327,7 @@ public:
 
 	static void              tag_ntree(BL::NodeTree ntree, bool updated=true);
 
-	std::unordered_set<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
+	HashSet<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
 
 	void              fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
 	void              fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
@@ -500,7 +490,7 @@ public:
 	}
 
 	std::mutex        m_maps_mtx;
-	StrSet            RenderChannelNames;
+	HashSet<std::string> RenderChannelNames;
 
 	/// Caches ID's pointers for every sync, if ID is in the cache it is skipped (object & data)
 	IdCache           m_id_cache;
