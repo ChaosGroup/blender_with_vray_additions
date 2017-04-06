@@ -177,6 +177,9 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 				else if (attrType == "PLUGIN") {
 					attrDesc.type = AttrTypePlugin;
 				}
+				else if (attrType == "GEOMETRY") {
+					attrDesc.type = AttrTypePluginGeometry;
+				}
 				else if (attrType == "BRDF") {
 					attrDesc.type = AttrTypePluginBRDF;
 				}
