@@ -75,7 +75,7 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 		else if (propType == PROP_FLOAT) {
 			if (NOT(RNA_property_array_check(prop))) {
 				const float value = RNA_float_get(propGroup, attrName.c_str());
-				if (attrDesc.options & ParamDesc::AttrOption_ExportAsColor) {
+				if (attrDesc.options & ParamDesc::AttrOptionExportAsColor) {
 					pluginDesc.add(attrName, AttrAColor(value));
 				} else {
 					pluginDesc.add(attrName, value);
