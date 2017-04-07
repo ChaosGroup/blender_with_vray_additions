@@ -90,7 +90,8 @@ AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node
 
 	const std::string outputClosure = toSocket.name();
 	std::string pluginId;
-	if (node.bl_idname() == "VRayNodeMtlOSL") {
+	bool isMtl = node.bl_idname() == "VRayNodeMtlOSL";
+	if (isMtl) {
 		pluginId = "MtlOSL";
 	} else {
 		pluginId = "TexOSL";
@@ -112,7 +113,11 @@ AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node
 
 	const auto &scriptPath = RNA_std_string_get(&node.ptr, "export_filepath");
 	plgDesc.add("shader_file", scriptPath);
-	plgDesc.add("output_closure", outputClosure);
+	if (isMtl) {
+		plgDesc.add("output_closure", outputClosure);
+	} else {
+		plgDesc.add("output_color", outputClosure);
+	}
 	setAttrsFromNodeAuto(ntree, node, fromSocket, context, plgDesc);
 
 	return m_exporter->export_plugin(plgDesc);
