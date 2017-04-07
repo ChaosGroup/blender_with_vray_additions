@@ -27,10 +27,6 @@
 
 #include <fstream>
 
-#ifdef WITH_OSL
-	#include <OSL/oslquery.h>
-#endif
-
 
 AttrValue convertToOSLArgument(const AttrValue & val) {
 	if (val.type == ValueTypeColor) {
@@ -50,16 +46,9 @@ AttrValue convertToOSLArgument(const AttrValue & val) {
 	}
 }
 
-AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, const std::string & oslBytecode) {
-	AttrListValue list;
-
-#ifdef WITH_OSL
+AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, OSL::OSLQuery & query) {
 	OIIO_NAMESPACE_USING
-	OSL::OSLQuery query;
-	if (!query.open_bytecode(oslBytecode)) {
-		PRINT_ERROR("Failed to load script for node \"%s\"", node.name().c_str());
-		return list;
-	}
+	AttrListValue list;
 
 	for (int c = 0; c < query.nparams(); c++) {
 		const OSL::OSLQuery::Parameter *param = query.getparam(c);
@@ -87,7 +76,6 @@ AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Nod
 			}
 		}
 	}
-#endif
 
 	return list;
 }
@@ -111,10 +99,16 @@ AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node
 	const std::string pluginName = pluginId + "|" + GenPluginName(node, ntree, context);
 	PluginDesc plgDesc(pluginName, pluginId);
 
+	OSL::OSLQuery query;
 	// if this is inline script - save it to file
 	// TODO: what about DR and zmq?
 	const auto & scriptData = RNA_std_string_get(&node.ptr, "bytecode");
-	plgDesc.add("input_parameters", buildScriptArgumentList(ntree, node, context, scriptData));
+	if (!query.open_bytecode(scriptData)) {
+		PRINT_ERROR("Failed to load script for node \"%s\"", node.name().c_str());
+		plgDesc.add("input_parameters", AttrListValue());
+	} else {
+		plgDesc.add("input_parameters", buildScriptArgumentList(ntree, node, context, query));
+	}
 
 	const auto &scriptPath = RNA_std_string_get(&node.ptr, "export_filepath");
 	plgDesc.add("shader_file", scriptPath);

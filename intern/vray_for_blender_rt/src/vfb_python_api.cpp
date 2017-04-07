@@ -31,17 +31,15 @@
 #include "zmq_wrapper.hpp"
 #include "vfb_plugin_exporter_zmq.h"
 
-#ifdef WITH_OSL
-	// OSL
-	#include <OSL/oslquery.h>
-	#include <OSL/oslconfig.h>
-	#include <OSL/oslcomp.h>
-	#include <OSL/oslexec.h>
+// OSL
+#include <OSL/oslquery.h>
+#include <OSL/oslconfig.h>
+#include <OSL/oslcomp.h>
+#include <OSL/oslexec.h>
 
-	// OIIO
-	#include <errorhandler.h>
-	#include <string_view.h>
-#endif
+// OIIO
+#include <errorhandler.h>
+#include <string_view.h>
 
 VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
@@ -409,6 +407,7 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 
 static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 {
+	OIIO_NAMESPACE_USING
 	using namespace std;
 	PyObject *pynodegroup, *pynode;
 	const char *filepath = NULL;
@@ -426,11 +425,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 	auto makeErr = [](ErrorType type, const char * err) {
 		return Py_BuildValue("(is)", static_cast<int>(type), err);
 	};
-	ErrorType returnErrType = Error;
-	const char * returnErrStr = "OSL not supported";
 
-#ifdef WITH_OSL
-	OIIO_NAMESPACE_USING
 	/* RNA */
 	PointerRNA nodeptr;
 	RNA_pointer_create((ID*)PyLong_AsVoidPtr(pynodegroup), &RNA_ShaderNodeScript, (void*)PyLong_AsVoidPtr(pynode), &nodeptr);
@@ -443,6 +438,8 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		return makeErr(Error, errStr.c_str());
 	}
 
+	ErrorType returnErrType = None;
+	const char * returnErrStr = nullptr;
 	const bool isMtl = RNA_std_string_get(&nodeptr, "vray_type") == "MATERIAL";
 
 	HashSet<void*> used_sockets;
@@ -602,13 +599,11 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		}
 	} while(removed);
 
-#endif
 	return makeErr(returnErrType, returnErrStr);
 }
 
 static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
 {
-#ifdef WITH_OSL
 	OIIO_NAMESPACE_USING
 	using namespace std;
 	const char *inputfile = nullptr, *outputfile = nullptr, *stdoslfile = nullptr;
@@ -634,8 +629,6 @@ static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
 		Py_RETURN_TRUE;
 	}
 	PRINT_WARN("OSL compilation failed using \"\" path for stdosl.h", stdoslfile);
-
-#endif
 	Py_RETURN_FALSE;
 }
 

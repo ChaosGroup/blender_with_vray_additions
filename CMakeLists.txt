@@ -846,10 +846,6 @@ if(WITH_VRAY_FOR_BLENDER)
 	endif()
 
 	if(USE_BLENDER_VRAY_ZMQ)
-		if (WTHI_CYCLES_OSL)
-			add_definitions(-DWITH_OSL)
-		endif()
-
 		set(LIBS_ROOT "" CACHE PATH "ZMQ lib location")
 
 		if (UNIX)

@@ -46,12 +46,10 @@ set(INC
 	${OPENEXR_INCLUDE_DIRS}
 )
 
-if (WTHI_CYCLES_OSL)
-	if (WIN32)
-		list(APPEND INC ${LIBDIR}/osl/include)
-	else()
-		list(APPEND INC ${OSL_INCLUDE_DIR})
-	endif()
+if (WIN32)
+	list(APPEND INC ${LIBDIR}/osl/include)
+else()
+	list(APPEND INC ${OSL_INCLUDE_DIR})
 endif()
 
 # generate good folder structure for Visual Studio
