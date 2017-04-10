@@ -70,6 +70,7 @@ AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Nod
 				if (sockVal.as<AttrPlugin>().plugin == "") {
 					sockVal = AttrSimpleType<std::string>("");
 				}
+				sockVal.as<AttrPlugin>().output = ""; // no output name needed for osl
 				list.append(sockVal);
 			} else {
 				list.append(convertToOSLArgument(exportDefaultSocket(ntree, sock)));
