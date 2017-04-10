@@ -336,6 +336,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 			pluginDesc.add("osd_subdiv_type", subS.subdivision_type() == BL::SubsurfModifier::subdivision_type_CATMULL_CLARK ? 0 : 1);
 			pluginDesc.add("osd_subdiv_uvs", subS.use_subsurf_uv());
 			pluginDesc.add("osd_subdiv_enable", true);
+			options.merge_channel_vertices = true;
 		}
 	}
 

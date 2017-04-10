@@ -160,15 +160,16 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 		attrValue = AttrPlugin(geomDesc.pluginName);
 
 		if (m_settings.export_meshes) {
+			PointerRNA geomStaticMesh = RNA_pointer_get(&node.ptr, "GeomStaticMesh");
+			const int osdLevel = RNA_int_get(&geomStaticMesh, "osd_subdiv_level");
+
 			VRayForBlender::Mesh::ExportOptions options;
-			options.merge_channel_vertices = context.object_context.merge_uv;
+			options.merge_channel_vertices = context.object_context.merge_uv || osdLevel;
 			options.mode = m_evalMode;
 			options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 
 			int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 			if (!err) {
-				PointerRNA geomStaticMesh = RNA_pointer_get(&node.ptr, "GeomStaticMesh");
-
 				geomDesc.add("dynamic_geometry", RNA_boolean_get(&geomStaticMesh, "dynamic_geometry"));
 				geomDesc.add("environment_geometry", RNA_boolean_get(&geomStaticMesh, "environment_geometry"));
 				geomDesc.add("primary_visibility", RNA_boolean_get(&geomStaticMesh, "primary_visibility"));
@@ -180,7 +181,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 				auto * osdLevelAttr = geomDesc.get("osd_subdiv_level");
 				if (osdLevelAttr) {
 					// if we have OSD already just add the level so we can have both blender and vray subdivide the mesh
-					osdLevelAttr->attrValue.as<AttrSimpleType<int>>().value += RNA_int_get(&geomStaticMesh, "osd_subdiv_level");
+					osdLevelAttr->attrValue.as<AttrSimpleType<int>>().value += osdLevel;
 				} else {
 					geomDesc.add("osd_subdiv_type", RNA_enum_get(&geomStaticMesh, "osd_subdiv_type"));
 					geomDesc.add("osd_subdiv_level", RNA_int_get(&geomStaticMesh, "osd_subdiv_level"));
