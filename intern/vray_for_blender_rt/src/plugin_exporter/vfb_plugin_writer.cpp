@@ -259,15 +259,7 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrInstancer &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrListValue &val)
 {
-	pp << "List(";
-	if (!val.empty()) {
-		auto iter = val.getData()->cbegin();
-		pp << *iter;
-		for (++iter; iter != val.getData()->cend(); ++iter) {
-			pp << "," << *iter;
-		}
-	}
-	return pp << ")";
+	return printList(pp, val, "", val.getCount() > 10);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
