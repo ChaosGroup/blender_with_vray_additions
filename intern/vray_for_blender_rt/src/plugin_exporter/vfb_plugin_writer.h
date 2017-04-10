@@ -49,18 +49,6 @@ public:
 
 	const char * indentation();
 
-	/// Wrapper to carry data needed for async zip task
-	template <typename T>
-	struct AsyncZipTask {
-		const VRayBaseTypes::AttrList<T> & m_data;
-
-		AsyncZipTask() = delete;
-		AsyncZipTask(const AsyncZipTask &) = delete;
-		AsyncZipTask & operator=(const AsyncZipTask &) = delete;
-
-		explicit AsyncZipTask(const VRayBaseTypes::AttrList<T> & val): m_data(val) {}
-	};
-
 	void addTask(const char * data) {
 		processItems(data);
 	}
@@ -71,16 +59,15 @@ public:
 
 	/// Add task to the queue
 	template <typename T>
-	void addTask(const AsyncZipTask<T> &task) {
+	void addTask(const T &task) {
 		// when adding and removing elements from deque no references are invalidated
-		const auto & compressData = task.m_data;
 
 		m_items.emplace_back();
 		auto & item = m_items.back();
 
 		// Array's data is actually shared_ptr so copy it inside to preserve the data
-		m_threadManager->addTask([&item, compressData, this](int, const volatile bool &) {
-			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*compressData), compressData.getBytesCount());
+		m_threadManager->addTask([&item, task, this](int, const volatile bool &) {
+			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*task), task.getBytesCount());
 			item.asyncDone(zipData);
 		}, ThreadManager::Priority::LOW);
 
@@ -178,13 +165,6 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrListValue &v
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val);
 
 template <typename T>
-PluginWriter &operator<<(PluginWriter &pp, const PluginWriter::AsyncZipTask<T> &task)
-{
-	pp.addTask(task);
-	return pp;
-}
-
-template <typename T>
 using KVPair = std::pair<std::string, T>;
 
 
@@ -198,11 +178,8 @@ PluginWriter &operator<<(PluginWriter &pp, const KVPair<T> &val)
 	}
 }
 
-template <> inline
-PluginWriter &operator<<(PluginWriter &pp, const KVPair<std::string> &val)
-{
-	return pp << pp.indent() << val.first << "=\"" << val.second << "\";\n" << pp.unindent();
-}
+template <>
+PluginWriter &operator<<(PluginWriter &pp, const KVPair<std::string> &val);
 
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<T> &val)
@@ -210,11 +187,8 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<T
 	return pp << val.value;
 }
 
-template <> inline
-PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<std::string> &val)
-{
-	return pp << "\"" << val.value << "\"";
-}
+template <>
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<std::string> &val);
 
 template <typename T>
 PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val, const char *listName, bool newLine = false)
@@ -239,7 +213,9 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 		pp.unindent();
 		pp << "\n" << pp.indentation() << ")";
 	} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
-		pp << "Hex(\"" << PluginWriter::AsyncZipTask<T>(val) << "\")";
+		pp << "Hex(\"";
+		pp.addTask(val);
+		pp << "\")";
 	} else {
 		char * zipData = GetHex(reinterpret_cast<const u_int8_t *>(*val), val.getBytesCount());
 		pp << "Hex(\"" << zipData << "\")";
@@ -249,29 +225,8 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 	return pp;
 }
 
-template <> inline
-PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
-{
-	pp << "List" << listName;
-
-	if (val.empty()) {
-		return pp << "()";
-	}
-
-	pp << "(\n" << pp.indent() << "\"" << StripString((*val)[0]) << "\"";
-	for (int c = 1; c < val.getCount(); c++) {
-		pp << ",";
-		if (newLine) {
-			pp << "\n" << pp.indentation();
-		} else {
-			pp << " ";
-		}
-		pp <<"\"" << StripString((*val)[c]) << "\"";
-	}
-	pp.unindent();
-	pp << "\n" << pp.indentation() << ")";
-	return pp;
-}
+template <>
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine);
 
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val)
@@ -279,23 +234,14 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val
 	return printList(pp, val, "", true);
 }
 
-template <> inline
-PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<float> &val)
-{
-	return printList(pp, val, "Float");
-}
+template <>
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<float> &val);
 
-template <> inline
-PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<int> &val)
-{
-	return printList(pp, val, "Int");
-}
+template <>
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<int> &val);
 
-template <> inline
-PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<VRayBaseTypes::AttrVector> &val)
-{
-	return printList(pp, val, "Vector", true);
-}
+template <>
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<VRayBaseTypes::AttrVector> &val);
 
 } // VRayForBlender
 

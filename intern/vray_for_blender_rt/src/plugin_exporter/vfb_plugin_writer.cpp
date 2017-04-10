@@ -298,4 +298,59 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
 	return pp;
 }
 
+template <>
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
+{
+	pp << "List" << listName;
+
+	if (val.empty()) {
+		return pp << "()";
+	}
+
+	pp << "(\n" << pp.indent() << "\"" << StripString((*val)[0]) << "\"";
+	for (int c = 1; c < val.getCount(); c++) {
+		pp << ",";
+		if (newLine) {
+			pp << "\n" << pp.indentation();
+		} else {
+			pp << " ";
+		}
+		pp <<"\"" << StripString((*val)[c]) << "\"";
+	}
+	pp.unindent();
+	pp << "\n" << pp.indentation() << ")";
+	return pp;
+}
+
+
+template <> inline
+PluginWriter &operator<<(PluginWriter &pp, const KVPair<std::string> &val)
+{
+	return pp << pp.indent() << val.first << "=\"" << val.second << "\";\n" << pp.unindent();
+}
+
+template <> inline
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<std::string> &val)
+{
+	return pp << "\"" << val.value << "\"";
+}
+
+template <> inline
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<float> &val)
+{
+	return printList(pp, val, "Float");
+}
+
+template <> inline
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<int> &val)
+{
+	return printList(pp, val, "Int");
+}
+
+template <> inline
+PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<VRayBaseTypes::AttrVector> &val)
+{
+	return printList(pp, val, "Vector", true);
+}
+
 } // VRayForBlender
