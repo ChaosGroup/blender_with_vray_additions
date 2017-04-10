@@ -524,3 +524,33 @@ AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &nt
 
 	return m_exporter->export_plugin(pluginDesc);
 }
+
+
+AttrValue DataExporter::exportVRayNodeTexSoftbox(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	PointerRNA texSoftbox = RNA_pointer_get(&node.ptr, "TexSoftbox");
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context), "TexSoftbox");
+
+	if (RNA_boolean_get(&texSoftbox, "grad_vert_on")) {
+		pluginDesc.add("grad_vert_on", true);
+		DataExporter::fillRampAttributes(ntree, node, fromSocket, context,
+											  pluginDesc, "ramp_grad_vert", "grad_vert_col", "grad_vert_pos");
+	}
+	if (RNA_boolean_get(&texSoftbox, "grad_horiz_on")) {
+		pluginDesc.add("grad_horiz_on", true);
+		DataExporter::fillRampAttributes(ntree, node, fromSocket, context,
+											  pluginDesc, "ramp_grad_horiz", "grad_horiz_col", "grad_horiz_pos");
+	}
+	if (RNA_boolean_get(&texSoftbox, "grad_rad_on")) {
+		pluginDesc.add("grad_rad_on", true);
+		DataExporter::fillRampAttributes(ntree, node, fromSocket, context,
+											  pluginDesc, "ramp_grad_rad", "grad_rad_col", "grad_rad_pos");
+	}
+	if (RNA_boolean_get(&texSoftbox, "frame_on")) {
+		pluginDesc.add("frame_on", true);
+		DataExporter::fillRampAttributes(ntree, node, fromSocket, context,
+											  pluginDesc, "ramp_frame", "frame_col", "frame_pos");
+	}
+
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+}
