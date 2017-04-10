@@ -522,7 +522,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 				socket_type = "VRaySocketPlugin";
 				data_type = BL::NodeSocket::type_STRING;
 				if (param->validdefault) {
-					default_string = param->sdefault[0];
+					default_string = param->sdefault[0].string();
 				}
 			} else {
 				continue;
@@ -556,7 +556,9 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 			} else {
 				b_sock = b_node.inputs.create(socket_type.c_str(), param->name.c_str(), param->name.c_str());
 			}
+		}
 
+		if (!b_sock.is_linked()) {
 			if(data_type == BL::NodeSocket::type_VALUE) {
 				RNA_float_set(&b_sock.ptr, "value", default_float);
 			} else if(data_type == BL::NodeSocket::type_INT) {
