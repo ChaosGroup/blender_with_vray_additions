@@ -62,15 +62,19 @@ AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Nod
 		if (sock) {
 			
 			list.append(AttrSimpleType<std::string>(sockName));
+			// NOTE: OSL string param could be either plugin or string, if the socket is linked
+			// the value type will be ValueTypePlugin and contain the connected plugin instance name
+			// or it can be string in which case the default value is used
 			if (param->type == TypeDesc::STRING) {
 				// only string is mappable currently
 				auto sockVal = exportSocket(ntree, sock, context);
-				BLI_assert(sockVal.type == ValueTypePlugin);
-				// empty plugins should be empty string and not blank
-				if (sockVal.as<AttrPlugin>().plugin == "") {
-					sockVal = AttrSimpleType<std::string>("");
+				if (sockVal.type == ValueTypePlugin) {
+					if (sockVal.as<AttrPlugin>().plugin == "") {
+						// empty plugins should be empty string and not blank
+						sockVal = AttrSimpleType<std::string>("");
+					}
+					sockVal.as<AttrPlugin>().output = ""; // no output name needed for osl
 				}
-				sockVal.as<AttrPlugin>().output = ""; // no output name needed for osl
 				list.append(sockVal);
 			} else {
 				list.append(convertToOSLArgument(exportDefaultSocket(ntree, sock)));

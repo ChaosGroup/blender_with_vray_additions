@@ -342,7 +342,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 		            ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
 	}
 	else if (socketVRayType == "VRaySocketPlugin") {
-		attrValue = AttrPlugin("");
+		attrValue = AttrSimpleType<std::string>(RNA_std_string_get(&socket.ptr, "value"));
 	}
 	// These sockets do not have default value, they must be linked or skipped otherwise.
 	//
