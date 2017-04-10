@@ -191,27 +191,34 @@ template <>
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrSimpleType<std::string> &val);
 
 template <typename T>
-PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val, const char *listName, bool newLine = false)
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val, const char *listName, int itemsPerLine = 0)
 {
 	pp << "List" << listName;
 
 	if (val.empty()) {
 		return pp << "()";
 	}
-
+	itemsPerLine = std::max(0, itemsPerLine);
 	if (listName[0] == '\0' || pp.format() == ExporterSettings::ExportFormatASCII) {
-		pp << "(\n" << pp.indent() << (*val)[0];
+		pp << "(";
+		if (itemsPerLine) {
+			pp << "\n" << pp.indent();
+		}
+		pp << (*val)[0];
 		for (int c = 1; c < val.getCount(); c++) {
 			pp << ",";
-			if (newLine) {
+			if (itemsPerLine && c % itemsPerLine == 0) {
 				pp << "\n" << pp.indentation();
 			} else {
 				pp << " ";
 			}
 			pp << (*val)[c];
 		}
-		pp.unindent();
-		pp << "\n" << pp.indentation() << ")";
+		if (itemsPerLine) {
+			pp.unindent();
+			pp << "\n" << pp.indentation();
+		}
+		pp << ")";
 	} else if (pp.format() == ExporterSettings::ExportFormatZIP) {
 		pp << "Hex(\"";
 		pp.addTask(val);
@@ -226,12 +233,12 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val,
 }
 
 template <>
-PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine);
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, int itemsPerLine);
 
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<T> &val)
 {
-	return printList(pp, val, "", true);
+	return printList(pp, val, "", 1);
 }
 
 template <>

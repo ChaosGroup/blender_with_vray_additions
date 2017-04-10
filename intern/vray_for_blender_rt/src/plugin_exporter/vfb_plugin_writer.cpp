@@ -162,12 +162,12 @@ PluginWriter &operator<<(PluginWriter &pp, float val)
 
 PluginWriter &operator<<(PluginWriter &pp, const char *val)
 {
-	return pp.writeStr(val);
+	return *val ? pp.writeStr(val) : pp;
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const std::string &val)
 {
-	return pp.writeStr(val.c_str());
+	return !val.empty() ? pp.writeStr(val.c_str()) : pp;
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrColor &val)
@@ -259,7 +259,7 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrInstancer &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrListValue &val)
 {
-	return printList(pp, val, "", val.getCount() > 10);
+	return printList(pp, val, "", val.getCount() > 10 ? 2 : 0);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
@@ -291,26 +291,32 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
 }
 
 template <>
-PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, bool newLine)
+PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::string> &val, const char *listName, int itemsPerLine)
 {
 	pp << "List" << listName;
 
 	if (val.empty()) {
 		return pp << "()";
 	}
-
-	pp << "(\n" << pp.indent() << "\"" << StripString((*val)[0]) << "\"";
+	itemsPerLine = std::max(0, itemsPerLine);
+	pp << "(";
+	if (itemsPerLine) {
+		pp << "\n" << pp.indent();
+	}
+	pp << "\"" << StripString((*val)[0]) << "\"";
 	for (int c = 1; c < val.getCount(); c++) {
 		pp << ",";
-		if (newLine) {
+		if (itemsPerLine && c % itemsPerLine == 0) {
 			pp << "\n" << pp.indentation();
 		} else {
 			pp << " ";
 		}
 		pp <<"\"" << StripString((*val)[c]) << "\"";
 	}
-	pp.unindent();
-	pp << "\n" << pp.indentation() << ")";
+	if (itemsPerLine) {
+		pp.unindent();
+		pp << "\n" << pp.indentation() << ")";
+	}
 	return pp;
 }
 
@@ -342,7 +348,7 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<int> &v
 template <> inline
 PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrList<VRayBaseTypes::AttrVector> &val)
 {
-	return printList(pp, val, "Vector", true);
+	return printList(pp, val, "Vector", 1);
 }
 
 } // VRayForBlender
