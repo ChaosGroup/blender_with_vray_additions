@@ -22,6 +22,7 @@
 #include <queue>
 
 #include "cgr_vray_for_blender_rt.h"
+#include "utils/cgr_hash.h"
 #include "vfb_scene_exporter_rt.h"
 #include "vfb_scene_exporter_pro.h"
 #include "vfb_params_json.h"
@@ -404,6 +405,22 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 	return expTypesList;
 }
 
+static int getOSLInputHash(const char * fname) {
+	FILE * file = fopen(fname, "r");
+	if (!file) {
+		return 0;
+	}
+
+	MHash hash = 0;
+	char buff[4096];
+	int readSize = 0;
+	while ( (readSize = fread(buff, 1, 4096, file)) > 0) {
+		MurmurHash3_x86_32(buff, readSize, 42, &hash);
+	}
+
+	fclose(file);
+	return hash;
+}
 
 static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 {
@@ -425,11 +442,18 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 	auto makeErr = [](ErrorType type, const char * err) {
 		return Py_BuildValue("(is)", static_cast<int>(type), err);
 	};
+	ErrorType returnErrType = None;
+	const char * returnErrStr = nullptr;
 
 	/* RNA */
 	PointerRNA nodeptr;
 	RNA_pointer_create((ID*)PyLong_AsVoidPtr(pynodegroup), &RNA_ShaderNodeScript, (void*)PyLong_AsVoidPtr(pynode), &nodeptr);
 	BL::ShaderNodeScript b_node(nodeptr);
+
+	if (!RNA_boolean_get(&nodeptr, "do_socket_update")) {
+		PRINT_INFO_EX("Node \"%s\" already had sockets updated - skipping.", b_node.name().c_str());
+		return makeErr(returnErrType, returnErrStr);
+	}
 
 	OSL::OSLQuery query;
 	if (!query.open(filepath, "")) {
@@ -438,8 +462,9 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		return makeErr(Error, errStr.c_str());
 	}
 
-	ErrorType returnErrType = None;
-	const char * returnErrStr = nullptr;
+	// mark as updated
+	RNA_boolean_set(&nodeptr, "do_socket_update", false);
+
 	const bool isMtl = RNA_std_string_get(&nodeptr, "vray_type") == "MATERIAL";
 
 	HashSet<void*> used_sockets;
@@ -450,8 +475,9 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		static const std::string texSockets[] = {"Color", "Transparency", "Alpha", "Intensity"};
 		for (int c = 0; c < sizeof(texSockets) / sizeof(texSockets[0]); c++) {
 			auto socket = b_node.outputs[texSockets[c]];
-			BLI_assert(!!socket && "Missing texture socket on TexOSL");
-			PRINT_ERROR("Missing socket \"%s\" on TexOSL", texSockets[c].c_str());
+			if (!socket) {
+				PRINT_ERROR("Missing socket \"%s\" on TexOSL", texSockets[c].c_str());
+			}
 			used_sockets.insert(socket.ptr.data);
 		}
 	}
@@ -609,9 +635,20 @@ static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
 	OIIO_NAMESPACE_USING
 	using namespace std;
 	const char *inputfile = nullptr, *outputfile = nullptr, *stdoslfile = nullptr;
+	PyObject * pynodegroup, *pynode;
 
-	if (!PyArg_ParseTuple(args, "sss", &inputfile, &outputfile, &stdoslfile)) {
+	if (!PyArg_ParseTuple(args, "OOsss", &pynodegroup, &pynode, &inputfile, &outputfile, &stdoslfile)) {
 		return nullptr;
+	}
+
+	PointerRNA nodeptr;
+	RNA_pointer_create((ID*)PyLong_AsVoidPtr(pynodegroup), &RNA_ShaderNodeScript, (void*)PyLong_AsVoidPtr(pynode), &nodeptr);
+	BL::ShaderNodeScript b_node(nodeptr);
+
+	const int nodeHash = RNA_int_get(&nodeptr, "input_hash");
+	const int inputHash = getOSLInputHash(inputfile);
+	if (nodeHash == inputHash) {
+		Py_RETURN_TRUE;
 	}
 
 	vector<string> options;
@@ -628,6 +665,8 @@ static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
 	}
 
 	if (ok) {
+		RNA_int_set(&nodeptr, "input_hash", inputHash);
+		RNA_boolean_set(&nodeptr, "do_socket_update", true);
 		Py_RETURN_TRUE;
 	}
 	PRINT_WARN("OSL compilation failed using \"\" path for stdosl.h", stdoslfile);
