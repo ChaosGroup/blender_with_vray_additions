@@ -29,6 +29,8 @@
 #include <memory>
 #include <functional>
 
+#include <OSL/oslquery.h>
+
 // This is global because multiple mt exporters could run at the same time
 static boost::shared_mutex vfbExporterBlenderLock;
 #define WRITE_LOCK_BLENDER_RAII boost::unique_lock<boost::shared_mutex> _raiiWriteLock(vfbExporterBlenderLock);
@@ -36,6 +38,26 @@ static boost::shared_mutex vfbExporterBlenderLock;
 
 namespace VRayForBlender {
 namespace Blender {
+
+struct OSLManager {
+	std::string stdOSLPath;
+
+	bool compile(const std::string & inputFile, const std::string & outputFile);
+	std::string compileToBuffer(const std::string & code);
+
+	// Query compiled .oso file for parameters
+	bool queryFromFile(const std::string & file, OSL::OSLQuery & query);
+	bool queryFromBytecode(const std::string & code, OSL::OSLQuery & query);
+
+	bool queryFromNode(BL::Node node, OSL::OSLQuery & query, const std::string & basepath, bool writeToFile = false, std::string * output = nullptr);
+
+	static OSLManager & getInstance() {
+		static OSLManager mgr;
+		return mgr;
+	}
+};
+
+
 
 inline void freePyObject(PyObject * ob) {
 	if (ob) {

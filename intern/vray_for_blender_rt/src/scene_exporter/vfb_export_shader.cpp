@@ -19,6 +19,8 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_blender.h"
+#include "vfb_utils_string.h"
 
 #include "BLI_path_util.h"
 #include "BLI_string.h"
@@ -105,18 +107,16 @@ AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node
 	const std::string pluginName = pluginId + "|" + GenPluginName(node, ntree, context);
 	PluginDesc plgDesc(pluginName, pluginId);
 
-	OSL::OSLQuery query;
 	// if this is inline script - save it to file
 	// TODO: what about DR and zmq?
-	const auto & scriptData = RNA_std_string_get(&node.ptr, "bytecode");
-	if (!query.open_bytecode(scriptData)) {
-		PRINT_ERROR("Failed to load script for node \"%s\"", node.name().c_str());
-		plgDesc.add("input_parameters", AttrListValue());
-	} else {
-		plgDesc.add("input_parameters", buildScriptArgumentList(ntree, node, context, query));
+	std::string scriptPath;
+	OSL::OSLQuery query;
+	auto & oslManager = Blender::OSLManager::getInstance();
+	if (!oslManager.queryFromNode(node, query, m_data.filepath(), true, &scriptPath)) {
+		PRINT_WARN("Failed to query node \"%s\"", node.name().c_str())
 	}
 
-	const auto &scriptPath = RNA_std_string_get(&node.ptr, "export_filepath");
+	plgDesc.add("input_parameters", buildScriptArgumentList(ntree, node, context, query));
 	plgDesc.add("shader_file", scriptPath);
 	if (isMtl) {
 		plgDesc.add("output_closure", outputClosure);

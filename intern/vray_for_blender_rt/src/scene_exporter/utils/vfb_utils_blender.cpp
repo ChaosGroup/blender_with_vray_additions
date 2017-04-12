@@ -26,8 +26,124 @@
 #include "BLI_string.h"
 #include "BLI_path_util.h"
 
+#include "cgr_config.h"
+#include <boost/filesystem.hpp>
+
+// OSL
+#include <OSL/oslconfig.h>
+#include <OSL/oslcomp.h>
+#include <OSL/oslexec.h>
+
+// OIIO
+#include <errorhandler.h>
+#include <string_view.h>
+
 
 using namespace VRayForBlender;
+
+
+bool Blender::OSLManager::compile(const std::string & inputFile, const std::string & outputFile)
+{
+	OIIO_NAMESPACE_USING
+	std::vector<std::string> options;
+	std::string stdosl_path = stdOSLPath;
+
+	options.push_back("-o");
+	options.push_back(outputFile);
+
+	OSL::OSLCompiler compiler(&OSL::ErrorHandler::default_handler());
+	return compiler.compile(string_view(inputFile), options, string_view(stdosl_path));
+}
+
+std::string Blender::OSLManager::compileToBuffer(const std::string & code)
+{
+	OIIO_NAMESPACE_USING
+	std::vector<std::string> options;
+	std::string stdosl_path = stdOSLPath;
+
+	OSL::OSLCompiler compiler(&OSL::ErrorHandler::default_handler());
+	std::string buffer;
+	compiler.compile_buffer(code, buffer, {}, stdOSLPath);
+	return buffer;
+}
+
+bool Blender::OSLManager::queryFromFile(const std::string & file, OSL::OSLQuery & query)
+{
+	return query.open(file, "");
+}
+
+bool Blender::OSLManager::queryFromBytecode(const std::string & code, OSL::OSLQuery & query)
+{
+	return query.open_bytecode(code);
+}
+
+bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, const std::string & basepath, bool writeToFile, std::string * output)
+{
+	bool success = true;
+	std::string scriptPath;
+	bool compileFromFile = true, ivalidOSL = false;
+	enum OSLNodeMode { INTERNAL = 0, EXTERNAL = 1 };
+	if (RNA_enum_get(&node.ptr, "mode") == EXTERNAL) {
+		scriptPath = RNA_std_string_get(&node.ptr, "filepath");
+		scriptPath = String::AbsFilePath(scriptPath, basepath);
+
+		boost::filesystem::path osoPath = scriptPath;
+		osoPath.replace_extension(".oso");
+		std::string strOsoPath = osoPath.string();
+		if (!compile(scriptPath, strOsoPath)) {
+			PRINT_ERROR("Failed to compile OSL file: \"%s\"", scriptPath.c_str());
+			success = false;
+		} else {
+			if (!queryFromFile(strOsoPath, query)) {
+				PRINT_ERROR("Failed to query compiled OSO file: \"%s\"", output->c_str());
+				success = false;
+			}
+		}
+
+		if (!writeToFile && success) {
+			std::remove(strOsoPath.c_str());
+		}
+	} else {
+		BL::Text text(RNA_pointer_get(&node.ptr, "script"));
+		if (text) {
+			if (text.is_dirty() || text.is_in_memory() || text.is_modified()) {
+				// osl code is in memmory - com
+				std::string oslCode;
+				BL::Text::lines_iterator lineIter;
+				for (text.lines.begin(lineIter); lineIter != text.lines.end(); ++lineIter) {
+					oslCode += *lineIter;
+					oslCode += '\n';
+				}
+				std::string bytecode = compileToBuffer(oslCode);
+
+				if (bytecode.empty() || !queryFromBytecode(bytecode, query)) {
+					PRINT_ERROR("Failed query for osl node: \"%s\"", node.name().c_str());
+					success = false;
+				} else if (writeToFile && output) {
+					boost::filesystem::path tempPath = boost::filesystem::unique_path("%%%%-%%%%-%%%%-%%%%.osl");
+					*output = tempPath.string();
+					std::ofstream tmpFile(output->c_str(), std::ios::trunc | std::ios::binary);
+					if (tmpFile && tmpFile.write(bytecode.c_str(), bytecode.length())) {
+						compileFromFile = false;
+					} else {
+						PRINT_ERROR("Failed to write OSL script to temp file \"%s\"", output->c_str());
+					}
+				}
+			} else {
+				scriptPath = text.filepath();
+			}
+		} else {
+			PRINT_ERROR("Invalid script selected for osl node \"%s\"", node.name().c_str());
+			success = false;
+		}
+	}
+
+	if (writeToFile && output && !scriptPath.empty()) {
+		*output = scriptPath;
+	}
+
+	return success;
+}
 
 
 std::string Blender::GetIDName(BL::ID id, const std::string &)

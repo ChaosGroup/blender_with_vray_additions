@@ -27,20 +27,9 @@
 #include "vfb_scene_exporter_pro.h"
 #include "vfb_params_json.h"
 
-#include "vfb_plugin_exporter_zmq.h"
-
+#include "vfb_utils_blender.h"
 #include "zmq_wrapper.hpp"
 #include "vfb_plugin_exporter_zmq.h"
-
-// OSL
-#include <OSL/oslquery.h>
-#include <OSL/oslconfig.h>
-#include <OSL/oslcomp.h>
-#include <OSL/oslexec.h>
-
-// OIIO
-#include <errorhandler.h>
-#include <string_view.h>
 
 VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
@@ -405,65 +394,25 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 	return expTypesList;
 }
 
-static int getOSLInputHash(const char * fname) {
-	FILE * file = fopen(fname, "r");
-	if (!file) {
-		return 0;
-	}
-
-	MHash hash = 0;
-	char buff[4096];
-	int readSize = 0;
-	while ( (readSize = fread(buff, 1, 4096, file)) > 0) {
-		MurmurHash3_x86_32(buff, readSize, 42, &hash);
-	}
-
-	fclose(file);
-	return hash;
-}
-
 static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 {
 	OIIO_NAMESPACE_USING
-	using namespace std;
 	PyObject *pynodegroup, *pynode;
-	const char *filepath = NULL;
+	const char *blendPath = nullptr;
 
-	if (!PyArg_ParseTuple(args, "OOs", &pynodegroup, &pynode, &filepath)) {
-		return NULL;
+	if (!PyArg_ParseTuple(args, "OOs", &pynodegroup, &pynode, &blendPath)) {
+		return nullptr;
 	}
-
-	enum ErrorType {
-		None = 0,
-		Warning = 0,
-		Error = 0,
-	};
-
-	auto makeErr = [](ErrorType type, const char * err) {
-		return Py_BuildValue("(is)", static_cast<int>(type), err);
-	};
-	ErrorType returnErrType = None;
-	const char * returnErrStr = nullptr;
 
 	/* RNA */
 	PointerRNA nodeptr;
 	RNA_pointer_create((ID*)PyLong_AsVoidPtr(pynodegroup), &RNA_ShaderNodeScript, (void*)PyLong_AsVoidPtr(pynode), &nodeptr);
-	BL::ShaderNodeScript b_node(nodeptr);
-
-	if (!RNA_boolean_get(&nodeptr, "do_socket_update")) {
-		PRINT_INFO_EX("Node \"%s\" already had sockets updated - skipping.", b_node.name().c_str());
-		return makeErr(returnErrType, returnErrStr);
-	}
+	BL::Node b_node(nodeptr);
 
 	OSL::OSLQuery query;
-	if (!query.open(filepath, "")) {
-		string errStr = "OSL query failed to open ";
-		errStr += filepath;
-		return makeErr(Error, errStr.c_str());
+	if (!Blender::OSLManager::getInstance().queryFromNode(b_node, query, blendPath)) {
+		Py_RETURN_FALSE;
 	}
-
-	// mark as updated
-	RNA_boolean_set(&nodeptr, "do_socket_update", false);
 
 	const bool isMtl = RNA_std_string_get(&nodeptr, "vray_type") == "MATERIAL";
 
@@ -504,8 +453,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 
 		if (param->isclosure && param->isoutput) {
 			if (!isMtl) {
-				returnErrType = Warning;
-				returnErrStr = "Closure output is not supported for TexOSL";
+				PRINT_WARN("Closure output is not supported for TexOSL");
 				continue;
 			} else {
 				socket_type = "VRaySocketMtl";
@@ -627,50 +575,24 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		}
 	} while(removed);
 
-	return makeErr(returnErrType, returnErrStr);
+	Py_RETURN_TRUE;
 }
 
-static PyObject* vfb_osl_compile_func(PyObject * /*self*/, PyObject *args)
-{
-	OIIO_NAMESPACE_USING
-	using namespace std;
-	const char *inputfile = nullptr, *outputfile = nullptr, *stdoslfile = nullptr;
-	PyObject * pynodegroup, *pynode;
+static PyObject* vfb_osl_setstdosl_path(PyObject * /*self*/, PyObject *args) {
+	const char *stdoslfile = nullptr;
 
-	if (!PyArg_ParseTuple(args, "OOsss", &pynodegroup, &pynode, &inputfile, &outputfile, &stdoslfile)) {
+	if (!PyArg_ParseTuple(args, "s", &stdoslfile)) {
 		return nullptr;
 	}
 
-	PointerRNA nodeptr;
-	RNA_pointer_create((ID*)PyLong_AsVoidPtr(pynodegroup), &RNA_ShaderNodeScript, (void*)PyLong_AsVoidPtr(pynode), &nodeptr);
-	BL::ShaderNodeScript b_node(nodeptr);
+	auto & mgr = Blender::OSLManager::getInstance();
 
-	const int nodeHash = RNA_int_get(&nodeptr, "input_hash");
-	const int inputHash = getOSLInputHash(inputfile);
-	if (nodeHash == inputHash) {
-		Py_RETURN_TRUE;
+	if (mgr.stdOSLPath != stdoslfile) {
+		mgr.stdOSLPath = stdoslfile;
+		PRINT_INFO_EX("Using \"%s\" for stdosl path.", stdoslfile);
 	}
 
-	vector<string> options;
-	string stdosl_path = stdoslfile;
-
-	options.push_back("-o");
-	options.push_back(outputfile);
-
-	/* compile */
-	bool ok = false;
-	{
-		OSL::OSLCompiler compiler(&OSL::ErrorHandler::default_handler());
-		ok = compiler.compile(string_view(inputfile), options, string_view(stdosl_path));
-	}
-
-	if (ok) {
-		RNA_int_set(&nodeptr, "input_hash", inputHash);
-		RNA_boolean_set(&nodeptr, "do_socket_update", true);
-		Py_RETURN_TRUE;
-	}
-	PRINT_WARN("OSL compilation failed using \"\" path for stdosl.h", stdoslfile);
-	Py_RETURN_FALSE;
+	Py_RETURN_TRUE;
 }
 
 
@@ -694,7 +616,7 @@ static PyMethodDef methods[] = {
     { "getExporterTypes", vfb_get_exporter_types, METH_NOARGS, "" },
 
     {"osl_update_node", vfb_osl_update_node_func, METH_VARARGS, ""},
-    {"osl_compile", vfb_osl_compile_func, METH_VARARGS, ""},
+    {"osl_set_stdosl_path", vfb_osl_setstdosl_path, METH_VARARGS, ""},
 
     {NULL, NULL, 0, NULL},
 };

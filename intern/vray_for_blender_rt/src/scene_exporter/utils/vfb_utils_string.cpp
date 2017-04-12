@@ -19,6 +19,7 @@
 #include "vfb_utils_string.h"
 #include "cgr_config.h"
 #include "vfb_utils_blender.h"
+#include <boost/filesystem.hpp>
 
 #include "BLI_path_util.h"
 
@@ -164,12 +165,14 @@ std::string VRayForBlender::String::ExpandFilenameVariables(
 
 std::string VRayForBlender::String::AbsFilePath(const std::string & path, const std::string & blendPath)
 {
-	char result[FILE_MAX];
-	strcpy(result, blendPath.c_str());
-
-	if (BLI_path_abs(result, blendPath.c_str())) {
-		return result;
+	if (path.size() >= 2 && path[0] == '/' && path[1] == '/') {
+		boost::filesystem::path base;
+		base = blendPath;
+		base.remove_filename();
+		base /= path.substr(2);
+		base.normalize();
+		return base.string();
+	} else {
+		return path;
 	}
-
-	return path;
 }
