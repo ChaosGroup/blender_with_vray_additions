@@ -107,11 +107,12 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 		BL::Text text(RNA_pointer_get(&node.ptr, "script"));
 		if (text) {
 			if (text.is_dirty() || text.is_in_memory() || text.is_modified()) {
-				// osl code is in memmory - com
+				// osl code is in memmory - compile and write if needed
 				std::string oslCode;
+				oslCode.reserve(text.lines.length() * 50); // 50 average chars per line seems reasonable
 				BL::Text::lines_iterator lineIter;
 				for (text.lines.begin(lineIter); lineIter != text.lines.end(); ++lineIter) {
-					oslCode += *lineIter;
+					oslCode += lineIter->body();
 					oslCode += '\n';
 				}
 				std::string bytecode = compileToBuffer(oslCode);
@@ -120,10 +121,10 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 					PRINT_ERROR("Failed query for osl node: \"%s\"", node.name().c_str());
 					success = false;
 				} else if (writeToFile && output) {
-					boost::filesystem::path tempPath = boost::filesystem::unique_path("%%%%-%%%%-%%%%-%%%%.osl");
+					boost::filesystem::path tempPath = boost::filesystem::temp_directory_path()/ boost::filesystem::unique_path("%%%%-%%%%-%%%%-%%%%.osl");
 					*output = tempPath.string();
 					std::ofstream tmpFile(output->c_str(), std::ios::trunc | std::ios::binary);
-					if (tmpFile && tmpFile.write(bytecode.c_str(), bytecode.length())) {
+					if (tmpFile && tmpFile.write(oslCode.c_str(), oslCode.length())) {
 						compileFromFile = false;
 					} else {
 						PRINT_ERROR("Failed to write OSL script to temp file \"%s\"", output->c_str());
