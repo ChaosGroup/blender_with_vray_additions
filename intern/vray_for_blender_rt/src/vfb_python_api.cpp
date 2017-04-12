@@ -432,7 +432,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 	}
 
 	static const std::string uvwGenSockName = "Uvwgen";
-	used_sockets.insert(b_node.inputs[string(uvwGenSockName)].ptr.data);
+	used_sockets.insert(b_node.inputs[std::string(uvwGenSockName)].ptr.data);
 
 
 	for(int i = 0; i < query.nparams(); i++) {
@@ -444,12 +444,12 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		}
 
 		/* determine socket type */
-		string socket_type;
+		std::string socket_type;
 		BL::NodeSocket::type_enum data_type = BL::NodeSocket::type_VALUE;
 		float default_float4[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 		float default_float = 0.0f;
 		int default_int = 0;
-		string default_string = "";
+		std::string default_string = "";
 
 		if (param->isclosure && param->isoutput) {
 			if (!isMtl) {
