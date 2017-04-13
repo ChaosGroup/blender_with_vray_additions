@@ -870,10 +870,12 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		return;
 	}
 
-	// if we have N array modifiers we have N dimentional grid
-	// so total objects is product of all dimension's sizes
 
-	std::vector<int> arrModIndecies, arrModSizes;
+	// map of all array modifiers active on the object
+	std::vector<int> arrModIndecies;
+	// map of dupli cound for each modifier
+	std::vector<int> arrModSizes;
+	int capCount = 0; // cap object count
 	int totalCount = 1;
 	for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
 		auto mod = ob.modifiers[c];
@@ -901,6 +903,11 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 				arrMod.show_render(false);
 			}
 			const int modSize = arrModData->count;
+			// TODO: fix this - not correct
+			capCount += !!arrModData->start_cap;
+			capCount += !!arrModData->end_cap;
+			// if we have N array modifiers we have N dimentional grid
+			// so total objects is product of all dimension's sizes
 			totalCount *= modSize;
 			arrModSizes.push_back(modSize);
 		}
@@ -926,7 +933,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
-	instances.data.resize(totalCount);
+	instances.data.resize(totalCount + capCount);
 
 	float m4Identity[4][4];
 	unit_m4(m4Identity);
@@ -966,6 +973,56 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		instancer_item.node = nodeName;
 		instancer_item.tm = AttrTransformFromBlTransform(dupliLocalTm);
 		memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+	}
+
+	// TODO: cap objects are correct only for first array mod, fix for other
+	// add cap objects
+	for (int c = 0, capIdx = 0; c < arrModSizes.size(); c++) {
+		auto arrMod = ob.modifiers[arrModIndecies[c]];
+		const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+
+		Object * capObs[2] = {amd->start_cap, amd->end_cap};
+
+		for (int r = 0; r < 2; ++r) {
+			if (!capObs[r]) {
+				// if this cap is null - skip it
+				continue;
+			}
+
+			PointerRNA obRNA;
+			RNA_id_pointer_create(&capObs[r]->id, &obRNA);
+			BL::Object capOb(obRNA);
+
+			// need inverted of cap object
+			copy_m4_m4(objectInvertedTm, ((Object*)capOb.ptr.data)->obmat);
+			invert_m4(objectInvertedTm);
+
+			// show/hide override?
+			ObjectOverridesAttrs override;
+			override.override = true;
+			override.useInstancer = true;
+			override.tm = AttrTransformFromBlTransform(capOb.matrix_world());
+			override.id = reinterpret_cast<intptr_t>(capOb.ptr.data);
+			sync_object(capOb, check_updated, override);
+
+			float capLocalTm[4][4];
+			// start cap is first after all dupli tms
+			// end cap is after start cap
+			// array is long enough if either of them is present
+			const float * capDupliTm = amd->dupliTms + ( (amd->count + r) * 16);
+			mul_m4_m4m4(capLocalTm, (float (*)[4])capDupliTm, objectInvertedTm);
+
+			MHash instanceId = getParticleID(capOb, capIdx);
+			maxInstanceId = std::max(maxInstanceId, instanceId);
+
+			AttrInstancer::Item &instancer_item = (*instances.data)[totalCount + capIdx];
+			instancer_item.index = instanceId;
+			instancer_item.node = m_data_exporter.getNodeName(capOb);
+			instancer_item.tm = AttrTransformFromBlTransform(capLocalTm);
+			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+
+			capIdx++;
+		}
 	}
 
 	for (int c = 0; c < totalCount; ++c) {

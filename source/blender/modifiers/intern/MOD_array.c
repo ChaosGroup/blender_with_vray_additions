@@ -93,6 +93,7 @@ static void freeData(ModifierData *md)
 
 static void copyData(ModifierData *md, ModifierData *target)
 {
+	int count = 0;
 	modifier_copyData_generic(md, target);
 
 	ArrayModifierData *amd = (ArrayModifierData *) md;
@@ -103,9 +104,13 @@ static void copyData(ModifierData *md, ModifierData *target)
 	tamd->dupliTms = NULL;
 
 	if (amd->dupliTms && amd->count) {
-		tamd->dupliTms = (float*)MEM_mallocN(amd->count * sizeof(float[4][4]), "amd->dupliTms");
+		count = amd->count;
+		if (amd->start_cap || amd->end_cap) {
+			count += 2;
+		}
+		tamd->dupliTms = (float*)MEM_mallocN(count * sizeof(float[4][4]), "amd->dupliTms");
 		if (tamd->dupliTms) {
-			memcpy(tamd->dupliTms, amd->dupliTms, amd->count * sizeof(float[4][4]));
+			memcpy(tamd->dupliTms, amd->dupliTms, count * sizeof(float[4][4]));
 		}
 	}
 }
@@ -559,7 +564,15 @@ static DerivedMesh *arrayModifier_doArray(
 		amd->dupliTms = NULL;
 	}
 
-	amd->dupliTms = (float*)MEM_mallocN(count * sizeof(float[4][4]), "amd->dupliTms");
+	// if either cap is valid allocate 2 more so we can have
+	// n + 1 - start cap
+	// n + 2 - end cap
+	// independent if there is only one cap
+	if (start_cap_dm || end_cap_dm) {
+		amd->dupliTms = (float*)MEM_mallocN((count + 2) * sizeof(float[4][4]), "amd->dupliTms");
+	} else {
+		amd->dupliTms = (float*)MEM_mallocN(count * sizeof(float[4][4]), "amd->dupliTms");
+	}
 
 	/* The number of verts, edges, loops, polys, before eventually merging doubles */
 	result_nverts = chunk_nverts * count + start_cap_nverts + end_cap_nverts;
@@ -714,6 +727,8 @@ static DerivedMesh *arrayModifier_doArray(
 		float start_offset[4][4];
 		int start_cap_start = result_nverts - start_cap_nverts - end_cap_nverts;
 		invert_m4_m4(start_offset, offset);
+		// first after end is start cap
+		memcpy(amd->dupliTms + count * 16, start_offset, sizeof(float[4][4]));
 		dm_merge_transform(
 		        result, start_cap_dm, start_offset,
 		        result_nverts - start_cap_nverts - end_cap_nverts,
@@ -738,6 +753,8 @@ static DerivedMesh *arrayModifier_doArray(
 		float end_offset[4][4];
 		int end_cap_start = result_nverts - end_cap_nverts;
 		mul_m4_m4m4(end_offset, current_offset, offset);
+		// first after end is start cap
+		memcpy(amd->dupliTms + (count + 1) * 16, end_offset, sizeof(float[4][4]));
 		dm_merge_transform(
 		        result, end_cap_dm, end_offset,
 		        result_nverts - end_cap_nverts,
