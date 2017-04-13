@@ -952,7 +952,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			// index 0, means object itself, so we offset all indecies by -1 and skip first
 			if (tmIndecies[r] != 0) {
 				const float * amdTm = amd->dupliTms + (tmIndecies[r]-1) * 16;
-				mul_m4_m4m4(dupliLocalTm, dupliLocalTm, (float (*)[4])amdTm);
+				mul_m4_m4m4(dupliLocalTm, (float (*)[4])amdTm, dupliLocalTm);
 			}
 		}
 
