@@ -994,6 +994,9 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 	}
 
+	// TODO: cap objects need to be tracked in m_data_exporter.m_id_track so RT can manage them correctly
+	// TODO: cap objects could be "composite" objects (object that is instancer itself) the name here should be the name of the "root" node
+
 	// add cap object instances
 	// we are starting from the last mod, so we need to build up the sizes array
 	std::vector<int> capArraySizes;
