@@ -226,9 +226,11 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrMapChannels &val)
 	pp << "List(\n";
 
 	if (!val.data.empty()) {
+		pp.indent();
 		int index = 0;
 		for (auto iter = val.data.cbegin(); iter != val.data.cend(); ++iter) {
-			pp << pp.indent() << "List(" << index++ << ",\n" << pp.indent();
+			pp << pp.indentation() << "List(" << index++ << ",\n";
+			pp << pp.indent();
 			pp << iter->second.vertices << ",\n" << pp.indentation() << iter->second.faces;
 			pp.unindent();
 			pp << "\n" << pp.indentation() << ")\n";
@@ -249,7 +251,6 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrInstancer &val)
 			pp << ",\n" << pp.indentation() << "List(" << item.index << ", " << item.tm << ", " << item.vel << "," << item.node << ")";
 		}
 		pp.unindent();
-		pp << pp.indentation();
 	}
 
 	return pp << "\n" << pp.indentation() << ")";
