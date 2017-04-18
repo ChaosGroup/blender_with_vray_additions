@@ -876,7 +876,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	// map of dupli cound for each modifier
 	std::vector<int> arrModSizes;
 	std::vector<bool> modShowStates;
-	int totalCount = 1;
+	int instancesCount = 1;
 	for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
 		auto mod = ob.modifiers[c];
 		if (mod.type() != BL::Modifier::type_ARRAY) {
@@ -907,7 +907,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			const int modSize = arrModData->count;
 			// if we have N array modifiers we have N dimentional grid
 			// so total objects is product of all dimension's sizes
-			totalCount *= modSize;
+			instancesCount *= modSize;
 			arrModSizes.push_back(modSize);
 		}
 	}
@@ -952,13 +952,13 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
-	instances.data.resize(totalCount + capCount);
+	instances.data.resize(instancesCount + capCount);
 
 	float m4Identity[4][4];
 	unit_m4(m4Identity);
 
 	MHash maxInstanceId = 0;
-	for (int c = 0; c < totalCount; ++c) {
+	for (int c = 0; c < instancesCount; ++c) {
 		auto tmIndecies = unravel_index(c, arrModSizes);
 		BLI_assert(tmIndecies.size() == arrModIndecies.size());
 		// tmIndecies maps index to TM in n'th modifier
@@ -995,7 +995,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	}
 
 	// TODO: cap objects need to be tracked in m_data_exporter.m_id_track so RT can manage them correctly
-	// TODO: cap objects could be "composite" objects (object that is instancer itself) the name here should be the name of the "root" node
+	// TODO: cap objects could be "composite" objects (object that is instancer itself) so the name here should be the name of the "root" node
 
 	// add cap object instances
 	// we are starting from the last mod, so we need to build up the sizes array
@@ -1042,7 +1042,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			MHash instanceId = getParticleID(capOb, capInstanceIndex);
 			maxInstanceId = std::max(maxInstanceId, instanceId);
 
-			AttrInstancer::Item &instancer_item = (*instances.data)[totalCount + capInstanceIndex];
+			AttrInstancer::Item &instancer_item = (*instances.data)[instancesCount + capInstanceIndex];
 			instancer_item.index = instanceId;
 			instancer_item.node = m_data_exporter.getNodeName(capOb);
 			instancer_item.tm = AttrTransformFromBlTransform(capLocalTm);
@@ -1070,7 +1070,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 				MHash instanceId = getParticleID(capOb, capInstanceIndex);
 				maxInstanceId = std::max(maxInstanceId, instanceId);
 
-				AttrInstancer::Item &instancer_item = (*instances.data)[totalCount + capInstanceIndex];
+				AttrInstancer::Item &instancer_item = (*instances.data)[instancesCount + capInstanceIndex];
 				instancer_item.index = instanceId;
 				instancer_item.node = m_data_exporter.getNodeName(capOb);
 				instancer_item.tm = AttrTransformFromBlTransform(capInstanceTm);
@@ -1084,7 +1084,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		capArraySizes.push_back(arrModData->count);
 	}
 
-	for (int c = 0; c < totalCount; ++c) {
+	for (int c = 0; c < instancesCount + capCount; ++c) {
 		(*instances.data)[c].index = maxInstanceId - (*instances.data)[c].index;
 	}
 
