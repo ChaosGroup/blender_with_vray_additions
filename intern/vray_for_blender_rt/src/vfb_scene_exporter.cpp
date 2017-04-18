@@ -875,7 +875,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	std::vector<int> arrModIndecies;
 	// map of dupli cound for each modifier
 	std::vector<int> arrModSizes;
-	int capCount = 0; // cap object count
+	std::vector<bool> modShowStates;
 	int totalCount = 1;
 	for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
 		auto mod = ob.modifiers[c];
@@ -898,32 +898,51 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			}
 
 			if (is_viewport()) {
+				modShowStates.push_back(arrMod.show_viewport());
 				arrMod.show_viewport(false);
 			} else {
+				modShowStates.push_back(arrMod.show_render());
 				arrMod.show_render(false);
 			}
 			const int modSize = arrModData->count;
-			// TODO: fix this - not correct
-			capCount += !!arrModData->start_cap;
-			capCount += !!arrModData->end_cap;
 			// if we have N array modifiers we have N dimentional grid
 			// so total objects is product of all dimension's sizes
 			totalCount *= modSize;
 			arrModSizes.push_back(modSize);
 		}
 	}
+	const int modCount = arrModIndecies.size();
 	// export the node for the base object
 	sync_object(ob, check_updated, overrideAttrs);
 
-	for (int c = 0; c < arrModIndecies.size(); ++c) {
+	std::vector<int> arrCapCount(modCount, 0);
+	int capCount = 0; // cap object count
+	int dimentionProduct = 1;
+
+	for (int c = 0; c < modCount; c++) {
 		auto arrMod = ob.modifiers[arrModIndecies[c]];
+		auto arrModData = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+
+		// this many cap objects per side for this array mod
+		const int capObjects = dimentionProduct;
+		// count total cap instance objects for this mod
+		const int modCapInstances = !!arrModData->start_cap * capObjects + !!arrModData->end_cap * capObjects;
+
+		// save only count for one cap so we dont have to devide by 2 when exporting instances
+		arrCapCount[c] = modCapInstances ? capObjects : 0;
+		capCount += modCapInstances;
+
+		dimentionProduct *= arrModData->count;
+
+		// restore show states
 		if (is_viewport()) {
-			arrMod.show_viewport(true);
+			arrMod.show_viewport(modShowStates[c]);
 		} else {
-			arrMod.show_render(true);
+			arrMod.show_render(modShowStates[c]);
 		}
 	}
 
+	// reverse these because we traverse mods in reverse order
 	std::reverse(arrModIndecies.begin(), arrModIndecies.end());
 	std::reverse(arrModSizes.begin(), arrModSizes.end());
 
@@ -975,27 +994,26 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 	}
 
-	// TODO: cap objects are correct only for first array mod, fix for other
-	// add cap objects
-	for (int c = 0, capIdx = 0; c < arrModSizes.size(); c++) {
+	// add cap object instances
+	// we are starting from the last mod, so we need to build up the sizes array
+	std::vector<int> capArraySizes;
+	int capInstanceIndex = 0;
+	// now we need to traverse them in reverse order
+	std::reverse(arrModIndecies.begin(), arrModIndecies.end());
+	for (int c = 0; c < modCount; c++) {
 		auto arrMod = ob.modifiers[arrModIndecies[c]];
-		const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+		auto arrModData = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+		Object * capObs[2] = {arrModData->start_cap, arrModData->end_cap};
 
-		Object * capObs[2] = {amd->start_cap, amd->end_cap};
-
-		for (int r = 0; r < 2; ++r) {
-			if (!capObs[r]) {
-				// if this cap is null - skip it
+		for (int cap = 0; cap < 2; cap++) {
+			if (!capObs[cap]) {
 				continue;
 			}
+			const int capInstanceCount = arrCapCount[c];
 
 			PointerRNA obRNA;
-			RNA_id_pointer_create(&capObs[r]->id, &obRNA);
+			RNA_id_pointer_create(&capObs[cap]->id, &obRNA);
 			BL::Object capOb(obRNA);
-
-			// need inverted of cap object
-			copy_m4_m4(objectInvertedTm, ((Object*)capOb.ptr.data)->obmat);
-			invert_m4(objectInvertedTm);
 
 			// show/hide override?
 			ObjectOverridesAttrs override;
@@ -1003,26 +1021,64 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			override.useInstancer = true;
 			override.tm = AttrTransformFromBlTransform(capOb.matrix_world());
 			override.id = reinterpret_cast<intptr_t>(capOb.ptr.data);
+			// base of cap object
 			sync_object(capOb, check_updated, override);
+
+			// need inverted of cap object
+			copy_m4_m4(objectInvertedTm, ((Object*)capOb.ptr.data)->obmat);
+			invert_m4(objectInvertedTm);
 
 			float capLocalTm[4][4];
 			// start cap is first after all dupli tms
 			// end cap is after start cap
 			// array is long enough if either of them is present
-			const float * capDupliTm = amd->dupliTms + ( (amd->count + r) * 16);
+			const float * capDupliTm = arrModData->dupliTms + ( (arrModData->count + cap) * 16);
 			mul_m4_m4m4(capLocalTm, (float (*)[4])capDupliTm, objectInvertedTm);
 
-			MHash instanceId = getParticleID(capOb, capIdx);
+			// base instance, because it's always there
+			MHash instanceId = getParticleID(capOb, capInstanceIndex);
 			maxInstanceId = std::max(maxInstanceId, instanceId);
 
-			AttrInstancer::Item &instancer_item = (*instances.data)[totalCount + capIdx];
+			AttrInstancer::Item &instancer_item = (*instances.data)[totalCount + capInstanceIndex];
 			instancer_item.index = instanceId;
 			instancer_item.node = m_data_exporter.getNodeName(capOb);
 			instancer_item.tm = AttrTransformFromBlTransform(capLocalTm);
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+			capInstanceIndex++;
 
-			capIdx++;
+			// all instances created because of "next" array modifiers
+			for (int r = 1; r < capInstanceCount; r++) {
+				auto tmIndecies = unravel_index(r, capArraySizes);
+				float capInstanceTm[4][4];
+				copy_m4_m4(capInstanceTm, capLocalTm);
+
+				// to get tm of each cap beside base we need to multiply by TM of "next" array mods
+				for (int tmIdx = 0; tmIdx < tmIndecies.size(); tmIdx++) {
+					auto arrMod = ob.modifiers[arrModIndecies[tmIdx]];
+					const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
+
+					// index 0, means object itself, so we offset all indecies by -1 and skip first
+					if (tmIndecies[tmIdx] != 0) {
+						const float * amdTm = amd->dupliTms + (tmIndecies[tmIdx]-1) * 16;
+						mul_m4_m4m4(capInstanceTm, (float (*)[4])amdTm, capInstanceTm);
+					}
+				}
+
+				MHash instanceId = getParticleID(capOb, capInstanceIndex);
+				maxInstanceId = std::max(maxInstanceId, instanceId);
+
+				AttrInstancer::Item &instancer_item = (*instances.data)[totalCount + capInstanceIndex];
+				instancer_item.index = instanceId;
+				instancer_item.node = m_data_exporter.getNodeName(capOb);
+				instancer_item.tm = AttrTransformFromBlTransform(capInstanceTm);
+				memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+
+				capInstanceIndex++;
+			}
 		}
+
+		// push this array mod size so we can calculate "prev" mod cap count
+		capArraySizes.push_back(arrModData->count);
 	}
 
 	for (int c = 0; c < totalCount; ++c) {
