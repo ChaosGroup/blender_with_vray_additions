@@ -228,14 +228,16 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrMapChannels &val)
 	if (!val.data.empty()) {
 		pp.indent();
 		int index = 0;
+		bool addComma = false;
 		for (auto iter = val.data.cbegin(); iter != val.data.cend(); ++iter) {
-			pp << pp.indentation() << "List(" << index++ << ",\n";
+			pp << pp.indentation() << (addComma ? "," : "") << "List(" << index++ << ",\n";
 			pp << pp.indent();
 			pp << iter->second.vertices << ",\n" << pp.indentation() << iter->second.faces;
 			pp.unindent();
 			pp << "\n" << pp.indentation() << ")\n";
-			pp.unindent();
+			addComma = true;
 		}
+		pp.unindent();
 	}
 	return pp << pp.indentation() << ")";
 }
