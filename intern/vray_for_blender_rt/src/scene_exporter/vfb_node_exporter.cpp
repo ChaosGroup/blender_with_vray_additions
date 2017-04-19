@@ -295,7 +295,7 @@ void DataExporter::setComputedLayers(uint32_t layers, bool is_local_view)
 
 void DataExporter::resetSyncState()
 {
-	auto l = raiiLock();
+	auto lock = raiiLock();
 	m_id_cache.clear();
 	m_id_track.reset_usage();
 	clearMaterialCache();

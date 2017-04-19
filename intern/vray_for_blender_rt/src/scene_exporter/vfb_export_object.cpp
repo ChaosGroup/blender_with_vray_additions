@@ -508,11 +508,6 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
-	// track instancer
-	{
-		auto lock = raiiLock();
-		m_id_track.insert(ob, exportName, dupliType);
-	}
 	const bool visible = isObjectVisible(ob, ObjectVisibility(HIDE_RENDER | HIDE_VIEWPORT));
 
 	PluginDesc instancerDesc(exportName, "Instancer2");
@@ -522,9 +517,11 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	instancerDesc.add("shading_needs_ids", true);
 
 	const auto & wrapperName = "NodeWrapper@" + exportName;
-	// also track node wrapper
 	{
 		auto lock = raiiLock();
+		// track instancer
+		m_id_track.insert(ob, exportName, dupliType);
+		// also track node wrapper
 		m_id_track.insert(ob, wrapperName, dupliType);
 	}
 	PluginDesc nodeWrapper(wrapperName, "Node");

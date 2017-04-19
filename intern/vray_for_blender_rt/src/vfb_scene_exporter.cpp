@@ -541,21 +541,20 @@ void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updat
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
 	const std::string &obName = ob.name();
-	bool add = false;
-	if (override) {
-		auto lock = m_data_exporter.raiiLock();
-		add = !m_data_exporter.m_id_cache.contains(override.id) && (!override.useInstancer || !m_data_exporter.m_id_cache.contains(ob));
-	} else {
-		auto lock = m_data_exporter.raiiLock();
-		add = !m_data_exporter.m_id_cache.contains(ob);
-	}
-	// this object's ID is already synced - skip
-	if (!add) {
-		return;
-	}
 
 	{
 		auto lock = m_data_exporter.raiiLock();
+		// this object's ID is already synced - skip
+		if (override) {
+			if (m_data_exporter.m_id_cache.contains(override.id) || (override.useInstancer && m_data_exporter.m_id_cache.contains(ob))) {
+				return;
+			}
+		} else {
+			if (m_data_exporter.m_id_cache.contains(ob)) {
+				return;
+			}
+		}
+
 		auto pluginName = override.namePrefix;
 		if (DataExporter::isObMesh(ob) || DataExporter::isObGroupInstance(ob)) {
 			pluginName += m_data_exporter.getNodeName(ob);
@@ -626,13 +625,14 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	if (!skip_export || overrideAttr) {
 		m_data_exporter.saveSyncedObject(ob);
 
-		if (overrideAttr) {
+		{
 			auto lock = m_data_exporter.raiiLock();
-			m_data_exporter.m_id_cache.insert(overrideAttr.id);
-			m_data_exporter.m_id_cache.insert(ob);
-		} else {
-			auto lock = m_data_exporter.raiiLock();
-			m_data_exporter.m_id_cache.insert(ob);
+			if (overrideAttr) {
+				m_data_exporter.m_id_cache.insert(overrideAttr.id);
+				m_data_exporter.m_id_cache.insert(ob);
+			} else {
+				m_data_exporter.m_id_cache.insert(ob);
+			}
 		}
 
 		if (!overrideAttr && ob.modifiers.length()) {
