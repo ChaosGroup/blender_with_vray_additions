@@ -106,8 +106,6 @@ bool ProductionExporter::export_scene(const bool)
 {
 	using AnimMode = SettingsAnimation::AnimationMode;
 
-	clock_t begin = clock();
-
 	SceneExporter::export_scene(false);
 	m_frameExporter.updateFromSettings();
 
@@ -128,9 +126,12 @@ bool ProductionExporter::export_scene(const bool)
 		renderThread = std::thread(&ProductionExporter::render_loop, this);
 	}
 
+	double totalSyncTime = 0.;
 	const int renderFrames = m_frameExporter.getRenderFrameCount();
 	bool isFirstExport = true;
 	for (int c = 0; c < renderFrames; ++c) {
+		clock_t frameBeginTime = clock();
+
 		// export current render frame data
 		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
 			const auto aMode = m_settings.settings_animation.mode;
@@ -180,13 +181,20 @@ bool ProductionExporter::export_scene(const bool)
 			m_exporter->commit_changes();
 		}
 
-		// render current frame
+		clock_t frameEndTime = clock();
+		const double frameSyncSeconds = double(frameEndTime - frameBeginTime) / CLOCKS_PER_SEC;
+		totalSyncTime += frameSyncSeconds;
+
+		// wait render for current frame only
 		if (!isFileExport) {
+			PRINT_INFO_EX("Frame sync time %.3f sec.", frameSyncSeconds);
 			if (!wait_for_frame_render()) {
 				break;
 			}
 		}
 	}
+
+	PRINT_INFO_EX("Total sync time %.3f sec.", totalSyncTime);
 
 	if (!isFileExport) {
 		std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
@@ -212,12 +220,6 @@ bool ProductionExporter::export_scene(const bool)
 		renderThread.join();
 		render_end();
 	}
-
-	// finally set the frame that we want to render to so we actually render the correct frame
-
-	clock_t end = clock();
-	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	PRINT_INFO_EX("Synced in %.3f sec.", elapsed_secs);
 
 	m_exporter->free();
 
