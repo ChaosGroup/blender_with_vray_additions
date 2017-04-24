@@ -48,10 +48,17 @@ AttrValue convertToOSLArgument(const AttrValue & val) {
 	}
 }
 
-AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, OSL::OSLQuery & query) {
-	OIIO_NAMESPACE_USING
+AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, std::string & scriptPath) {
 	AttrListValue list;
+#ifdef WITH_OSL
+	OSL::OSLQuery query;
+	auto & oslManager = Blender::OSLManager::getInstance();
+	if (!oslManager.queryFromNode(node, query, m_data.filepath(), true, &scriptPath)) {
+		PRINT_WARN("Failed to query node \"%s\"", node.name().c_str());
+		return list;
+	}
 
+	OIIO_NAMESPACE_USING
 	for (int c = 0; c < query.nparams(); c++) {
 		const OSL::OSLQuery::Parameter *param = query.getparam(c);
 		// usuported types
@@ -83,7 +90,7 @@ AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Nod
 			}
 		}
 	}
-
+#endif
 	return list;
 }
 
@@ -110,13 +117,7 @@ AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node
 	// if this is inline script - save it to file
 	// TODO: what about DR and zmq?
 	std::string scriptPath;
-	OSL::OSLQuery query;
-	auto & oslManager = Blender::OSLManager::getInstance();
-	if (!oslManager.queryFromNode(node, query, m_data.filepath(), true, &scriptPath)) {
-		PRINT_WARN("Failed to query node \"%s\"", node.name().c_str())
-	}
-
-	plgDesc.add("input_parameters", buildScriptArgumentList(ntree, node, context, query));
+	plgDesc.add("input_parameters", buildScriptArgumentList(ntree, node, context, scriptPath));
 	plgDesc.add("shader_file", scriptPath);
 	if (isMtl) {
 		plgDesc.add("output_closure", outputClosure);

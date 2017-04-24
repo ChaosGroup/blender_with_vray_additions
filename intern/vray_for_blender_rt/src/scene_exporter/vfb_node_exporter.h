@@ -481,7 +481,7 @@ private:
 
 	AttrValue         exportBlenderNodeNormal(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
-	AttrListValue     buildScriptArgumentList(BL::NodeTree &ntree, BL::Node & node, NodeContext &context, OSL::OSLQuery & query);
+	AttrListValue     buildScriptArgumentList(BL::NodeTree &ntree, BL::Node & node, NodeContext &context, std::string & stringPath);
 	AttrValue         exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 
 public:

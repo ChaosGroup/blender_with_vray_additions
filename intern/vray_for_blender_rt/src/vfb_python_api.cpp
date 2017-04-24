@@ -396,6 +396,7 @@ static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 
 static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 {
+#ifdef WITH_OSL
 	OIIO_NAMESPACE_USING
 	PyObject *pynodegroup, *pynode;
 	const char *blendPath = nullptr;
@@ -574,7 +575,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 			}
 		}
 	} while(removed);
-
+#endif
 	Py_RETURN_TRUE;
 }
 
@@ -584,13 +585,14 @@ static PyObject* vfb_osl_setstdosl_path(PyObject * /*self*/, PyObject *args) {
 	if (!PyArg_ParseTuple(args, "s", &stdoslfile)) {
 		return nullptr;
 	}
-
+#ifdef WITH_OSL
 	auto & mgr = Blender::OSLManager::getInstance();
 
 	if (mgr.stdOSLPath != stdoslfile) {
 		mgr.stdOSLPath = stdoslfile;
 		PRINT_INFO_EX("Using \"%s\" for stdosl path.", stdoslfile);
 	}
+#endif
 
 	Py_RETURN_TRUE;
 }

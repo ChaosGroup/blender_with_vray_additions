@@ -91,6 +91,10 @@ else()
 	list(APPEND ${HEADERS} ${HEADER_LOCAL})
 endif()
 
+if (WITH_CYCLES_OSL)
+	add_definitions(-DWITH_OSL)
+endif()
+
 
 if (UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -std=c++11")

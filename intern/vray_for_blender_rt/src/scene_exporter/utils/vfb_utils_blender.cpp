@@ -29,6 +29,9 @@
 #include "cgr_config.h"
 #include <boost/filesystem.hpp>
 
+using namespace VRayForBlender;
+
+#ifdef WITH_OSL
 // OSL
 #include <OSL/oslconfig.h>
 #include <OSL/oslcomp.h>
@@ -37,10 +40,6 @@
 // OIIO
 #include <errorhandler.h>
 #include <string_view.h>
-
-
-using namespace VRayForBlender;
-
 
 bool Blender::OSLManager::compile(const std::string & inputFile, const std::string & outputFile)
 {
@@ -145,7 +144,7 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 
 	return success;
 }
-
+#endif
 
 std::string Blender::GetIDName(BL::ID id, const std::string &)
 {

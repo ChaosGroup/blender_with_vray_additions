@@ -29,7 +29,9 @@
 #include <memory>
 #include <functional>
 
+#ifdef WITH_OSL
 #include <OSL/oslquery.h>
+#endif
 
 // This is global because multiple mt exporters could run at the same time
 static boost::shared_mutex vfbExporterBlenderLock;
@@ -38,7 +40,7 @@ static boost::shared_mutex vfbExporterBlenderLock;
 
 namespace VRayForBlender {
 namespace Blender {
-
+#ifdef WITH_OSL
 struct OSLManager {
 	std::string stdOSLPath;
 
@@ -56,7 +58,7 @@ struct OSLManager {
 		return mgr;
 	}
 };
-
+#endif
 
 
 inline void freePyObject(PyObject * ob) {
