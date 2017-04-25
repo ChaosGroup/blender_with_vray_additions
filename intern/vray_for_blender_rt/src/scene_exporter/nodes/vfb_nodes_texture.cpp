@@ -494,12 +494,12 @@ AttrValue DataExporter::exportVRayNodeTexFalloff(BL::NodeTree &ntree, BL::Node &
 
 		const std::string &texBezierCurveName = GenPluginName(blendInputNode, ntree, context);
 		PluginDesc texBezierCurveAttrs(texBezierCurveName, "TexBezierCurve");
+		output.as<AttrPlugin>().output = "blend_output";
 		texBezierCurveAttrs.add("input_float", output);
 		texBezierCurveAttrs.add("points", points);
 		texBezierCurveAttrs.add("types", types);
 
 		auto plg = m_exporter->export_plugin(texBezierCurveAttrs);
-		plg.output = "blend_output";
 
 		pluginDesc.add("use_blend_input", true);
 		pluginDesc.add("blend_input", plg);
