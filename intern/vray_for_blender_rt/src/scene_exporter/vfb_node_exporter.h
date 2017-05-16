@@ -438,6 +438,14 @@ public:
 	bool              isObjectInHideList(BL::Object ob, const std::string listName) const;
 
 private:
+	/// Find the corresponding uvwgen used for the texture that might be attached to @textureSocket
+	/// @ntree - the node tree that this socket is in
+	/// @node - the node that this socket is from
+	/// @context - the current node export context
+	/// @textureSocket - the socket which the texture is attached to
+	/// @return - the plugin that is the uvwgen used for the texture or empty plugin
+	AttrPlugin        getTextureUVWGen(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, BL::NodeSocket textureSocket);
+
 	BL::Object        exportVRayNodeSelectObject(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	BL::Group         exportVRayNodeSelectGroup(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 

@@ -103,6 +103,26 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 	return m_exporter->export_plugin(mtlMultiDesc);
 }
 
+AttrPlugin DataExporter::getTextureUVWGen(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, BL::NodeSocket textureSocket) {
+	if (textureSocket) {
+		auto texNode = Nodes::GetConnectedNode(textureSocket);
+		if (textureSocket) {
+			auto uvwgenSock = Nodes::GetSocketByAttr(texNode, "uvwgen");
+			if (uvwgenSock) {
+				auto uvwgenNode = Nodes::GetConnectedNode(uvwgenSock);
+				if (uvwgenNode) {
+					return AttrPlugin(GenPluginName(uvwgenNode, ntree, context));
+				} else {
+					// if no uvwgen is attached, setAttrsFromNode will generate one
+					return AttrPlugin("UVW@" + DataExporter::GenPluginName(node, ntree, context));
+				}
+			}
+		}
+	}
+
+	return "";
+}
+
 AttrValue DataExporter::exportVRayNodeBRDFBumpMtl(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	const std::string &brdfBumpName = "BRDFBump@" + DataExporter::GenPluginName(node, ntree, context);
@@ -113,10 +133,18 @@ AttrValue DataExporter::exportVRayNodeBRDFBumpMtl(BL::NodeTree &ntree, BL::Node 
 
 	BL::NodeSocket sockBump   = Nodes::GetSocketByAttr(node, "bump_tex_float");
 	BL::NodeSocket sockNormal = Nodes::GetSocketByAttr(node, "bump_tex_color");
+	BL::NodeSocket sockTex(PointerRNA_NULL);
 	if (sockBump && sockBump.is_linked()) {
 		brdfBump.del("bump_tex_color");
+		sockTex = sockBump;
 	} else {
 		brdfBump.del("bump_tex_float");
+		sockTex = sockNormal;
+	}
+
+	auto uvwgenPlg = getTextureUVWGen(ntree, node, context, sockTex);
+	if (!uvwgenPlg.plugin.empty()) {
+		brdfBump.add("normal_uvwgen", uvwgenPlg);
 	}
 
 	return m_exporter->export_plugin(brdfBump);
@@ -156,28 +184,18 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 
 		setAttrsFromNode(ntree, node, fromSocket, context, brdfBump, "BRDFBump", ParamDesc::PluginBRDF);
 
-		BL::NodeSocket texSock(PointerRNA_NULL);
+		BL::NodeSocket sockTex(PointerRNA_NULL);
 		if (sockBump && sockBump.is_linked()) {
 			brdfBump.del("bump_tex_color");
-			texSock = sockBump;
+			sockTex = sockBump;
 		} else {
 			brdfBump.del("bump_tex_float");
-			texSock = sockNormal;
+			sockTex = sockNormal;
 		}
 
-		// attach the bump texture uvwgen to our normal_uvwgen socket
-		auto texNode = Nodes::GetConnectedNode(texSock);
-		if (texNode) {
-			auto uvwgenSock = Nodes::GetSocketByAttr(texNode, "uvwgen");
-			if (uvwgenSock) {
-				auto uvwgenNode = Nodes::GetConnectedNode(uvwgenSock);
-				if (uvwgenNode) {
-					brdfBump.add("normal_uvwgen", AttrPlugin(GenPluginName(uvwgenNode, ntree, context)));
-				} else {
-					// if no uvwgen is attached, setAttrsFromNode will generate one
-					brdfBump.add("normal_uvwgen", AttrPlugin("UVW@" + DataExporter::GenPluginName(node, ntree, context)));
-				}
-			}
+		auto uvwgenPlg = getTextureUVWGen(ntree, node, context, sockTex);
+		if (!uvwgenPlg.plugin.empty()) {
+			brdfBump.add("normal_uvwgen", uvwgenPlg);
 		}
 
 		m_exporter->export_plugin(brdfBump);
