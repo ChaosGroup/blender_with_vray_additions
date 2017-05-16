@@ -156,11 +156,28 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 
 		setAttrsFromNode(ntree, node, fromSocket, context, brdfBump, "BRDFBump", ParamDesc::PluginBRDF);
 
+		BL::NodeSocket texSock(PointerRNA_NULL);
 		if (sockBump && sockBump.is_linked()) {
 			brdfBump.del("bump_tex_color");
-		}
-		else {
+			texSock = sockBump;
+		} else {
 			brdfBump.del("bump_tex_float");
+			texSock = sockNormal;
+		}
+
+		// attach the bump texture uvwgen to our normal_uvwgen socket
+		auto texNode = Nodes::GetConnectedNode(texSock);
+		if (texNode) {
+			auto uvwgenSock = Nodes::GetSocketByAttr(texNode, "uvwgen");
+			if (uvwgenSock) {
+				auto uvwgenNode = Nodes::GetConnectedNode(uvwgenSock);
+				if (uvwgenNode) {
+					brdfBump.add("normal_uvwgen", AttrPlugin(GenPluginName(uvwgenNode, ntree, context)));
+				} else {
+					// if no uvwgen is attached, setAttrsFromNode will generate one
+					brdfBump.add("normal_uvwgen", AttrPlugin("UVW@" + DataExporter::GenPluginName(node, ntree, context)));
+				}
+			}
 		}
 
 		m_exporter->export_plugin(brdfBump);
