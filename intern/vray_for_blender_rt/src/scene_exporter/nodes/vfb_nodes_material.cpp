@@ -120,7 +120,7 @@ AttrPlugin DataExporter::getTextureUVWGen(BL::NodeTree &ntree, BL::Node &node, N
 		}
 	}
 
-	return "";
+	return AttrPlugin();
 }
 
 AttrValue DataExporter::exportVRayNodeBRDFBumpMtl(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
