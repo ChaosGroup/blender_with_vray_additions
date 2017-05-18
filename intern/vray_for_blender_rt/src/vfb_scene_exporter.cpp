@@ -1163,7 +1163,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}, ThreadManager::Priority::LOW);
 	}
 
-	if (m_threadManager->workerCount()) {
+	if (!is_interrupted() && m_threadManager->workerCount()) {
 		PRINT_INFO_EX("Started export for all objects - waiting for all.");
 		wg.wait();
 	}

@@ -50,7 +50,7 @@ public:
 		{
 			std::lock_guard<std::mutex> lock(m_mtx);
 			--m_remaining;
-			notify = m_remaining == 0;
+			notify = m_remaining <= 0;
 		}
 		if (notify) {
 			m_condVar.notify_all();
