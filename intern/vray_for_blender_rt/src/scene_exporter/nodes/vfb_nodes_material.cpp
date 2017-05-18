@@ -133,18 +133,14 @@ AttrValue DataExporter::exportVRayNodeBRDFBumpMtl(BL::NodeTree &ntree, BL::Node 
 
 	BL::NodeSocket sockBump   = Nodes::GetSocketByAttr(node, "bump_tex_float");
 	BL::NodeSocket sockNormal = Nodes::GetSocketByAttr(node, "bump_tex_color");
-	BL::NodeSocket sockTex(PointerRNA_NULL);
 	if (sockBump && sockBump.is_linked()) {
 		brdfBump.del("bump_tex_color");
-		sockTex = sockBump;
 	} else {
 		brdfBump.del("bump_tex_float");
-		sockTex = sockNormal;
-	}
-
-	auto uvwgenPlg = getTextureUVWGen(ntree, node, context, sockTex);
-	if (!uvwgenPlg.plugin.empty()) {
-		brdfBump.add("normal_uvwgen", uvwgenPlg);
+		auto uvwgenPlg = getTextureUVWGen(ntree, node, context, sockNormal);
+		if (!uvwgenPlg.plugin.empty()) {
+			brdfBump.add("normal_uvwgen", uvwgenPlg);
+		}
 	}
 
 	return m_exporter->export_plugin(brdfBump);
@@ -155,24 +151,16 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 	const std::string &baseName = DataExporter::GenPluginName(node, ntree, context);
 
 	// BRDFVRayMtl
-	//
-	const std::string &brdfVRayMtlName = "BRDFVRayMtl@" + baseName;
-
-	PluginDesc brdfVRayMtl(brdfVRayMtlName, "BRDFVRayMtl");
+	PluginDesc brdfVRayMtl("BRDFVRayMtl@" + baseName, "BRDFVRayMtl");
 	setAttrsFromNode(ntree, node, fromSocket, context, brdfVRayMtl, "BRDFVRayMtl", ParamDesc::PluginBRDF);
 
 	PointerRNA brdfVRayMtlPtr = RNA_pointer_get(&node.ptr, "BRDFVRayMtl");
 	if (RNA_boolean_get(&brdfVRayMtlPtr, "hilight_glossiness_lock")) {
 		brdfVRayMtl.add("hilight_glossiness", brdfVRayMtl.get("reflect_glossiness")->attrValue);
 	}
-
-	m_exporter->export_plugin(brdfVRayMtl);
-
-	// Material BRDF
-	std::string materialBrdf = brdfVRayMtlName;
+	AttrPlugin baseBRDF = m_exporter->export_plugin(brdfVRayMtl);
 
 	// BRDFBump
-	//
 	BL::NodeSocket sockBump   = Nodes::GetSocketByAttr(node, "bump_tex_float");
 	BL::NodeSocket sockNormal = Nodes::GetSocketByAttr(node, "bump_tex_color");
 	const bool useBump = (sockBump && sockBump.is_linked()) || (sockNormal && sockNormal.is_linked());
@@ -180,43 +168,33 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 		const std::string &brdfBumpName = "BRDFBump@" + baseName;
 
 		PluginDesc brdfBump(brdfBumpName, "BRDFBump");
-		brdfBump.add("base_brdf", AttrPlugin(brdfVRayMtlName));
+		brdfBump.add("base_brdf", baseBRDF);
 
 		setAttrsFromNode(ntree, node, fromSocket, context, brdfBump, "BRDFBump", ParamDesc::PluginBRDF);
 
-		BL::NodeSocket sockTex(PointerRNA_NULL);
 		if (sockBump && sockBump.is_linked()) {
 			brdfBump.del("bump_tex_color");
-			sockTex = sockBump;
 		} else {
 			brdfBump.del("bump_tex_float");
-			sockTex = sockNormal;
+			auto uvwgenPlg = getTextureUVWGen(ntree, node, context, sockNormal);
+			if (!uvwgenPlg.plugin.empty()) {
+				brdfBump.add("normal_uvwgen", uvwgenPlg);
+			}
 		}
 
-		auto uvwgenPlg = getTextureUVWGen(ntree, node, context, sockTex);
-		if (!uvwgenPlg.plugin.empty()) {
-			brdfBump.add("normal_uvwgen", uvwgenPlg);
-		}
-
-		m_exporter->export_plugin(brdfBump);
-
-		materialBrdf = brdfBumpName;
+		baseBRDF = m_exporter->export_plugin(brdfBump);
 	}
 
 	// MtlSingleBRDF
-	//
-	const std::string &mtlSingleBrdfName = "MtlSingleBRDF@" + baseName;
-
-	PluginDesc mtlSingleBrdf(mtlSingleBrdfName, "MtlSingleBRDF");
-	mtlSingleBrdf.add("brdf", AttrPlugin(materialBrdf));
+	PluginDesc mtlSingleBrdf("MtlSingleBRDF@" + baseName, "MtlSingleBRDF");
+	mtlSingleBrdf.add("brdf", baseBRDF);
 
 	setAttrsFromNode(ntree, node, fromSocket, context, mtlSingleBrdf, "MtlSingleBRDF", ParamDesc::PluginMaterial);
-	m_exporter->export_plugin(mtlSingleBrdf);
+	AttrPlugin singleBrdf = m_exporter->export_plugin(mtlSingleBrdf);
 
 	// MtlMaterialID
-	//
 	PluginDesc mtlMaterialId(baseName, "MtlMaterialID");
-	mtlMaterialId.add("base_mtl", AttrPlugin(mtlSingleBrdfName));
+	mtlMaterialId.add("base_mtl", singleBrdf);
 
 	setAttrsFromNode(ntree, node, fromSocket, context, mtlMaterialId, "MtlMaterialID", ParamDesc::PluginMaterial);
 
