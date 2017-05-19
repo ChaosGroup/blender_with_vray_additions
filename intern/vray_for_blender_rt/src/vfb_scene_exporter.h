@@ -148,7 +148,7 @@ private:
 
 	/// The last frame that was exported
 	/// NOTE: used to skip already exported frames in case we have high motion blur radius and alot of frames overlap
-	float m_lastExportedFrame; 
+	int m_lastExportedFrame; 
 
 	float m_sceneFrameToExport; ///< the frame we need to set to the current scene so we can export
 
@@ -196,7 +196,16 @@ private:
 			return m_subframeValues;
 		}
 
+		int getCurrentSubframeDivision() {
+			return m_currentSubframeDivision;
+		}
+
+		void setCurrentSubframeDivision(int sd) {
+			m_currentSubframeDivision = sd;
+		}
+
 	private:
+		int m_currentSubframeDivision;
 		BL::Scene &m_scene;
 		std::multimap<int, BL::Object, std::greater<int>> m_objectsWithSubframes;
 		std::vector<int> m_subframeValues;
