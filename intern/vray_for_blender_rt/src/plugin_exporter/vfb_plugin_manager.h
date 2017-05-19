@@ -25,8 +25,9 @@
 #include "utils/cgr_hash.h"
 
 namespace VRayForBlender {
-/// Class that keeps track of what data is exported last, it keeps hashes for all plugins properties
+/// Class that keeps track of what data is exported last, it keeps hashes for all plugin's properties
 /// All plugins that are exported first go trough this class to check if any/all properties need to be exported
+/// Check PluginExporter::export_plugin for details
 class PluginManager {
 public:
 	PluginManager();
