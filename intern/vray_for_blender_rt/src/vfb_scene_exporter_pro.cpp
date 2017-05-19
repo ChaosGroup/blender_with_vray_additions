@@ -133,7 +133,7 @@ bool ProductionExporter::export_scene(const bool)
 		clock_t frameBeginTime = clock();
 
 		// export current render frame data
-		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
+		m_frameExporter.forEachExportFrame([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
 			const auto aMode = m_settings.settings_animation.mode;
 			{
 				std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
@@ -141,15 +141,18 @@ bool ProductionExporter::export_scene(const bool)
 				if (!isFileExport) {
 					std::lock(uLock, lock);
 				}
-				if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
-					m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+				const FrameExportManager::BlenderFramePair sceneFramePair = {m_scene.frame_current(), m_scene.frame_subframe()};
+				const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
+
+				if (sceneFramePair != setFramePair) {
+					m_scene.frame_set(setFramePair.frame, setFramePair.subframe);
 				}
 				if (aMode == AnimMode::AnimationModeCameraLoop) {
 					m_active_camera = frameExp.getActiveCamera();
 				}
 			}
 			// set this on the settings obj so it is accessible from data exporter
-			m_settings.settings_animation.frame_current = m_frameExporter.getSceneFrameToExport();
+			m_settings.settings_animation.frame_current = m_frameExporter.getCurrentFrame();
 
 			// set the frame to export (so values are inserted for that time)
 			if (aMode == AnimMode::AnimationModeCameraLoop) {
@@ -157,7 +160,7 @@ bool ProductionExporter::export_scene(const bool)
 				// and also export frame is constant
 				m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame() + 1); // frames are 1 based
 			} else {
-				m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
+				m_exporter->set_current_frame(m_frameExporter.getCurrentFrame());
 			}
 
 			if (!isFirstExport && aMode == AnimMode::AnimationModeFullNoGeometry) {

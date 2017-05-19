@@ -165,7 +165,7 @@ AttrPlugin DataExporter::exportSettingsMotionBlur(ViewParams &viewParams)
 		if (cameraData) {
 			PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
 			PointerRNA moblurSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");
-			
+
 			setAttrsFromPropGroupAuto(moBlurDesc, &moblurSettings, "SettingsMotionBlur");
 		}
 	}

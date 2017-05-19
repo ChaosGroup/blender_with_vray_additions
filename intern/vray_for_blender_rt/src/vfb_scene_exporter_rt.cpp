@@ -62,7 +62,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			: renderFrame(frameExp.getCurrentRenderFrame())
 			, useMotionBlur(settings.use_motion_blur)
 			, mbDuration(settings.mb_duration)
-			, mbInterval(settings.mb_intervalCenter)
+			, mbInterval(settings.mb_offset)
 		{}
 
 		bool operator!=(const FrameStateCheck & o) const {
@@ -94,13 +94,16 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			m_exporter->getPluginManager().clear();
 		}
 
-		m_frameExporter.forEachFrameInBatch([this](FrameExportManager & frameExp) {
-			if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
-				m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+		m_frameExporter.forEachExportFrame([this](FrameExportManager & frameExp) {
+			const FrameExportManager::BlenderFramePair sceneFramePair = {m_scene.frame_current(), m_scene.frame_subframe()};
+			const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
+
+			if (sceneFramePair != setFramePair) {
+				m_scene.frame_set(setFramePair.frame, setFramePair.subframe);
 			}
 			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 			// set the frame to export (so values are inserted for that time)
-			m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
+			m_exporter->set_current_frame(m_frameExporter.getCurrentFrame());
 			sync(false);
 			return true;
 		});

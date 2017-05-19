@@ -61,24 +61,26 @@ FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & setti
 
 void FrameExportManager::updateFromSettings()
 {
-	m_lastExportedFrame = INT_MIN; // remove exported cache
+	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();
 
 	m_sceneSavedFrame = m_scene.frame_current();
 	m_sceneFirstFrame = m_scene.frame_start();
+	m_mbGeomSamples = m_settings.mb_samples;
 
 	if (m_settings.use_motion_blur) {
-		const int framesPerRender = m_settings.mb_duration + 1; // total frames to export for single render frame
-		const int midFrame = framesPerRender * m_settings.mb_intervalCenter; // the 'render' frame
-		m_mbFramesBefore = std::max(0, midFrame - 1); // motion blur frames before 'render' frame
+		// motion blur breaks the pattern of exporting only integer values for current frame
+		// even so that we may not at all export integer value frames
+		// E.G: sceneFrame = 5, mbInterval = 1, mbOffset = -0.5, mbSamples = 2
+		// this must export the scene 2 times in 4.5 frame and 5.5 frame
 
-		// if mb frames is 1, and interval center is 0.5, we want 'render' frame to be 0 and have one more mb frame after it
-		m_mbFramesAfter = std::max(0, framesPerRender - midFrame); // motion blur frames after 'render' frame
-
+		m_mbSampleStep = m_settings.mb_duration / (m_mbGeomSamples - 1); // we must have export sample at the end if the mb interval
+		m_mbIntervalStartOffset = m_settings.mb_offset - m_settings.mb_duration * 0.5;
 	} else {
-		m_mbFramesBefore = 0;
-		m_mbFramesAfter = 0;
+		m_mbGeomSamples = 1; // force this to 1 so we can export 1 sample per frame with MB disabled
+		m_mbSampleStep = 0;
+		m_mbIntervalStartOffset = 0;
 	}
 
 	if (m_settings.settings_animation.use) {
@@ -138,8 +140,8 @@ int FrameExportManager::getRenderFrameCount() const {
 void FrameExportManager::rewind()
 {
 	m_frameToRender = m_sceneSavedFrame; // we need to render the current frame
-	m_sceneFrameToExport -= (m_mbFramesBefore + 1 + m_mbFramesAfter); // rewind number of exported frames
-	m_lastExportedFrame = INT_MIN; // remove exported cache
+	m_currentFrame -= m_mbIntervalStartOffset; // rewind what we exported
+	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 }
 
 void FrameExportManager::reset()
@@ -150,29 +152,24 @@ void FrameExportManager::reset()
 	updateFromSettings();
 }
 
-void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback)
+void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManager &)> callback)
 {
 	if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		// for camera loop we ignore motion blur
-		m_sceneFrameToExport = m_sceneSavedFrame; // for camera loop we export only the current frame, but from different cameras
+		m_currentFrame = m_sceneSavedFrame; // for camera loop we export only the current frame, but from different cameras
 		callback(*this);
 		m_lastExportedFrame++;
 		m_frameToRender++;
 	} else {
 		m_frameToRender += m_animationFrameStep;
 
-		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame + 1);
-		const int lastFrame = m_frameToRender + m_mbFramesAfter;
-
-		// this is motion blur frames so the step is always 1
-		for (int c = firstFrame; c <= lastFrame; c++) {
-			m_sceneFrameToExport = c;
+		for (int c = 0; c < m_mbGeomSamples; c++) {
+			m_currentFrame = m_frameToRender + m_mbIntervalStartOffset + c * m_mbSampleStep;
 			if (!callback(*this)) {
 				break;
 			}
-			m_lastExportedFrame = c;
+			m_lastExportedFrame = m_currentFrame;
 		}
-
 	}
 }
 
@@ -1163,7 +1160,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}, ThreadManager::Priority::LOW);
 	}
 
-	if (m_threadManager->workerCount()) {
+	if (!is_interrupted() && m_threadManager->workerCount()) {
 		PRINT_INFO_EX("Started export for all objects - waiting for all.");
 		wg.wait();
 	}
