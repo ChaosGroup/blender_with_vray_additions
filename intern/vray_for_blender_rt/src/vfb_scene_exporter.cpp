@@ -55,6 +55,7 @@ using namespace VRayForBlender;
 FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings)
 	: m_settings(settings)
 	, m_scene(scene)
+	, m_subframes(scene)
 {
 	updateFromSettings();
 }
@@ -161,7 +162,7 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 	} else {
 		m_frameToRender += m_animationFrameStep;
 
-		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame + 1);
+		const int firstFrame = std::max((float)m_frameToRender - m_mbFramesBefore, m_lastExportedFrame + 1);
 		const int lastFrame = m_frameToRender + m_mbFramesAfter;
 
 		// this is motion blur frames so the step is always 1

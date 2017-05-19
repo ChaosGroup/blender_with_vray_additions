@@ -148,9 +148,9 @@ private:
 
 	/// The last frame that was exported
 	/// NOTE: used to skip already exported frames in case we have high motion blur radius and alot of frames overlap
-	int m_lastExportedFrame; 
+	float m_lastExportedFrame; 
 
-	int m_sceneFrameToExport; ///< the frame we need to set to the current scene so we can export
+	float m_sceneFrameToExport; ///< the frame we need to set to the current scene so we can export
 
 	/// The next frame we should actually render
 	/// For animation this will jump with the frame step and will generraly mean the frames that vray will render
@@ -159,6 +159,49 @@ private:
 
 	int m_mbFramesBefore; ///< number of motion blur frames to export before m_frameToRender
 	int m_mbFramesAfter; ///< number of motion blur frames to export after m_frameToRender
+
+	class SubframesHandler {
+	public:
+		SubframesHandler(BL::Scene &scene)
+			: m_scene(scene)
+			, m_isUpdated(false)
+		{
+			update();
+		}
+
+		void update() {
+			BL::Scene::objects_iterator soIt;
+			for (m_scene.objects.begin(soIt); soIt != m_scene.objects.end(); ++soIt) {
+				int subframesCount = RNA_int_get(&RNA_pointer_get(&(*soIt).ptr, "vray"), "subframes");
+				if (subframesCount != 0) {
+					m_subframeValues.push_back(subframesCount);
+					m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, (*soIt)));
+				}
+			}
+
+			m_isUpdated = true;
+		}
+
+		std::multimap<int, BL::Object, std::greater<int>> &getObjectsWithSubframes() {
+			if (!m_isUpdated)
+				update();
+
+			return m_objectsWithSubframes;
+		}
+
+		std::vector<int> &getSubframeValues() {
+			if (!m_isUpdated)
+				update();
+
+			return m_subframeValues;
+		}
+
+	private:
+		BL::Scene &m_scene;
+		std::multimap<int, BL::Object, std::greater<int>> m_objectsWithSubframes;
+		std::vector<int> m_subframeValues;
+		bool m_isUpdated;
+	} m_subframes;
 };
 
 class SceneExporter {
