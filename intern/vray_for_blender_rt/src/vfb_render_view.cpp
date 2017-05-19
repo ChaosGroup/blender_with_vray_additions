@@ -166,9 +166,6 @@ AttrPlugin DataExporter::exportSettingsMotionBlur(ViewParams &viewParams)
 			PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
 			PointerRNA moblurSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");
 
-			moBlurDesc.add("duration", m_settings.mb_duration);
-			moBlurDesc.add("interval_center", m_settings.mb_offset);
-
 			setAttrsFromPropGroupAuto(moBlurDesc, &moblurSettings, "SettingsMotionBlur");
 		}
 	}
@@ -506,12 +503,12 @@ void SceneExporter::sync_view(const bool check_updated)
 			m_data_exporter.exportSettingsCameraDof(viewParams);
 		}
 
-		m_data_exporter.exportSettingsMotionBlur(viewParams);
 		if (viewParams.usePhysicalCamera) {
 			physCam = m_data_exporter.exportCameraPhysical(viewParams);
 			m_exporter->set_camera_plugin(physCam.plugin);
 		}
 		else {
+			m_data_exporter.exportSettingsMotionBlur(viewParams);
 			defCam = m_data_exporter.exportCameraDefault(viewParams);
 			m_exporter->set_camera_plugin(defCam.plugin);
 		}
