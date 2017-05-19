@@ -141,7 +141,7 @@ bool ProductionExporter::export_scene(const bool)
 				if (!isFileExport) {
 					std::lock(uLock, lock);
 				}
-				const FrameExportManager::BlenderFramePair sceneFramePair = {m_scene.frame_current(), m_scene.frame_subframe()};
+				const FrameExportManager::BlenderFramePair sceneFramePair(m_scene.frame_current(), m_scene.frame_subframe());
 				const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
 
 				if (sceneFramePair != setFramePair) {

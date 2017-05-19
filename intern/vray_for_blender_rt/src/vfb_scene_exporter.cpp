@@ -65,6 +65,7 @@ void FrameExportManager::updateFromSettings()
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();
 
+	m_sceneSavedSubframe = m_scene.frame_subframe();
 	m_sceneSavedFrame = m_scene.frame_current();
 	m_sceneFirstFrame = m_scene.frame_start();
 	m_mbGeomSamples = m_settings.mb_samples;
@@ -115,14 +116,14 @@ void FrameExportManager::updateFromSettings()
 			m_animationFrameStep = 0;
 		} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
 			// frae by frame is actually not animation and we need to export current frame only
-			m_frameToRender = m_scene.frame_current(); // only current frame
+			m_frameToRender = m_sceneSavedFrame + m_sceneSavedSubframe; // only current frame
 			m_animationFrameStep = 0; // no animation
 		} else {
 			m_frameToRender = m_scene.frame_start() - m_animationFrameStep;
 		}
 	} else {
 		m_animationFrameStep = 0; // we have no animation so dont move
-		m_lastFrameToRender = m_frameToRender = m_sceneSavedFrame;
+		m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
 	}
 
 }

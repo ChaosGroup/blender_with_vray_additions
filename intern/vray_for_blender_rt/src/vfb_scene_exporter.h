@@ -127,7 +127,7 @@ public:
 		return m_currentFrame;
 	}
 
-	int getCurrentRenderFrame() const {
+	float getCurrentRenderFrame() const {
 		return m_frameToRender;
 	}
 
@@ -136,24 +136,24 @@ public:
 		int frame; ///< int part of the current frame
 		float subframe; ///< fraction of the current frame
 
-		bool operator==(const BlenderFramePair &right) const {
-			if (frame != right.frame) {
-				return false;
-			}
-			return fabs(subframe - right.subframe) < 1e-3;
-		}
+		BlenderFramePair(int frame, float subframe)
+		    : frame(frame)
+		    , subframe(subframe)
+		{}
+
+		explicit BlenderFramePair(float value)
+		    : frame(static_cast<int>(value))
+		    , subframe(value - frame)
+		{}
 
 		bool operator!=(const BlenderFramePair &right) const {
-			return !(*this == right);
+			return frame != right.frame || !(fabs(subframe - right.subframe) < 1e-3);
 		}
 	};
 
 	/// Convert float frame to blender frame pair
 	static BlenderFramePair floatFrameToBlender(float value) {
-		BlenderFramePair pair;
-		pair.frame = static_cast<int>(value);
-		pair.subframe = value - pair.frame;
-		return pair;
+		return BlenderFramePair(value);
 	}
 
 private:
@@ -161,6 +161,7 @@ private:
 	BL::Scene m_scene; ///< Current scene
 	std::vector<BL::Camera> m_loopCameras; ///< All cameras with 'camera_loop' enabled if anim is Camera Loop
 
+	float m_sceneSavedSubframe; ///< m_scene.frame_subframe() on init, used to restore scene to correct frame
 	int m_sceneSavedFrame; ///< m_scene.frame_current() on init, used to restore scene to correct frame
 	int m_sceneFirstFrame; ///< first frame of the animation
 	int m_lastFrameToRender; ///< last frame of the animation
@@ -175,7 +176,7 @@ private:
 	/// The next frame we should actually render
 	/// For animation this will jump with the frame step and will generraly mean the frames that vray will render
 	/// For camera loop this will be in range [0, n) where n is the number of cameras in the camera loop
-	int m_frameToRender;
+	float m_frameToRender;
 
 	/// Number of samples that need to be exported for each render frame
 	/// This is like subframes for object but affect the whole scene - for each render frame we need to export

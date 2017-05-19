@@ -130,7 +130,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 					Still = 0, Cinematic = 1, Video = 2,
 				};
 				const auto cameraType = static_cast<PhysicalCameraType>(RNA_enum_ext_get(&physCamera, "type"));
-				float frameDuration = 1.0 / (scene.render().fps() / scene.render().fps_base());
+				const float frameDuration = 1.0 / (scene.render().fps() / scene.render().fps_base());
 
 				if (cameraType == Still) {
 					mb_duration = 1.0 / (RNA_float_get(&physCamera, "shutter_speed") * frameDuration);

@@ -53,20 +53,20 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	clock_t begin = clock();
 
 	struct FrameStateCheck {
-		int renderFrame;
+		FrameExportManager::BlenderFramePair sceneFrame;
 		bool useMotionBlur;
 		float mbDuration;
 		float mbInterval;
 
 		FrameStateCheck(const ExporterSettings & settings, const FrameExportManager & frameExp)
-			: renderFrame(frameExp.getCurrentRenderFrame())
+			: sceneFrame(frameExp.getCurrentRenderFrame())
 			, useMotionBlur(settings.use_motion_blur)
 			, mbDuration(settings.mb_duration)
 			, mbInterval(settings.mb_offset)
 		{}
 
 		bool operator!=(const FrameStateCheck & o) const {
-			if (renderFrame != o.renderFrame) {
+			if (sceneFrame != o.sceneFrame) {
 				return true;
 			} else if (useMotionBlur != o.useMotionBlur) {
 				return true;
