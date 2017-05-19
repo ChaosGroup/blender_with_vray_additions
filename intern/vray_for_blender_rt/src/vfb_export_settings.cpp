@@ -122,6 +122,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 			use_hide_from_view = RNA_boolean_get(&vrayCamera, "hide_from_view");
 			PointerRNA mbSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");
+			mb_samples = RNA_int_get(&mbSettings, "geom_samples");
 
 			if (use_physical_camera) {
 				use_motion_blur = RNA_boolean_get(&physCamera, "use_moblur");
@@ -133,13 +134,13 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 				if (cameraType == Still) {
 					mb_duration = 1.0 / (RNA_float_get(&physCamera, "shutter_speed") * frameDuration);
-					mb_intervalCenter = mb_duration * 0.5;
+					mb_offset = mb_duration * 0.5;
 				} else if (cameraType == Cinematic) {
 					mb_duration = RNA_float_get(&physCamera, "shutter_angle") / 360.0;
-					mb_intervalCenter = RNA_float_get(&physCamera, "shutter_offset") / 360.0 + mb_duration * 0.5;
+					mb_offset = RNA_float_get(&physCamera, "shutter_offset") / 360.0 + mb_duration * 0.5;
 				} else if (cameraType == Video) {
 					mb_duration = 1.0 + RNA_float_get(&physCamera, "latency") / frameDuration;
-					mb_intervalCenter = -mb_duration * 0.5;
+					mb_offset = -mb_duration * 0.5;
 				} else {
 					use_motion_blur = false;
 				}
@@ -147,7 +148,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 				if (RNA_boolean_get(&mbSettings, "on")) {
 					use_motion_blur = true;
 					mb_duration = RNA_float_get(&mbSettings, "duration");
-					mb_intervalCenter = RNA_float_get(&mbSettings, "interval_center");
+					mb_offset = RNA_float_get(&mbSettings, "interval_center");
 				}
 			}
 		}

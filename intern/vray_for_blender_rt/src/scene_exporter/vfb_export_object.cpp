@@ -330,6 +330,9 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		nodeDesc.add("geometry", geom);
 		nodeDesc.add("material", mtl);
 		nodeDesc.add("objectID", ob.pass_index());
+		if (m_settings.use_motion_blur) {
+			nodeDesc.add("nsamples", m_settings.mb_samples);
+		}
 		if (override) {
 			nodeDesc.add("visible", override.visible);
 			nodeDesc.add("transform", override.tm);
@@ -493,6 +496,9 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 
 			if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated || m_layer_changed)) {
 				PluginDesc hairNodeDesc(hairNodeName, "Node");
+				if (m_settings.use_motion_blur) {
+					hairNodeDesc.add("nsamples", m_settings.mb_samples);
+				}
 				hairNodeDesc.add("geometry", hair_geom);
 				hairNodeDesc.add("material", hair_mtl);
 				hairNodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
@@ -525,6 +531,9 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		m_id_track.insert(ob, wrapperName, dupliType);
 	}
 	PluginDesc nodeWrapper(wrapperName, "Node");
+	if (m_settings.use_motion_blur) {
+		nodeWrapper.add("nsamples", m_settings.mb_samples);
+	}
 
 	auto inst = m_exporter->export_plugin(instancerDesc);
 	nodeWrapper.add("geometry", inst);

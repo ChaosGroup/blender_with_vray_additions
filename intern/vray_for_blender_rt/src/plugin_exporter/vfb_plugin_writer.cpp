@@ -76,7 +76,7 @@ PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat format)
 	: m_threadManager(tm)
     , m_depth(1)
-    , m_animationFrame(-1)
+    , m_animationFrame(-FLT_MAX)
     , m_file(pyFile)
     , m_format(format)
 {

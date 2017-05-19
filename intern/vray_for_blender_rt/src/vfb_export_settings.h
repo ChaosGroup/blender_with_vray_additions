@@ -66,7 +66,7 @@ struct SettingsAnimation {
 	{}
 
 	int           use;
-	int           frame_current;
+	float         frame_current;
 	int           frame_start;
 	int           frame_step;
 	AnimationMode mode;
@@ -177,8 +177,9 @@ struct ExporterSettings {
 	bool              show_vfb;
 	bool              use_bake_view;
 
+	int               mb_samples;
 	float             mb_duration;
-	float             mb_intervalCenter;
+	float             mb_offset;
 
 	VRayVerboseLevel  verbose_level;
 	ImageType         viewport_image_type;
