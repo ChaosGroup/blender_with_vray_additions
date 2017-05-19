@@ -77,7 +77,6 @@
 #include "ED_object.h"
 #include "ED_screen.h"
 #include "ED_view3d.h"
-#include "ED_screen.h"
 #include "ED_space_api.h"
 
 #include "gpencil_intern.h"
@@ -626,6 +625,7 @@ static int gpencil_interpolate_modal(bContext *C, wmOperator *op, const wmEvent 
 			break;
 		}
 		default:
+		{
 			if ((event->val == KM_PRESS) && handleNumInput(C, &tgpi->num, event)) {
 				const float factor = tgpi->init_factor;
 				float value;
@@ -650,6 +650,7 @@ static int gpencil_interpolate_modal(bContext *C, wmOperator *op, const wmEvent 
 				/* unhandled event - allow to pass through */
 				return OPERATOR_RUNNING_MODAL | OPERATOR_PASS_THROUGH;
 			}
+		}
 	}
 	
 	/* still running... */

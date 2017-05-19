@@ -49,6 +49,16 @@ static float beckmann_table_slope_max()
 	return 6.0;
 }
 
+
+/* MSVC 2015 needs this ugly hack to prevent a codegen bug on x86
+ * see T50176 for details
+ */
+#if defined(_MSC_VER) && (_MSC_VER == 1900)
+#  define MSVC_VOLATILE volatile
+#else
+#  define MSVC_VOLATILE
+#endif
+
 /* Paper used: Importance Sampling Microfacet-Based BSDFs with the
  * Distribution of Visible Normals. Supplemental Material 2/2.
  *
@@ -72,7 +82,7 @@ static void beckmann_table_rows(float *table, int row_from, int row_to)
 		slope_x[0] = (double)-beckmann_table_slope_max();
 		CDF_P22_omega_i[0] = 0;
 
-		for(int index_slope_x = 1; index_slope_x < DATA_TMP_SIZE; ++index_slope_x) {
+		for(MSVC_VOLATILE int index_slope_x = 1; index_slope_x < DATA_TMP_SIZE; ++index_slope_x) {
 			/* slope_x */
 			slope_x[index_slope_x] = (double)(-beckmann_table_slope_max() + 2.0f * beckmann_table_slope_max() * index_slope_x/(DATA_TMP_SIZE - 1.0f));
 
@@ -115,6 +125,8 @@ static void beckmann_table_rows(float *table, int row_from, int row_to)
 		}
 	}
 }
+
+#undef MSVC_VOLATILE
 
 static void beckmann_table_build(vector<float>& table)
 {
@@ -229,6 +241,10 @@ void Shader::set_graph(ShaderGraph *graph_)
 	delete graph_bump;
 	graph = graph_;
 	graph_bump = NULL;
+
+	/* Store info here before graph optimization to make sure that
+	 * nodes that get optimized away still count. */
+	has_volume_connected = (graph->output()->input("Volume")->link != NULL);
 }
 
 void Shader::tag_update(Scene *scene)
@@ -420,15 +436,14 @@ void ShaderManager::device_update_common(Device *device,
 			flag |= SD_HAS_VOLUME;
 			has_volumes = true;
 
-			/* in this case we can assume transparent surface */
-			if(!shader->has_surface)
-				flag |= SD_HAS_ONLY_VOLUME;
-
 			/* todo: this could check more fine grained, to skip useless volumes
 			 * enclosed inside an opaque bsdf.
 			 */
 			flag |= SD_HAS_TRANSPARENT_SHADOW;
 		}
+		/* in this case we can assume transparent surface */
+		if(shader->has_volume_connected && !shader->has_surface)
+			flag |= SD_HAS_ONLY_VOLUME;
 		if(shader->heterogeneous_volume && shader->has_volume_spatial_varying)
 			flag |= SD_HETEROGENEOUS_VOLUME;
 		if(shader->has_bssrdf_bump)
@@ -568,6 +583,9 @@ void ShaderManager::get_requested_graph_features(ShaderGraph *graph,
 			BsdfNode *bsdf_node = static_cast<BsdfNode*>(node);
 			if(CLOSURE_IS_VOLUME(bsdf_node->closure)) {
 				requested_features->nodes_features |= NODE_FEATURE_VOLUME;
+			}
+			else if(CLOSURE_IS_PRINCIPLED(bsdf_node->closure)) {
+				requested_features->use_principled = true;
 			}
 		}
 		if(node->has_surface_bssrdf()) {

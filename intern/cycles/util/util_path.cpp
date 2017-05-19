@@ -768,9 +768,17 @@ bool path_remove(const string& path)
 	return remove(path.c_str()) == 0;
 }
 
-static string line_directive(const string& path, int line)
+static string line_directive(const string& base, const string& path, int line)
 {
 	string escaped_path = path;
+	/* First we make path relative. */
+	if(string_startswith(escaped_path, base.c_str())) {
+		const string base_file = path_filename(base);
+		const size_t base_len = base.length();
+		escaped_path = base_file + escaped_path.substr(base_len,
+		                                               escaped_path.length() - base_len);
+	}
+	/* Second, we replace all unsafe characters. */
 	string_replace(escaped_path, "\"", "\\\"");
 	string_replace(escaped_path, "\'", "\\\'");
 	string_replace(escaped_path, "\?", "\\\?");
@@ -778,13 +786,13 @@ static string line_directive(const string& path, int line)
 	return string_printf("#line %d \"%s\"", line, escaped_path.c_str());
 }
 
-
-string path_source_replace_includes(const string& source,
-                                    const string& path,
-                                    const string& source_filename)
+static string path_source_replace_includes_recursive(
+        const string& base,
+        const string& source,
+        const string& source_filepath)
 {
 	/* Our own little c preprocessor that replaces #includes with the file
-	 * contents, to work around issue of opencl drivers not supporting
+	 * contents, to work around issue of OpenCL drivers not supporting
 	 * include paths with spaces in them.
 	 */
 
@@ -799,23 +807,22 @@ string path_source_replace_includes(const string& source,
 			if(string_startswith(token, "include")) {
 				token = string_strip(token.substr(7, token.size() - 7));
 				if(token[0] == '"') {
-					size_t n_start = 1;
-					size_t n_end = token.find("\"", n_start);
-					string filename = token.substr(n_start, n_end - n_start);
-					string text, filepath = path_join(path, filename);
+					const size_t n_start = 1;
+					const size_t n_end = token.find("\"", n_start);
+					const string filename = token.substr(n_start, n_end - n_start);
+					string filepath = path_join(base, filename);
+					if(!path_exists(filepath)) {
+						filepath = path_join(path_dirname(source_filepath),
+						                     filename);
+					}
+					string text;
 					if(path_read_text(filepath, text)) {
-						/* Replace include directories with both current path
-						 * and path extracted from the include file.
-						 * Not totally robust, but works fine for Cycles kernel
-						 * and avoids having list of include directories.x
-						 */
-						text = path_source_replace_includes(
-						        text, path_dirname(filepath), filename);
-						text = path_source_replace_includes(text, path, filename);
+						text = path_source_replace_includes_recursive(
+						        base, text, filepath);
 						/* Use line directives for better error messages. */
-						line = line_directive(filepath, 1)
+						line = line_directive(base, filepath, 1)
 						     + token.replace(0, n_end + 1, "\n" + text + "\n")
-						     + line_directive(path_join(path, source_filename), i + 1);
+						     + line_directive(base, source_filepath, i + 1);
 					}
 				}
 			}
@@ -824,6 +831,16 @@ string path_source_replace_includes(const string& source,
 	}
 
 	return result;
+}
+
+string path_source_replace_includes(const string& source,
+                                    const string& path,
+                                    const string& source_filename)
+{
+	return path_source_replace_includes_recursive(
+	        path,
+	        source,
+	        path_join(path, source_filename));
 }
 
 FILE *path_fopen(const string& path, const string& mode)

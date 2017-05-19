@@ -321,7 +321,14 @@ private:
 	static bool initialized;
 };
 
-class BsdfNode : public ShaderNode {
+class BsdfBaseNode : public ShaderNode {
+public:
+	BsdfBaseNode(const NodeType *node_type);
+
+	ClosureType closure;
+};
+
+class BsdfNode : public BsdfBaseNode {
 public:
 	explicit BsdfNode(const NodeType *node_type);
 	SHADER_NODE_BASE_CLASS(BsdfNode)
@@ -333,7 +340,6 @@ public:
 	float3 color;
 	float3 normal;
 	float surface_mix_weight;
-	ClosureType closure;
 
 	virtual bool equals(const ShaderNode& /*other*/)
 	{
@@ -362,7 +368,7 @@ public:
 };
 
 /* Disney principled BRDF */
-class PrincipledBsdfNode : public ShaderNode {
+class PrincipledBsdfNode : public BsdfBaseNode {
 public:
 	SHADER_NODE_CLASS(PrincipledBsdfNode)
 
@@ -372,16 +378,16 @@ public:
 	void compile(SVMCompiler& compiler, ShaderInput *metallic, ShaderInput *subsurface, ShaderInput *subsurface_radius,
 		ShaderInput *specular, ShaderInput *roughness, ShaderInput *specular_tint, ShaderInput *anisotropic,
 		ShaderInput *sheen, ShaderInput *sheen_tint, ShaderInput *clearcoat, ShaderInput *clearcoat_gloss,
-		ShaderInput *ior, ShaderInput *transparency, ShaderInput *anisotropic_rotation, ShaderInput *refraction_roughness);
+		ShaderInput *ior, ShaderInput *transmission, ShaderInput *anisotropic_rotation, ShaderInput *transmission_roughness);
 
 	float3 base_color;
 	float3 subsurface_color, subsurface_radius;
 	float metallic, subsurface, specular, roughness, specular_tint, anisotropic,
-		sheen, sheen_tint, clearcoat, clearcoat_gloss, ior, transparency,
-		anisotropic_rotation, refraction_roughness;
+		sheen, sheen_tint, clearcoat, clearcoat_gloss, ior, transmission,
+		anisotropic_rotation, transmission_roughness;
 	float3 normal, clearcoat_normal, tangent;
 	float surface_mix_weight;
-	ClosureType closure, distribution, distribution_orig;
+	ClosureType distribution, distribution_orig;
 
 	virtual bool equals(const ShaderNode * /*other*/)
 	{
