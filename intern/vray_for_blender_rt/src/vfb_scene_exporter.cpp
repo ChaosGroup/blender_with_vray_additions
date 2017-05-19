@@ -73,8 +73,9 @@ void FrameExportManager::updateFromSettings()
 	if (m_settings.use_motion_blur) {
 		// motion blur breaks the pattern of exporting only integer values for current frame
 		// even so that we may not at all export integer value frames
-		// E.G: sceneFrame = 5, mbInterval = 1, mbOffset = -0.5, mbSamples = 2
-		// this must export the scene 2 times in 4.5 frame and 5.5 frame
+		// E.G: sceneFrame = 3, mbInterval = 1, mbOffset = -0.5, mbSamples = 3 so export frames are [2.5, 3, 3.5]
+		// time line       : 1  .  2  .  3  .  4  .  5
+		// export frames   :          ^  ^  ^
 
 		m_mbSampleStep = m_settings.mb_duration / (m_mbGeomSamples - 1); // we must have export sample at the end if the mb interval
 		m_mbIntervalStartOffset = m_settings.mb_offset - m_settings.mb_duration * 0.5;
