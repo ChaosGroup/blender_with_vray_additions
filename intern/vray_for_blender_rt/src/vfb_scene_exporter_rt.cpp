@@ -57,12 +57,14 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 		bool useMotionBlur;
 		float mbDuration;
 		float mbInterval;
+		int mbGeomSamples;
 
 		FrameStateCheck(const ExporterSettings & settings, const FrameExportManager & frameExp)
-			: sceneFrame(frameExp.getCurrentRenderFrame())
-			, useMotionBlur(settings.use_motion_blur)
-			, mbDuration(settings.mb_duration)
-			, mbInterval(settings.mb_offset)
+		    : sceneFrame(frameExp.getCurrentRenderFrame())
+		    , useMotionBlur(settings.use_motion_blur)
+		    , mbDuration(settings.mb_duration)
+		    , mbInterval(settings.mb_offset)
+		    , mbGeomSamples(settings.mb_samples)
 		{}
 
 		bool operator!=(const FrameStateCheck & o) const {
@@ -71,7 +73,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			} else if (useMotionBlur != o.useMotionBlur) {
 				return true;
 			} else {
-				return mbDuration != o.mbDuration || mbInterval != o.mbInterval;
+				return mbDuration != o.mbDuration || mbInterval != o.mbInterval || mbGeomSamples != o.mbGeomSamples;
 			}
 		}
 
