@@ -88,7 +88,6 @@ private:
 	PyThreadState * m_threadState; ///< pointer to the state of the thread that called the c++
 };
 
-
 /// Class that keeps track of what frames are exported and what need to be exported
 /// Simplifies motion blur and animation export (both requre multi frame export)
 class FrameExportManager {
@@ -125,15 +124,23 @@ public:
 	BL::Camera getActiveCamera();
 
 	/// Call function for each frame that needs to be exported so next frame can be rendered
-	void forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback);
+	void forEachFrameInBatch(std::function<bool(FrameExportManager &, float)> callback);
 
 	/// Get the frame we need to set to scene for the current export
-	int getSceneFrameToExport() const {
+	float getSceneFrameToExport() const {
 		return m_sceneFrameToExport;
 	}
 
 	int getCurrentRenderFrame() const {
 		return m_frameToRender;
+	}
+
+	bool isCurrentSubframe() const {
+		return (m_subframes.getCurrentSubframeDivision() != 0);
+	}
+
+	std::pair<std::multimap<int, BL::Object, std::greater<int>>::iterator, std::multimap<int, BL::Object, std::greater<int>>::iterator> getObjectsWithCurrentSubframes() {
+		return m_subframes.getObjectsWithCurrentSubframes();
 	}
 
 private:
@@ -160,11 +167,13 @@ private:
 	int m_mbFramesBefore; ///< number of motion blur frames to export before m_frameToRender
 	int m_mbFramesAfter; ///< number of motion blur frames to export after m_frameToRender
 
+public:
 	class SubframesHandler {
 	public:
 		SubframesHandler(BL::Scene &scene)
 			: m_scene(scene)
 			, m_isUpdated(false)
+			, m_currentSubframeDivision(0)
 		{
 			update();
 		}
@@ -189,6 +198,10 @@ private:
 			return m_objectsWithSubframes;
 		}
 
+		std::pair<std::multimap<int, BL::Object, std::greater<int>>::iterator, std::multimap<int, BL::Object, std::greater<int>>::iterator> getObjectsWithCurrentSubframes() {
+			return m_objectsWithSubframes.equal_range(m_currentSubframeDivision);
+		}
+
 		std::vector<int> &getSubframeValues() {
 			if (!m_isUpdated)
 				update();
@@ -196,7 +209,7 @@ private:
 			return m_subframeValues;
 		}
 
-		int getCurrentSubframeDivision() {
+		int getCurrentSubframeDivision() const {
 			return m_currentSubframeDivision;
 		}
 
@@ -204,7 +217,7 @@ private:
 			m_currentSubframeDivision = sd;
 		}
 
-	private:
+	public:
 		int m_currentSubframeDivision;
 		BL::Scene &m_scene;
 		std::multimap<int, BL::Object, std::greater<int>> m_objectsWithSubframes;
@@ -249,6 +262,7 @@ public:
 	/// Export all scene data for the current frame
 	void                 sync(const bool check_updated=false);
 	void                 sync_view(const bool check_updated=false);
+	void                 help_sync_objects();
 	void                 sync_objects(const bool check_updated=false);
 	void                 sync_effects(const bool check_updated=false);
 	void                 sync_materials();

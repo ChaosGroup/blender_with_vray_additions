@@ -31,8 +31,8 @@ public:
 	bool good() const;
 
 	PyObject *getFile() { return m_file; }
-	void setAnimationFrame(int frame) { m_animationFrame = frame; }
-	int getAnimationFrame() const { return m_animationFrame; }
+	void setAnimationFrame(float frame) { m_animationFrame = frame; }
+	float getAnimationFrame() const { return m_animationFrame; }
 
 	bool operator==(const PluginWriter &other) const
 	{
@@ -137,7 +137,7 @@ private:
 	std::deque<WriteItem>           m_items; ///< Item queue for all items to be writen to files
 	ThreadManager::Ptr              m_threadManager; ///< Thread manager for async items
 	int                             m_depth; ///< Current indentation depth
-	int                             m_animationFrame; ///< The current animation frame
+	float                           m_animationFrame; ///< The current animation frame
 	PyObject                       *m_file; ///< The file object coming from python api
 	ExporterSettings::ExportFormat  m_format; ///< The file format (ASCII, HEX, ZIP)
 

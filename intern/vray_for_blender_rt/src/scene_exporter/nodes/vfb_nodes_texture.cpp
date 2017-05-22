@@ -47,7 +47,7 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 					int seqEnd    = seqLength - seqStart + 1;
 
 					if (imageUser.use_cyclic()) {
-						seqFrame = ((m_settings.settings_animation.frame_current - seqStart) % seqLength) + 1;
+						seqFrame = (((int)m_settings.settings_animation.frame_current - seqStart) % seqLength) + 1;
 					}
 					else {
 						if (m_settings.settings_animation.frame_current < seqStart){

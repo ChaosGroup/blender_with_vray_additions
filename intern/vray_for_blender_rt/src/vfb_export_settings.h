@@ -66,7 +66,7 @@ struct SettingsAnimation {
 	{}
 
 	int           use;
-	int           frame_current;
+	float         frame_current;
 	int           frame_start;
 	int           frame_step;
 	AnimationMode mode;

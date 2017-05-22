@@ -94,9 +94,9 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			m_exporter->getPluginManager().clear();
 		}
 
-		m_frameExporter.forEachFrameInBatch([this](FrameExportManager & frameExp) {
+		m_frameExporter.forEachFrameInBatch([this](FrameExportManager & frameExp, float sfPosition) {
 			if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
-				m_scene.frame_set(frameExp.getSceneFrameToExport(), 0.f);
+				m_scene.frame_set(frameExp.getSceneFrameToExport(), sfPosition);
 			}
 			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 			// set the frame to export (so values are inserted for that time)
