@@ -406,7 +406,8 @@ bool SceneExporter::export_scene(const bool check_updated)
 
 void SceneExporter::sync(const bool check_updated)
 {
-	m_data_exporter.syncStart(m_isUndoSync);
+	if (!m_frameExporter.isCurrentSubframe())
+		m_data_exporter.syncStart(m_isUndoSync);
 	sync_prepass();
 
 	// duplicate cycle's logic for layers here
@@ -470,15 +471,19 @@ void SceneExporter::sync(const bool check_updated)
 
 	sync_effects(check_updated);
 
-	// Sync data (will remove deleted objects)
-	m_data_exporter.sync();
-	// must be after sync so we update plugins appropriately
-	m_data_exporter.exportLightLinker();
+	if (!m_frameExporter.isCurrentSubframe()) {
+		// Sync data (will remove deleted objects)
+		m_data_exporter.sync();
+		// must be after sync so we update plugins appropriately
+		m_data_exporter.exportLightLinker();
+	}
 
 	// Sync plugins
 	m_exporter->sync();
 
-	m_data_exporter.syncEnd();
+	if (!m_frameExporter.isCurrentSubframe())
+		m_data_exporter.syncEnd();
+
 	m_isUndoSync = false;
 }
 
