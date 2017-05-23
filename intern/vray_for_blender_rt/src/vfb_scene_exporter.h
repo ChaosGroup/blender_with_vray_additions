@@ -88,6 +88,58 @@ private:
 	PyThreadState * m_threadState; ///< pointer to the state of the thread that called the c++
 };
 
+/// Class that handles objects with subframes
+class SubframesHandler {
+public:
+	typedef std::multimap<int, BL::Object, std::greater<int>> ObjectCollection;
+	typedef ObjectCollection::iterator                        ObjectCollectionIt;
+
+	SubframesHandler() = delete;
+	SubframesHandler(BL::Scene &scene);
+
+	/// Collects all the objects from the scene that have subframes
+	void update();
+
+	/// Get all the objects from the scene that have subframes
+	ObjectCollection &getObjectsWithSubframes();
+
+	/// Get the objects that will be exported on the current subframe
+	std::pair<ObjectCollectionIt, ObjectCollectionIt> getObjectsWithCurrentSubframes() {
+		return m_objectsWithSubframes.equal_range(m_currentSubframeDivision);
+	}
+
+	/// Get all different subframe divisions of current frame
+	std::vector<int> &getSubframeValues();
+
+	int getCurrentSubframeDivision() const {
+		return m_currentSubframeDivision;
+	}
+
+	void setCurrentSubframeDivision(int sd) {
+		m_currentSubframeDivision = sd;
+	}
+
+	float getCurrentSubframeOffset() const {
+		return m_currentSubframeOffset;
+	}
+
+	void setCurrentSubframeOffset(float so) {
+		m_currentSubframeOffset = so;
+	}
+
+	bool isCurrentSubframe() const {
+		return (m_currentSubframeDivision != 0);
+	}
+
+private:
+	int              m_currentSubframeDivision;
+	float            m_currentSubframeOffset;
+	BL::Scene       &m_scene;
+	ObjectCollection m_objectsWithSubframes;
+	std::vector<int> m_subframeValues;
+	bool             m_isUpdated;
+};
+
 /// Class that keeps track of what frames are exported and what need to be exported
 /// Simplifies motion blur and animation export (both requre multi frame export)
 class FrameExportManager {
@@ -124,7 +176,7 @@ public:
 	BL::Camera getActiveCamera();
 
 	/// Call function for each frame that needs to be exported so next frame can be rendered
-	void forEachFrameInBatch(std::function<bool(FrameExportManager &, float)> callback);
+	void forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback);
 
 	/// Get the frame we need to set to scene for the current export
 	float getSceneFrameToExport() const {
@@ -136,10 +188,14 @@ public:
 	}
 
 	bool isCurrentSubframe() const {
-		return (m_subframes.getCurrentSubframeDivision() != 0);
+		return m_subframes.isCurrentSubframe();
 	}
 
-	std::pair<std::multimap<int, BL::Object, std::greater<int>>::iterator, std::multimap<int, BL::Object, std::greater<int>>::iterator> getObjectsWithCurrentSubframes() {
+	float getCurrentSubframeOffset() const {
+		return m_subframes.getCurrentSubframeOffset();
+	}
+
+	std::pair<SubframesHandler::ObjectCollectionIt, SubframesHandler::ObjectCollectionIt> getObjectsWithCurrentSubframes() {
 		return m_subframes.getObjectsWithCurrentSubframes();
 	}
 
@@ -167,63 +223,7 @@ private:
 	int m_mbFramesBefore; ///< number of motion blur frames to export before m_frameToRender
 	int m_mbFramesAfter; ///< number of motion blur frames to export after m_frameToRender
 
-public:
-	class SubframesHandler {
-	public:
-		SubframesHandler(BL::Scene &scene)
-			: m_scene(scene)
-			, m_isUpdated(false)
-			, m_currentSubframeDivision(0)
-		{
-			update();
-		}
-
-		void update() {
-			BL::Scene::objects_iterator soIt;
-			for (m_scene.objects.begin(soIt); soIt != m_scene.objects.end(); ++soIt) {
-				int subframesCount = RNA_int_get(&RNA_pointer_get(&(*soIt).ptr, "vray"), "subframes");
-				if (subframesCount != 0) {
-					m_subframeValues.push_back(subframesCount);
-					m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, (*soIt)));
-				}
-			}
-
-			m_isUpdated = true;
-		}
-
-		std::multimap<int, BL::Object, std::greater<int>> &getObjectsWithSubframes() {
-			if (!m_isUpdated)
-				update();
-
-			return m_objectsWithSubframes;
-		}
-
-		std::pair<std::multimap<int, BL::Object, std::greater<int>>::iterator, std::multimap<int, BL::Object, std::greater<int>>::iterator> getObjectsWithCurrentSubframes() {
-			return m_objectsWithSubframes.equal_range(m_currentSubframeDivision);
-		}
-
-		std::vector<int> &getSubframeValues() {
-			if (!m_isUpdated)
-				update();
-
-			return m_subframeValues;
-		}
-
-		int getCurrentSubframeDivision() const {
-			return m_currentSubframeDivision;
-		}
-
-		void setCurrentSubframeDivision(int sd) {
-			m_currentSubframeDivision = sd;
-		}
-
-	public:
-		int m_currentSubframeDivision;
-		BL::Scene &m_scene;
-		std::multimap<int, BL::Object, std::greater<int>> m_objectsWithSubframes;
-		std::vector<int> m_subframeValues;
-		bool m_isUpdated;
-	} m_subframes;
+	SubframesHandler m_subframes;
 };
 
 class SceneExporter {
@@ -262,6 +262,7 @@ public:
 	/// Export all scene data for the current frame
 	void                 sync(const bool check_updated=false);
 	void                 sync_view(const bool check_updated=false);
+	void                 pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg);
 	void                 help_sync_objects();
 	void                 sync_objects(const bool check_updated=false);
 	void                 sync_effects(const bool check_updated=false);

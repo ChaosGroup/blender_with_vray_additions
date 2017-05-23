@@ -52,6 +52,47 @@ extern "C" {
 #include <atomic>
 
 using namespace VRayForBlender;
+
+SubframesHandler::SubframesHandler(BL::Scene &scene)
+	: m_scene(scene)
+	, m_isUpdated(false)
+	, m_currentSubframeDivision(0) {
+	update();
+}
+
+void SubframesHandler::update() {
+	BL::Scene::objects_iterator soIt;
+	for (m_scene.objects.begin(soIt); soIt != m_scene.objects.end(); ++soIt) {
+		int subframesCount = RNA_int_get(&RNA_pointer_get(&(*soIt).ptr, "vray"), "subframes");
+		if (subframesCount != 0) {
+			m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, (*soIt)));
+		}
+	}
+
+	for (ObjectCollectionIt it = m_objectsWithSubframes.begin();
+		 it != m_objectsWithSubframes.end();
+		 it = m_objectsWithSubframes.upper_bound(it->first))
+	{
+		m_subframeValues.push_back(it->first);
+	}
+
+	m_isUpdated = true;
+}
+
+SubframesHandler::ObjectCollection &SubframesHandler::getObjectsWithSubframes() {
+	if (!m_isUpdated)
+		update();
+
+	return m_objectsWithSubframes;
+}
+
+std::vector<int> &SubframesHandler::getSubframeValues() {
+	if (!m_isUpdated)
+		update();
+
+	return m_subframeValues;
+}
+
 FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings)
 	: m_settings(settings)
 	, m_scene(scene)
@@ -151,12 +192,12 @@ void FrameExportManager::reset()
 	updateFromSettings();
 }
 
-void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManager &, float sfPos)> callback)
+void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback)
 {
 	if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		// for camera loop we ignore motion blur
 		m_sceneFrameToExport = m_sceneSavedFrame; // for camera loop we export only the current frame, but from different cameras
-		callback(*this, 0.f);
+		callback(*this);
 		m_lastExportedFrame++;
 		m_frameToRender++;
 	} else {
@@ -168,7 +209,7 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 		// this is motion blur frames so the step is always 1
 		for (int c = firstFrame; c <= lastFrame; c++) {
 			m_sceneFrameToExport = c;
-			if (!callback(*this, 0.f)) {
+			if (!callback(*this)) {
 				break;
 			}
 			m_lastExportedFrame = c;
@@ -178,9 +219,10 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 			for (int i = 1; i <= sd; ++i) {
 				m_subframes.setCurrentSubframeDivision(sd);
 				float sfPosition = i / (sd + 1.f);
+				m_subframes.setCurrentSubframeOffset(sfPosition);
 				for (int c = firstFrame; c <= lastFrame; c++) {
 					m_sceneFrameToExport = c + sfPosition;
-					if (!callback(*this, sfPosition)) {
+					if (!callback(*this)) {
 						break;
 					}
 					m_lastExportedFrame = c;
@@ -188,6 +230,7 @@ void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManag
 			}
 		}
 		m_subframes.setCurrentSubframeDivision(0);
+		m_subframes.setCurrentSubframeOffset(0.f);
 	}
 }
 
@@ -1111,143 +1154,87 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
 }
 
+void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg) {
+	if (is_interrupted()) {
+		return;
+	}
+
+	m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
+		// make wrapper to call wg.done() on function exit
+		RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
+		if (is_interrupted()) {
+			return;
+		}
+
+		const auto obName = ob.name();
+		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
+		const bool visible = m_data_exporter.isObjectVisible(ob);
+
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+
+		bool has_array_mod = false;
+		if (dupli_use_instancer) {
+			for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
+				if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
+					// stop on last non array mod - we export only array mods on top of mod stack
+					break;
+				}
+				if (ob.modifiers[c].show_render()) {
+					// we found atleast one stuitable array mod
+					has_array_mod = true;
+					break;
+				}
+			}
+		}
+		if (ob.is_duplicator()) {
+			if (is_updated) {
+				sync_dupli(ob, check_updated);
+			}
+			if (is_interrupted()) {
+				return;
+			}
+
+			// As in old exporter - dont sync base if its light dupli
+			if (!Blender::IsLight(ob)) {
+				ObjectOverridesAttrs overAttrs;
+
+				overAttrs.override = true;
+				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+				overAttrs.visible = visible;
+
+				sync_object(ob, check_updated, overAttrs);
+			}
+		}
+		else if (has_array_mod) {
+			sync_array_mod(ob, check_updated);
+		}
+		else {
+			sync_object(ob, check_updated);
+		}
+
+	}, ThreadManager::Priority::LOW);
+}
+
 void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
 	CondWaitGroup wg(m_scene.objects.length());
 
-	if (m_frameExporter.m_subframes.getCurrentSubframeDivision() == 0) {
+	if (!m_frameExporter.isCurrentSubframe()) {
 		BL::Scene::objects_iterator obIt;
 		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-			if (is_interrupted()) {
-				break;
-			}
-
 			BL::Object ob(*obIt);
-			m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
-				// make wrapper to call wg.done() on function exit
-				RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
-				if (is_interrupted()) {
-					return;
-				}
-
-				const auto obName = ob.name();
-				const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
-				const bool visible = m_data_exporter.isObjectVisible(ob);
-
-				PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-				const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
-
-				bool has_array_mod = false;
-				if (dupli_use_instancer) {
-					for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
-						if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
-							// stop on last non array mod - we export only array mods on top of mod stack
-							break;
-						}
-						if (ob.modifiers[c].show_render()) {
-							// we found atleast one stuitable array mod
-							has_array_mod = true;
-							break;
-						}
-					}
-				}
-				if (ob.is_duplicator()) {
-					if (is_updated) {
-						sync_dupli(ob, check_updated);
-					}
-					if (is_interrupted()) {
-						return;
-					}
-
-					// As in old exporter - dont sync base if its light dupli
-					if (!Blender::IsLight(ob)) {
-						ObjectOverridesAttrs overAttrs;
-
-						overAttrs.override = true;
-						overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-						overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-						overAttrs.visible = visible;
-
-						sync_object(ob, check_updated, overAttrs);
-					}
-				}
-				else if (has_array_mod) {
-					sync_array_mod(ob, check_updated);
-				}
-				else {
-					sync_object(ob, check_updated);
-				}
-
-			}, ThreadManager::Priority::LOW);
+			pre_sync_object(check_updated, ob, wg);
 		}
 	}
 	else{
-		auto range = m_frameExporter.m_subframes.getObjectsWithCurrentSubframes();
+		auto range = m_frameExporter.getObjectsWithCurrentSubframes();
 		for (auto obIt = range.first; obIt != range.second; ++obIt) {
-			if (is_interrupted()) {
-				break;
-			}
-
 			BL::Object ob((*obIt).second);
-			m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
-				// make wrapper to call wg.done() on function exit
-				RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
-				if (is_interrupted()) {
-					return;
-				}
-
-				const auto obName = ob.name();
-				const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
-				const bool visible = m_data_exporter.isObjectVisible(ob);
-
-				PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-				const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
-
-				bool has_array_mod = false;
-				if (dupli_use_instancer) {
-					for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
-						if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
-							// stop on last non array mod - we export only array mods on top of mod stack
-							break;
-						}
-						if (ob.modifiers[c].show_render()) {
-							// we found atleast one stuitable array mod
-							has_array_mod = true;
-							break;
-						}
-					}
-				}
-				if (ob.is_duplicator()) {
-					if (is_updated) {
-						sync_dupli(ob, check_updated);
-					}
-					if (is_interrupted()) {
-						return;
-					}
-
-					// As in old exporter - dont sync base if its light dupli
-					if (!Blender::IsLight(ob)) {
-						ObjectOverridesAttrs overAttrs;
-
-						overAttrs.override = true;
-						overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-						overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-						overAttrs.visible = visible;
-
-						sync_object(ob, check_updated, overAttrs);
-					}
-				}
-				else if (has_array_mod) {
-					sync_array_mod(ob, check_updated);
-				}
-				else {
-					sync_object(ob, check_updated);
-				}
-
-			}, ThreadManager::Priority::LOW);
+			pre_sync_object(check_updated, ob, wg);
 		}
 	}
 

@@ -133,7 +133,7 @@ bool ProductionExporter::export_scene(const bool)
 		clock_t frameBeginTime = clock();
 
 		// export current render frame data
-		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isFileExport](FrameExportManager & frameExp, float sfPosition) {
+		m_frameExporter.forEachFrameInBatch([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
 			const auto aMode = m_settings.settings_animation.mode;
 			{
 				std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
@@ -142,7 +142,7 @@ bool ProductionExporter::export_scene(const bool)
 					std::lock(uLock, lock);
 				}
 				if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
-					m_scene.frame_set(frameExp.getSceneFrameToExport(), sfPosition);
+					m_scene.frame_set(frameExp.getSceneFrameToExport(), frameExp.getCurrentSubframeOffset());
 				}
 				if (aMode == AnimMode::AnimationModeCameraLoop) {
 					m_active_camera = frameExp.getActiveCamera();
