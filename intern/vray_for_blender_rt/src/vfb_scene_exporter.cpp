@@ -53,18 +53,24 @@ extern "C" {
 
 using namespace VRayForBlender;
 
-SubframesHandler::SubframesHandler(BL::Scene &scene)
+SubframesHandler::SubframesHandler(BL::Scene &scene, bool useMotionBlur)
 	: m_scene(scene)
+	, m_useMotionBlur(useMotionBlur)
 	, m_isUpdated(false)
 	, m_currentSubframeDivision(0) {
-	update();
+	update(m_useMotionBlur);
 }
 
-void SubframesHandler::update() {
+void SubframesHandler::update(bool use_motion_blur) {
+	if (!use_motion_blur) {
+		m_isUpdated = true;
+		return;
+	}
+
 	BL::Scene::objects_iterator soIt;
 	for (m_scene.objects.begin(soIt); soIt != m_scene.objects.end(); ++soIt) {
 		int subframesCount = RNA_int_get(&RNA_pointer_get(&(*soIt).ptr, "vray"), "subframes");
-		if (subframesCount != 0) {
+		if (subframesCount > 2) {
 			m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, (*soIt)));
 		}
 	}
@@ -81,14 +87,14 @@ void SubframesHandler::update() {
 
 SubframesHandler::ObjectCollection &SubframesHandler::getObjectsWithSubframes() {
 	if (!m_isUpdated)
-		update();
+		update(m_useMotionBlur);
 
 	return m_objectsWithSubframes;
 }
 
 std::vector<int> &SubframesHandler::getSubframeValues() {
 	if (!m_isUpdated)
-		update();
+		update(m_useMotionBlur);
 
 	return m_subframeValues;
 }
@@ -96,31 +102,35 @@ std::vector<int> &SubframesHandler::getSubframeValues() {
 FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings)
 	: m_settings(settings)
 	, m_scene(scene)
-	, m_subframes(scene)
+	, m_subframes(scene, m_settings.use_motion_blur)
 {
 	updateFromSettings();
 }
 
 void FrameExportManager::updateFromSettings()
 {
-	m_lastExportedFrame = INT_MIN; // remove exported cache
+	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();
 
+	m_sceneSavedSubframe = m_scene.frame_subframe();
 	m_sceneSavedFrame = m_scene.frame_current();
 	m_sceneFirstFrame = m_scene.frame_start();
+	m_mbGeomSamples = m_settings.mb_samples;
 
 	if (m_settings.use_motion_blur) {
-		const int framesPerRender = m_settings.mb_duration + 1; // total frames to export for single render frame
-		const int midFrame = framesPerRender * m_settings.mb_intervalCenter; // the 'render' frame
-		m_mbFramesBefore = std::max(0, midFrame - 1); // motion blur frames before 'render' frame
+		// motion blur breaks the pattern of exporting only integer values for current frame
+		// even so that we may not at all export integer value frames
+		// E.G: sceneFrame = 3, mbInterval = 1, mbOffset = -0.5, mbSamples = 3 so export frames are [2.5, 3, 3.5]
+		// time line       : 1  .  2  .  3  .  4  .  5
+		// export frames   :          ^  ^  ^
 
-		// if mb frames is 1, and interval center is 0.5, we want 'render' frame to be 0 and have one more mb frame after it
-		m_mbFramesAfter = std::max(0, framesPerRender - midFrame); // motion blur frames after 'render' frame
-
+		m_mbSampleStep = m_settings.mb_duration / (m_mbGeomSamples - 1); // we must have export sample at the end if the mb interval
+		m_mbIntervalStartOffset = m_settings.mb_offset - m_settings.mb_duration * 0.5;
 	} else {
-		m_mbFramesBefore = 0;
-		m_mbFramesAfter = 0;
+		m_mbGeomSamples = 1; // force this to 1 so we can export 1 sample per frame with MB disabled
+		m_mbSampleStep = 0;
+		m_mbIntervalStartOffset = 0;
 	}
 
 	if (m_settings.settings_animation.use) {
@@ -155,14 +165,14 @@ void FrameExportManager::updateFromSettings()
 			m_animationFrameStep = 0;
 		} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
 			// frae by frame is actually not animation and we need to export current frame only
-			m_frameToRender = m_scene.frame_current(); // only current frame
+			m_frameToRender = m_sceneSavedFrame + m_sceneSavedSubframe; // only current frame
 			m_animationFrameStep = 0; // no animation
 		} else {
 			m_frameToRender = m_scene.frame_start() - m_animationFrameStep;
 		}
 	} else {
 		m_animationFrameStep = 0; // we have no animation so dont move
-		m_lastFrameToRender = m_frameToRender = m_sceneSavedFrame;
+		m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
 	}
 
 }
@@ -180,8 +190,8 @@ int FrameExportManager::getRenderFrameCount() const {
 void FrameExportManager::rewind()
 {
 	m_frameToRender = m_sceneSavedFrame; // we need to render the current frame
-	m_sceneFrameToExport -= (m_mbFramesBefore + 1 + m_mbFramesAfter); // rewind number of exported frames
-	m_lastExportedFrame = INT_MIN; // remove exported cache
+	m_currentFrame -= m_mbIntervalStartOffset; // rewind what we exported
+	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 }
 
 void FrameExportManager::reset()
@@ -192,45 +202,43 @@ void FrameExportManager::reset()
 	updateFromSettings();
 }
 
-void FrameExportManager::forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback)
+void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManager &)> callback)
 {
 	if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		// for camera loop we ignore motion blur
-		m_sceneFrameToExport = m_sceneSavedFrame; // for camera loop we export only the current frame, but from different cameras
+		m_currentFrame = m_sceneSavedFrame; // for camera loop we export only the current frame, but from different cameras
 		callback(*this);
 		m_lastExportedFrame++;
 		m_frameToRender++;
 	} else {
 		m_frameToRender += m_animationFrameStep;
 
-		const int firstFrame = std::max(m_frameToRender - m_mbFramesBefore, m_lastExportedFrame + 1);
-		const int lastFrame = m_frameToRender + m_mbFramesAfter;
-
-		// this is motion blur frames so the step is always 1
-		for (int c = firstFrame; c <= lastFrame; c++) {
-			m_sceneFrameToExport = c;
+		for (int c = 0; c < m_mbGeomSamples; c++) {
+			m_currentFrame = m_frameToRender + m_mbIntervalStartOffset + c * m_mbSampleStep;
 			if (!callback(*this)) {
 				break;
 			}
-			m_lastExportedFrame = c;
+			m_lastExportedFrame = m_currentFrame;
 		}
 
+		float firstFrame = m_frameToRender + m_mbIntervalStartOffset;
+		float lastFrame = m_frameToRender + m_mbIntervalStartOffset + (m_mbGeomSamples - 1) * m_mbSampleStep;
 		for (int sd : m_subframes.getSubframeValues()) {
-			for (int i = 1; i <= sd; ++i) {
+			for (int i = 0; i < sd; ++i) {
 				m_subframes.setCurrentSubframeDivision(sd);
-				float sfPosition = i / (sd + 1.f);
-				m_subframes.setCurrentSubframeOffset(sfPosition);
-				for (int c = firstFrame; c <= lastFrame; c++) {
-					m_sceneFrameToExport = c + sfPosition;
-					if (!callback(*this)) {
+				float sfPosition = i / (sd - 1.f);
+
+				for (int c = 0; c < m_mbGeomSamples; c++) {
+					m_currentFrame = m_frameToRender + m_mbIntervalStartOffset + c * m_mbSampleStep + sfPosition;
+					if (m_currentFrame >= lastFrame && firstFrame != lastFrame)
 						break;
-					}
-					m_lastExportedFrame = c;
+
+					if (!callback(*this))
+						break;
 				}
 			}
 		}
 		m_subframes.setCurrentSubframeDivision(0);
-		m_subframes.setCurrentSubframeOffset(0.f);
 	}
 }
 
@@ -1221,13 +1229,13 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
-
 	if (!m_frameExporter.isCurrentSubframe()) {
-		CondWaitGroup wg(m_scene.objects.length());
+		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
 		BL::Scene::objects_iterator obIt;
 		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 			BL::Object ob(*obIt);
-			pre_sync_object(check_updated, ob, wg);
+			if (!m_frameExporter.hasObjectSubframes(ob))
+				pre_sync_object(check_updated, ob, wg);
 		}
 
 		if (m_threadManager->workerCount()) {

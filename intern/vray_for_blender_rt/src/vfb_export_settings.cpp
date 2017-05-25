@@ -92,6 +92,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	settings_animation.frame_step    = scene.frame_step();
 
 	use_motion_blur = false;
+	use_physical_camera = false;
 
 	// Find if we need hide from view
 	if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
@@ -116,14 +117,39 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 			BL::Camera camera_data(camera.data());
 
 			PointerRNA vrayCamera = RNA_pointer_get(&camera_data.ptr, "vray");
+			PointerRNA physCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
+			use_physical_camera = RNA_boolean_get(&physCamera, "use");
 
 			use_hide_from_view = RNA_boolean_get(&vrayCamera, "hide_from_view");
 			PointerRNA mbSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");
+			mb_samples = RNA_int_get(&mbSettings, "geom_samples");
 
-			if (RNA_boolean_get(&mbSettings, "on")) {
-				use_motion_blur = true;
-				mb_duration = RNA_float_get(&mbSettings, "duration");
-				mb_intervalCenter = RNA_float_get(&mbSettings, "interval_center");
+			if (use_physical_camera) {
+				use_motion_blur = RNA_boolean_get(&physCamera, "use_moblur");
+				enum PhysicalCameraType {
+					Still = 0, Cinematic = 1, Video = 2,
+				};
+				const auto cameraType = static_cast<PhysicalCameraType>(RNA_enum_ext_get(&physCamera, "type"));
+				const float frameDuration = 1.0 / (scene.render().fps() / scene.render().fps_base());
+
+				if (cameraType == Still) {
+					mb_duration = 1.0 / (RNA_float_get(&physCamera, "shutter_speed") * frameDuration);
+					mb_offset = mb_duration * 0.5;
+				} else if (cameraType == Cinematic) {
+					mb_duration = RNA_float_get(&physCamera, "shutter_angle") / 360.0;
+					mb_offset = RNA_float_get(&physCamera, "shutter_offset") / 360.0 + mb_duration * 0.5;
+				} else if (cameraType == Video) {
+					mb_duration = 1.0 + RNA_float_get(&physCamera, "latency") / frameDuration;
+					mb_offset = -mb_duration * 0.5;
+				} else {
+					use_motion_blur = false;
+				}
+			} else {
+				if (RNA_boolean_get(&mbSettings, "on")) {
+					use_motion_blur = true;
+					mb_duration = RNA_float_get(&mbSettings, "duration");
+					mb_offset = RNA_float_get(&mbSettings, "interval_center");
+				}
 			}
 		}
 	}

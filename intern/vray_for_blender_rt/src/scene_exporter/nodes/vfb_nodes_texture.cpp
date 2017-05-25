@@ -45,17 +45,18 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 					int seqLength = imageUser.frame_duration();
 					int seqStart  = imageUser.frame_start();
 					int seqEnd    = seqLength - seqStart + 1;
+					int currentFrame = static_cast<int>(m_settings.settings_animation.frame_current);
 
 					if (imageUser.use_cyclic()) {
-						seqFrame = (((int)m_settings.settings_animation.frame_current - seqStart) % seqLength) + 1;
+						seqFrame = ((currentFrame - seqStart) % seqLength) + 1;
 					}
 					else {
-						if (m_settings.settings_animation.frame_current < seqStart){
+						if (currentFrame < seqStart){
 							seqFrame = seqStart;
-						} else if (m_settings.settings_animation.frame_current > seqEnd) {
+						} else if (currentFrame > seqEnd) {
 							seqFrame = seqEnd;
 						} else {
-							seqFrame = seqStart + m_settings.settings_animation.frame_current - 1;
+							seqFrame = seqStart + currentFrame - 1;
 						}
 					}
 					if(seqOffset < 0) {

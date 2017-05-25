@@ -95,10 +95,10 @@ public:
 	typedef ObjectCollection::iterator                        ObjectCollectionIt;
 
 	SubframesHandler() = delete;
-	SubframesHandler(BL::Scene &scene);
+	SubframesHandler(BL::Scene &scene, bool use_motion_blur);
 
 	/// Collects all the objects from the scene that have subframes
-	void update();
+	void update(bool use_motion_blur);
 
 	/// Get all the objects from the scene that have subframes
 	ObjectCollection &getObjectsWithSubframes();
@@ -110,6 +110,10 @@ public:
 
 	std::size_t countObjectsWithCurrentSubframes() const {
 		return m_objectsWithSubframes.count(m_currentSubframeDivision);
+	}
+
+	std::size_t countObjectsWithSubframes() const {
+		return m_objectsWithSubframes.size();
 	}
 
 	/// Get all different subframe divisions of current frame
@@ -142,6 +146,7 @@ private:
 	ObjectCollection m_objectsWithSubframes;
 	std::vector<int> m_subframeValues;
 	bool             m_isUpdated;
+	bool             m_useMotionBlur;
 };
 
 /// Class that keeps track of what frames are exported and what need to be exported
@@ -167,27 +172,22 @@ public:
 	/// Get the number of frames to be exported for a single render frame
 	/// NOTE: if motion blur is enabled this will be 2 frames for example
 	///       if not it will be 1
-	int getBatchFrameCount() const {
-		return m_mbFramesBefore + 1 + m_mbFramesAfter;
-	}
-
-	/// Get the number of frames that will be exported (includes motion blur frames)
-	int getExportFrameCount() const {
-		return getRenderFrameCount() * getBatchFrameCount();
+	int getMotionBlurSamples() const {
+		return m_mbGeomSamples;
 	}
 
 	/// Get the correct camera for current frame (used for camera loop)
 	BL::Camera getActiveCamera();
 
 	/// Call function for each frame that needs to be exported so next frame can be rendered
-	void forEachFrameInBatch(std::function<bool(FrameExportManager &)> callback);
+	void forEachExportFrame(std::function<bool(FrameExportManager &)> callback);
 
 	/// Get the frame we need to set to scene for the current export
-	float getSceneFrameToExport() const {
-		return m_sceneFrameToExport;
+	float getCurrentFrame() const {
+		return m_currentFrame;
 	}
 
-	int getCurrentRenderFrame() const {
+	float getCurrentRenderFrame() const {
 		return m_frameToRender;
 	}
 
@@ -207,31 +207,74 @@ public:
 		return m_subframes.countObjectsWithCurrentSubframes();
 	}
 
+	std::size_t countObjectsWithSubframes() const {
+		return m_subframes.countObjectsWithSubframes();
+	}
+
+	bool hasObjectSubframes(BL::Object object) const {
+		return m_settings.use_motion_blur && RNA_int_get(&RNA_pointer_get(&object.ptr, "vray"), "subframes") > 2;
+	}
+
+	/// Blender frame format
+	struct BlenderFramePair {
+		int frame; ///< int part of the current frame
+		float subframe; ///< fraction of the current frame
+
+		BlenderFramePair(int frame, float subframe)
+		    : frame(frame)
+		    , subframe(subframe)
+		{}
+
+		explicit BlenderFramePair(float value)
+		    : frame(static_cast<int>(value))
+		    , subframe(value - frame)
+		{}
+
+		bool operator!=(const BlenderFramePair &right) const {
+			return frame != right.frame || !(fabs(subframe - right.subframe) < 1e-3);
+		}
+	};
+
+	/// Convert float frame to blender frame pair
+	static BlenderFramePair floatFrameToBlender(float value) {
+		return BlenderFramePair(value);
+	}
+
 private:
 	ExporterSettings &m_settings; ///< The global settings for the exporter
 	BL::Scene m_scene; ///< Current scene
 	std::vector<BL::Camera> m_loopCameras; ///< All cameras with 'camera_loop' enabled if anim is Camera Loop
 
+	float m_sceneSavedSubframe; ///< m_scene.frame_subframe() on init, used to restore scene to correct frame
 	int m_sceneSavedFrame; ///< m_scene.frame_current() on init, used to restore scene to correct frame
 	int m_sceneFirstFrame; ///< first frame of the animation
 	int m_lastFrameToRender; ///< last frame of the animation
 	int m_animationFrameStep; ///< the frame step of the animation
 
-	/// The last frame that was exported
+	/// This is the biggest (rightmost on the timeline) frame time that we exported the whole scene
 	/// NOTE: used to skip already exported frames in case we have high motion blur radius and alot of frames overlap
-	int m_lastExportedFrame; 
+	float m_lastExportedFrame;
 
-	float m_sceneFrameToExport; ///< the frame we need to set to the current scene so we can export
+	float m_currentFrame; ///< the frame we need to set to the current scene so we can export
 
 	/// The next frame we should actually render
 	/// For animation this will jump with the frame step and will generraly mean the frames that vray will render
 	/// For camera loop this will be in range [0, n) where n is the number of cameras in the camera loop
-	int m_frameToRender;
+	float m_frameToRender;
 
-	int m_mbFramesBefore; ///< number of motion blur frames to export before m_frameToRender
-	int m_mbFramesAfter; ///< number of motion blur frames to export after m_frameToRender
+	/// Number of samples that need to be exported for each render frame
+	/// This is like subframes for object but affect the whole scene - for each render frame we need to export
+	/// this many keyframes
+	/// The default value is 2 - one in the mb interval startn and one in the end
+	int m_mbGeomSamples;
+
+	/// The distance between two motion blur keyframes (this is the analogue of the animation step in animation)
+	float m_mbSampleStep;
 
 	SubframesHandler m_subframes;
+
+	/// The offset we need to add to current frame to get the beggining of the motion blur interval
+	float m_mbIntervalStartOffset;
 };
 
 class SceneExporter {

@@ -171,7 +171,7 @@ using KVPair = std::pair<std::string, T>;
 template <typename T>
 PluginWriter &operator<<(PluginWriter &pp, const KVPair<T> &val)
 {
-	if (pp.getAnimationFrame() == -1) {
+	if (pp.getAnimationFrame() == -FLT_MAX) {
 		return pp << pp.indent() << val.first << "=" << val.second << ";\n" << pp.unindent();
 	} else {
 		return pp << pp.indent() << val.first << "=interpolate((" << pp.getAnimationFrame() << "," << val.second << "));\n" << pp.unindent();

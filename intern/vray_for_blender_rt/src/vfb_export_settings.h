@@ -167,6 +167,7 @@ struct ExporterSettings {
 	bool              export_hair;
 	bool              export_fluids;
 
+	bool              use_physical_camera;
 	bool              use_motion_blur;
 	bool              use_hide_from_view;
 	bool              use_displace_subdiv;
@@ -176,8 +177,9 @@ struct ExporterSettings {
 	bool              show_vfb;
 	bool              use_bake_view;
 
-	int               mb_duration;
-	float             mb_intervalCenter;
+	int               mb_samples;
+	float             mb_duration;
+	float             mb_offset;
 
 	VRayVerboseLevel  verbose_level;
 	ImageType         viewport_image_type;

@@ -53,25 +53,27 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	clock_t begin = clock();
 
 	struct FrameStateCheck {
-		int renderFrame;
+		FrameExportManager::BlenderFramePair sceneFrame;
 		bool useMotionBlur;
 		float mbDuration;
 		float mbInterval;
+		int mbGeomSamples;
 
 		FrameStateCheck(const ExporterSettings & settings, const FrameExportManager & frameExp)
-			: renderFrame(frameExp.getCurrentRenderFrame())
-			, useMotionBlur(settings.use_motion_blur)
-			, mbDuration(settings.mb_duration)
-			, mbInterval(settings.mb_intervalCenter)
+		    : sceneFrame(frameExp.getCurrentRenderFrame())
+		    , useMotionBlur(settings.use_motion_blur)
+		    , mbDuration(settings.mb_duration)
+		    , mbInterval(settings.mb_offset)
+		    , mbGeomSamples(settings.mb_samples)
 		{}
 
 		bool operator!=(const FrameStateCheck & o) const {
-			if (renderFrame != o.renderFrame) {
+			if (sceneFrame != o.sceneFrame) {
 				return true;
 			} else if (useMotionBlur != o.useMotionBlur) {
 				return true;
 			} else {
-				return mbDuration != o.mbDuration || mbInterval != o.mbInterval;
+				return mbDuration != o.mbDuration || mbInterval != o.mbInterval || mbGeomSamples != o.mbGeomSamples;
 			}
 		}
 
@@ -94,13 +96,16 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			m_exporter->getPluginManager().clear();
 		}
 
-		m_frameExporter.forEachFrameInBatch([this](FrameExportManager & frameExp) {
-			if (m_scene.frame_current() != frameExp.getSceneFrameToExport()) {
-				m_scene.frame_set(frameExp.getSceneFrameToExport(), frameExp.getCurrentSubframeOffset());
+		m_frameExporter.forEachExportFrame([this](FrameExportManager & frameExp) {
+			const FrameExportManager::BlenderFramePair sceneFramePair = {m_scene.frame_current(), m_scene.frame_subframe()};
+			const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
+
+			if (sceneFramePair != setFramePair) {
+				m_scene.frame_set(setFramePair.frame, setFramePair.subframe);
 			}
 			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 			// set the frame to export (so values are inserted for that time)
-			m_exporter->set_current_frame(m_frameExporter.getSceneFrameToExport());
+			m_exporter->set_current_frame(m_frameExporter.getCurrentFrame());
 			sync(false);
 			return true;
 		});

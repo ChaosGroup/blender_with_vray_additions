@@ -316,9 +316,16 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 		BL::Modifier mod;
 	} modReseter = { false, false, BL::Modifier(PointerRNA_NULL) };
 
-	if (options.use_subsurf_to_osd && ob.modifiers.length() > 0) {
+	if (ob.modifiers.length() > 0) {
+		BL::Object::modifiers_iterator iter;
+		for (ob.modifiers.begin(iter); iter != ob.modifiers.end(); ++iter) {
+			if (*iter && iter->type() == BL::Modifier::type_SUBSURF) {
+				options.merge_channel_vertices = true;
+			}
+		}
+
 		auto lastMod = ob.modifiers[ob.modifiers.length() - 1];
-		if (lastMod && lastMod.type() == BL::Modifier::type_SUBSURF) {
+		if (options.use_subsurf_to_osd && lastMod && lastMod.type() == BL::Modifier::type_SUBSURF) {
 			modReseter.showRender = lastMod.show_render();
 			modReseter.showViewport = lastMod.show_viewport();
 			modReseter.mod = lastMod;
@@ -336,7 +343,6 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 			pluginDesc.add("osd_subdiv_type", subS.subdivision_type() == BL::SubsurfModifier::subdivision_type_CATMULL_CLARK ? 0 : 1);
 			pluginDesc.add("osd_subdiv_uvs", subS.use_subsurf_uv());
 			pluginDesc.add("osd_subdiv_enable", true);
-			options.merge_channel_vertices = true;
 		}
 	}
 
