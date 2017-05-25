@@ -27,9 +27,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 	PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
 
 	// Add real work mode check
-	VRayBaseTypes::RenderMode renderMode = m_evalMode == EvalModePreview
-	                                       ? m_settings.getViewportRenderMode()
-	                                       : m_settings.getRenderMode();
+	VRayBaseTypes::RenderMode renderMode = m_settings.render_mode;
 
 	VRayForBlender::Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;

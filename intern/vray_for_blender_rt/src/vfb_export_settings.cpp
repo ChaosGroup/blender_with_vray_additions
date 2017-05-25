@@ -191,16 +191,22 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		zmq_server_address = "127.0.0.1";
 	}
 
-	m_renderMode = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "rendering_mode");
-	if (isPreview || settings_animation.use) {
-		m_renderMode = VRayBaseTypes::RenderModeProduction;
+	if (isViewport) {
+		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode"));
+	} else {
+		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "rendering_mode"));
+		if (isPreview || settings_animation.use) {
+			render_mode = RenderMode::RenderModeProduction;
+		}
 	}
-
-	m_renderModeViewport = (VRayBaseTypes::RenderMode)RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode");
 
 	m_viewportResolution = RNA_int_get(&m_vrayExporter, "viewport_resolution") / 100.0f;
 	viewport_image_quality = RNA_int_get(&m_vrayExporter, "viewport_jpeg_quality");
-	viewport_image_type = static_cast<ImageType>(RNA_enum_ext_get(&m_vrayExporter, "viewport_image_type"));
+	if (isViewport) {
+		viewport_image_type = static_cast<ImageType>(RNA_enum_ext_get(&m_vrayExporter, "viewport_image_type"));
+	} else {
+		viewport_image_type = ImageType::RGBA_REAL;
+	}
 	show_vfb = !isViewport && work_mode != WorkMode::WorkModeExportOnly && !isPreview && RNA_boolean_get(&m_vrayExporter, "display");
 
 	verbose_level = static_cast<VRayVerboseLevel>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));

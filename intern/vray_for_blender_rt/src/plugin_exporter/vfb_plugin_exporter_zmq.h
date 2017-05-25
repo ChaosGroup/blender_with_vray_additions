@@ -99,9 +99,9 @@ private:
 		int viewport_image_quality;
 		ImageType viewport_image_type;
 		bool show_vfb;
+		RenderMode render_mode;
 	};
 
-	RenderMode          m_renderMode;
 	ClientPtr           m_client;
 
 	// some cached values to reduce trafix

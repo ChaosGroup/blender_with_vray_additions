@@ -378,12 +378,7 @@ bool SceneExporter::export_scene(const bool check_updated)
 	PRINT_INFO_EX("SceneExporter::sync(%i)", check_updated);
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-
-	VRayBaseTypes::RenderMode renderMode = m_view3d
-		                                    ? m_settings.getViewportRenderMode()
-		                                    : m_settings.getRenderMode();
-
-	m_exporter->set_render_mode(renderMode);
+	m_exporter->set_render_mode(m_settings.render_mode);
 
 	return true;
 }

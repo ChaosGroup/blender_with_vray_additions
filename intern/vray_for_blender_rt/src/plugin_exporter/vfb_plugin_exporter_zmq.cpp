@@ -327,16 +327,20 @@ void ZmqExporter::init()
 		}
 
 		if (m_client->connected()) {
-			auto mode = exporter_settings.settings_animation.use && !is_viewport ? VRayMessage::RendererType::Animation : VRayMessage::RendererType::RT;
+			VRayMessage::RendererType type = VRayMessage::RendererType::None;
 			if (is_viewport) {
-				m_renderMode = exporter_settings.getViewportRenderMode();
+				type = VRayMessage::RendererType::RT;
 			} else {
-				m_renderMode = exporter_settings.getRenderMode();
+				if (exporter_settings.settings_animation.use) {
+					type = VRayMessage::RendererType::Animation;
+				} else {
+					type = VRayMessage::RendererType::SingleFrame;
+				}
 			}
 
-			m_client->send(VRayMessage::msgRendererType(mode));
+			m_client->send(VRayMessage::msgRendererType(type));
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Init));
-			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_renderMode)));
+			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(exporter_settings.render_mode)));
 
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
 			if (!is_viewport && !exporter_settings.settings_animation.use) {
@@ -352,6 +356,7 @@ void ZmqExporter::init()
 			m_cachedValues.viewport_image_type = exporter_settings.viewport_image_type;
 			m_cachedValues.renderHeight = 0;
 			m_cachedValues.renderWidth = 0;
+			m_cachedValues.render_mode = exporter_settings.render_mode;
 		}
 	} catch (zmq::error_t &e) {
 		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
@@ -402,12 +407,7 @@ void ZmqExporter::sync()
 	CHECK_UPDATE(show_vfb, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, exporter_settings.show_vfb)));
 	CHECK_UPDATE(viewport_image_quality, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewport_image_quality)));
 	CHECK_UPDATE(viewport_image_type, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(exporter_settings.viewport_image_type))));
-
-
-	if (is_viewport && m_renderMode != exporter_settings.getViewportRenderMode()) {
-		m_renderMode = exporter_settings.getViewportRenderMode();
-		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(m_renderMode)));
-	}
+	CHECK_UPDATE(render_mode, m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(exporter_settings.render_mode))));
 #undef CHECK_UPDATE
 	// call commit explicitly else will often commit before calling startSync which is not needed
 	// set_commit_state(CommitAction::CommitNow);

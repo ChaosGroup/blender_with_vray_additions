@@ -142,6 +142,7 @@ struct ExporterSettings {
 	};
 
 	using ImageType = VRayBaseTypes::AttrImage::ImageType;
+	using RenderMode = VRayBaseTypes::RenderMode;
 
 	ExporterSettings();
 	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d);
@@ -191,8 +192,7 @@ struct ExporterSettings {
 	BL::Material      override_material;
 	BL::Object        current_bake_object;
 
-	VRayBaseTypes::RenderMode  getRenderMode() const { return m_renderMode; }
-	VRayBaseTypes::RenderMode  getViewportRenderMode() const { return m_renderModeViewport; }
+	RenderMode        render_mode;
 
 	float                      getViewportResolutionPercentage() const { return m_viewportResolution; }
 	int                        getViewportShowAlpha();
@@ -201,8 +201,7 @@ private:
 	PointerRNA                 m_vrayScene;
 	PointerRNA                 m_vrayExporter;
 
-	VRayBaseTypes::RenderMode  m_renderMode;
-	VRayBaseTypes::RenderMode  m_renderModeViewport;
+
 	float                      m_viewportResolution;
 
 };
