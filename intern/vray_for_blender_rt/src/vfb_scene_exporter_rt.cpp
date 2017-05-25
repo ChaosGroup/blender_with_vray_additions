@@ -205,6 +205,9 @@ void InteractiveExporter::draw()
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, glFilter);
 
 			glEnable(GL_TEXTURE_2D);
+			// this will apply color managment settings to the drawn result
+			// must not forget to unbind after texture is set
+			m_engine.bind_display_space_shader(m_scene);
 
 			glPushMatrix();
 			glTranslatef(0.0f, 0.0f, 0.0f);
@@ -222,6 +225,7 @@ void InteractiveExporter::draw()
 
 			glPopMatrix();
 
+			m_engine.unbind_display_space_shader();
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glDisable(GL_TEXTURE_2D);
 			glDeleteTextures(1, &texid);
