@@ -168,7 +168,7 @@ bool ProductionExporter::export_scene(const bool)
 				sync_view(false);
 			} else {
 				// sync(!isFirstExport);
-				sync(false); // TODO: can we make blender keep the updated/data_updated tag?
+ 				sync(false); // TODO: can we make blender keep the updated/data_updated tag?
 			}
 
 			isFirstExport = false;

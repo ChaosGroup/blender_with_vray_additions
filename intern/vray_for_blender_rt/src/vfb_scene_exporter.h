@@ -108,6 +108,10 @@ public:
 		return m_objectsWithSubframes.equal_range(m_currentSubframeDivision);
 	}
 
+	std::size_t countObjectsWithCurrentSubframes() const {
+		return m_objectsWithSubframes.count(m_currentSubframeDivision);
+	}
+
 	/// Get all different subframe divisions of current frame
 	std::vector<int> &getSubframeValues();
 
@@ -197,6 +201,10 @@ public:
 
 	std::pair<SubframesHandler::ObjectCollectionIt, SubframesHandler::ObjectCollectionIt> getObjectsWithCurrentSubframes() {
 		return m_subframes.getObjectsWithCurrentSubframes();
+	}
+
+	std::size_t countObjectsWithCurrentSubframes() const {
+		return m_subframes.countObjectsWithCurrentSubframes();
 	}
 
 private:

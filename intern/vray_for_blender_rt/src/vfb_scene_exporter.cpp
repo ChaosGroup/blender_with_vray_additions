@@ -1221,26 +1221,32 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
-	CondWaitGroup wg(m_scene.objects.length());
 
 	if (!m_frameExporter.isCurrentSubframe()) {
+		CondWaitGroup wg(m_scene.objects.length());
 		BL::Scene::objects_iterator obIt;
 		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 			BL::Object ob(*obIt);
 			pre_sync_object(check_updated, ob, wg);
 		}
+
+		if (m_threadManager->workerCount()) {
+			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			wg.wait();
+		}
 	}
 	else{
 		auto range = m_frameExporter.getObjectsWithCurrentSubframes();
+		CondWaitGroup wg(m_frameExporter.countObjectsWithCurrentSubframes());
 		for (auto obIt = range.first; obIt != range.second; ++obIt) {
 			BL::Object ob((*obIt).second);
 			pre_sync_object(check_updated, ob, wg);
 		}
-	}
 
-	if (m_threadManager->workerCount()) {
-		PRINT_INFO_EX("Started export for all objects - waiting for all.");
-		wg.wait();
+		if (m_threadManager->workerCount()) {
+			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			wg.wait();
+		}
 	}
 }
 
