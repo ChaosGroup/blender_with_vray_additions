@@ -21,6 +21,7 @@
 #include "RE_pipeline.h"
 #include "RE_engine.h"
 #include "render_types.h"
+#include "utils/vfb_utils_string.h"
 
 #include "vfb_plugin_exporter_zmq.h"
 
@@ -28,6 +29,7 @@
 
 #include <thread>
 #include <chrono>
+#include <boost/filesystem.hpp>
 
 #include <Python.h>
 
@@ -214,8 +216,27 @@ bool ProductionExporter::export_scene(const bool)
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
 		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
-		const std::string filepath = "scene_app_sdk.vrscene";
-		m_exporter->export_vrscene(filepath);
+		std::string vrsceneDest;
+		std::string blendPath = m_data.filepath();
+
+		switch (m_settings.settings_files.output_type) {
+		case SettingsFiles::OutputDirType::OutputDirTypeTmp:
+			break;
+			vrsceneDest = (boost::filesystem::temp_directory_path() / "appsdk.vrscene").string();
+		case SettingsFiles::OutputDirType::OutputDirTypeUser:
+			vrsceneDest = VRayForBlender::String::AbsFilePath(m_settings.settings_files.output_dir, blendPath) + "/appsdk.vrscene";
+			break;
+		case SettingsFiles::OutputDirType::OutputDirTypeScene:
+		default:
+			if (!m_data.filepath().empty()) {
+				vrsceneDest = boost::filesystem::path(m_data.filepath()).replace_extension(".vrscene").string();
+			} else {
+				vrsceneDest = (boost::filesystem::temp_directory_path() / "appsdk.vrscene").string();
+			}
+			break;
+		}
+
+		m_exporter->export_vrscene(vrsceneDest);
 	}
 
 	if (!isFileExport) {

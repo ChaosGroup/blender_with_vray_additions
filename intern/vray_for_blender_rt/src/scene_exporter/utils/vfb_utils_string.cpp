@@ -170,6 +170,7 @@ std::string VRayForBlender::String::AbsFilePath(const std::string & path, const 
 		base = blendPath;
 		base.remove_filename();
 		base /= path.substr(2);
+		base.remove_trailing_separator();
 		base.normalize();
 		return base.string();
 	} else {
