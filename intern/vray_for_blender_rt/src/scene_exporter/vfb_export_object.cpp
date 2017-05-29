@@ -117,6 +117,16 @@ bool DataExporter::isObjectInHideList(BL::Object ob, const std::string listName)
 	return false;
 }
 
+void DataExporter::setNSamples(PluginDesc &pluginDesc, BL::Object ob) {
+	int sf_value = RNA_int_get(&RNA_pointer_get(&ob.ptr, "vray"), "subframes");
+	if (sf_value > 2) {
+		pluginDesc.add("nsamples", sf_value);
+	}
+	else {
+		pluginDesc.add("nsamples", m_settings.mb_samples);
+	}
+}
+
 bool DataExporter::objectIsMeshLight(BL::Object ob)
 {
 	// ob must have ntree
@@ -331,13 +341,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		nodeDesc.add("material", mtl);
 		nodeDesc.add("objectID", ob.pass_index());
 		if (m_settings.use_motion_blur) {
-			int sf_value = RNA_int_get(&RNA_pointer_get(&ob.ptr, "vray"), "subframes");
-			if (sf_value > 2) {
-				nodeDesc.add("nsamples", sf_value);
-			}
-			else {
-				nodeDesc.add("nsamples", m_settings.mb_samples);
-			}
+			setNSamples(nodeDesc, ob);
 		}
 		if (override) {
 			nodeDesc.add("visible", override.visible);
@@ -503,13 +507,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 			if (hair_geom && hair_mtl && (hair_is_updated || hair_is_data_updated || m_layer_changed)) {
 				PluginDesc hairNodeDesc(hairNodeName, "Node");
 				if (m_settings.use_motion_blur) {
-					int sf_value = RNA_int_get(&RNA_pointer_get(&ob.ptr, "vray"), "subframes");
-					if (sf_value > 2) {
-						hairNodeDesc.add("nsamples", sf_value);
-					}
-					else {
-						hairNodeDesc.add("nsamples", m_settings.mb_samples);
-					}
+					setNSamples(hairNodeDesc, ob);
 				}
 				hairNodeDesc.add("geometry", hair_geom);
 				hairNodeDesc.add("material", hair_mtl);
@@ -544,13 +542,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	}
 	PluginDesc nodeWrapper(wrapperName, "Node");
 	if (m_settings.use_motion_blur) {
-		int sf_value = RNA_int_get(&RNA_pointer_get(&ob.ptr, "vray"), "subframes");
-		if (sf_value > 2) {
-			nodeWrapper.add("nsamples", sf_value);
-		}
-		else {
-			nodeWrapper.add("nsamples", m_settings.mb_samples);
-		}
+		setNSamples(nodeWrapper, ob);
 	}
 
 	auto inst = m_exporter->export_plugin(instancerDesc);
