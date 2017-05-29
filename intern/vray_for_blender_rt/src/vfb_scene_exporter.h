@@ -108,10 +108,12 @@ public:
 		return m_objectsWithSubframes.equal_range(m_currentSubframeDivision);
 	}
 
+	/// Count the objects that should be exported on the current subframe
 	std::size_t countObjectsWithCurrentSubframes() const {
 		return m_objectsWithSubframes.count(m_currentSubframeDivision);
 	}
 
+	/// Count all objects in the scene that have subframes
 	std::size_t countObjectsWithSubframes() const {
 		return m_objectsWithSubframes.size();
 	}
@@ -119,34 +121,28 @@ public:
 	/// Get all different subframe divisions of current frame
 	std::vector<int> &getSubframeValues();
 
+	/// Get the subframe value that objects are being exported 
 	int getCurrentSubframeDivision() const {
 		return m_currentSubframeDivision;
 	}
 
+	/// Set the subframe value that objects are being exported 
 	void setCurrentSubframeDivision(int sd) {
 		m_currentSubframeDivision = sd;
 	}
 
-	float getCurrentSubframeOffset() const {
-		return m_currentSubframeOffset;
-	}
-
-	void setCurrentSubframeOffset(float so) {
-		m_currentSubframeOffset = so;
-	}
-
+	/// Is the current frame a subframe
 	bool isCurrentSubframe() const {
 		return (m_currentSubframeDivision != 0);
 	}
 
 private:
-	int              m_currentSubframeDivision;
-	float            m_currentSubframeOffset;
-	BL::Scene       &m_scene;
-	ObjectCollection m_objectsWithSubframes;
-	std::vector<int> m_subframeValues;
-	bool             m_isUpdated;
-	bool             m_useMotionBlur;
+	int              m_currentSubframeDivision; /// current subframe division that is exported
+	BL::Scene       &m_scene; /// current scene that is exported
+	ObjectCollection m_objectsWithSubframes; /// all objects in the scene with subframes
+	std::vector<int> m_subframeValues; /// all different subframe values
+	bool             m_isUpdated; /// is data for subframes updated
+	bool             m_useMotionBlur; /// is motion blur used(do we need to export subframes)
 };
 
 /// Class that keeps track of what frames are exported and what need to be exported
@@ -186,31 +182,33 @@ public:
 	float getCurrentFrame() const {
 		return m_currentFrame;
 	}
-
+		
+	/// 
 	float getCurrentRenderFrame() const {
 		return m_frameToRender;
 	}
 
+	/// Is the current frame a subframe
 	bool isCurrentSubframe() const {
 		return m_subframes.isCurrentSubframe();
 	}
 
-	float getCurrentSubframeOffset() const {
-		return m_subframes.getCurrentSubframeOffset();
-	}
-
+	/// Get the objects that will be exported on the current subframe
 	std::pair<SubframesHandler::ObjectCollectionIt, SubframesHandler::ObjectCollectionIt> getObjectsWithCurrentSubframes() {
 		return m_subframes.getObjectsWithCurrentSubframes();
 	}
 
+	/// Count the objects that should be exported on the current subframe
 	std::size_t countObjectsWithCurrentSubframes() const {
 		return m_subframes.countObjectsWithCurrentSubframes();
 	}
 
+	/// Count all objects in the scene that have subframes
 	std::size_t countObjectsWithSubframes() const {
 		return m_subframes.countObjectsWithSubframes();
 	}
 
+	/// Does the object has subframes that need to be exported separately
 	bool hasObjectSubframes(BL::Object object) const {
 		return m_settings.use_motion_blur && RNA_int_get(&RNA_pointer_get(&object.ptr, "vray"), "subframes") > 2;
 	}
@@ -271,6 +269,8 @@ private:
 	/// The distance between two motion blur keyframes (this is the analogue of the animation step in animation)
 	float m_mbSampleStep;
 
+	/// Holds objects with subframes
+	/// Helps to export only objects with relevant subframe value to the current frame
 	SubframesHandler m_subframes;
 
 	/// The offset we need to add to current frame to get the beggining of the motion blur interval

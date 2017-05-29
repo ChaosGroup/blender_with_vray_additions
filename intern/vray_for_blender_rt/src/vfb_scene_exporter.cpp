@@ -230,11 +230,13 @@ void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManage
 
 				for (int c = 0; c < m_mbGeomSamples; c++) {
 					m_currentFrame = m_frameToRender + m_mbIntervalStartOffset + c * m_mbSampleStep + sfPosition;
-					if (m_currentFrame >= lastFrame && firstFrame != lastFrame)
+					if (m_currentFrame >= lastFrame && firstFrame != lastFrame) {
 						break;
+					}
 
-					if (!callback(*this))
+					if (!callback(*this)) {
 						break;
+					}
 				}
 			}
 		}
@@ -457,8 +459,10 @@ bool SceneExporter::export_scene(const bool check_updated)
 
 void SceneExporter::sync(const bool check_updated)
 {
-	if (!m_frameExporter.isCurrentSubframe())
+	if (!m_frameExporter.isCurrentSubframe()) {
 		m_data_exporter.syncStart(m_isUndoSync);
+	}
+
 	sync_prepass();
 
 	// duplicate cycle's logic for layers here
@@ -1234,8 +1238,9 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		BL::Scene::objects_iterator obIt;
 		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 			BL::Object ob(*obIt);
-			if (!m_frameExporter.hasObjectSubframes(ob))
+			if (!m_frameExporter.hasObjectSubframes(ob)) {
 				pre_sync_object(check_updated, ob, wg);
+			}
 		}
 
 		if (m_threadManager->workerCount()) {
