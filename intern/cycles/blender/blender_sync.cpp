@@ -329,6 +329,9 @@ void BlenderSync::sync_integrator()
 			integrator->ao_bounces = get_int(cscene, "ao_bounces_render");
 		}
 	}
+	else {
+		integrator->ao_bounces = 0;
+	}
 
 	if(integrator->modified(previntegrator))
 		integrator->tag_update(scene);
@@ -598,8 +601,6 @@ array<Pass> BlenderSync::sync_render_passes(BL::RenderLayer& b_rlay,
 		b_engine.add_pass("Debug Ray Bounces", 1, "X", b_srlay.name().c_str());
 		Pass::add(PASS_RAY_BOUNCES, passes);
 	}
-#else
-	(void) b_srlay;  /* Ignored. */
 #endif
 
 	return passes;

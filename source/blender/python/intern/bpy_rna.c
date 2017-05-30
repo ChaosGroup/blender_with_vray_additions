@@ -806,7 +806,7 @@ static PyObject *pyrna_struct_richcmp(PyObject *a, PyObject *b, int op)
 	switch (op) {
 		case Py_NE:
 			ok = !ok;
-			/* fall-through */
+			ATTR_FALLTHROUGH;
 		case Py_EQ:
 			res = ok ? Py_False : Py_True;
 			break;
@@ -836,7 +836,7 @@ static PyObject *pyrna_prop_richcmp(PyObject *a, PyObject *b, int op)
 	switch (op) {
 		case Py_NE:
 			ok = !ok;
-			/* fall-through */
+			ATTR_FALLTHROUGH;
 		case Py_EQ:
 			res = ok ? Py_False : Py_True;
 			break;
@@ -5168,7 +5168,7 @@ static PyObject *pyrna_param_to_py(PointerRNA *ptr, PropertyRNA *prop, void *dat
 							ret = Matrix_CreatePyObject(data, 3, 3, NULL);
 							break;
 						}
-						/* fall-through */
+						ATTR_FALLTHROUGH;
 #endif
 					default:
 						ret = PyTuple_New(len);
@@ -5692,7 +5692,7 @@ PyTypeObject pyrna_struct_meta_idprop_Type = {
 	NULL,                       /* struct PyMethodDef *tp_methods; */
 	NULL,                       /* struct PyMemberDef *tp_members; */
 	NULL,                       /* struct PyGetSetDef *tp_getset; */
-#if defined(_MSC_VER) || defined(FREE_WINDOWS)
+#if defined(_MSC_VER)
 	NULL, /* defer assignment */
 #else
 	&PyType_Type,                       /* struct _typeobject *tp_base; */
@@ -6267,7 +6267,7 @@ static PyTypeObject pyrna_prop_collection_iter_Type = {
 	NULL,                       /* reprfunc tp_str; */
 
 	/* will only use these if this is a subtype of a py class */
-#if defined(_MSC_VER) || defined(FREE_WINDOWS)
+#if defined(_MSC_VER)
 	NULL, /* defer assignment */
 #else
 	PyObject_GenericGetAttr,    /* getattrofunc tp_getattro; */
@@ -6300,7 +6300,7 @@ static PyTypeObject pyrna_prop_collection_iter_Type = {
 #endif
 	/*** Added in release 2.2 ***/
 	/*   Iterators */
-#if defined(_MSC_VER) || defined(FREE_WINDOWS)
+#if defined(_MSC_VER)
 	NULL, /* defer assignment */
 #else
 	PyObject_SelfIter,          /* getiterfunc tp_iter; */
@@ -6776,7 +6776,7 @@ void BPY_rna_init(void)
 #endif
 
 	/* for some reason MSVC complains of these */
-#if defined(_MSC_VER) || defined(FREE_WINDOWS)
+#if defined(_MSC_VER)
 	pyrna_struct_meta_idprop_Type.tp_base = &PyType_Type;
 
 	pyrna_prop_collection_iter_Type.tp_iter = PyObject_SelfIter;
