@@ -18,6 +18,7 @@
 
 #include "vfb_export_settings.h"
 #include "cgr_config.h"
+#include "utils/vfb_utils_blender.h"
 
 #include <boost/asio/ip/host_name.hpp>
 
@@ -197,9 +198,9 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		if (override_material_name.empty()) {
 			override_material = BL::Material(PointerRNA_NULL);
 		} else {
-			for (int c = 0; c < data.materials.length(); ++c) {
-				if (data.materials[c].name() == overrideName) {
-					override_material = data.materials[c];
+			for (auto & mat : Blender::collection(data.materials)) {
+				if (mat.name() == overrideName) {
+					override_material = mat;
 					break;
 				}
 			}

@@ -28,6 +28,7 @@
 
 #include <memory>
 #include <functional>
+#include <type_traits>
 
 #ifdef WITH_OSL
 #include <OSL/oslquery.h>
@@ -104,6 +105,35 @@ int IsEmitterRenderable(BL::Object ob);
 int IsDuplicatorRenderable(BL::Object ob);
 int IsGeometry(BL::Object ob);
 int IsLight(BL::Object ob);
+
+/// Wrapper class over BL::BlendData collections that has begin() method which returns the iterator instead
+/// of taking it as an argument, this is when using rage based for loop
+/// NOTE: *never* use .length() and operator[](int) on blender collections as this is quadratic since all collections are linked lists
+template <typename T, typename iterator>
+class BLCollection {
+	T & collection;
+public:
+
+	BLCollection(T & collection): collection(collection) {}
+
+	iterator begin() {
+		iterator iter;
+		collection.begin(iter);
+		return iter;
+	}
+
+	iterator end() {
+		return collection.end();
+	}
+};
+
+/// Utility function to enable template argument deduction
+template <typename T>
+auto collection(T & collection) -> BLCollection<T, decltype(collection.end())>
+{
+	return BLCollection<T, decltype(collection.end())>(collection);
+}
+
 
 } // namespace Blender
 } // namespace VRayForBlender

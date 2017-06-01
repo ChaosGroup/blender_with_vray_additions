@@ -149,17 +149,17 @@ HashSet<BL::Object> DataExporter::getObjectList(const std::string ob_name, const
 {
 	HashSet<BL::Object> objects, additional;
 
-	for (int c = 0; c < m_scene.objects.length(); ++c) {
-		if (m_scene.objects[c].name() == ob_name) {
-			objects.insert(m_scene.objects[c]);
+	for (auto & ob : Blender::collection(m_scene.objects)) {
+		if (ob.name() == ob_name) {
+			objects.insert(ob);
 			break;
 		}
 	}
 
-	for (int c = 0; c < m_data.groups.length(); ++c) {
-		if (m_data.groups[c].name() == group_name) {
-			for (int r = 0; r < m_data.groups[c].objects.length(); ++r) {
-				objects.insert(m_data.groups[c].objects[r]);
+	for (auto & group : Blender::collection(m_data.groups)) {
+		if (group.name() == group_name) {
+			for (auto & object : Blender::collection(group.objects)) {
+				objects.insert(object);
 			}
 			break;
 		}

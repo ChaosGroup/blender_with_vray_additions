@@ -1230,9 +1230,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 
 	if (!m_frameExporter.isCurrentSubframe()) {
 		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
-		BL::Scene::objects_iterator obIt;
-		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-			BL::Object ob(*obIt);
+		for (auto & ob : Blender::collection(m_scene.objects)) {
 			if (!m_frameExporter.hasObjectSubframes(ob)) {
 				pre_sync_object(check_updated, ob, wg);
 			}
@@ -1268,10 +1266,7 @@ void SceneExporter::sync_effects(const bool)
 
 void SceneExporter::sync_materials()
 {
-	BL::BlendData::materials_iterator maIt;
-
-	for (m_data.materials.begin(maIt); maIt != m_data.materials.end(); ++maIt) {
-		BL::Material ma(*maIt);
+	for (auto & ma : Blender::collection(m_data.materials)) {
 		BL::NodeTree ntree(Nodes::GetNodeTree(ma));
 		if (ntree) {
 			const bool updated = ma.is_updated() || ma.is_updated_data() || ntree.is_updated();

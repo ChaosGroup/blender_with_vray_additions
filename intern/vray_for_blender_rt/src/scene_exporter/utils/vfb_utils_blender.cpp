@@ -109,9 +109,8 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 				// osl code is in memmory - compile and write if needed
 				std::string oslCode;
 				oslCode.reserve(text.lines.length() * 50); // 50 average chars per line seems reasonable
-				BL::Text::lines_iterator lineIter;
-				for (text.lines.begin(lineIter); lineIter != text.lines.end(); ++lineIter) {
-					oslCode += lineIter->body();
+				for (auto & line : Blender::collection(text.lines)) {
+					oslCode += line.body();
 					oslCode += '\n';
 				}
 				std::string bytecode = compileToBuffer(oslCode);
@@ -120,7 +119,7 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 					PRINT_ERROR("Failed query for osl node: \"%s\"", node.name().c_str());
 					success = false;
 				} else if (writeToFile && output) {
-					boost::filesystem::path tempPath = boost::filesystem::temp_directory_path()/ boost::filesystem::unique_path("%%%%-%%%%-%%%%-%%%%.osl");
+					boost::filesystem::path tempPath = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("%%%%-%%%%-%%%%-%%%%.osl");
 					*output = tempPath.string();
 					std::ofstream tmpFile(output->c_str(), std::ios::trunc | std::ios::binary);
 					if (tmpFile && tmpFile.write(oslCode.c_str(), oslCode.length())) {
@@ -310,14 +309,11 @@ int Blender::IsEmitterRenderable(BL::Object ob)
 {
 	int render_emitter = true;
 
-	if (ob.particle_systems.length()) {
-		BL::Object::particle_systems_iterator psysIt;
-		for (ob.particle_systems.begin(psysIt); psysIt != ob.particle_systems.end(); ++psysIt) {
-			BL::ParticleSettings pset(psysIt->settings());
-			if (!pset.use_render_emitter()) {
-				render_emitter = false;
-				break;
-			}
+	for (auto & ps : Blender::collection(ob.particle_systems)) {
+		BL::ParticleSettings pset(ps.settings());
+		if (!pset.use_render_emitter()) {
+			render_emitter = false;
+			break;
 		}
 	}
 
