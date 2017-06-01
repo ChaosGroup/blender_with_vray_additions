@@ -400,6 +400,7 @@ public:
 	AttrPlugin        exportCameraPhysical(ViewParams &viewParams);
 	AttrPlugin        exportCameraDefault(const ViewParams &viewParams);
 	AttrPlugin        exportCameraSettings(ViewParams &viewParams);
+	AttrPlugin        exportCameraStereoscopic(ViewParams &viewParams);
 
 	BL::Node          getNtreeSelectedNode(BL::NodeTree &ntree);
 

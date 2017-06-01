@@ -31,7 +31,7 @@
 
 using namespace VRayForBlender;
 
-
+const std::string VRayForBlender::ViewParams::stereoSettingPluginName("stereoscopicSettings");
 const std::string VRayForBlender::ViewParams::renderViewPluginName("renderView");
 const std::string VRayForBlender::ViewParams::physicalCameraPluginName("cameraPhysical");
 const std::string VRayForBlender::ViewParams::defaultCameraPluginName("cameraDefault");
@@ -124,6 +124,73 @@ AttrPlugin DataExporter::exportBakeView(ViewParams &viewParams)
 	return m_exporter->export_plugin(bakeView);
 }
 
+namespace
+{
+// this creates the TM for the corresponding camera by:
+//  - shifting world matrix in -X for left camera
+//  - taking rotaion from world matrix
+//  - 0.5 * translation from world matrix
+//  - overriding scale with 1 or 2 depending on the adjust_resolution param
+AttrTransform calculateStereoCameraMatrix(BL::Object camera, float shift, bool adjustRes)
+{
+	typedef float m4_t[4][4];
+	m4_t worldMtx;
+	unit_m4(worldMtx);
+	copy_m4_m4(worldMtx, reinterpret_cast<float(*)[4]>(camera.matrix_world().data));
+	translate_m4(worldMtx, -shift, 0, 0);
+
+	float world_pos[3], world_rot[4], world_scale[3];
+	mat4_decompose(world_pos, world_rot, world_scale, worldMtx);
+
+	m4_t mat_rot;
+	quat_to_mat4(mat_rot, world_rot);
+
+	m4_t mat_loc;
+	unit_m4(mat_loc);
+	for (int c = 0; c < 3; c++) {
+		world_pos[c] *= 0.5;
+	}
+	copy_v3_v3(mat_loc[3], world_pos);
+
+	m4_t mat_scale;
+	unit_m4(mat_scale);
+	if (adjustRes) {
+		mat_scale[1][1] = 2.f;
+	}
+
+	m4_t result;
+	unit_m4(result);
+	mul_m4_series(result, mat_loc, mat_rot, mat_scale);
+	return AttrTransformFromBlTransform(result);
+}
+}
+
+AttrPlugin DataExporter::exportCameraStereoscopic(ViewParams &viewParams)
+{
+	PluginDesc stereoSettingsDesc(ViewParams::stereoSettingPluginName, "VRayStereoscopicSettings");
+	PluginDesc leftCamDesc("LeftCam", "RenderView"), rightCamDesc("RightCam", "RenderView");
+
+	PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");
+	PointerRNA stereoSettings = RNA_pointer_get(&vrayScene, "VRayStereoscopicSettings");
+
+	BL::Camera cameraData(viewParams.cameraObject.data());
+	PointerRNA vrayCamera = RNA_pointer_get(&cameraData.ptr, "vray");
+	PointerRNA cameraStereo = RNA_pointer_get(&vrayCamera, "CameraStereoscopic");
+
+	const bool adjustRes = RNA_boolean_get(&stereoSettings, "adjust_resolution");
+	const auto leftTm = calculateStereoCameraMatrix(m_settings.camera_stereo_left, RNA_float_get(&cameraStereo, "stereo_base"), adjustRes);
+	const auto rightTm = calculateStereoCameraMatrix(m_settings.camera_stereo_right, 0.f, adjustRes);
+	leftCamDesc.add("transform", leftTm);
+	rightCamDesc.add("transform", rightTm);
+
+	stereoSettingsDesc.add("left_camera", m_exporter->export_plugin(leftCamDesc));
+	stereoSettingsDesc.add("right_camera", m_exporter->export_plugin(rightCamDesc));
+
+	setAttrsFromPropGroupAuto(stereoSettingsDesc, &stereoSettings, "VRayStereoscopicSettings");
+
+	return m_exporter->export_plugin(stereoSettingsDesc);
+}
+
 
 AttrPlugin DataExporter::exportRenderView(ViewParams &viewParams)
 {
@@ -143,7 +210,12 @@ AttrPlugin DataExporter::exportRenderView(ViewParams &viewParams)
 	// TODO: Set this only for viewport rendering
 	viewDesc.add("use_scene_offset", false);
 
-	return m_exporter->export_plugin(viewDesc);
+	auto renderViewMain = m_exporter->export_plugin(viewDesc);
+	if (m_settings.use_stereo_camera) {
+		exportCameraStereoscopic(viewParams);
+	}
+
+	return renderViewMain;
 }
 
 
@@ -253,6 +325,7 @@ void DataExporter::fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCa
 		setAttrsFromPropGroupAuto(physCamDesc, &physicalCamera, "CameraPhysical");
 	}
 }
+
 
 
 AttrPlugin DataExporter::exportCameraPhysical(ViewParams &viewParams)
@@ -493,10 +566,6 @@ void SceneExporter::sync_view(const bool check_updated)
 		m_data_exporter.exportCameraSettings(viewParams);
 	}
 
-	AttrPlugin renView;
-	AttrPlugin physCam;
-	AttrPlugin defCam;
-
 	if (!isBake) {
 		if (!viewParams.renderView.ortho &&
 			!viewParams.usePhysicalCamera) {
@@ -504,23 +573,21 @@ void SceneExporter::sync_view(const bool check_updated)
 		}
 
 		if (viewParams.usePhysicalCamera) {
-			physCam = m_data_exporter.exportCameraPhysical(viewParams);
+			AttrPlugin physCam = m_data_exporter.exportCameraPhysical(viewParams);
 			m_exporter->set_camera_plugin(physCam.plugin);
 		}
 		else {
 			m_data_exporter.exportSettingsMotionBlur(viewParams);
-			defCam = m_data_exporter.exportCameraDefault(viewParams);
-			m_exporter->set_camera_plugin(defCam.plugin);
+			m_exporter->set_camera_plugin(m_data_exporter.exportCameraDefault(viewParams).plugin);
 		}
 
 		const bool paramsChanged = m_viewParams.changedParams(viewParams);
 		if (needReset || paramsChanged) {
-			renView = m_data_exporter.exportRenderView(viewParams);
+			m_data_exporter.exportRenderView(viewParams);
 		}
 	} else {
-		defCam = m_data_exporter.exportCameraDefault(viewParams);
-		m_exporter->set_camera_plugin(defCam.plugin);
-		renView = m_data_exporter.exportBakeView(viewParams);
+		m_exporter->set_camera_plugin(m_data_exporter.exportCameraDefault(viewParams).plugin);
+		m_data_exporter.exportBakeView(viewParams);
 	}
 
 	if (needReset) {

@@ -168,6 +168,7 @@ struct ExporterSettings {
 	bool              export_hair;
 	bool              export_fluids;
 
+	bool              use_stereo_camera;
 	bool              use_physical_camera;
 	bool              use_motion_blur;
 	bool              use_hide_from_view;
@@ -191,6 +192,8 @@ struct ExporterSettings {
 	std::string       override_material_name;
 	BL::Material      override_material;
 	BL::Object        current_bake_object;
+	BL::Object        camera_stereo_left;
+	BL::Object        camera_stereo_right;
 
 	RenderMode        render_mode;
 

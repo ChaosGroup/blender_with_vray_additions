@@ -17,6 +17,7 @@
  */
 
 #include "vfb_export_settings.h"
+#include "cgr_config.h"
 
 #include <boost/asio/ip/host_name.hpp>
 
@@ -28,6 +29,8 @@ ExporterSettings::ExporterSettings()
     : export_meshes(true)
     , override_material(PointerRNA_NULL)
     , current_bake_object(PointerRNA_NULL)
+    , camera_stereo_left(PointerRNA_NULL)
+    , camera_stereo_right(PointerRNA_NULL)
 {}
 
 
@@ -91,6 +94,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	settings_animation.frame_current = scene.frame_current();
 	settings_animation.frame_step    = scene.frame_step();
 
+	use_stereo_camera = false;
 	use_motion_blur = false;
 	use_physical_camera = false;
 
@@ -119,6 +123,31 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 			PointerRNA vrayCamera = RNA_pointer_get(&camera_data.ptr, "vray");
 			PointerRNA physCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
 			use_physical_camera = RNA_boolean_get(&physCamera, "use");
+
+			PointerRNA stereoSettings = RNA_pointer_get(&m_vrayScene, "VRayStereoscopicSettings");
+			PointerRNA cameraStereo = RNA_pointer_get(&vrayCamera, "CameraStereoscopic");
+			use_stereo_camera = (stereoSettings.data && RNA_boolean_get(&stereoSettings, "use")) && (cameraStereo.data && RNA_boolean_get(&cameraStereo, "use"));
+			if (use_stereo_camera) {
+				const auto leftCamName = RNA_std_string_get(&cameraStereo, "LeftCam");
+				const auto rightCamName = RNA_std_string_get(&cameraStereo, "RightCam");
+
+				BL::BlendData::objects_iterator obIt;
+				int found = 0;
+				for (data.objects.begin(obIt); found < 2 && obIt != data.objects.end(); ++obIt) {
+					const auto camName = obIt->name();
+					if (camName == leftCamName) {
+						camera_stereo_left = *obIt;
+						found++;
+					} else if (camName == rightCamName) {
+						camera_stereo_right = *obIt;
+						found++;
+					}
+				}
+				if (found != 2) {
+					use_stereo_camera = false;
+					PRINT_ERROR("Failed to find cameras for stereo camera!");
+				}
+			}
 
 			use_hide_from_view = RNA_boolean_get(&vrayCamera, "hide_from_view");
 			PointerRNA mbSettings = RNA_pointer_get(&vrayCamera, "SettingsMotionBlur");

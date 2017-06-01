@@ -78,6 +78,7 @@ struct RenderViewParams {
 
 
 struct ViewParams {
+	static const std::string stereoSettingPluginName;
 	static const std::string renderViewPluginName;
 	static const std::string physicalCameraPluginName;
 	static const std::string defaultCameraPluginName;
