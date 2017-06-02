@@ -207,8 +207,9 @@ AttrPlugin DataExporter::exportRenderView(ViewParams &viewParams)
 		viewDesc.add("focalDistance", Blender::GetCameraDofDistance(viewParams.cameraObject));
 	}
 
-	// TODO: Set this only for viewport rendering
-	viewDesc.add("use_scene_offset", false);
+	if (m_settings.is_viewport) {
+		viewDesc.add("use_scene_offset", false);
+	}
 
 	auto renderViewMain = m_exporter->export_plugin(viewDesc);
 	if (m_settings.use_stereo_camera) {

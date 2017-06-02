@@ -37,7 +37,7 @@ ExporterSettings::ExporterSettings()
 
 void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene, BL::SpaceView3D view3d)
 {
-	const bool isViewport = !!view3d;
+	is_viewport = !!view3d;
 	const bool isPreview = engine && engine.is_preview();
 
 	BL::Scene scene(_scene);
@@ -65,7 +65,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	PointerRNA BakeView = RNA_pointer_get(&m_vrayScene, "BakeView");
-	use_bake_view = RNA_boolean_get(&BakeView, "use") && !isViewport && !isPreview; // no bake in viewport
+	use_bake_view = RNA_boolean_get(&BakeView, "use") && !is_viewport && !isPreview; // no bake in viewport
 	if (use_bake_view) {
 		PointerRNA bakeObj = RNA_pointer_get(&m_vrayExporter, "currentBakeObject");
 		current_bake_object = BL::Object(bakeObj);
@@ -83,7 +83,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
 
-	if (isPreview || isViewport || use_bake_view) {
+	if (isPreview || is_viewport || use_bake_view) {
 		settings_animation.mode = SettingsAnimation::AnimationMode::AnimationModeNone;
 	} else {
 		settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
@@ -221,7 +221,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		zmq_server_address = "127.0.0.1";
 	}
 
-	if (isViewport) {
+	if (is_viewport) {
 		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode"));
 	} else {
 		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "rendering_mode"));
@@ -232,12 +232,12 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	m_viewportResolution = RNA_int_get(&m_vrayExporter, "viewport_resolution") / 100.0f;
 	viewport_image_quality = RNA_int_get(&m_vrayExporter, "viewport_jpeg_quality");
-	if (isViewport) {
+	if (is_viewport) {
 		viewport_image_type = static_cast<ImageType>(RNA_enum_ext_get(&m_vrayExporter, "viewport_image_type"));
 	} else {
 		viewport_image_type = ImageType::RGBA_REAL;
 	}
-	show_vfb = !isViewport && work_mode != WorkMode::WorkModeExportOnly && !isPreview && RNA_boolean_get(&m_vrayExporter, "display");
+	show_vfb = !is_viewport && work_mode != WorkMode::WorkModeExportOnly && !isPreview && RNA_boolean_get(&m_vrayExporter, "display");
 
 	verbose_level = static_cast<VRayVerboseLevel>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
 }

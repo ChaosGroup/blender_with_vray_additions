@@ -179,6 +179,7 @@ struct ExporterSettings {
 
 	bool              show_vfb;
 	bool              use_bake_view;
+	bool              is_viewport;
 
 	int               mb_samples;
 	float             mb_duration;
