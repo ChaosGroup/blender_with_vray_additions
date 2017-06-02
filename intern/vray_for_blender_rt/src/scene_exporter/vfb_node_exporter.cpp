@@ -499,6 +499,9 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeTexSoftbox") {
 		attrValue = exportVRayNodeTexSoftbox(ntree, node, fromSocket, context);
 	}
+	else if (nodeClass == "VRayNodeTexRemap") {
+		attrValue = exportVRayNodeTexRemap(ntree, node, fromSocket, context);
+	}
 
 	// Material / BRDF
 	//

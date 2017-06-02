@@ -526,6 +526,92 @@ AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &nt
 	return m_exporter->export_plugin(pluginDesc);
 }
 
+AttrValue DataExporter::exportVRayNodeTexRemap(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	PointerRNA texRemapPtr = RNA_pointer_get(&node.ptr, "TexRemap");
+	enum RemapType {
+		Value, Color, HSV
+	};
+
+	const RemapType type = static_cast<RemapType>(RNA_enum_ext_get(&texRemapPtr, "type"));
+	auto inputColorSock = getSocketByAttr(node, "input_value");
+	const bool hasInputColor = inputColorSock && inputColorSock.is_linked();
+
+	PluginDesc pluginDesc(GenPluginName(node, ntree, context), GetNodePluginID(node));
+
+	// this hack is here because GPU does not support remapping of float to color
+	// TODO: remove this when GPU adds support
+	if (hasInputColor && type == Value) {
+		pluginDesc.add("color_colors", 0);
+
+		// split the float input to color and pass the color as input
+		PluginDesc floatToColorSplit(GenPluginName(node, ntree, context), "Float3ToAColor", "DummySplitter@");
+		auto floatPlgInput = exportSocket(ntree, inputColorSock, context);
+
+		floatToColorSplit.add("float1", floatPlgInput);
+		floatToColorSplit.add("float2", floatPlgInput);
+		floatToColorSplit.add("float3", floatPlgInput);
+		floatToColorSplit.add("invert", 0);
+		floatToColorSplit.add("alpha", 0);
+
+		pluginDesc.add("input_color", m_exporter->export_plugin(floatToColorSplit));
+		// set the mode to color
+		pluginDesc.add("type", static_cast<int>(Color));
+
+		BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, "texture"));
+		if (!tex) {
+			PRINT_ERROR("Failed to export TexRemap ramp for %s", node.name().c_str());
+			return AttrPlugin("NULL");
+		}
+		char pluginName[String::MAX_PLG_LEN] = {0, };
+		snprintf(pluginName, sizeof(pluginName), "%s@%s", GenPluginName(node, ntree, context).c_str(), "color_ramp");
+
+		BL::ColorRamp ramp = tex.color_ramp();
+
+		AttrListPlugin  floatVals[3];
+		AttrListFloat   positions;
+		AttrListInt     types;
+
+		int interp;
+		switch(ramp.interpolation()) {
+			case BL::ColorRamp::interpolation_CONSTANT: interp = 0; break;
+			case BL::ColorRamp::interpolation_LINEAR:   interp = 1; break;
+			case BL::ColorRamp::interpolation_EASE:     interp = 2; break;
+			case BL::ColorRamp::interpolation_CARDINAL: interp = 3; break;
+			case BL::ColorRamp::interpolation_B_SPLINE: interp = 4; break;
+			default:                                    interp = 1;
+		}
+
+		const int chCount = 3;
+		static std::string channelNames[chCount] = {"red", "green", "blue"};
+
+		int elNum = 0;
+		for (auto & el : Blender::collection(ramp.elements)) {
+			const float pos = el.position();
+			const auto color = el.color();
+
+			for (int c = 0; c < chCount; c++) {
+				char colPluginName[String::MAX_PLG_LEN] = {0, };
+				snprintf(colPluginName, sizeof(colPluginName), "%s_Channel|%sPos%i", pluginName, channelNames[c].c_str(), elNum);
+				PluginDesc floatValTex(colPluginName, "TexFloat");
+				floatValTex.add("input", color[c]);
+				floatVals[c].append(m_exporter->export_plugin(floatValTex));
+			}
+			positions.append(pos);
+			types.append(interp);
+			elNum++;
+		}
+
+		for (int c = 0; c < chCount; c++) {
+			pluginDesc.add(channelNames[c] + "_values", floatVals[c]);
+			pluginDesc.add(channelNames[c] + "_positions", positions);
+			pluginDesc.add(channelNames[c] + "_types", types);
+		}
+	}
+
+	//DataExporter::getConnectedNode()
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+}
 
 AttrValue DataExporter::exportVRayNodeTexSoftbox(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
