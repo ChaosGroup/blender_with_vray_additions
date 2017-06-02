@@ -157,7 +157,7 @@ PluginWriter &operator<<(PluginWriter &pp, int val)
 
 PluginWriter &operator<<(PluginWriter &pp, float val)
 {
-	FormatAndAdd(pp, "%g", val);
+	FormatAndAdd(pp, "%.4f", val);
 }
 
 PluginWriter &operator<<(PluginWriter &pp, const char *val)

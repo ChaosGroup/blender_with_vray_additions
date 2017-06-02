@@ -379,6 +379,9 @@ public:
 	void              getUserAttributes(PointerRNA *ptr, StrVector &user_attributes);
 	AttrValue         getObjectNameList(BL::Group group);
 
+	/// Set nsamples value of plugin based on object subframes and nsamples in settings
+	void              setNSamples(PluginDesc &pluginDesc, BL::Object ob);
+
 	bool              objectIsMeshLight(BL::Object ob);
 	AttrValue         exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride = false);
 	AttrValue         exportVRayClipper(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());

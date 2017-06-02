@@ -143,6 +143,7 @@ bool ProductionExporter::export_scene(const bool)
 				if (!isFileExport) {
 					std::lock(uLock, lock);
 				}
+
 				const FrameExportManager::BlenderFramePair sceneFramePair(m_scene.frame_current(), m_scene.frame_subframe());
 				const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
 
@@ -154,15 +155,15 @@ bool ProductionExporter::export_scene(const bool)
 				}
 			}
 			// set this on the settings obj so it is accessible from data exporter
-			m_settings.settings_animation.frame_current = m_frameExporter.getCurrentFrame();
+			m_settings.settings_animation.frame_current = frameExp.getCurrentFrame();
 
 			// set the frame to export (so values are inserted for that time)
 			if (aMode == AnimMode::AnimationModeCameraLoop) {
 				// for camera loop render frames == export frames
 				// and also export frame is constant
-				m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame() + 1); // frames are 1 based
+				m_exporter->set_current_frame(frameExp.getCurrentRenderFrame() + 1); // frames are 1 based
 			} else {
-				m_exporter->set_current_frame(m_frameExporter.getCurrentFrame());
+				m_exporter->set_current_frame(frameExp.getCurrentFrame());
 			}
 
 			if (!isFirstExport && aMode == AnimMode::AnimationModeFullNoGeometry) {
@@ -173,7 +174,7 @@ bool ProductionExporter::export_scene(const bool)
 				sync_view(false);
 			} else {
 				// sync(!isFirstExport);
-				sync(false); // TODO: can we make blender keep the updated/data_updated tag?
+ 				sync(false); // TODO: can we make blender keep the updated/data_updated tag?
 			}
 
 			isFirstExport = false;

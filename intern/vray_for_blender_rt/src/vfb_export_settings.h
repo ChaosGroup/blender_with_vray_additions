@@ -169,6 +169,7 @@ struct ExporterSettings {
 	bool              export_fluids;
 
 	bool              use_stereo_camera;
+
 	bool              use_physical_camera;
 	bool              use_motion_blur;
 	bool              use_hide_from_view;
