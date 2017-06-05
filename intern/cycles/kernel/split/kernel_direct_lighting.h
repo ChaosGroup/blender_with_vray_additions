@@ -40,11 +40,11 @@ CCL_NAMESPACE_BEGIN
  *   shadow_blocked function must be executed, after this kernel call
  *    Before this kernel call the QUEUE_SHADOW_RAY_CAST_DL_RAYS will be empty.
  */
-ccl_device void kernel_direct_lighting(KernelGlobals *kg)
+ccl_device void kernel_direct_lighting(KernelGlobals *kg,
+                                       ccl_local_param unsigned int *local_queue_atomics)
 {
-	ccl_local unsigned int local_queue_atomics;
 	if(ccl_local_id(0) == 0 && ccl_local_id(1) == 0) {
-		local_queue_atomics = 0;
+		*local_queue_atomics = 0;
 	}
 	ccl_barrier(CCL_LOCAL_MEM_FENCE);
 
@@ -56,38 +56,37 @@ ccl_device void kernel_direct_lighting(KernelGlobals *kg)
 	                          kernel_split_params.queue_size,
 	                          0);
 
-#ifdef __COMPUTE_DEVICE_GPU__
-	/* If we are executing on a GPU device, we exit all threads that are not
-	 * required.
-	 *
-	 * If we are executing on a CPU device, then we need to keep all threads
-	 * active since we have barrier() calls later in the kernel. CPU devices,
-	 * expect all threads to execute barrier statement.
-	 */
-	if(ray_index == QUEUE_EMPTY_SLOT) {
-		return;
-	}
-#endif
-
-#ifndef __COMPUTE_DEVICE_GPU__
-	if(ray_index != QUEUE_EMPTY_SLOT) {
-#endif
-
 	if(IS_STATE(kernel_split_state.ray_state, ray_index, RAY_ACTIVE)) {
 		ccl_global PathState *state = &kernel_split_state.path_state[ray_index];
 		ShaderData *sd = &kernel_split_state.sd[ray_index];
 
 		/* direct lighting */
 #ifdef __EMISSION__
-		if((kernel_data.integrator.use_direct_light &&
-		    (sd->flag & SD_BSDF_HAS_EVAL)))
-		{
+		RNG rng = kernel_split_state.rng[ray_index];
+
+		bool flag = (kernel_data.integrator.use_direct_light &&
+		             (sd->flag & SD_BSDF_HAS_EVAL));
+
+#  ifdef __BRANCHED_PATH__
+		if(flag && kernel_data.integrator.branched) {
+			flag = false;
+			enqueue_flag = 1;
+		}
+#  endif  /* __BRANCHED_PATH__ */
+
+#  ifdef __SHADOW_TRICKS__
+		if(flag && state->flag & PATH_RAY_SHADOW_CATCHER) {
+			flag = false;
+			enqueue_flag = 1;
+		}
+#  endif  /* __SHADOW_TRICKS__ */
+
+		if(flag) {
 			/* Sample illumination from lights to find path contribution. */
-			ccl_global RNG* rng = &kernel_split_state.rng[ray_index];
-			float light_t = path_state_rng_1D(kg, rng, state, PRNG_LIGHT);
+			float light_t = path_state_rng_1D(kg, &rng, state, PRNG_LIGHT);
 			float light_u, light_v;
-			path_state_rng_2D(kg, rng, state, PRNG_LIGHT_U, &light_u, &light_v);
-			float terminate = path_state_rng_light_termination(kg, rng, state);
+			path_state_rng_2D(kg, &rng, state, PRNG_LIGHT_U, &light_u, &light_v);
+			float terminate = path_state_rng_light_termination(kg, &rng, state);
 
 			LightSample ls;
 			if(light_sample(kg,
@@ -98,9 +97,9 @@ ccl_device void kernel_direct_lighting(KernelGlobals *kg)
 			                &ls)) {
 
 				Ray light_ray;
-#ifdef __OBJECT_MOTION__
+#  ifdef __OBJECT_MOTION__
 				light_ray.time = sd->time;
-#endif
+#  endif
 
 				BsdfEval L_light;
 				bool is_lamp;
@@ -112,17 +111,13 @@ ccl_device void kernel_direct_lighting(KernelGlobals *kg)
 					kernel_split_state.bsdf_eval[ray_index] = L_light;
 					kernel_split_state.is_lamp[ray_index] = is_lamp;
 					/* Mark ray state for next shadow kernel. */
-					ADD_RAY_FLAG(kernel_split_state.ray_state, ray_index, RAY_SHADOW_RAY_CAST_DL);
 					enqueue_flag = 1;
 				}
 			}
 		}
+		kernel_split_state.rng[ray_index] = rng;
 #endif  /* __EMISSION__ */
 	}
-
-#ifndef __COMPUTE_DEVICE_GPU__
-	}
-#endif
 
 #ifdef __EMISSION__
 	/* Enqueue RAY_SHADOW_RAY_CAST_DL rays. */
@@ -130,10 +125,31 @@ ccl_device void kernel_direct_lighting(KernelGlobals *kg)
 	                        QUEUE_SHADOW_RAY_CAST_DL_RAYS,
 	                        enqueue_flag,
 	                        kernel_split_params.queue_size,
-	                        &local_queue_atomics,
+	                        local_queue_atomics,
 	                        kernel_split_state.queue_data,
 	                        kernel_split_params.queue_index);
 #endif
+
+#ifdef __BRANCHED_PATH__
+	/* Enqueue RAY_LIGHT_INDIRECT_NEXT_ITER rays
+	 * this is the last kernel before next_iteration_setup that uses local atomics so we do this here
+	 */
+	ccl_barrier(CCL_LOCAL_MEM_FENCE);
+	if(ccl_local_id(0) == 0 && ccl_local_id(1) == 0) {
+		*local_queue_atomics = 0;
+	}
+	ccl_barrier(CCL_LOCAL_MEM_FENCE);
+
+	ray_index = ccl_global_id(1) * ccl_global_size(0) + ccl_global_id(0);
+	enqueue_ray_index_local(ray_index,
+	                        QUEUE_LIGHT_INDIRECT_ITER,
+	                        IS_STATE(kernel_split_state.ray_state, ray_index, RAY_LIGHT_INDIRECT_NEXT_ITER),
+	                        kernel_split_params.queue_size,
+	                        local_queue_atomics,
+	                        kernel_split_state.queue_data,
+	                        kernel_split_params.queue_index);
+
+#endif  /* __BRANCHED_PATH__ */
 }
 
 CCL_NAMESPACE_END

@@ -102,7 +102,7 @@ public:
 	virtual RenderImage  get_image() { return RenderImage(); }
 	virtual RenderImage  get_render_channel(RenderChannelType) { return RenderImage(); }
 
-	RenderImage          get_pass(BL::RenderPass::type_enum passType);
+	RenderImage          get_pass(const std::string & name);
 
 	virtual void         show_frame_buffer() {}
 	virtual void         hide_frame_buffer() {}

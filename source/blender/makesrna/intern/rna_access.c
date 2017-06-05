@@ -590,6 +590,21 @@ bool RNA_struct_idprops_register_check(const StructRNA *type)
 	return (type->flag & STRUCT_NO_IDPROPERTIES) == 0;
 }
 
+bool RNA_struct_idprops_datablock_allowed(const StructRNA *type)
+{
+	return (type->flag & (STRUCT_NO_DATABLOCK_IDPROPERTIES | STRUCT_NO_IDPROPERTIES)) == 0;
+}
+
+/**
+ * Whether given type implies datablock usage by IDProperties.
+ * This is used to prevent classes allowed to have IDProperties, but not datablock ones, to indirectly use some
+ * (e.g. by assigning an IDP_GROUP containing some IDP_ID pointers...).
+ */
+bool RNA_struct_idprops_contains_datablock(const StructRNA *type)
+{
+	return (type->flag & (STRUCT_CONTAINS_DATABLOCK_IDPROPERTIES | STRUCT_ID)) != 0;
+}
+
 /* remove an id-property */
 bool RNA_struct_idprops_unset(PointerRNA *ptr, const char *identifier)
 {
@@ -631,8 +646,11 @@ PropertyRNA *RNA_struct_find_property(PointerRNA *ptr, const char *identifier)
 		/* id prop lookup, not so common */
 		PropertyRNA *r_prop = NULL;
 		PointerRNA r_ptr; /* only support single level props */
-		if (RNA_path_resolve(ptr, identifier, &r_ptr, &r_prop))
+		if (RNA_path_resolve_property(ptr, identifier, &r_ptr, &r_prop) &&
+		    (r_ptr.type == ptr->type) && (r_ptr.data == ptr->data))
+		{
 			return r_prop;
+		}
 	}
 	else {
 		/* most common case */
@@ -1206,10 +1224,12 @@ int RNA_property_pointer_poll(PointerRNA *ptr, PropertyRNA *prop, PointerRNA *va
 		PointerPropertyRNA *pprop = (PointerPropertyRNA *)prop;
 
 		if (pprop->poll) {
-			if (rna_idproperty_check(&prop,ptr))
-				return ((PropPointerPollFuncPy) pprop->poll)(ptr, value, prop);
-			else
+			if (rna_idproperty_check(&prop, ptr)) {
+				return ((PropPointerPollFuncPy) pprop->poll)(ptr, *value, prop);
+			}
+			else {
 				return pprop->poll(ptr, *value);
+			}
 		}
 
 		return 1;
@@ -2975,8 +2995,11 @@ PointerRNA RNA_property_pointer_get(PointerRNA *ptr, PropertyRNA *prop)
 	if ((idprop = rna_idproperty_check(&prop, ptr))) {
 		pprop = (PointerPropertyRNA *)prop;
 
-		if (RNA_struct_is_ID(pprop->type))
-			return rna_pointer_inherit_refine(ptr, pprop->type, idprop->data.pointer);
+		if (RNA_struct_is_ID(pprop->type)) {
+			return rna_pointer_inherit_refine(ptr, pprop->type, IDP_Id(idprop));
+		}
+
+		/* for groups, data is idprop itself */
 		if (pprop->typef)
 			/* for groups, data is idprop itself */
 			return rna_pointer_inherit_refine(ptr, pprop->typef(ptr), idprop);
@@ -2999,35 +3022,33 @@ PointerRNA RNA_property_pointer_get(PointerRNA *ptr, PropertyRNA *prop)
 
 void RNA_property_pointer_set(PointerRNA *ptr, PropertyRNA *prop, PointerRNA ptr_value)
 {
-	IDProperty *idprop;
-	PointerPropertyRNA *pprop = (PointerPropertyRNA *) prop;
+	PointerPropertyRNA *pprop = (PointerPropertyRNA *)prop;
 	BLI_assert(RNA_property_type(prop) == PROP_POINTER);
 
-	idprop = rna_idproperty_check(&prop, ptr);
-
-	if (idprop && pprop->set && !((PropPointerSetFuncPy)pprop->set)(ptr, &ptr_value, prop))
-		return;
-
+	/* Check types */
 	if (ptr_value.type != NULL && !RNA_struct_is_a(ptr_value.type, pprop->type)) {
 		printf("%s: expected %s type, not %s.\n", __func__, pprop->type->identifier, ptr_value.type->identifier);
 		return;
 	}
 
-	if (!idprop && pprop->set &&
-		!((prop->flag & PROP_NEVER_NULL) && ptr_value.data == NULL) &&
-		!((prop->flag & PROP_ID_SELF_CHECK) && ptr->id.data == ptr_value.id.data))
+	/* RNA */
+	if (pprop->set &&
+	    !((prop->flag & PROP_NEVER_NULL) && ptr_value.data == NULL) &&
+	    !((prop->flag & PROP_ID_SELF_CHECK) && ptr->id.data == ptr_value.id.data))
 	{
 		pprop->set(ptr, ptr_value);
 	}
+	/* IDProperty */
 	else if (prop->flag & PROP_EDITABLE) {
-		IDPropertyTemplate val = { 0 };
+		IDPropertyTemplate val = {0};
 		IDProperty *group;
 
 		val.id = ptr_value.data;
 
-		group = RNA_struct_idprops(ptr, 1);
-		if (group)
+		group = RNA_struct_idprops(ptr, true);
+		if (group) {
 			IDP_ReplaceInGroup(group, IDP_New(IDP_ID, &val, prop->identifier));
+		}
 	}
 }
 
@@ -5570,6 +5591,9 @@ static char *rna_pointer_as_string__bldata(PointerRNA *ptr)
 		return BLI_strdup("None");
 	}
 	else if (RNA_struct_is_ID(ptr->type)) {
+		if (ptr->id.data == NULL) {
+			return BLI_strdup("None");
+		}
 		return RNA_path_full_ID_py(ptr->id.data);
 	}
 	else {
@@ -5577,9 +5601,13 @@ static char *rna_pointer_as_string__bldata(PointerRNA *ptr)
 	}
 }
 
-char *RNA_pointer_as_string(bContext *C, PointerRNA *UNUSED(ptr), PropertyRNA *prop_ptr, PointerRNA *ptr_prop)
+char *RNA_pointer_as_string(bContext *C, PointerRNA *ptr, PropertyRNA *prop_ptr, PointerRNA *ptr_prop)
 {
-	if (RNA_property_flag(prop_ptr) & PROP_IDPROPERTY) {
+	IDProperty *prop;
+	if (ptr_prop->data == NULL) {
+		return BLI_strdup("None");
+	}
+	else if ((prop = rna_idproperty_check(&prop_ptr, ptr)) && prop->type != IDP_ID) {
 		return RNA_pointer_as_string_id(C, ptr_prop);
 	}
 	else {

@@ -54,7 +54,7 @@ void KERNEL_FUNCTION_FULL_NAME(data_init)(
 #ifdef __KERNEL_OPENCL__
 #define KERNEL_TEX(type, ttype, name)                                   \
         ccl_global type *name,
-#include "../kernel_textures.h"
+#include "kernel/kernel_textures.h"
 #endif
 
         int start_sample,
@@ -67,6 +67,10 @@ void KERNEL_FUNCTION_FULL_NAME(data_init)(
         unsigned int num_samples,
         ccl_global float *buffer)
 {
+#ifdef KERNEL_STUB
+	STUB_ASSERT(KERNEL_ARCH, data_init);
+#else
+
 #ifdef __KERNEL_OPENCL__
 	kg->data = data;
 #endif
@@ -98,28 +102,23 @@ void KERNEL_FUNCTION_FULL_NAME(data_init)(
 #ifdef __KERNEL_OPENCL__
 #define KERNEL_TEX(type, ttype, name) \
 	kg->name = name;
-#include "../kernel_textures.h"
+#include "kernel/kernel_textures.h"
 #endif
 
 	int thread_index = ccl_global_id(1) * ccl_global_size(0) + ccl_global_id(0);
 
 	/* Initialize queue data and queue index. */
 	if(thread_index < queuesize) {
-		/* Initialize active ray queue. */
-		kernel_split_state.queue_data[QUEUE_ACTIVE_AND_REGENERATED_RAYS * queuesize + thread_index] = QUEUE_EMPTY_SLOT;
-		/* Initialize background and buffer update queue. */
-		kernel_split_state.queue_data[QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS * queuesize + thread_index] = QUEUE_EMPTY_SLOT;
-		/* Initialize shadow ray cast of AO queue. */
-		kernel_split_state.queue_data[QUEUE_SHADOW_RAY_CAST_AO_RAYS * queuesize + thread_index] = QUEUE_EMPTY_SLOT;
-		/* Initialize shadow ray cast of direct lighting queue. */
-		kernel_split_state.queue_data[QUEUE_SHADOW_RAY_CAST_DL_RAYS * queuesize + thread_index] = QUEUE_EMPTY_SLOT;
+		for(int i = 0; i < NUM_QUEUES; i++) {
+			kernel_split_state.queue_data[i * queuesize + thread_index] = QUEUE_EMPTY_SLOT;
+		}
 	}
 
 	if(thread_index == 0) {
-		Queue_index[QUEUE_ACTIVE_AND_REGENERATED_RAYS] = 0;
-		Queue_index[QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS] = 0;
-		Queue_index[QUEUE_SHADOW_RAY_CAST_AO_RAYS] = 0;
-		Queue_index[QUEUE_SHADOW_RAY_CAST_DL_RAYS] = 0;
+		for(int i = 0; i < NUM_QUEUES; i++) {
+			Queue_index[i] = 0;
+		}
+
 		/* The scene-intersect kernel should not use the queues very first time.
 		 * since the queue would be empty.
 		 */
@@ -148,6 +147,8 @@ void KERNEL_FUNCTION_FULL_NAME(data_init)(
 			*(rng_state + index) = hash_int_2d(x, y);
 		}
 	}
+
+#endif  /* KERENL_STUB */
 }
 
 CCL_NAMESPACE_END

@@ -132,42 +132,14 @@ void PluginExporter::set_commit_state(VRayBaseTypes::CommitAction ca)
 	}
 }
 
-RenderImage PluginExporter::get_pass(BL::RenderPass::type_enum passType)
+RenderImage PluginExporter::get_pass(const std::string & name)
 {
 	RenderImage image;
 
-	switch (passType) {
-		case BL::RenderPass::type_COMBINED: image = get_image(); break;
-		case BL::RenderPass::type_Z: image = get_render_channel(RenderChannelTypeVfbZdepth); break;
-		case BL::RenderPass::type_COLOR: image = get_render_channel(RenderChannelTypeVfbRealcolor); break;
-		// case BL::RenderPass::type_DIFFUSE: image = get_render_channel(RenderChannelTypeVfbDiffuse); break;
-		// case BL::RenderPass::type_SPECULAR: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_SHADOW: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_AO: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_REFLECTION: image = get_render_channel(RenderChannelType); break;
-		case BL::RenderPass::type_NORMAL: image = get_render_channel(RenderChannelTypeVfbNormal); break;
-		// case BL::RenderPass::type_VECTOR: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_REFRACTION: image = get_render_channel(RenderChannelType); break;
-		case BL::RenderPass::type_OBJECT_INDEX: image = get_render_channel(RenderChannelTypeVfbRenderID); break;
-		// case BL::RenderPass::type_UV: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_MIST: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_EMIT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_ENVIRONMENT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_MATERIAL_INDEX: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_DIFFUSE_DIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_DIFFUSE_INDIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_DIFFUSE_COLOR: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_GLOSSY_DIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_GLOSSY_INDIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_GLOSSY_COLOR: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_TRANSMISSION_DIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_TRANSMISSION_INDIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_TRANSMISSION_COLOR: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_SUBSURFACE_DIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_SUBSURFACE_INDIRECT: image = get_render_channel(RenderChannelType); break;
-		// case BL::RenderPass::type_SUBSURFACE_COLOR: image = get_render_channel(RenderChannelType); break;
-		default:
-			break;
+	if (name == "Combined") {
+		image = get_image();
+	} else if (name == "Depth") {
+		image = get_render_channel(RenderChannelTypeVfbZdepth);
 	}
 
 	return image;
