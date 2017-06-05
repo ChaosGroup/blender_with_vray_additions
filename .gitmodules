@@ -2,10 +2,12 @@
 	path = release/scripts/addons
 	url = http://git.blender.org/blender-addons.git
 	ignore = all
+	branch = master
 [submodule "release/scripts/addons_contrib"]
 	path = release/scripts/addons_contrib
 	url = http://git.blender.org/blender-addons-contrib.git
 	ignore = all
+	branch = master
 [submodule "release/datafiles/locale"]
 	path = release/datafiles/locale
 	url = http://git.blender.org/blender-translations.git
@@ -15,7 +17,9 @@
 	url = ../vray-zmq-wrapper.git
 	branch = master
 	ignore = all
+	branch = master
 [submodule "source/tools"]
 	path = source/tools
 	url = http://git.blender.org/blender-dev-tools.git
 	ignore = all
+	branch = master
