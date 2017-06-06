@@ -380,7 +380,7 @@ public:
 	AttrValue         getObjectNameList(BL::Group group);
 
 	/// Set nsamples value of plugin based on object subframes and nsamples in settings
-	void              setNSamples(PluginDesc &pluginDesc, BL::Object ob);
+	void              setNSamples(PluginDesc &pluginDesc, BL::Object ob) const;
 
 	bool              objectIsMeshLight(BL::Object ob);
 	AttrValue         exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride = false);
