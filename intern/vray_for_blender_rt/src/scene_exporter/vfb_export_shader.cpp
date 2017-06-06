@@ -29,7 +29,7 @@
 
 #include <fstream>
 
-
+namespace {
 AttrValue convertToOSLArgument(const AttrValue & val) {
 	if (val.type == ValueTypeColor) {
 		AttrListValue vlist;
@@ -46,6 +46,7 @@ AttrValue convertToOSLArgument(const AttrValue & val) {
 	} else {
 		return val;
 	}
+}
 }
 
 AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Node &node, NodeContext &context, std::string & scriptPath) {

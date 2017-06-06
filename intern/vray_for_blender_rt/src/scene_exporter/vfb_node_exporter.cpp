@@ -35,8 +35,8 @@
 	const char * const FormatVector("Vector(%.6g,%.6g,%.6g)");      \
 
 
-#define SPRINTF_FORMAT_STRING(s)  (snprintf(formatBuff, sizeof(formatBuff), FormatFloat  , s), formatBuff)
-#define SPRINTF_FORMAT_FLOAT(f)   (snprintf(formatBuff, sizeof(formatBuff), FormatString , f), formatBuff)
+#define SPRINTF_FORMAT_STRING(s)  (snprintf(formatBuff, sizeof(formatBuff), FormatString , s), formatBuff)
+#define SPRINTF_FORMAT_FLOAT(f)   (snprintf(formatBuff, sizeof(formatBuff), FormatFloat  , f), formatBuff)
 #define SPRINTF_FORMAT_TM(tm)     (snprintf(formatBuff, sizeof(formatBuff), FormatTmHex  , tm), formatBuff)
 #define SPRINTF_FORMAT_INT(i)     (snprintf(formatBuff, sizeof(formatBuff), FormatInt    , i), formatBuff)
 #define SPRINTF_FORMAT_UINT(i)    (snprintf(formatBuff, sizeof(formatBuff), FormatUInt   , i), formatBuff)

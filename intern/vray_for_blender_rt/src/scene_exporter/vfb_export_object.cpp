@@ -200,7 +200,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 
 	// XXX: Check for valid mesh?
 	if (!ntree) {
-		if (!is_data_updated && !m_layer_changed || !m_settings.export_meshes) {
+		if ((!is_data_updated && !m_layer_changed) || !m_settings.export_meshes) {
 			// nothing changed just get the name
 			geom = AttrPlugin(getMeshName(ob));
 		} else if (is_data_updated) {
@@ -471,7 +471,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 			AttrValue hair_geom;
 			const auto exporthairName = getHairName(ob, psys, pset);
 
-			if (!hair_is_data_updated && !m_layer_changed || !m_settings.export_meshes) {
+			if ((!hair_is_data_updated && !m_layer_changed) || !m_settings.export_meshes) {
 				// nothing changed just get the name
 				hair_geom = AttrPlugin(getMeshName(ob));
 			} else if (is_data_updated) {
