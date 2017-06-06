@@ -119,8 +119,7 @@ bool DataExporter::isObjectInHideList(BL::Object ob, const std::string listName)
 
 void DataExporter::setNSamples(PluginDesc &pluginDesc, BL::Object ob) const
 {
-	auto vrayObj = RNA_pointer_get(&ob.ptr, "vray");
-	int sf_value = vrayObj.id.data ? RNA_int_get(&vrayObj, "subframes") : 0;
+	int sf_value = Blender::getObjectSubframes(ob);
 	if (sf_value > 2) {
 		pluginDesc.add("nsamples", sf_value);
 	}

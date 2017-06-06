@@ -67,11 +67,10 @@ void SubframesHandler::update(bool use_motion_blur) {
 		return;
 	}
 
-	BL::Scene::objects_iterator soIt;
-	for (m_scene.objects.begin(soIt); soIt != m_scene.objects.end(); ++soIt) {
-		int subframesCount = RNA_int_get(&RNA_pointer_get(&(*soIt).ptr, "vray"), "subframes");
+	for (auto & ob : Blender::collection(m_scene.objects)) {
+		int subframesCount = Blender::getObjectSubframes(ob);
 		if (subframesCount > 2) {
-			m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, (*soIt)));
+			m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, ob));
 		}
 	}
 

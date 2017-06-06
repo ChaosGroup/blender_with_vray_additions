@@ -105,6 +105,10 @@ int IsEmitterRenderable(BL::Object ob);
 int IsDuplicatorRenderable(BL::Object ob);
 int IsGeometry(BL::Object ob);
 int IsLight(BL::Object ob);
+inline int getObjectSubframes(BL::Object ob) {
+	auto vrayOb = RNA_pointer_get(&ob.ptr, "vray");
+	return vrayOb.id.data ? RNA_int_get(&vrayOb, "subframes") : 0;
+}
 
 /// Wrapper class over BL::BlendData collections that has begin() method which returns the iterator instead
 /// of taking it as an argument, this is when using rage based for loop
