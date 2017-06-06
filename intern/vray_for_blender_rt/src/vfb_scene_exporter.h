@@ -210,7 +210,8 @@ public:
 
 	/// Does the object has subframes that need to be exported separately
 	bool hasObjectSubframes(BL::Object object) const {
-		return m_settings.use_motion_blur && RNA_int_get(&RNA_pointer_get(&object.ptr, "vray"), "subframes") > 2;
+		auto obVray = RNA_pointer_get(&object.ptr, "vray");
+		return m_settings.use_motion_blur && obVray.id.data && RNA_int_get(&obVray, "subframes") > 2;
 	}
 
 	/// Blender frame format
