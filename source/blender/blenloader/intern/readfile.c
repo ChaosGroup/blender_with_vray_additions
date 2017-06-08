@@ -9264,16 +9264,16 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 		expand_doit(fd, mainvar, ntree->gpd);
 	
 	for (node = ntree->nodes.first; node; node = node->next) {
-		if (node->id && node->type != CMP_NODE_R_LAYERS) {
-			expand_doit(fd, mainvar, node->id);
-		}
-
 		expand_idprops(fd, mainvar, node->prop);
 
-		for (sock = node->inputs.first; sock; sock = sock->next)
-			expand_doit(fd, mainvar, sock->prop);
-		for (sock = node->outputs.first; sock; sock = sock->next)
-			expand_doit(fd, mainvar, sock->prop);
+		if (node->id && node->type != CMP_NODE_R_LAYERS) {
+			expand_doit(fd, mainvar, node->id);
+
+			for (sock = node->inputs.first; sock; sock = sock->next)
+				expand_doit(fd, mainvar, sock->prop);
+			for (sock = node->outputs.first; sock; sock = sock->next)
+				expand_doit(fd, mainvar, sock->prop);
+		}
 	}
 
 	for (sock = ntree->inputs.first; sock; sock = sock->next)
