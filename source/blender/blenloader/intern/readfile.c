@@ -9269,11 +9269,14 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 		if (node->id && node->type != CMP_NODE_R_LAYERS) {
 			expand_doit(fd, mainvar, node->id);
 
+			// sockets are intentionally skipped when node->id == NULL
+			// beceuse their prop is not ID
 			for (sock = node->inputs.first; sock; sock = sock->next)
 				expand_doit(fd, mainvar, sock->prop);
 			for (sock = node->outputs.first; sock; sock = sock->next)
 				expand_doit(fd, mainvar, sock->prop);
 		}
+
 	}
 
 	for (sock = ntree->inputs.first; sock; sock = sock->next)
