@@ -2990,7 +2990,10 @@ void ntreeVerifyNodes(struct Main *main, struct ID *id)
 		Scene *iter_scene;
 		BLI_LISTBASE_CIRCULAR_FORWARD_BEGIN(&main->scene, iter_scene, main->scene.first) {
 			dvn = get_dvn(iter_scene);
-			defined_validate_nodes |= dvn ? IDP_Int(dvn) : 1;
+			defined_validate_nodes = dvn ? IDP_Int(dvn) : 1;
+			if (defined_validate_nodes) {
+				break;
+			}
 		} BLI_LISTBASE_CIRCULAR_FORWARD_END(&main->scene, ((ID*)iter_scene), main->scene.first);
 	}
 

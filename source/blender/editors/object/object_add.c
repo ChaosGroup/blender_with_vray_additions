@@ -1149,7 +1149,13 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 		bNode *node;
 
 		for (node = ntree->nodes.first; node; node = node->next) {
-			defined_validate_nodes |= (int)node->typeinfo->verifyfunc;
+			if ((int)node->typeinfo->verifyfunc) {
+				defined_validate_nodes = (int)node->typeinfo->verifyfunc;
+				break;
+			}
+		}
+		if (defined_validate_nodes) {
+			break;
 		}
 	} FOREACH_NODETREE_END
 
@@ -1161,7 +1167,6 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 
 	IDProperty *defined_validate_nodes_property = IDP_New(IDP_INT, &val, "defined_validate_nodes");
 	IDP_AddToGroup(vray_group, defined_validate_nodes_property);
-	// -----
 
 	CTX_DATA_BEGIN (C, Base *, base, selected_bases)
 	{
@@ -1236,7 +1241,6 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 
 	// destroy flag that signals if call to ntreeVerifyNodes is needed
 	IDP_FreeFromGroup(vray_group, defined_validate_nodes_property);
-	// -----
 
 	if (!changed)
 		return OPERATOR_CANCELLED;
