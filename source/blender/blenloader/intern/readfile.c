@@ -9276,7 +9276,6 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 			for (sock = node->outputs.first; sock; sock = sock->next)
 				expand_doit(fd, mainvar, sock->prop);
 		}
-
 	}
 
 	for (sock = ntree->inputs.first; sock; sock = sock->next)
