@@ -1160,13 +1160,17 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 	} FOREACH_NODETREE_END
 
 	IDProperty *scene_properties = scene->id.properties;
-	IDProperty *vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
+	if (scene_properties) {
+		IDProperty *vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
+		if (vray_group) {
+			IDPropertyTemplate val;
+			val.i = defined_validate_nodes;
 
-	IDPropertyTemplate val;
-	val.i = defined_validate_nodes;
+			IDProperty *defined_validate_nodes_property = IDP_New(IDP_INT, &val, "defined_validate_nodes");
+			IDP_AddToGroup(vray_group, defined_validate_nodes_property);
+		}
+	}
 
-	IDProperty *defined_validate_nodes_property = IDP_New(IDP_INT, &val, "defined_validate_nodes");
-	IDP_AddToGroup(vray_group, defined_validate_nodes_property);
 
 	CTX_DATA_BEGIN (C, Base *, base, selected_bases)
 	{

@@ -2974,8 +2974,11 @@ static void ntree_validate_links(bNodeTree *ntree)
 // get defined_validate_nodes property of a scene
 IDProperty *get_dvn(Scene* scene) {
 	IDProperty *scene_properties = (scene)->id.properties;
-	IDProperty *vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
-	return IDP_GetPropertyFromGroup(vray_group, "defined_validate_nodes"); 
+	if (scene_properties) {
+		IDProperty *vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
+		return vray_group ? IDP_GetPropertyFromGroup(vray_group, "defined_validate_nodes") : NULL;
+	}
+	return NULL;
 }
 
 void ntreeVerifyNodes(struct Main *main, struct ID *id)
