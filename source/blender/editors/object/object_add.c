@@ -1160,13 +1160,15 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 	} FOREACH_NODETREE_END
 
 	IDProperty *scene_properties = scene->id.properties;
+	IDProperty *vray_group = NULL;
+	IDProperty *defined_validate_nodes_property = NULL;
 	if (scene_properties) {
-		IDProperty *vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
+		vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
 		if (vray_group) {
 			IDPropertyTemplate val;
 			val.i = defined_validate_nodes;
 
-			IDProperty *defined_validate_nodes_property = IDP_New(IDP_INT, &val, "defined_validate_nodes");
+			defined_validate_nodes_property = IDP_New(IDP_INT, &val, "defined_validate_nodes");
 			IDP_AddToGroup(vray_group, defined_validate_nodes_property);
 		}
 	}
@@ -1243,8 +1245,10 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 	}
 	CTX_DATA_END;
 
-	// destroy flag that signals if call to ntreeVerifyNodes is needed
-	IDP_FreeFromGroup(vray_group, defined_validate_nodes_property);
+	if (vray_group && defined_validate_nodes_property) {
+		// destroy flag that signals if call to ntreeVerifyNodes is needed
+		IDP_FreeFromGroup(vray_group, defined_validate_nodes_property);
+	}
 
 	if (!changed)
 		return OPERATOR_CANCELLED;
