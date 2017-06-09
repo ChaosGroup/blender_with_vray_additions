@@ -784,6 +784,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
 	int num_instances = 0;
+	int idx_instances = 0;
 	if (dupli_use_instancer) {
 		BL::Object::dupli_list_iterator dupIt;
 		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
@@ -797,18 +798,14 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			if (!is_hidden && supported_type) {
 				PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
 				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, num_instances++));
 				// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
 
-				// check only if we havent found any particle objects not suitable for instancer
-				if (dupli_use_instancer) {
-					// if any of the duplicated objects is clipper or light we cant use instancer
-					if (is_light || RNA_boolean_get(&vrayClipper, "enabled")) {
-						dupli_use_instancer = false;
-					} else if (m_data_exporter.objectIsMeshLight(parentOb)) {
-						dupli_use_instancer = false;
-					}
+				// if any of the duplicated objects is clipper or light we cant use instancer
+				if (!(is_light || RNA_boolean_get(&vrayClipper, "enabled") || m_data_exporter.objectIsMeshLight(parentOb))) {
+					maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, idx_instances));
+					++num_instances;
 				}
+				++idx_instances;
 			}
 		}
 
@@ -822,6 +819,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	int dupliIdx = 0;
+	int instancerIdx = 0; // for objects using instancer
 	// if parent is empty or it is hidden in some way, do not show base objects
 	const bool hide_from_parent = !m_data_exporter.isObjectVisible(ob) || ob.type() == BL::Object::type_EMPTY;
 
@@ -853,7 +851,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		// we dont check here for mesh light since data exporter will not export nodes for mesh lights
 		// TODO: if we check here it might be faster to skip the redundent call to sync_object
-		if (is_light || !dupli_use_instancer) {
+		if (is_light) {
 			overrideAttrs.useInstancer = false;
 
 			// sync dupli base object
@@ -892,12 +890,14 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			float tm[4][4];
 			mul_m4_m4m4(tm, ((DupliObject*)instance.ptr.data)->mat, inverted);
 
-			AttrInstancer::Item &instancer_item = (*instances.data)[dupliIdx];
+			AttrInstancer::Item &instancer_item = (*instances.data)[instancerIdx];
 			instancer_item.index = persistendID;
 			instancer_item.node = m_data_exporter.getNodeName(parentOb);
 			instancer_item.tm = AttrTransformFromBlTransform(tm);
 			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
 			sync_object(parentOb, check_updated, overrideAttrs);
+
+			++instancerIdx;
 		}
 
 		dupliIdx++;
