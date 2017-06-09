@@ -117,6 +117,9 @@
 
 #include "object_intern.h"
 
+#include "BKE_idprop.h"
+#include "BKE_node.h"
+
 /* this is an exact copy of the define in rna_lamp.c
  * kept here because of linking order.
  * Icons are only defined here */
@@ -1140,6 +1143,31 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 	if (CTX_data_edit_object(C)) 
 		return OPERATOR_CANCELLED;
 
+	// create flag that signals if call to ntreeVerifyNodes is needed
+	int defined_validate_nodes = 0;
+	FOREACH_NODETREE(bmain, ntree, owner_id) {
+		bNode *node;
+
+		for (node = ntree->nodes.first; node; node = node->next) {
+			if ((int)node->typeinfo->verifyfunc) {
+				defined_validate_nodes = (int)node->typeinfo->verifyfunc;
+				break;
+			}
+		}
+		if (defined_validate_nodes) {
+			break;
+		}
+	} FOREACH_NODETREE_END
+
+	IDProperty *scene_properties = scene->id.properties;
+	IDProperty *vray_group = IDP_GetPropertyFromGroup(scene_properties, "vray");
+
+	IDPropertyTemplate val;
+	val.i = defined_validate_nodes;
+
+	IDProperty *defined_validate_nodes_property = IDP_New(IDP_INT, &val, "defined_validate_nodes");
+	IDP_AddToGroup(vray_group, defined_validate_nodes_property);
+
 	CTX_DATA_BEGIN (C, Base *, base, selected_bases)
 	{
 		const bool is_indirectly_used = BKE_library_ID_is_indirectly_used(bmain, base->object);
@@ -1210,6 +1238,9 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 		/* end global */
 	}
 	CTX_DATA_END;
+
+	// destroy flag that signals if call to ntreeVerifyNodes is needed
+	IDP_FreeFromGroup(vray_group, defined_validate_nodes_property);
 
 	if (!changed)
 		return OPERATOR_CANCELLED;
