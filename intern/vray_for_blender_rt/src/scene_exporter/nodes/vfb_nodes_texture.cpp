@@ -533,30 +533,32 @@ AttrValue DataExporter::exportVRayNodeTexRemap(BL::NodeTree &ntree, BL::Node &no
 		Value, Color, HSV
 	};
 
-	const RemapType type = static_cast<RemapType>(RNA_enum_ext_get(&texRemapPtr, "type"));
-	auto inputColorSock = getSocketByAttr(node, "input_value");
-	const bool hasInputColor = inputColorSock && inputColorSock.is_linked();
-
 	PluginDesc pluginDesc(GenPluginName(node, ntree, context), GetNodePluginID(node));
 
-	// this hack is here because GPU does not support remapping of float to color
-	// TODO: remove this when GPU adds support
-	if (hasInputColor && type == Value) {
-		pluginDesc.add("color_colors", 0);
+	// if this is used to output color we need split the remaps for color channels
+	if (fromSocket.bl_idname() == "VRaySocketColor") {
+		const RemapType type = static_cast<RemapType>(RNA_enum_ext_get(&texRemapPtr, "type"));
 
-		// split the float input to color and pass the color as input
-		PluginDesc floatToColorSplit(GenPluginName(node, ntree, context), "Float3ToAColor", "DummySplitter@");
-		auto floatPlgInput = exportSocket(ntree, inputColorSock, context);
+		// this hack is here because GPU does not support remapping of float to color
+		// TODO: remove this when GPU adds support
+		if (type == Value) {
+			pluginDesc.add("color_colors", 0);
+			// split the float input to color and pass the color as input
+			PluginDesc floatToColorSplit(GenPluginName(node, ntree, context), "TexAColor", "DummyFloatToColor@");
+			auto inputColorSock = getSocketByAttr(node, "input_value");
+			auto floatPlgInput = exportSocket(ntree, inputColorSock, context);
 
-		floatToColorSplit.add("float1", floatPlgInput);
-		floatToColorSplit.add("float2", floatPlgInput);
-		floatToColorSplit.add("float3", floatPlgInput);
-		floatToColorSplit.add("invert", 0);
-		floatToColorSplit.add("alpha", 0);
+			floatToColorSplit.add("float1", floatPlgInput);
+			floatToColorSplit.add("float2", floatPlgInput);
+			floatToColorSplit.add("float3", floatPlgInput);
+			floatToColorSplit.add("invert", 0);
+			floatToColorSplit.add("alpha", 0);
 
-		pluginDesc.add("input_color", m_exporter->export_plugin(floatToColorSplit));
-		// set the mode to color
-		pluginDesc.add("type", static_cast<int>(Color));
+			pluginDesc.add("input_color", m_exporter->export_plugin(floatToColorSplit));
+
+			// set the mode to color
+			pluginDesc.add("type", static_cast<int>(Color));
+		}
 
 		BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, "texture"));
 		if (!tex) {
@@ -609,8 +611,9 @@ AttrValue DataExporter::exportVRayNodeTexRemap(BL::NodeTree &ntree, BL::Node &no
 		}
 	}
 
-	//DataExporter::getConnectedNode()
-	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+
+	return m_exporter->export_plugin(pluginDesc);
 }
 
 AttrValue DataExporter::exportVRayNodeTexSoftbox(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)

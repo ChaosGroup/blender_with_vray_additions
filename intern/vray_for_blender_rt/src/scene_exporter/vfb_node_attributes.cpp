@@ -255,7 +255,11 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 					pluginDesc.add(attrName, socketValue);
 				}
 			}
-			else if (attrType == ParamDesc::AttrTypeWidgetRamp) {
+			else if (attrType == ParamDesc::AttrTypeWidgetRamp && !(
+			        pluginDesc.get(attrDesc.descRamp.colors) ||
+			        pluginDesc.get(attrDesc.descRamp.positions) ||
+			        pluginDesc.get(attrDesc.descRamp.interpolations)
+				)) {
 				// To preserve compatibility with already existing projects
 				const std::string texAttrName = ((pluginID == "TexGradRamp") || (pluginID == "TexRemap"))
 				                                ? "texture"
