@@ -268,10 +268,10 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 
 			PluginAttr *uv_set_name = mappingDesc.get("uv_set_name");
 			if (uv_set_name) {
-				uv_set_name->attrValue.as<AttrSimpleType<std::string>>() = VRayForBlender::Mesh::UvChanNamePrefix + uv_set_name->attrValue.as<AttrSimpleType<std::string>>().value;
+				uv_set_name->attrValue.as<AttrSimpleType<std::string>>() = uv_set_name->attrValue.as<AttrSimpleType<std::string>>().value;
 			}
 			else {
-				mappingDesc.add("uv_set_name", "UvUVMap");
+				mappingDesc.add("uv_set_name", "UVMap");
 			}
 
 			mappingPlugin = m_exporter->export_plugin(mappingDesc);
@@ -520,7 +520,7 @@ AttrValue DataExporter::exportVRayNodeTexMeshVertexColorChannel(BL::NodeTree &nt
 
 	PluginAttr *channel_name = pluginDesc.get("channel_name");
 	if (channel_name) {
-		channel_name->attrValue.as<AttrSimpleType<std::string>>() = VRayForBlender::Mesh::ColChanNamePrefix + channel_name->attrValue.as<AttrSimpleType<std::string>>().value;
+		channel_name->attrValue.as<AttrSimpleType<std::string>>() = channel_name->attrValue.as<AttrSimpleType<std::string>>().value;
 	}
 
 	return m_exporter->export_plugin(pluginDesc);

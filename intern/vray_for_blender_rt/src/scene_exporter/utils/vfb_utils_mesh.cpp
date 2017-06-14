@@ -103,7 +103,7 @@ struct MapChannelRaw:
 			BL::Mesh::tessface_uv_textures_iterator uvIt;
 			for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 				BL::MeshTextureFaceLayer  uvLayer(*uvIt);
-				const std::string        &uvLayerName = VRayForBlender::Mesh::UvChanNamePrefix + uvLayer.name();
+				const std::string &uvLayerName = uvLayer.name();
 
 				// Setup channel data storage
 				AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[uvLayerName];
@@ -115,7 +115,7 @@ struct MapChannelRaw:
 			BL::Mesh::tessface_vertex_colors_iterator colIt;
 			for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 				BL::MeshColorLayer  colLayer(*colIt);
-				const std::string  &colLayerName = VRayForBlender::Mesh::ColChanNamePrefix + colLayer.name();
+				const std::string &colLayerName = colLayer.name();
 
 				// Setup channel data storage
 				AttrMapChannels::AttrMapChannel &map_channel = map_channels.data[colLayerName];
@@ -135,7 +135,7 @@ struct MapChannelRaw:
 				BL::Mesh::tessface_uv_textures_iterator uvIt;
 				for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 					BL::MeshTextureFaceLayer  uvLayer(*uvIt);
-					const std::string        &uvLayerName = VRayForBlender::Mesh::UvChanNamePrefix + uvLayer.name();
+					const std::string &uvLayerName = uvLayer.name();
 
 					AttrMapChannels::AttrMapChannel &uv_channel = map_channels.data[uvLayerName];
 
@@ -159,7 +159,7 @@ struct MapChannelRaw:
 				BL::Mesh::tessface_vertex_colors_iterator colIt;
 				for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 					BL::MeshColorLayer  colLayer(*colIt);
-					const std::string  &colLayerName = VRayForBlender::Mesh::ColChanNamePrefix + colLayer.name();
+					const std::string &colLayerName = colLayer.name();
 
 					AttrMapChannels::AttrMapChannel &col_channel = map_channels.data[colLayerName];
 
@@ -220,7 +220,7 @@ struct MapChannelMerge:
 				for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 					BL::MeshTextureFaceLayer uvLayer(*uvIt);
 
-					const std::string &layerName = VRayForBlender::Mesh::UvChanNamePrefix + uvLayer.name();
+					const std::string &layerName = uvLayer.name();
 
 					ChanSet &uvSet = chan_data[layerName];
 
@@ -237,7 +237,7 @@ struct MapChannelMerge:
 				for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 					BL::MeshColorLayer colLayer(*colIt);
 
-					const std::string &layerName = VRayForBlender::Mesh::ColChanNamePrefix + colLayer.name();
+					const std::string &layerName = colLayer.name();
 
 					ChanSet &colSet = chan_data[layerName];
 
@@ -507,7 +507,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 			for (mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 				BL::MeshTextureFaceLayer uvLayer(*uvIt);
 
-				const std::string &layerName = VRayForBlender::Mesh::UvChanNamePrefix + uvLayer.name();
+				const std::string &layerName = uvLayer.name();
 
 				AttrListInt &uvData = map_channels.data[layerName].faces;
 
@@ -532,7 +532,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 			for (mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 				BL::MeshColorLayer colLayer(*colIt);
 
-				const std::string &layerName = VRayForBlender::Mesh::ColChanNamePrefix + colLayer.name();
+				const std::string &layerName = colLayer.name();
 
 				AttrListInt &colData = map_channels.data[layerName].faces;
 

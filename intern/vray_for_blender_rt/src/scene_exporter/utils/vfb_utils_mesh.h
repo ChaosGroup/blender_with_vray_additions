@@ -27,9 +27,6 @@
 namespace VRayForBlender {
 namespace Mesh {
 
-static const std::string UvChanNamePrefix = "Uv";
-static const std::string ColChanNamePrefix = "Col";
-
 struct ExportOptions {
 	ExportOptions()
 	    : mode(EvalModeRender)
