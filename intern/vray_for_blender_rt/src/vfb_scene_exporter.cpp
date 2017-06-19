@@ -777,6 +777,26 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		m_exporter->remove_plugin(exportInstName);
 
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
+
+		{
+			auto lock = m_data_exporter.raiiLock();
+			for (auto dIt = m_data_exporter.m_id_track.data.begin(); dIt != m_data_exporter.m_id_track.data.end(); ++dIt) {
+				auto &dep = dIt->second;
+
+				if (dep.object == ob) {
+					for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
+						if (plIter->second.type == IdTrack::DUPLI_NODE) {
+							m_exporter->remove_plugin(plIter->first);
+							plIter = dep.plugins.erase(plIter);
+						}
+						else {
+							++plIter;
+						}
+					}
+				}
+			}
+		}
+
 		return;
 	}
 	MHash maxParticleId = 0;
