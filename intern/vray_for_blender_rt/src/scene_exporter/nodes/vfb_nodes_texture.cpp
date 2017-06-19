@@ -544,15 +544,11 @@ AttrValue DataExporter::exportVRayNodeTexRemap(BL::NodeTree &ntree, BL::Node &no
 		if (type == Value) {
 			pluginDesc.add("color_colors", 0);
 			// split the float input to color and pass the color as input
-			PluginDesc floatToColorSplit(GenPluginName(node, ntree, context), "TexAColor", "DummyFloatToColor@");
+			PluginDesc floatToColorSplit(GenPluginName(node, ntree, context), "TexFloatToColor", "DummyFloatToColor@");
 			auto inputColorSock = getSocketByAttr(node, "input_value");
 			auto floatPlgInput = exportSocket(ntree, inputColorSock, context);
 
-			floatToColorSplit.add("float1", floatPlgInput);
-			floatToColorSplit.add("float2", floatPlgInput);
-			floatToColorSplit.add("float3", floatPlgInput);
-			floatToColorSplit.add("invert", 0);
-			floatToColorSplit.add("alpha", 0);
+			floatToColorSplit.add("input", floatPlgInput);
 
 			pluginDesc.add("input_color", m_exporter->export_plugin(floatToColorSplit));
 
