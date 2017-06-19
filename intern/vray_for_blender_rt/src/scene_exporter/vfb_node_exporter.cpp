@@ -235,8 +235,13 @@ void DataExporter::sync()
 					break;
 				case IdTrack::DUPLI_NODE:
 					// we had dupli *without* instancer, now we dont have dupli, or its via instancer
-					should_remove = !ob.is_duplicator();
+					should_remove = !ob.is_duplicator() || dupli_use_instancer;
 					type = "DUPLI_NODE";
+					break;
+				case IdTrack::DUPLI_LIGHT:
+					// we had dupli *without* instancer, now we dont have dupli, or its via instancer
+					should_remove = !ob.is_duplicator();
+					type = "DUPLI_LIGHT";
 					break;
 				case IdTrack::DUPLI_INSTACER:
 					// we had dupli *with* instancer, now we have node based dupli or not at all

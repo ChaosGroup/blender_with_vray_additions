@@ -631,7 +631,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			pluginName += m_data_exporter.getLightName(ob);
 		}
 
-		if (!pluginName.empty() && pluginName.find("Dupli") == std::string::npos) { // not a duplicate
+		if (!pluginName.empty() && !override.isDupli) { // not a duplicate
 			m_data_exporter.m_id_track.insert(ob, pluginName);
 		}
 	}
@@ -765,19 +765,20 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-	bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+	bool noClipper = !RNA_boolean_get(&vrayClipper, "enabled");
 
 	using OVisibility = DataExporter::ObjectVisibility;
 
 	const int base_visibility = OVisibility::HIDE_VIEWPORT | OVisibility::HIDE_RENDER | OVisibility::HIDE_LAYER;
 	const bool skip_export = !m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
-	if (skip_export && dupli_use_instancer) {
+	if (skip_export && noClipper) {
 		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 		m_exporter->remove_plugin(exportInstName);
 
 		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
 
+		// remove dupli light plugins
 		{
 			auto lock = m_data_exporter.raiiLock();
 			for (auto dIt = m_data_exporter.m_id_track.data.begin(); dIt != m_data_exporter.m_id_track.data.end(); ++dIt) {
@@ -785,7 +786,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 				if (dep.object == ob) {
 					for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
-						if (plIter->second.type == IdTrack::DUPLI_NODE) {
+						if (plIter->second.type == IdTrack::DUPLI_LIGHT) {
 							m_exporter->remove_plugin(plIter->first);
 							plIter = dep.plugins.erase(plIter);
 						}
@@ -805,7 +806,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	instances.frameNumber = m_scene.frame_current();
 	int num_instances = 0;
 	int idx_instances = 0;
-	if (dupli_use_instancer) {
+	if (noClipper) {
 		BL::Object::dupli_list_iterator dupIt;
 		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
 			BL::DupliObject instance(*dupIt);
@@ -831,7 +832,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			}
 		}
 
-		if (dupli_use_instancer) { // this could be removed
+		if (noClipper) { // this could be removed
 			instances.data.resize(num_instances);
 		}
 	}
@@ -869,6 +870,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		ObjectOverridesAttrs overrideAttrs;
 		overrideAttrs.override = true;
+		overrideAttrs.isDupli = true;
 		overrideAttrs.dupliEmitter = ob;
 
 		// we dont check here for mesh light since data exporter will not export nodes for mesh lights
@@ -896,7 +898,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			{
 				// mark the duplication so we can remove in rt
 				auto lock = m_data_exporter.raiiLock();
-				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getLightName(parentOb), IdTrack::DUPLI_NODE);
+				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getLightName(parentOb), IdTrack::DUPLI_LIGHT);
 			}
 			sync_object(parentOb, check_updated, overrideAttrs);
 		} else {
@@ -925,7 +927,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		dupliIdx++;
 	}
 
-	if (dupli_use_instancer && num_instances) {
+	if (noClipper && num_instances) {
 		m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
@@ -1200,10 +1202,10 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 
 		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-		const bool dupli_use_instancer = RNA_boolean_get(&vrayObject, "use_instancer") && !RNA_boolean_get(&vrayClipper, "enabled");
+		const bool noClipper = !RNA_boolean_get(&vrayClipper, "enabled");
 
 		bool has_array_mod = false;
-		if (dupli_use_instancer) {
+		if (noClipper) {
 			for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
 				if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
 					// stop on last non array mod - we export only array mods on top of mod stack

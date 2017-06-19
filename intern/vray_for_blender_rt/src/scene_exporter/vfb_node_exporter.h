@@ -162,6 +162,7 @@ struct IdTrack {
 		CLIPPER,           // ID has clipper
 		DUPLI_INSTACER,    // ID has instancer
 		DUPLI_NODE,        // ID has node based duplication
+		DUPLI_LIGHT,       // ID is duplicated light
 		DUPLI_MODIFIER,    // ID has duplication with array modifier
 		HAIR,              // ID has particle system that is hair type
 	};
@@ -243,8 +244,9 @@ struct DataDefaults {
 
 struct ObjectOverridesAttrs {
 	ObjectOverridesAttrs()
-	    : useInstancer(true)
-	    , override(false)
+		: useInstancer(true)
+		, override(false)
+		, isDupli(false)
 	    , visible(true)
 	    , id(0)
 	    , dupliEmitter(PointerRNA_NULL)
@@ -256,6 +258,7 @@ struct ObjectOverridesAttrs {
 
 	bool           useInstancer;
 	bool           override;
+	bool           isDupli;
 	int            visible;
 	AttrTransform  tm;
 	int            id;
