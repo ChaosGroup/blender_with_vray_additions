@@ -631,7 +631,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			pluginName += m_data_exporter.getLightName(ob);
 		}
 
-		if (!pluginName.empty()) {
+		if (!pluginName.empty() && pluginName.find("Dupli") == std::string::npos) { // not a duplicate
 			m_data_exporter.m_id_track.insert(ob, pluginName);
 		}
 	}
@@ -857,7 +857,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			overrideAttrs.useInstancer = false;
 
 			// sync dupli base object
-			if (!is_light && !hide_from_parent) {
+			if (!hide_from_parent) {
 				overrideAttrs.visible = is_visible;
 				overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
 				sync_object(parentOb, check_updated, overrideAttrs);
@@ -873,10 +873,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 			// overrideAttrs.visible = true; do this?
 
-			if (!is_light) {
+			{
 				// mark the duplication so we can remove in rt
 				auto lock = m_data_exporter.raiiLock();
-				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getNodeName(parentOb), IdTrack::DUPLI_NODE);
+				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getLightName(parentOb), IdTrack::DUPLI_NODE);
 			}
 			sync_object(parentOb, check_updated, overrideAttrs);
 		} else {
