@@ -625,7 +625,9 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		}
 
 		auto pluginName = override.namePrefix;
-		if (DataExporter::isObMesh(ob) || DataExporter::isObGroupInstance(ob)) {
+		if (DataExporter::isObVrscene(ob)) {
+			pluginName += m_data_exporter.getAssetName(ob);
+		} else if (DataExporter::isObMesh(ob) || DataExporter::isObGroupInstance(ob)) {
 			pluginName += m_data_exporter.getNodeName(ob);
 		} else if (DataExporter::isObLamp(ob)) {
 			pluginName += m_data_exporter.getLightName(ob);
@@ -717,7 +719,9 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 						ob.is_updated(), ob.is_updated_data(), data_updated, check_updated,
 						override.namePrefix.c_str(), ob.name().c_str());
 #endif
-		if (ob.data() && DataExporter::isObMesh(ob)) {
+		if (DataExporter::isObVrscene(ob)) {
+			m_data_exporter.exportAsset(ob, check_updated, override);
+		} else if (ob.data() && DataExporter::isObMesh(ob)) {
 			if (RNA_boolean_get(&vrayClipper, "enabled")) {
 
 				if (!overrideAttr) {

@@ -318,6 +318,7 @@ public:
 	static std::string            GetConnectedNodePluginID(BL::NodeSocket fromSocket);
 
 	// Generate data name
+	std::string       getAssetName(BL::Object ob);
 	std::string       getNodeName(BL::Object ob);
 	std::string       getMeshName(BL::Object ob);
 	std::string       getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
@@ -386,6 +387,7 @@ public:
 	AttrValue         exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride = false);
 	AttrValue         exportVRayClipper(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
+	AttrValue         exportAsset(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
 	AttrValue         exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm = false);
@@ -430,6 +432,8 @@ public:
 
 	/// Check if ob is a mesh
 	static bool       isObMesh(BL::Object ob);
+	/// Check if ob is a vrscene
+	static bool       isObVrscene(BL::Object ob);
 	/// Check if ob is a lamp
 	static bool       isObLamp(BL::Object ob);
 	/// Check if ob is a group instance (BL::Object::type_EMPTY)

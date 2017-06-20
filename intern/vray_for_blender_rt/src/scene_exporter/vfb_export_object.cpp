@@ -20,6 +20,7 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_object.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_string.h"
 
 uint32_t to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
@@ -357,6 +358,73 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 	}
 
 	return node;
+}
+
+AttrValue DataExporter::exportAsset(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
+{
+	bool is_updated = check_updated ? ob.is_updated() : true;
+
+	// we are syncing dupli, without instancer -> we need to export the node
+	if (override && !override.useInstancer) {
+		is_updated = true;
+	}
+
+	// we are syncing "undo" state so check if this object was changed in the "do" state
+	if (!is_updated && shouldSyncUndoneObject(ob)) {
+		is_updated = true;
+	}
+
+	if (!is_updated && ob.parent()) {
+		BL::Object parent(ob.parent());
+		is_updated = parent.is_updated();
+	}
+
+	if (!is_updated) {
+		return AttrPlugin();
+	}
+
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+	PointerRNA vrayAsset  = RNA_pointer_get(&vrayObject, "VRayAsset");
+
+	const std::string &pluginName = override.namePrefix + getAssetName(ob);
+	PluginDesc sceneDesc(pluginName, "VRayScene");
+	if (override) {
+		sceneDesc.add("transform", override.tm);
+	} else {
+		sceneDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
+	}
+
+	sceneDesc.add("filepath", String::AbsFilePath(RNA_std_string_get(&vrayAsset, "sceneFilepath"), m_data.filepath()));
+	sceneDesc.add("use_transform", RNA_boolean_get(&vrayAsset, "sceneUseTransform"));
+	sceneDesc.add("add_nodes", RNA_boolean_get(&vrayAsset, "sceneAddNodes"));
+	sceneDesc.add("add_lights", RNA_boolean_get(&vrayAsset, "sceneAddLights"));
+
+	// pluginAttrs["add_materials"]   = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddMaterials"));
+	// pluginAttrs["add_cameras"]     = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddCameras"));
+	// pluginAttrs["add_environment"] = BOOST_FORMAT_BOOL(RNA_boolean_get(&vrayAsset, "sceneAddEnvironment"));
+
+	sceneDesc.add("anim_type", RNA_enum_ext_get(&vrayAsset, "anim_type"));
+	sceneDesc.add("anim_speed", RNA_float_get(&vrayAsset, "anim_speed"));
+	sceneDesc.add("anim_offset", RNA_float_get(&vrayAsset, "anim_offset"));
+	sceneDesc.add("anim_start", RNA_int_get(&vrayAsset, "anim_start"));
+	sceneDesc.add("anim_length", RNA_int_get(&vrayAsset, "anim_length"));
+
+	if (m_settings.override_material) {
+		sceneDesc.add("material_override", AttrPlugin(m_settings.override_material_name));
+	}
+
+	if (RNA_boolean_get(&vrayAsset, "use_hide_objects")) {
+		std::string objectsString = RNA_std_string_get(&vrayAsset, "hidden_objects");
+		if (!objectsString.empty()) {
+			AttrListString hiddenObjects(std::move(String::SplitString(objectsString, ";")));
+
+			if (!hiddenObjects.empty()) {
+				sceneDesc.add("hidden_objects", hiddenObjects);
+			}
+		}
+	}
+
+	return m_exporter->export_plugin(sceneDesc);
 }
 
 AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, const ObjectOverridesAttrs &overrideAttrs) 

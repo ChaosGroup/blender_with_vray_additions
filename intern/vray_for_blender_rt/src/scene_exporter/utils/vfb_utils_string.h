@@ -42,6 +42,12 @@ std::string ExpandFilenameVariables(const std::string & expr, const std::string 
 /// If path starts with // then prepend it with current blend file name
 std::string AbsFilePath(const std::string & path, const std::string & blendPath);
 
+/// Get full filepath from relative and ID holder
+std::string GetFullFilepath(const std::string &filepath, ID *holder=nullptr);
+
+/// Split a string by a list of delimiters
+std::vector<std::string> SplitString(const std::string & input, const std::string & delimiters, bool preserveEmpty = false);
+
 } // namespace String
 } // namespace VRayForBlender
 

@@ -130,6 +130,11 @@ HashSet<std::string> IdTrack::getAllObjectPlugins(BL::Object ob) const {
 	return set;
 }
 
+bool DataExporter::isObVrscene(BL::Object ob) {
+	auto vray = RNA_pointer_get(&ob.ptr, "vray");
+	return vray.data && RNA_boolean_get(&vray, "overrideWithScene");
+}
+
 bool DataExporter::isObMesh(BL::Object ob) {
 	auto obType = ob.type();
 	return (obType == BL::Object::type_MESH    ||
@@ -730,6 +735,10 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 	return true;
 }
 
+std::string DataExporter::getAssetName(BL::Object ob)
+{
+	return "Asset@" + getNodeName(ob);
+}
 
 std::string DataExporter::getNodeName(BL::Object ob)
 {

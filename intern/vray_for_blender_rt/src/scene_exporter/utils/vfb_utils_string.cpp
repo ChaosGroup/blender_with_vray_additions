@@ -21,7 +21,11 @@
 #include "vfb_utils_blender.h"
 #include <boost/filesystem.hpp>
 
+#include "BLI_string.h"
 #include "BLI_path_util.h"
+#include "DNA_ID.h"
+#include "BKE_main.h"
+#include "BKE_global.h"
 
 #include <Python.h>
 
@@ -176,4 +180,42 @@ std::string VRayForBlender::String::AbsFilePath(const std::string & path, const 
 	} else {
 		return path;
 	}
+}
+
+std::string VRayForBlender::String::GetFullFilepath(const std::string &filepath, ID *holder)
+{
+	char absFilepath[FILE_MAX];
+	BLI_strncpy(absFilepath, filepath.c_str(), FILE_MAX);
+
+	BLI_path_abs(absFilepath, holder ? ID_BLEND_PATH(G.main, holder) : G.main->name);
+
+	// Convert UNC filepath "\\" to "/" on *nix
+	// User then have to mount share "\\MyShare" to "/MyShare"
+#ifndef _WIN32
+	if (absFilepath[0] == '\\' && absFilepath[1] == '\\') {
+		absFilepath[1] = '/';
+		return absFilepath+1;
+	}
+#endif
+
+	return absFilepath;
+}
+
+
+std::vector<std::string> VRayForBlender::String::SplitString(const std::string & input, const std::string & delimiters, bool preserveEmpty)
+{
+	std::vector<std::string> parts;
+
+	size_t current = 0, next = -1;
+	do {
+		current = next + 1;
+		next = input.find_first_of(delimiters);
+		if (preserveEmpty && current == next) {
+			parts.push_back("");
+		} else {
+			parts.push_back(input.substr(current, next - current));
+		}
+	} while (next != std::string::npos);
+
+	return parts;
 }
