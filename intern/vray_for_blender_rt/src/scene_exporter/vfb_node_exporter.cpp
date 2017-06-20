@@ -219,6 +219,7 @@ void DataExporter::sync()
 			dupli_use_instancer = !use_clipper && RNA_boolean_get(&vrayObject, "use_instancer");
 		}
 
+
 		for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
 			bool should_remove = false;
 			const char * type = nullptr;
@@ -228,6 +229,10 @@ void DataExporter::sync()
 				should_remove = true;
 			} else if (!plIter->second.used) {
 				// object used, but not this plugin - check if object still has it
+
+				const int base_visibility = ObjectVisibility::HIDE_VIEWPORT | ObjectVisibility::HIDE_RENDER | ObjectVisibility::HIDE_LAYER;
+				const bool skip_export = !isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
+
 				switch (plIter->second.type) {
 				case IdTrack::CLIPPER:
 					should_remove = !use_clipper;
@@ -240,7 +245,7 @@ void DataExporter::sync()
 					break;
 				case IdTrack::DUPLI_LIGHT:
 					// we had dupli *without* instancer, now we dont have dupli, or its via instancer
-					should_remove = !ob.is_duplicator();
+					should_remove = skip_export || !ob.is_duplicator();
 					type = "DUPLI_LIGHT";
 					break;
 				case IdTrack::DUPLI_INSTACER:
