@@ -170,8 +170,7 @@ std::string VRayForBlender::String::ExpandFilenameVariables(
 std::string VRayForBlender::String::AbsFilePath(const std::string & path, const std::string & blendPath)
 {
 	if (path.size() >= 2 && path[0] == '/' && path[1] == '/') {
-		boost::filesystem::path base;
-		base = blendPath;
+		boost::filesystem::path base = blendPath;
 		base.remove_filename();
 		base /= path.substr(2);
 		base.remove_trailing_separator();
@@ -200,7 +199,6 @@ std::string VRayForBlender::String::GetFullFilepath(const std::string &filepath,
 
 	return absFilepath;
 }
-
 
 std::vector<std::string> VRayForBlender::String::SplitString(const std::string & input, const std::string & delimiters, bool preserveEmpty)
 {
