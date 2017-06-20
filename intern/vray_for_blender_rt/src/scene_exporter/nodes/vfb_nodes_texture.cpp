@@ -375,8 +375,8 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 		}
 	}
 
-	std::reverse(textures.ptr()->begin(), textures.ptr()->end());
-	std::reverse(blend_modes.ptr()->begin(), blend_modes.ptr()->end());
+	std::reverse(textures.getData()->begin(), textures.getData()->end());
+	std::reverse(blend_modes.getData()->begin(), blend_modes.getData()->end());
 
 	PluginDesc pluginDesc(pluginName, "TexLayered");
 	pluginDesc.add("textures", textures);

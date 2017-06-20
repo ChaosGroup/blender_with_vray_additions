@@ -185,7 +185,7 @@ struct MapChannelRaw:
 
 			// Setup face data
 			for (auto &mcIt : map_channels.data) {
-				for (int i = 0; i < mcIt.second.faces.ptr()->size(); ++i) {
+				for (int i = 0; i < mcIt.second.faces.getData()->size(); ++i) {
 					(*mcIt.second.faces)[i] = i;
 				}
 			}
