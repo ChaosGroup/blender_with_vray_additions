@@ -139,16 +139,18 @@ struct MapChannelRaw:
 
 					AttrMapChannels::AttrMapChannel &uv_channel = map_channels.data[uvLayerName];
 
-					const AttrVector v0(uvLayer.data[faceIdx].uv1());
-					const AttrVector v1(uvLayer.data[faceIdx].uv2());
-					const AttrVector v2(uvLayer.data[faceIdx].uv3());
+					AttrVector v0(uvLayer.data[faceIdx].uv1());
+					AttrVector v1(uvLayer.data[faceIdx].uv2());
+					AttrVector v2(uvLayer.data[faceIdx].uv3());
+					v0.z = v1.z = v2.z = 0.f;
 
 					(*uv_channel.vertices)[chanVertIndex+0] = v0;
 					(*uv_channel.vertices)[chanVertIndex+1] = v1;
 					(*uv_channel.vertices)[chanVertIndex+2] = v2;
 
 					if (faceVerts[3]) {
-						const AttrVector v3(uvLayer.data[faceIdx].uv4());
+						AttrVector v3(uvLayer.data[faceIdx].uv4());
+						v3.z = 0.f;
 
 						(*uv_channel.vertices)[chanVertIndex+3] = v0;
 						(*uv_channel.vertices)[chanVertIndex+4] = v2;
