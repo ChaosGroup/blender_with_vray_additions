@@ -384,7 +384,7 @@ void BKE_library_foreach_ID_link(Main *bmain, ID *id, LibraryIDLinkCallback call
 			continue;
 		}
 
-		library_foreach_idproperty_ID_link(&data, id->properties, IDWALK_CB_USER);
+		library_foreach_idproperty_ID_link(&data, id->properties, IDWALK_CB_USER_ONE);
 
 		AnimData *adt = BKE_animdata_from_id(id);
 		if (adt) {
