@@ -659,6 +659,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			}
 		} else if (DataExporter::isObLamp(ob)) {
 			// we cant hide lamps, so we must remove
+			remove = true;
 			exportName = overrideAttr.namePrefix + m_data_exporter.getLightName(ob);
 		}
 
