@@ -326,6 +326,7 @@ public:
 	std::string       getMeshName(BL::Object ob);
 	std::string       getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
 	std::string       getLightName(BL::Object ob);
+	std::string       getClipperName(BL::Object ob);
 	static std::string       getIdUniqueName(BL::Pointer ob);
 	static std::string       getIdUniqueName(ID * id);
 

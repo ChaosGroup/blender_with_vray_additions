@@ -139,6 +139,68 @@ auto collection(T & collection) -> BLCollection<T, decltype(collection.end())>
 }
 
 
+/// Class representing array of some number of flags, created depending on some enum class type and enforces that
+/// the enum is used to access the flags, thus improving type safety
+/// This class is intended to abstract std::vector<char> with bitfield manipulation but it has the caveat that each flag
+/// is stored in different chunk of memmory which speeds up loops on only 1 flag but slows loops on multiple flags (AoS -> SoA)
+/// @FlagEnum - type of the enum whose values that represent the flag names
+/// @N - the count of the flags, must be value of the enum type
+/// Example usage
+/// 	enum class InstanceFlags { UNSUPPORTED, HIDDEN, LIGHT, MESH_LIGHT, CLIPPER, FLAGS_COUNT };
+/// 	Blender::FlagsArray<InstanceFlags, InstanceFlags::FLAGS_COUNT> instanceFlags;
+template <typename FlagEnum, FlagEnum N>
+struct FlagsArray {
+	std::vector<bool> containers[N];
+public:
+	/// Helper class for accessing all flags at a specific index
+	class Flags{
+		FlagsArray<FlagEnum, N> & data;
+		int index;
+	public:
+		Flags(FlagsArray<FlagEnum, N> & data, int index)
+			: data(data)
+			, index(index)
+		{}
+
+		/// Set the @flag
+		void set(FlagEnum flag) {
+			data.containers[static_cast<int>(flag)][index] = true;
+		}
+
+		/// Clear the @flag
+		void clear(FlagEnum flag) {
+			data.containers[static_cast<int>(flag)][index] = false;
+		}
+
+		/// Get the @flag
+		bool get(FlagEnum flag) {
+			return data.containers[static_cast<int>(flag)][index];
+		}
+	};
+
+	/// Initialize with size, all flags set to false
+	FlagsArray(int size) {
+		for (int c = 0; c < static_cast<int>(N); c++) {
+			containers[c].resize(size, false);
+		}
+	}
+
+	FlagsArray() {}
+
+	/// Add one element to all flags
+	void push_back(bool flag) {
+		for (int c = 0; c < static_cast<int>(N); c++) {
+			containers[c].push_back(flag);
+		}
+	}
+
+	/// Get a accessor for all flags at @index
+	Flags get_flags(int index) {
+		return {*this, index};
+	}
+};
+
+
 } // namespace Blender
 } // namespace VRayForBlender
 

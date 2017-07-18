@@ -213,16 +213,6 @@ void DataExporter::sync()
 		auto ob = dIt->second.object;
 		auto &dep = dIt->second;
 
-		PointerRNA vrayObject = PointerRNA_NULL;
-		bool use_clipper = false;
-		bool dupli_use_instancer = false;
-
-		if (dep.used) {
-			vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-			use_clipper = RNA_boolean_get(&vrayClipper, "enabled");
-			dupli_use_instancer = !use_clipper && RNA_boolean_get(&vrayObject, "use_instancer");
-		}
 
 
 		for (auto plIter = dep.plugins.cbegin(), end = dep.plugins.cend(); plIter != end; /*nop*/) {
@@ -239,13 +229,17 @@ void DataExporter::sync()
 				const bool skip_export = !isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
 				switch (plIter->second.type) {
-				case IdTrack::CLIPPER:
-					should_remove = !use_clipper;
+				case IdTrack::CLIPPER: {
+					PointerRNA vrayObject = PointerRNA_NULL;
+					vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+					PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+					should_remove = !RNA_boolean_get(&vrayClipper, "enabled");
 					type = "CLIPPER";
 					break;
+				}
 				case IdTrack::DUPLI_NODE:
 					// we had dupli *without* instancer, now we dont have dupli, or its via instancer
-					should_remove = !ob.is_duplicator() || dupli_use_instancer;
+					should_remove = skip_export || !ob.is_duplicator();
 					type = "DUPLI_NODE";
 					break;
 				case IdTrack::DUPLI_LIGHT:
@@ -255,7 +249,7 @@ void DataExporter::sync()
 					break;
 				case IdTrack::DUPLI_INSTACER:
 					// we had dupli *with* instancer, now we have node based dupli or not at all
-					should_remove = !ob.is_duplicator() || !dupli_use_instancer;
+					should_remove = !ob.is_duplicator();
 					type = "DUPLI_INSTACER";
 					break;
 				case IdTrack::DUPLI_MODIFIER:
@@ -782,6 +776,12 @@ std::string DataExporter::getLightName(BL::Object ob)
 {
 	return "Lamp@" + getIdUniqueName(ob);
 }
+
+std::string DataExporter::getClipperName(BL::Object ob)
+{
+	return "Clipper@" + getIdUniqueName(ob);
+}
+
 
 std::string DataExporter::getIdUniqueName(ID * id) {
 	std::string name(id->name);

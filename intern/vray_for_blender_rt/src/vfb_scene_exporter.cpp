@@ -787,34 +787,55 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 	MHash maxParticleId = 0;
 
+	enum class InstanceFlags {
+		GEOMETRY, HIDDEN, LIGHT, MESH_LIGHT, CLIPPER, FLAGS_COUNT
+	};
+	using IF = InstanceFlags;
+	Blender::FlagsArray<IF, IF::FLAGS_COUNT> instanceFlags;
+
 	AttrInstancer instances;
 	instances.frameNumber = m_scene.frame_current();
 	int num_instances = 0;
 	int idx_instances = 0;
 	if (noClipper) {
-		BL::Object::dupli_list_iterator dupIt;
-		for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
-			BL::DupliObject instance(*dupIt);
+		int c = 0;
+		for (auto & instance : Blender::collection(ob.dupli_list)) {
 			BL::Object      parentOb(instance.object());
+			instanceFlags.push_back(false);
+			auto & flags = instanceFlags.get_flags(c++);
 
-			const bool is_hidden = instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render());
-			const bool is_light = Blender::IsLight(parentOb);
-			const bool supported_type = Blender::IsGeometry(parentOb) || is_light;
-
-			if (!is_hidden && supported_type) {
-				PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
-				PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-				// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
-
-				// if any of the duplicated objects is clipper or light we cant use instancer
-				if (!(is_light 
-					|| RNA_boolean_get(&vrayClipper, "enabled") 
-					|| m_data_exporter.objectIsMeshLight(parentOb))) {
-					maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, idx_instances));
-					++num_instances;
-				}
-				++idx_instances;
+			if (instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render())) {
+				flags.set(IF::HIDDEN);
 			}
+			if (Blender::IsGeometry(parentOb)) {
+				flags.set(IF::GEOMETRY);
+			}
+
+			if (Blender::IsLight(parentOb)) {
+				flags.set(IF::LIGHT);
+			} else if (m_data_exporter.objectIsMeshLight(parentOb)) {
+				flags.set(IF::MESH_LIGHT);
+			}
+
+			// hidden geometries are not exported at all, but hidden mesh lights are
+			if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
+				continue;
+			}
+
+			PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
+			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+			if (RNA_boolean_get(&vrayClipper, "enabled")) {
+				flags.set(IF::CLIPPER);
+			}
+
+			// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
+			// if any of the duplicated objects is clipper or light we cant use instancer
+			if (!(flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || flags.get(IF::CLIPPER))) {
+				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, idx_instances));
+				++num_instances;
+			}
+			++idx_instances;
 		}
 
 		if (noClipper) { // this could be removed
@@ -831,22 +852,15 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	// if parent is empty or it is hidden in some way, do not show base objects
 	const bool hide_from_parent = !m_data_exporter.isObjectVisible(ob) || ob.type() == BL::Object::type_EMPTY;
 
-	BL::Object::dupli_list_iterator dupIt;
-	for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {
+	int c = 0;
+	for (auto & instance : Blender::collection(ob.dupli_list)) {
 		if (is_interrupted()) {
 			return;
 		}
+		auto & flags = instanceFlags.get_flags(c++);
+		BL::Object parentOb(instance.object());
 
-		BL::DupliObject instance(*dupIt);
-		BL::Object      parentOb(instance.object());
-
-		const bool is_hidden = instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render());
-		const bool is_visible = !hide_from_parent && m_data_exporter.isObjectVisible(parentOb);
-
-		const bool is_light = Blender::IsLight(parentOb);
-		const bool supported_type = Blender::IsGeometry(parentOb) || is_light;
-
-		if (!supported_type || is_hidden) {
+		if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
 			continue;
 		}
 
@@ -858,14 +872,15 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		overrideAttrs.isDupli = true;
 		overrideAttrs.dupliEmitter = ob;
 
-		// we dont check here for mesh light since data exporter will not export nodes for mesh lights
+
 		// TODO: if we check here it might be faster to skip the redundent call to sync_object
-		if (is_light) {
+		// node based duplication is for: (light, mesh light, visible clipper)
+		if (flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || (flags.get(IF::CLIPPER) && !flags.get(IF::HIDDEN))) {
 			overrideAttrs.useInstancer = false;
 
 			// sync dupli base object
 			if (!hide_from_parent) {
-				overrideAttrs.visible = is_visible;
+				overrideAttrs.visible = !flags.get(IF::HIDDEN);
 				overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
 				sync_object(parentOb, check_updated, overrideAttrs);
 			}
@@ -878,17 +893,21 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			snprintf(namePrefix, 250, "Dupli%u@", persistendID);
 			overrideAttrs.namePrefix = namePrefix;
 
+			if (flags.get(IF::CLIPPER)) {
+				// clipper expects the node to be visible, and will hide it on its own
+				overrideAttrs.visible = true;
+			}
 			// overrideAttrs.visible = true; do this?
 
-			{
+			if (flags.get(IF::LIGHT)) {
 				// mark the duplication so we can remove in rt
 				auto lock = m_data_exporter.raiiLock();
 				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getLightName(parentOb), IdTrack::DUPLI_LIGHT);
 			}
 			sync_object(parentOb, check_updated, overrideAttrs);
-		} else {
+		} else if (!flags.get(IF::HIDDEN)) {
 
-			overrideAttrs.visible = is_visible;
+			overrideAttrs.visible = !flags.get(IF::HIDDEN);
 			overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
 			overrideAttrs.id = reinterpret_cast<intptr_t>(parentOb.ptr.data);
 
@@ -912,7 +931,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		dupliIdx++;
 	}
 
-	if (noClipper && num_instances) {
+	if (noClipper) {
 		m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
