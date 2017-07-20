@@ -54,24 +54,32 @@ BL::NodeTree VRayForBlender::Nodes::GetGroupNodeTree(BL::Node group_node)
 
 BL::NodeSocket VRayForBlender::Nodes::GetInputSocketByName(BL::Node node, const std::string &socketName)
 {
-	BL::Node::inputs_iterator input;
-	for (node.inputs.begin(input); input != node.inputs.end(); ++input) {
-		if (input->name() == socketName) {
-			return *input;
+	if (!node) {
+			return BL::NodeSocket(PointerRNA_NULL);
+	}
+
+	for (auto input : Blender::collection(node.inputs)) {
+		if (input.name() == socketName) {
+			return input;
 		}
 	}
+
 	return BL::NodeSocket(PointerRNA_NULL);
 }
 
 
 BL::NodeSocket VRayForBlender::Nodes::GetOutputSocketByName(BL::Node node, const std::string &socketName)
 {
-	BL::Node::outputs_iterator input;
-	for (node.outputs.begin(input); input != node.outputs.end(); ++input) {
-		if (input->name() == socketName) {
-			return *input;
+	if (!node) {
+		return BL::NodeSocket(PointerRNA_NULL);
+	}
+
+	for (auto output : Blender::collection(node.outputs)) {
+		if (output.name() == socketName) {
+			return output;
 		}
 	}
+
 	return BL::NodeSocket(PointerRNA_NULL);
 }
 
