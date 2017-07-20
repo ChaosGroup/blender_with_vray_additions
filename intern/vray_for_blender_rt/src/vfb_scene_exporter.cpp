@@ -854,7 +854,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		if (is_interrupted()) {
 			return;
 		}
-		auto & flags = instanceFlags.get_flags(c++);
+		auto flags = instanceFlags.get_flags(c++);
 		BL::Object parentOb(instance.object());
 
 		if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
