@@ -289,7 +289,8 @@ void ProductionExporter::draw()
 	if (duration_cast<milliseconds>(now - m_lastReportTime).count() > 1000) {
 		m_lastReportTime = now;
 		if (m_settings.settings_animation.use) {
-			PRINT_INFO_EX("Rendering progress frame: %d [%d%%]", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_progress());
+			int progress = 100.f * m_exporter->get_progress();
+			PRINT_INFO_EX("Rendering progress frame: %f [%d%%]", m_frameExporter.getCurrentRenderFrame(), progress);
 		}
 	}
 
