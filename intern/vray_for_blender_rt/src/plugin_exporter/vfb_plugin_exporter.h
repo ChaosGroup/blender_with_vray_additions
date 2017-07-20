@@ -80,7 +80,7 @@ public:
 	virtual void         init()=0;
 	virtual void         free()=0;
 
-	virtual void         clear_frame_data(float upTo) {};
+	virtual void         clear_frame_data(float) {};
 	virtual void         sync()  {}
 	virtual void         start() {}
 	virtual void         stop()  {}
