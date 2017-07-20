@@ -55,7 +55,7 @@ BL::NodeTree VRayForBlender::Nodes::GetGroupNodeTree(BL::Node group_node)
 BL::NodeSocket VRayForBlender::Nodes::GetInputSocketByName(BL::Node node, const std::string &socketName)
 {
 	if (!node) {
-			return BL::NodeSocket(PointerRNA_NULL);
+		return BL::NodeSocket(PointerRNA_NULL);
 	}
 
 	for (auto input : Blender::collection(node.inputs)) {
