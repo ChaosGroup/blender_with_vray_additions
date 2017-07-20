@@ -75,7 +75,7 @@ bool ProductionExporter::wait_for_frame_render()
 	bool stop = false;
 	m_exporter->start();
 	if (m_settings.settings_animation.use) {
-		PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+		PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
 	}
 
 	auto lastTime = high_resolution_clock::now();
@@ -86,7 +86,7 @@ bool ProductionExporter::wait_for_frame_render()
 		if (duration_cast<seconds>(now - lastTime).count() > 1) {
 			lastTime = now;
 			if (m_settings.settings_animation.use) {
-				PRINT_INFO_EX("Waiting for renderer to render animation frame %d, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+				PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
 			}
 		}
 		if (is_interrupted()) {
