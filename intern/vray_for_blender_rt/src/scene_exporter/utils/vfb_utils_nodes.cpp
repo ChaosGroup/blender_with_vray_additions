@@ -78,20 +78,21 @@ BL::NodeSocket VRayForBlender::Nodes::GetOutputSocketByName(BL::Node node, const
 
 BL::NodeSocket VRayForBlender::Nodes::GetSocketByAttr(BL::Node node, const std::string &attrName)
 {
-	BL::NodeSocket socket(PointerRNA_NULL);
+	if (!node) {
+		return BL::NodeSocket(PointerRNA_NULL);
+	}
 
-	BL::Node::inputs_iterator sockIt;
-	for (node.inputs.begin(sockIt); sockIt != node.inputs.end(); ++sockIt) {
-		if (RNA_struct_find_property(&sockIt->ptr, "vray_attr")) {
-			std::string sockAttrName = RNA_std_string_get(&sockIt->ptr, "vray_attr");
+	for (auto socket : Blender::collection(node.inputs)) {
+		if (RNA_struct_find_property(&socket.ptr, "vray_attr")) {
+			std::string sockAttrName = RNA_std_string_get(&socket.ptr, "vray_attr");
 			if ((!sockAttrName.empty()) && (attrName == sockAttrName)) {
-				socket = *sockIt;
+				return socket;
 				break;
 			}
 		}
 	}
 
-	return socket;
+	return BL::NodeSocket(PointerRNA_NULL);
 }
 
 
