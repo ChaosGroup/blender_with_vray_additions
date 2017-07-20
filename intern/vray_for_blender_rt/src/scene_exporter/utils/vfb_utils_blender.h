@@ -150,7 +150,7 @@ auto collection(T & collection) -> BLCollection<T, decltype(collection.end())>
 /// 	Blender::FlagsArray<InstanceFlags, InstanceFlags::FLAGS_COUNT> instanceFlags;
 template <typename FlagEnum, FlagEnum N>
 struct FlagsArray {
-	std::vector<bool> containers[N];
+	std::vector<bool> containers[static_cast<int>(N)];
 public:
 	/// Helper class for accessing all flags at a specific index
 	class Flags{
