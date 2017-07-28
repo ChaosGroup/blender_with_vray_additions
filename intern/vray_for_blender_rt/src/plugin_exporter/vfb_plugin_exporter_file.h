@@ -55,10 +55,7 @@ private:
 	FileToWriterMap               m_fileWritersMap;
 	TypeToWriterMap               m_Writers;
 	ThreadManager::Ptr            m_threadManager;
-	bool                          m_ReexportMeshes;
 	bool                          m_Synced;
-	bool                          m_SplitFiles;
-	SettingsFiles::OutputDirType  m_FileDirType;
 	std::string                   m_FileDir;
 };
 

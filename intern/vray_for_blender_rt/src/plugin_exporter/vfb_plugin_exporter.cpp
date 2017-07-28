@@ -75,7 +75,7 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 		if (!inCache) {
 			plg = this->export_plugin_impl(pluginDesc);
 			m_pluginManager.updateCache(pluginDesc);
-		} else if (replace || inCache && isDifferent) {
+		} else if (replace || (inCache && isDifferent)) {
 
 			if (isDifferentId) {
 				// copy the name, since cachedPlugin is reference from inside the manager

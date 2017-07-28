@@ -112,7 +112,6 @@ bool ProductionExporter::export_scene(const bool)
 	m_frameExporter.updateFromSettings();
 
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
-	const bool isCameraLoop = m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop;
 
 	std::unique_lock<PythonGIL> fileExportLock(m_pyGIL, std::defer_lock);
 

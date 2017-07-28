@@ -45,7 +45,7 @@ public:
 
 	virtual bool      export_scene(const bool check_updated = false) override;
 	virtual void      sync_dupli(BL::Object ob, const int &check_updated=false) override;
-	virtual void      sync_object_modiefiers(BL::Object ob, const int &check_updated);
+	virtual void      sync_object_modiefiers(BL::Object ob, const int &check_updated) override;
 
 	virtual void      render_start() override;
 	void              render_end();
