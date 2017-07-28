@@ -405,7 +405,7 @@ void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img
 		for (int c = 0; c < result.layers.length(); ++c) {
 			for (int r = 0; r < result.layers[c].passes.length(); ++r) {
 				auto pass = result.layers[c].passes[r];
-				if (pass.fullname() == "Combined") {
+				if (pass && pass.fullname() == "Combined") {
 					auto * bPass = reinterpret_cast<RenderPass*>(pass.ptr.data);
 					RenderImage::updateImageRegion(bPass->rect, bPass->rectx, bPass->recty, img.x, img.y, reinterpret_cast<const float *>(img.data.get()), img.width, img.height, bPass->channels);
 					break;
