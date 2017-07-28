@@ -52,6 +52,8 @@ MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 			return valHash;
 		case ValueTypeTransform:
 			return getValueHash(value.as<AttrTransform>());
+		case ValueTypeMatrix:
+			return getValueHash(value.as<AttrMatrix>());
 		case ValueTypeListInt:
 			return getValueHash(value.as<AttrListInt>());
 		case ValueTypeListFloat:
