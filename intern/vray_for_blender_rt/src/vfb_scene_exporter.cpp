@@ -1284,6 +1284,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 void SceneExporter::sync_effects(const bool)
 {
 	NodeContext ctx;
+	ctx.isWorldNtree = true;
 	m_data_exporter.exportEnvironment(ctx);
 }
 

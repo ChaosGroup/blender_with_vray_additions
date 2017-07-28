@@ -247,8 +247,16 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 				PointerRNA UVWGenEnvironment = RNA_pointer_get(&node.ptr, "UVWGenEnvironment");
 				const int mapping_type = RNA_enum_get(&UVWGenEnvironment, "mapping_type");
 
-				// adds rotations for lamp textures (dome)
-				if (context.object_context.object && context.object_context.object.type() == BL::Object::type_LAMP) {
+				if (context.isWorldNtree) {
+					// for world ntrees allow exporting uvw_matrix so env textures can be rotated
+					auto inputSocket = Nodes::GetSocketByAttr(node, "uvw_matrix");
+					if (inputSocket && inputSocket.is_linked()) {
+						mappingDesc.add("uvw_matrix", exportLinkedSocket(ntree, inputSocket, context));
+					} else {
+						mappingDesc.add("uvw_matrix", AttrTransform::identity().m);
+					}
+				} else if (context.object_context.object && context.object_context.object.type() == BL::Object::type_LAMP) {
+					// adds rotations for lamp textures (dome)
 					float obMat[4][4];
 					invert_m4_m4(obMat, reinterpret_cast<float (*)[4]>(context.object_context.object.matrix_world().data));
 					AttrMatrix matrix = AttrTransformFromBlTransform(obMat).m;

@@ -81,6 +81,7 @@ public:
 	NodeContext() {}
 	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object)
 	    : object_context(data, scene, object)
+	    , isWorldNtree(false)
 	{}
 
 	BL::NodeTree getNodeTree() {
@@ -122,6 +123,7 @@ public:
 	ObjectContext  object_context;
 	NodeTreeVector parent;
 	NodeVector     group;
+	bool           isWorldNtree; ///< True if we are exporting the world ntree
 };
 
 
