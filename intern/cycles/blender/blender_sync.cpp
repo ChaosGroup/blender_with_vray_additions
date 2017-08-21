@@ -234,7 +234,6 @@ void BlenderSync::sync_integrator()
 	Integrator *integrator = scene->integrator;
 	Integrator previntegrator = *integrator;
 
-	integrator->min_bounce = get_int(cscene, "min_bounces");
 	integrator->max_bounce = get_int(cscene, "max_bounces");
 
 	integrator->max_diffuse_bounce = get_int(cscene, "diffuse_bounces");
@@ -243,8 +242,6 @@ void BlenderSync::sync_integrator()
 	integrator->max_volume_bounce = get_int(cscene, "volume_bounces");
 
 	integrator->transparent_max_bounce = get_int(cscene, "transparent_max_bounces");
-	integrator->transparent_min_bounce = get_int(cscene, "transparent_min_bounces");
-	integrator->transparent_shadows = get_boolean(cscene, "use_transparent_shadows");
 
 	integrator->volume_max_steps = get_int(cscene, "volume_max_steps");
 	integrator->volume_step_size = get_float(cscene, "volume_step_size");
@@ -294,32 +291,13 @@ void BlenderSync::sync_integrator()
 	integrator->sample_all_lights_indirect = get_boolean(cscene, "sample_all_lights_indirect");
 	integrator->light_sampling_threshold = get_float(cscene, "light_sampling_threshold");
 
-	int diffuse_samples = get_int(cscene, "diffuse_samples");
-	int glossy_samples = get_int(cscene, "glossy_samples");
-	int transmission_samples = get_int(cscene, "transmission_samples");
-	int ao_samples = get_int(cscene, "ao_samples");
-	int mesh_light_samples = get_int(cscene, "mesh_light_samples");
-	int subsurface_samples = get_int(cscene, "subsurface_samples");
-	int volume_samples = get_int(cscene, "volume_samples");
-
-	if(get_boolean(cscene, "use_square_samples")) {
-		integrator->diffuse_samples = diffuse_samples * diffuse_samples;
-		integrator->glossy_samples = glossy_samples * glossy_samples;
-		integrator->transmission_samples = transmission_samples * transmission_samples;
-		integrator->ao_samples = ao_samples * ao_samples;
-		integrator->mesh_light_samples = mesh_light_samples * mesh_light_samples;
-		integrator->subsurface_samples = subsurface_samples * subsurface_samples;
-		integrator->volume_samples = volume_samples * volume_samples;
-	} 
-	else {
-		integrator->diffuse_samples = diffuse_samples;
-		integrator->glossy_samples = glossy_samples;
-		integrator->transmission_samples = transmission_samples;
-		integrator->ao_samples = ao_samples;
-		integrator->mesh_light_samples = mesh_light_samples;
-		integrator->subsurface_samples = subsurface_samples;
-		integrator->volume_samples = volume_samples;
-	}
+	integrator->diffuse_samples = get_int(cscene, "diffuse_samples");
+	integrator->glossy_samples = get_int(cscene, "glossy_samples");
+	integrator->transmission_samples = get_int(cscene, "transmission_samples");
+	integrator->ao_samples = get_int(cscene, "ao_samples");
+	integrator->mesh_light_samples = get_int(cscene, "mesh_light_samples");
+	integrator->subsurface_samples = get_int(cscene, "subsurface_samples");
+	integrator->volume_samples = get_int(cscene, "volume_samples");
 
 	if(b_scene.render().use_simplify()) {
 		if(preview) {
@@ -437,11 +415,7 @@ void BlenderSync::sync_render_layers(BL::SpaceView3D& b_v3d, const char *layer)
 
 			render_layer.bound_samples = (use_layer_samples == 1);
 			if(use_layer_samples != 2) {
-				int samples = b_rlay->samples();
-				if(get_boolean(cscene, "use_square_samples"))
-					render_layer.samples = samples * samples;
-				else
-					render_layer.samples = samples;
+				render_layer.samples = b_rlay->samples();
 			}
 		}
 
@@ -756,14 +730,6 @@ SessionParams BlenderSync::get_session_params(BL::RenderEngine& b_engine,
 	int preview_samples = get_int(cscene, "preview_samples");
 	int preview_aa_samples = get_int(cscene, "preview_aa_samples");
 	
-	if(get_boolean(cscene, "use_square_samples")) {
-		aa_samples = aa_samples * aa_samples;
-		preview_aa_samples = preview_aa_samples * preview_aa_samples;
-
-		samples = samples * samples;
-		preview_samples = preview_samples * preview_samples;
-	}
-
 	if(get_enum(cscene, "progressive") == 0) {
 		if(background) {
 			params.samples = aa_samples;
@@ -810,6 +776,7 @@ SessionParams BlenderSync::get_session_params(BL::RenderEngine& b_engine,
 	}
 
 	params.start_resolution = get_int(cscene, "preview_start_resolution");
+	params.pixel_size = b_engine.get_preview_pixel_size(b_scene);
 
 	/* other parameters */
 	if(b_scene.render().threads_mode() == BL::RenderSettings::threads_mode_FIXED)
@@ -830,6 +797,7 @@ SessionParams BlenderSync::get_session_params(BL::RenderEngine& b_engine,
 			params.progressive = false;
 
 		params.start_resolution = INT_MAX;
+		params.pixel_size = 1;
 	}
 	else
 		params.progressive = true;

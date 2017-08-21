@@ -59,8 +59,12 @@ static PyStructSequence_Field app_cb_info_fields[] = {
 	{(char *)"load_post",         (char *)"on loading a new blend file (after)"},
 	{(char *)"save_pre",          (char *)"on saving a blend file (before)"},
 	{(char *)"save_post",         (char *)"on saving a blend file (after)"},
-	{(char *)"scene_update_pre",  (char *)"on updating the scenes data (before)"},
-	{(char *)"scene_update_post", (char *)"on updating the scenes data (after)"},
+	{(char *)"scene_update_pre",  (char *)"on every scene data update. Does not imply that anything changed in the "
+                                          "scene, just that the dependency graph is about to be reevaluated, and the "
+                                          "scene is about to be updated by Blender's animation system."},
+	{(char *)"scene_update_post",  (char *)"on every scene data update. Does not imply that anything changed in the "
+                                           "scene, just that the dependency graph was reevaluated, and the scene was "
+                                           "possibly updated by Blender's animation system."},
 	{(char *)"object_update",     (char *)"on updating an object"},
 	{(char *)"object_data_update", (char *)"on updating an object's data"},
 	{(char *)"node_tree_update",  (char *)"on updating a node tree"},

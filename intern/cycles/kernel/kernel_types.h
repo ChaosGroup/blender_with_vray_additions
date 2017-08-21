@@ -130,6 +130,7 @@ CCL_NAMESPACE_BEGIN
 #  ifdef __KERNEL_OPENCL_APPLE__
 #    define __KERNEL_SHADING__
 #    define __KERNEL_ADV_SHADING__
+#    define __PRINCIPLED__
 #    define __CMJ__
 /* TODO(sergey): Currently experimental section is ignored here,
  * this is because megakernel in device_opencl does not support
@@ -154,6 +155,7 @@ CCL_NAMESPACE_BEGIN
 #    define __CL_USE_NATIVE__
 #    define __KERNEL_SHADING__
 #    define __KERNEL_ADV_SHADING__
+#    define __PRINCIPLED__
 #    define __CMJ__
 #  endif  /* __KERNEL_OPENCL_INTEL_CPU__ */
 
@@ -328,24 +330,28 @@ enum PathRayFlag {
 	PATH_RAY_SINGULAR            = (1 << 5),
 	PATH_RAY_TRANSPARENT         = (1 << 6),
 
-	PATH_RAY_SHADOW_OPAQUE       = (1 << 7),
-	PATH_RAY_SHADOW_TRANSPARENT  = (1 << 8),
-	PATH_RAY_SHADOW = (PATH_RAY_SHADOW_OPAQUE|PATH_RAY_SHADOW_TRANSPARENT),
+	PATH_RAY_SHADOW_OPAQUE_NON_CATCHER       = (1 << 7),
+	PATH_RAY_SHADOW_OPAQUE_CATCHER           = (1 << 8),
+	PATH_RAY_SHADOW_OPAQUE                   = (PATH_RAY_SHADOW_OPAQUE_NON_CATCHER|PATH_RAY_SHADOW_OPAQUE_CATCHER),
+	PATH_RAY_SHADOW_TRANSPARENT_NON_CATCHER  = (1 << 9),
+	PATH_RAY_SHADOW_TRANSPARENT_CATCHER      = (1 << 10),
+	PATH_RAY_SHADOW_TRANSPARENT              = (PATH_RAY_SHADOW_TRANSPARENT_NON_CATCHER|PATH_RAY_SHADOW_TRANSPARENT_CATCHER),
+	PATH_RAY_SHADOW_NON_CATCHER              = (PATH_RAY_SHADOW_OPAQUE_NON_CATCHER|PATH_RAY_SHADOW_TRANSPARENT_NON_CATCHER),
+	PATH_RAY_SHADOW                          = (PATH_RAY_SHADOW_OPAQUE|PATH_RAY_SHADOW_TRANSPARENT),
 
-	PATH_RAY_CURVE               = (1 << 9), /* visibility flag to define curve segments */
-	PATH_RAY_VOLUME_SCATTER      = (1 << 10), /* volume scattering */
+	PATH_RAY_CURVE               = (1 << 11), /* visibility flag to define curve segments */
+	PATH_RAY_VOLUME_SCATTER      = (1 << 12), /* volume scattering */
 
 	/* Special flag to tag unaligned BVH nodes. */
-	PATH_RAY_NODE_UNALIGNED = (1 << 11),
+	PATH_RAY_NODE_UNALIGNED = (1 << 13),
 
-	PATH_RAY_ALL_VISIBILITY = ((1 << 12)-1),
+	PATH_RAY_ALL_VISIBILITY = ((1 << 14)-1),
 
-	PATH_RAY_MIS_SKIP            = (1 << 12),
-	PATH_RAY_DIFFUSE_ANCESTOR    = (1 << 13),
-	PATH_RAY_SINGLE_PASS_DONE    = (1 << 14),
-	PATH_RAY_SHADOW_CATCHER      = (1 << 15),
-	PATH_RAY_SHADOW_CATCHER_ONLY = (1 << 16),
-	PATH_RAY_STORE_SHADOW_INFO   = (1 << 17),
+	PATH_RAY_MIS_SKIP            = (1 << 15),
+	PATH_RAY_DIFFUSE_ANCESTOR    = (1 << 16),
+	PATH_RAY_SINGLE_PASS_DONE    = (1 << 17),
+	PATH_RAY_SHADOW_CATCHER      = (1 << 18),
+	PATH_RAY_STORE_SHADOW_INFO   = (1 << 19),
 };
 
 /* Closure Label */
@@ -462,11 +468,24 @@ typedef enum DenoiseFlag {
 	DENOISING_CLEAN_ALL_PASSES       = (1 << 8)-1,
 } DenoiseFlag;
 
+#ifdef __KERNEL_DEBUG__
+/* NOTE: This is a runtime-only struct, alignment is not
+ * really important here.
+ */
+typedef struct DebugData {
+	int num_bvh_traversed_nodes;
+	int num_bvh_traversed_instances;
+	int num_bvh_intersections;
+	int num_ray_bounces;
+} DebugData;
+#endif
+
 typedef ccl_addr_space struct PathRadiance {
 #ifdef __PASSES__
 	int use_light_pass;
 #endif
 
+	float transparent;
 	float3 emission;
 #ifdef __PASSES__
 	float3 background;
@@ -515,7 +534,16 @@ typedef ccl_addr_space struct PathRadiance {
 	float3 path_total_shaded;
 
 	/* Color of the background on which shadow is alpha-overed. */
-	float3 shadow_color;
+	float3 shadow_background_color;
+
+	/* Path radiance sum and throughput at the moment when ray hits shadow
+	 * catcher object.
+	 */
+	float3 shadow_radiance_sum;
+	float shadow_throughput;
+
+	/* Accumulated transparency along the path after shadow catcher bounce. */
+	float shadow_transparency;
 #endif
 
 #ifdef __DENOISING_FEATURES__
@@ -523,6 +551,10 @@ typedef ccl_addr_space struct PathRadiance {
 	float3 denoising_albedo;
 	float denoising_depth;
 #endif  /* __DENOISING_FEATURES__ */
+
+#ifdef __KERNEL_DEBUG__
+	DebugData debug_data;
+#endif /* __KERNEL_DEBUG__ */
 } PathRadiance;
 
 typedef struct BsdfEval {
@@ -1019,10 +1051,6 @@ typedef struct PathState {
 	RNG rng_congruential;
 	VolumeStack volume_stack[VOLUME_STACK_SIZE];
 #endif
-
-#ifdef __SHADOW_TRICKS__
-	int catcher_object;
-#endif
 } PathState;
 
 /* Subsurface */
@@ -1228,7 +1256,6 @@ typedef struct KernelIntegrator {
 	int portal_offset;
 
 	/* bounces */
-	int min_bounce;
 	int max_bounce;
 
 	int max_diffuse_bounce;
@@ -1239,7 +1266,6 @@ typedef struct KernelIntegrator {
 	int ao_bounces;
 
 	/* transparent */
-	int transparent_min_bounce;
 	int transparent_max_bounce;
 	int transparent_shadows;
 
@@ -1282,7 +1308,7 @@ typedef struct KernelIntegrator {
 	float light_inv_rr_threshold;
 
 	int start_sample;
-	int pad1, pad2, pad3;
+	int pad1;
 } KernelIntegrator;
 static_assert_align(KernelIntegrator, 16);
 
@@ -1335,18 +1361,6 @@ typedef struct KernelData {
 	KernelTables tables;
 } KernelData;
 static_assert_align(KernelData, 16);
-
-#ifdef __KERNEL_DEBUG__
-/* NOTE: This is a runtime-only struct, alignment is not
- * really important here.
- */
-typedef ccl_addr_space struct DebugData {
-	int num_bvh_traversed_nodes;
-	int num_bvh_traversed_instances;
-	int num_bvh_intersections;
-	int num_ray_bounces;
-} DebugData;
-#endif
 
 /* Declarations required for split kernel */
 

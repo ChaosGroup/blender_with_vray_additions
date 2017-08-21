@@ -201,7 +201,7 @@ struct DerivedMesh {
 	/* use for converting to BMesh which doesn't store bevel weight and edge crease by default */
 	char cd_flag;
 
-	char tangent_mask; /* which tangent layers are calculated */
+	short tangent_mask; /* which tangent layers are calculated */
 
 	/** Calculate vert and face normals */
 	void (*calcNormals)(DerivedMesh *dm);
@@ -220,7 +220,7 @@ struct DerivedMesh {
 	/** Recalculates mesh tessellation */
 	void (*recalcTessellation)(DerivedMesh *dm);
 
-	/** Loop tessellation cache */
+	/** Loop tessellation cache (WARNING! Only call inside threading-protected code!) */
 	void (*recalcLoopTri)(DerivedMesh *dm);
 	/** accessor functions */
 	const struct MLoopTri *(*getLoopTriArray)(DerivedMesh * dm);
@@ -625,7 +625,6 @@ void DM_ensure_normals(DerivedMesh *dm);
 void DM_ensure_tessface(DerivedMesh *dm);
 
 void DM_ensure_looptri_data(DerivedMesh *dm);
-void DM_ensure_looptri(DerivedMesh *dm);
 void DM_verttri_from_looptri(MVertTri *verttri, const MLoop *mloop, const MLoopTri *looptri, int looptri_num);
 
 void DM_update_tessface_data(DerivedMesh *dm);
@@ -791,11 +790,13 @@ void DM_calc_tangents_names_from_gpu(
 void DM_add_named_tangent_layer_for_uv(
         CustomData *uv_data, CustomData *tan_data, int numLoopData,
         const char *layer_name);
+
+#define DM_TANGENT_MASK_ORCO (1 << 9)
 void DM_calc_loop_tangents_step_0(
         const CustomData *loopData, bool calc_active_tangent,
         const char (*tangent_names)[MAX_NAME], int tangent_names_count,
         bool *rcalc_act, bool *rcalc_ren, int *ract_uv_n, int *rren_uv_n,
-        char *ract_uv_name, char *rren_uv_name, char *rtangent_mask);
+        char *ract_uv_name, char *rren_uv_name, short *rtangent_mask);
 void DM_calc_loop_tangents(
         DerivedMesh *dm, bool calc_active_tangent, const char (*tangent_names)[MAX_NAME],
         int tangent_names_count);
@@ -830,11 +831,5 @@ struct MEdge *DM_get_edge_array(struct DerivedMesh *dm, bool *r_allocated);
 struct MLoop *DM_get_loop_array(struct DerivedMesh *dm, bool *r_allocated);
 struct MPoly *DM_get_poly_array(struct DerivedMesh *dm, bool *r_allocated);
 struct MFace *DM_get_tessface_array(struct DerivedMesh *dm, bool *r_allocated);
-const MLoopTri *DM_get_looptri_array(
-        DerivedMesh *dm,
-        const MVert *mvert,
-        const MPoly *mpoly, int mpoly_len,
-        const MLoop *mloop, int mloop_len,
-        bool *r_allocated);
 
 #endif  /* __BKE_DERIVEDMESH_H__ */

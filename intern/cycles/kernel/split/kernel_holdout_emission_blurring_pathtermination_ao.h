@@ -125,17 +125,25 @@ ccl_device void kernel_holdout_emission_blurring_pathtermination_ao(
 #ifdef __SHADOW_TRICKS__
 		if((sd->object_flag & SD_OBJECT_SHADOW_CATCHER)) {
 			if(state->flag & PATH_RAY_CAMERA) {
-				state->flag |= (PATH_RAY_SHADOW_CATCHER | PATH_RAY_SHADOW_CATCHER_ONLY | PATH_RAY_STORE_SHADOW_INFO);
-				state->catcher_object = sd->object;
+				PathRadiance *L = &kernel_split_state.path_radiance[ray_index];
+				state->flag |= (PATH_RAY_SHADOW_CATCHER |
+				                PATH_RAY_STORE_SHADOW_INFO);
 				if(!kernel_data.background.transparent) {
-					PathRadiance *L = &kernel_split_state.path_radiance[ray_index];
 					ccl_global Ray *ray = &kernel_split_state.ray[ray_index];
-					L->shadow_color = indirect_background(kg, &kernel_split_state.sd_DL_shadow[ray_index], state, ray);
+					L->shadow_background_color = indirect_background(
+					        kg,
+					        &kernel_split_state.sd_DL_shadow[ray_index],
+					        state,
+					        ray);
 				}
+				L->shadow_radiance_sum = path_radiance_clamp_and_sum(kg, L);
+				L->shadow_throughput = average(throughput);
 			}
 		}
-		else {
-			state->flag &= ~PATH_RAY_SHADOW_CATCHER_ONLY;
+		else if(state->flag & PATH_RAY_SHADOW_CATCHER) {
+			/* Only update transparency after shadow catcher bounce. */
+			PathRadiance *L = &kernel_split_state.path_radiance[ray_index];
+			L->shadow_transparency *= average(shader_bsdf_transparency(kg, sd));
 		}
 #endif  /* __SHADOW_TRICKS__ */
 
@@ -154,7 +162,8 @@ ccl_device void kernel_holdout_emission_blurring_pathtermination_ao(
 					holdout_weight = shader_holdout_eval(kg, sd);
 				}
 				/* any throughput is ok, should all be identical here */
-				kernel_split_state.L_transparent[ray_index] += average(holdout_weight*throughput);
+				PathRadiance *L = &kernel_split_state.path_radiance[ray_index];
+				L->transparent += average(holdout_weight*throughput);
 			}
 			if(sd->object_flag & SD_OBJECT_HOLDOUT_MASK) {
 				kernel_split_path_end(kg, ray_index);
@@ -216,19 +225,19 @@ ccl_device void kernel_holdout_emission_blurring_pathtermination_ao(
 		 * shader evaluations, only need emission if we are going to terminate.
 		 */
 #ifndef __BRANCHED_PATH__
-		float probability = path_state_terminate_probability(kg, state, throughput);
+		float probability = path_state_continuation_probability(kg, state, throughput);
 #else
 		float probability = 1.0f;
 
 		if(!kernel_data.integrator.branched) {
-			probability = path_state_terminate_probability(kg, state, throughput);
+			probability = path_state_continuation_probability(kg, state, throughput);
 		}
 		else if(IS_FLAG(ray_state, ray_index, RAY_BRANCHED_INDIRECT)) {
 			int num_samples = kernel_split_state.branched_state[ray_index].num_samples;
-			probability = path_state_terminate_probability(kg, state, throughput*num_samples);
+			probability = path_state_continuation_probability(kg, state, throughput*num_samples);
 		}
 		else if(state->flag & PATH_RAY_TRANSPARENT) {
-			probability = path_state_terminate_probability(kg, state, throughput);
+			probability = path_state_continuation_probability(kg, state, throughput);
 		}
 #endif
 

@@ -38,7 +38,7 @@ BLACKLIST = {
     'io_import_dxf',  # Because of cydxfentity.so dependency
 
     # The unpacked wheel is only loaded when actually used, not directly on import:
-    "io_blend_utils/blender_bam-unpacked.whl",
+    os.path.join("io_blend_utils", "blender_bam-unpacked.whl"),
     }
 
 # Some modules need to add to the `sys.path`.
@@ -123,6 +123,8 @@ def load_addons():
 
 
 def load_modules():
+    VERBOSE = os.environ.get("BLENDER_VERBOSE") is not None
+
     modules = []
     module_paths = []
 
@@ -162,6 +164,14 @@ def load_modules():
     del module_names
 
     #
+    # test we tested all files except for presets and templates
+    ignore_paths = [
+        os.sep + "presets" + os.sep,
+        os.sep + "templates" + os.sep,
+    ] + ([(os.sep + f + os.sep) for f in BLACKLIST] +
+         [(os.sep + f + ".py")  for f in BLACKLIST])
+
+    #
     # now submodules
     for m in modules:
         filepath = m.__file__
@@ -178,15 +188,35 @@ def load_modules():
                     for f in MODULE_SYS_PATHS.get(mod_name_full, ())
                     ])
 
-                __import__(mod_name_full)
-                mod_imp = sys.modules[mod_name_full]
+                try:
+                    __import__(mod_name_full)
+                    mod_imp = sys.modules[mod_name_full]
 
-                sys.path[:] = sys_path_back
+                    sys.path[:] = sys_path_back
 
-                # check we load what we ask for.
-                assert(os.path.samefile(mod_imp.__file__, submod_full))
+                    # check we load what we ask for.
+                    assert(os.path.samefile(mod_imp.__file__, submod_full))
 
-                modules.append(mod_imp)
+                    modules.append(mod_imp)
+                except Exception as e:
+                    import traceback
+                    # Module might fail to import, but we don't want whole test to fail here.
+                    # Reasoning:
+                    # - This module might be in ignored list (for example, preset or template),
+                    #   so failing here will cause false-positive test failure.
+                    # - If this is module which should not be ignored, it is not added to list
+                    #   of successfully loaded modules, meaning the test will catch this
+                    #   import failure.
+                    # - We want to catch all failures of this script instead of stopping on
+                    #   a first big failure.
+                    do_print = True
+                    if not VERBOSE:
+                        for ignore in ignore_paths:
+                            if ignore in submod_full:
+                                do_print = False
+                                break
+                    if do_print:
+                        traceback.print_exc()
 
     #
     # check which filepaths we didn't load
@@ -204,14 +234,6 @@ def load_modules():
 
     for f in loaded_files:
         source_files.remove(f)
-
-    #
-    # test we tested all files except for presets and templates
-    ignore_paths = [
-        os.sep + "presets" + os.sep,
-        os.sep + "templates" + os.sep,
-    ] + ([(os.sep + f + os.sep) for f in BLACKLIST] +
-         [(os.sep + f + ".py")  for f in BLACKLIST])
 
     for f in source_files:
         for ignore in ignore_paths:

@@ -164,7 +164,6 @@ static void rna_Scene_ray_cast(
 
 	bool ret = ED_transform_snap_object_project_ray_ex(
 	        sctx,
-	        SCE_SNAP_MODE_FACE,
 	        &(const struct SnapObjectParams){
 	            .snap_select = SNAP_ALL,
 	        },
@@ -280,7 +279,7 @@ static void rna_Scene_collada_export(
         int include_shapekeys,
         int deform_bones_only,
         int active_uv_only,
-		int export_texture_type,
+        int export_texture_type,
         int use_texture_copies,
         int triangulate,
         int use_object_instantiation,

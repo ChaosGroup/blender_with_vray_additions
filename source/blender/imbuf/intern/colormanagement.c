@@ -63,6 +63,7 @@
 #include "BKE_context.h"
 #include "BKE_image.h"
 #include "BKE_main.h"
+#include "BKE_sequencer.h"
 
 #include "RNA_define.h"
 
@@ -1112,6 +1113,7 @@ void IMB_colormanagement_check_file_config(Main *bmain)
 	for (scene = bmain->scene.first; scene; scene = scene->id.next) {
 		ColorManagedColorspaceSettings *sequencer_colorspace_settings;
 
+		/* check scene color management settings */
 		colormanage_check_display_settings(&scene->display_settings, "scene", default_display);
 		colormanage_check_view_settings(&scene->display_settings, &scene->view_settings, "scene");
 
@@ -1122,6 +1124,15 @@ void IMB_colormanagement_check_file_config(Main *bmain)
 		if (sequencer_colorspace_settings->name[0] == '\0') {
 			BLI_strncpy(sequencer_colorspace_settings->name, global_role_default_sequencer, MAX_COLORSPACE_NAME);
 		}
+
+		/* check sequencer strip input color space settings */
+		Sequence *seq;
+		SEQ_BEGIN (scene->ed, seq) {
+			if (seq->strip) {
+				colormanage_check_colorspace_settings(&seq->strip->colorspace_settings, "sequencer strip");
+			}
+		}
+		SEQ_END
 	}
 
 	/* ** check input color space settings ** */
@@ -2554,6 +2565,14 @@ const char *IMB_colormanagement_colorspace_get_indexed_name(int index)
 
 void IMB_colormanagment_colorspace_from_ibuf_ftype(ColorManagedColorspaceSettings *colorspace_settings, ImBuf *ibuf)
 {
+	/* Don't modify non-color data space, it does not change with file type. */
+	ColorSpace *colorspace = colormanage_colorspace_get_named(colorspace_settings->name);
+
+	if (colorspace && colorspace->is_data) {
+		return;
+	}
+
+	/* Get color space from file type. */
 	const ImFileType *type;
 
 	for (type = IMB_FILE_TYPES; type < IMB_FILE_TYPES_LAST; type++) {

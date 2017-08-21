@@ -210,7 +210,7 @@ class CLIP_OT_set_active_clip(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         space = context.space_data
-        return space.type == 'CLIP_EDITOR'
+        return space.type == 'CLIP_EDITOR' and space.clip
 
     def execute(self, context):
         clip = context.space_data.clip
@@ -253,6 +253,11 @@ class CLIP_OT_track_to_empty(Operator):
         constraint.use_3d_position = False
         constraint.object = tracking_object.name
         constraint.camera = CLIP_camera_for_clip(context, clip)
+
+    @classmethod
+    def poll(cls, context):
+        space = context.space_data
+        return space.type == 'CLIP_EDITOR' and space.clip
 
     def execute(self, context):
         sc = context.space_data
@@ -782,8 +787,8 @@ class CLIP_OT_setup_tracking_scene(Operator):
         tree.links.new(mul_shadow.outputs["Image"], mul_image.inputs[2])
 
         tree.links.new(rlayer_fg.outputs["Image"], vector_blur.inputs["Image"])
-        tree.links.new(rlayer_fg.outputs["Z"], vector_blur.inputs["Z"])
-        tree.links.new(rlayer_fg.outputs["Speed"], vector_blur.inputs["Speed"])
+        tree.links.new(rlayer_fg.outputs["Depth"], vector_blur.inputs["Z"])
+        tree.links.new(rlayer_fg.outputs["Vector"], vector_blur.inputs["Speed"])
 
         tree.links.new(mul_image.outputs["Image"], alphaover.inputs[1])
         tree.links.new(vector_blur.outputs["Image"], alphaover.inputs[2])

@@ -119,6 +119,9 @@ ccl_device_noinline void kernel_branched_path_surface_indirect_light(KernelGloba
 			PathState ps = *state;
 			float3 tp = throughput;
 			Ray bsdf_ray;
+#ifdef __SHADOW_TRICKS__
+			float shadow_transparency = L->shadow_transparency;
+#endif
 
 			if(!kernel_branched_path_surface_bounce(kg,
 			                                        &bsdf_rng,
@@ -149,6 +152,10 @@ ccl_device_noinline void kernel_branched_path_surface_indirect_light(KernelGloba
 			 * for the next samples */
 			path_radiance_sum_indirect(L);
 			path_radiance_reset_indirect(L);
+
+#ifdef __SHADOW_TRICKS__
+			L->shadow_transparency = shadow_transparency;
+#endif
 		}
 	}
 }
@@ -262,17 +269,16 @@ ccl_device void kernel_branched_path_subsurface_scatter(KernelGlobals *kg,
 }
 #endif  /* __SUBSURFACE__ */
 
-ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
-                                                RNG *rng,
-                                                int sample,
-                                                Ray ray,
-                                                ccl_global float *buffer,
-                                                PathRadiance *L,
-                                                bool *is_shadow_catcher)
+ccl_device void kernel_branched_path_integrate(KernelGlobals *kg,
+                                               RNG *rng,
+                                               int sample,
+                                               Ray ray,
+                                               ccl_global float *buffer,
+                                               PathRadiance *L,
+                                               bool *is_shadow_catcher)
 {
 	/* initialize */
 	float3 throughput = make_float3(1.0f, 1.0f, 1.0f);
-	float L_transparent = 0.0f;
 
 	path_radiance_init(L, kernel_data.film.use_light_pass);
 
@@ -283,11 +289,6 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 
 	PathState state;
 	path_state_init(kg, &emission_sd, &state, rng, sample, &ray);
-
-#ifdef __KERNEL_DEBUG__
-	DebugData debug_data;
-	debug_data_init(&debug_data);
-#endif  /* __KERNEL_DEBUG__ */
 
 	/* Main Loop
 	 * Here we only handle transparency intersections from the camera ray.
@@ -319,10 +320,10 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 #endif  /* __HAIR__ */
 
 #ifdef __KERNEL_DEBUG__
-		debug_data.num_bvh_traversed_nodes += isect.num_traversed_nodes;
-		debug_data.num_bvh_traversed_instances += isect.num_traversed_instances;
-		debug_data.num_bvh_intersections += isect.num_intersections;
-		debug_data.num_ray_bounces++;
+		L->debug_data.num_bvh_traversed_nodes += isect.num_traversed_nodes;
+		L->debug_data.num_bvh_traversed_instances += isect.num_traversed_instances;
+		L->debug_data.num_bvh_intersections += isect.num_intersections;
+		L->debug_data.num_ray_bounces++;
 #endif  /* __KERNEL_DEBUG__ */
 
 #ifdef __VOLUME__
@@ -475,7 +476,7 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 		if(!hit) {
 			/* eval background shader if nothing hit */
 			if(kernel_data.background.transparent) {
-				L_transparent += average(throughput);
+				L->transparent += average(throughput);
 
 #ifdef __PASSES__
 				if(!(kernel_data.film.pass_flag & PASS_BACKGROUND))
@@ -499,16 +500,19 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 
 #ifdef __SHADOW_TRICKS__
 		if((sd.object_flag & SD_OBJECT_SHADOW_CATCHER)) {
-			if(state.flag & PATH_RAY_CAMERA) {
-				state.flag |= (PATH_RAY_SHADOW_CATCHER | PATH_RAY_SHADOW_CATCHER_ONLY | PATH_RAY_STORE_SHADOW_INFO);
-				state.catcher_object = sd.object;
-				if(!kernel_data.background.transparent) {
-					L->shadow_color = indirect_background(kg, &emission_sd, &state, &ray);
-				}
+			state.flag |= (PATH_RAY_SHADOW_CATCHER |
+			               PATH_RAY_STORE_SHADOW_INFO);
+			if(!kernel_data.background.transparent) {
+				L->shadow_background_color =
+				        indirect_background(kg, &emission_sd, &state, &ray);
 			}
+			L->shadow_radiance_sum = path_radiance_clamp_and_sum(kg, L);
+			L->shadow_throughput = average(throughput);
 		}
-		else {
-			state.flag &= ~PATH_RAY_SHADOW_CATCHER_ONLY;
+		else if(state.flag & PATH_RAY_SHADOW_CATCHER) {
+			/* Only update transparency after shadow catcher bounce. */
+			L->shadow_transparency *=
+				average(shader_bsdf_transparency(kg, &sd));
 		}
 #endif  /* __SHADOW_TRICKS__ */
 
@@ -524,7 +528,7 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 					holdout_weight = shader_holdout_eval(kg, &sd);
 				}
 				/* any throughput is ok, should all be identical here */
-				L_transparent += average(holdout_weight*throughput);
+				L->transparent += average(holdout_weight*throughput);
 			}
 			if(sd.object_flag & SD_OBJECT_HOLDOUT_MASK) {
 				break;
@@ -548,7 +552,7 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 			/* path termination. this is a strange place to put the termination, it's
 			 * mainly due to the mixed in MIS that we use. gives too many unneeded
 			 * shader evaluations, only need emission if we are going to terminate */
-			float probability = path_state_terminate_probability(kg, &state, throughput);
+			float probability = path_state_continuation_probability(kg, &state, throughput);
 
 			if(probability == 0.0f) {
 				break;
@@ -625,14 +629,8 @@ ccl_device float kernel_branched_path_integrate(KernelGlobals *kg,
 	}
 
 #ifdef __SHADOW_TRICKS__
-	*is_shadow_catcher = (state.flag & PATH_RAY_SHADOW_CATCHER);
+	*is_shadow_catcher = (state.flag & PATH_RAY_SHADOW_CATCHER) != 0;
 #endif  /* __SHADOW_TRICKS__ */
-
-#ifdef __KERNEL_DEBUG__
-	kernel_write_debug_passes(kg, buffer, &state, &debug_data, sample);
-#endif  /* __KERNEL_DEBUG__ */
-
-	return 1.0f - L_transparent;
 }
 
 ccl_device void kernel_branched_path_trace(KernelGlobals *kg,
@@ -657,14 +655,12 @@ ccl_device void kernel_branched_path_trace(KernelGlobals *kg,
 	bool is_shadow_catcher;
 
 	if(ray.t != 0.0f) {
-		float alpha = kernel_branched_path_integrate(kg, &rng, sample, ray, buffer, &L, &is_shadow_catcher);
-		kernel_write_result(kg, buffer, sample, &L, alpha, is_shadow_catcher);
+		kernel_branched_path_integrate(kg, &rng, sample, ray, buffer, &L, &is_shadow_catcher);
+		kernel_write_result(kg, buffer, sample, &L, is_shadow_catcher);
 	}
 	else {
-		kernel_write_result(kg, buffer, sample, NULL, 0.0f, false);
+		kernel_write_result(kg, buffer, sample, NULL, false);
 	}
-
-	path_rng_end(kg, rng_state, rng);
 }
 
 #endif  /* __SPLIT_KERNEL__ */

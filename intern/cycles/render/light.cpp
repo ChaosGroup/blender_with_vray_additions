@@ -224,12 +224,12 @@ void LightManager::disable_ineffective_light(Device *device, Scene *scene)
 
 bool LightManager::object_usable_as_light(Object *object) {
 	Mesh *mesh = object->mesh;
-	/* Skip if we are not visible for BSDFs. */
-	if(!(object->visibility & (PATH_RAY_DIFFUSE|PATH_RAY_GLOSSY|PATH_RAY_TRANSMIT))) {
+	/* Skip objects with NaNs */
+	if(!object->bounds.valid()) {
 		return false;
 	}
-	/* Skip motion blurred deforming meshes, not supported yet. */
-	if(mesh->has_motion_blur()) {
+	/* Skip if we are not visible for BSDFs. */
+	if(!(object->visibility & (PATH_RAY_DIFFUSE|PATH_RAY_GLOSSY|PATH_RAY_TRANSMIT))) {
 		return false;
 	}
 	/* Skip if we have no emission shaders. */

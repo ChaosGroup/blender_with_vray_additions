@@ -100,8 +100,6 @@ def draw_samples_info(layout, context):
     # Calculate sample values
     if integrator == 'PATH':
         aa = cscene.samples
-        if cscene.use_square_samples:
-            aa = aa * aa
     else:
         aa = cscene.aa_samples
         d = cscene.diffuse_samples
@@ -112,19 +110,9 @@ def draw_samples_info(layout, context):
         sss = cscene.subsurface_samples
         vol = cscene.volume_samples
 
-        if cscene.use_square_samples:
-            aa = aa * aa
-            d = d * d
-            g = g * g
-            t = t * t
-            ao = ao * ao
-            ml = ml * ml
-            sss = sss * sss
-            vol = vol * vol
-
     # Draw interface
     # Do not draw for progressive, when Square Samples are disabled
-    if use_branched_path(context) or (cscene.use_square_samples and integrator == 'PATH'):
+    if use_branched_path(context):
         col = layout.column(align=True)
         col.scale_y = 0.6
         col.label("Total Samples:")
@@ -157,7 +145,7 @@ class CyclesRender_PT_sampling(CyclesButtonsPanel, Panel):
         row = layout.row()
         sub = row.row()
         sub.prop(cscene, "progressive", text="")
-        row.prop(cscene, "use_square_samples")
+        sub.label()
 
         split = layout.split()
 
@@ -292,8 +280,6 @@ class CyclesRender_PT_light_paths(CyclesButtonsPanel, Panel):
         sub = col.column(align=True)
         sub.label("Transparency:")
         sub.prop(cscene, "transparent_max_bounces", text="Max")
-        sub.prop(cscene, "transparent_min_bounces", text="Min")
-        sub.prop(cscene, "use_transparent_shadows", text="Shadows")
 
         col.separator()
 
@@ -306,7 +292,6 @@ class CyclesRender_PT_light_paths(CyclesButtonsPanel, Panel):
         sub = col.column(align=True)
         sub.label(text="Bounces:")
         sub.prop(cscene, "max_bounces", text="Max")
-        sub.prop(cscene, "min_bounces", text="Min")
 
         sub = col.column(align=True)
         sub.prop(cscene, "diffuse_bounces", text="Diffuse")
@@ -417,6 +402,7 @@ class CyclesRender_PT_performance(CyclesButtonsPanel, Panel):
         col.prop(cscene, "debug_bvh_type", text="")
         col.separator()
         col.prop(cscene, "preview_start_resolution")
+        col.prop(rd, "preview_pixel_size", text="")
 
         col.separator()
 
@@ -1608,6 +1594,7 @@ class CyclesRender_PT_debug(CyclesButtonsPanel, Panel):
         col.prop(cscene, "debug_opencl_device_type", text="Device")
         col.prop(cscene, "debug_opencl_kernel_single_program", text="Single Program")
         col.prop(cscene, "debug_use_opencl_debug", text="Debug")
+        col.prop(cscene, "debug_opencl_mem_limit")
 
 
 class CyclesParticle_PT_CurveSettings(CyclesButtonsPanel, Panel):

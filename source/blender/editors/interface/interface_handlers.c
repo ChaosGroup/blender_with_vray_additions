@@ -2319,7 +2319,7 @@ static void ui_but_copy_paste(bContext *C, uiBut *but, uiHandleButtonData *data,
 			/* Get many decimal places, then strip trailing zeros.
 			 * note: too high values start to give strange results */
 			char buf_copy[UI_MAX_DRAW_STR];
-			ui_but_string_get_ex(but, buf_copy, sizeof(buf_copy), UI_PRECISION_FLOAT_MAX);
+			ui_but_string_get_ex(but, buf_copy, sizeof(buf_copy), UI_PRECISION_FLOAT_MAX, false, NULL);
 			BLI_str_rstrip_float_zero(buf_copy, '\0');
 
 			WM_clipboard_text_set(buf_copy, 0);
@@ -3060,6 +3060,7 @@ static void ui_textedit_begin(bContext *C, uiBut *but, uiHandleButtonData *data)
 	wmWindow *win = CTX_wm_window(C);
 	int len;
 	const bool is_num_but = ELEM(but->type, UI_BTYPE_NUM, UI_BTYPE_NUM_SLIDER);
+	bool no_zero_strip = false;
 
 	if (data->str) {
 		MEM_freeN(data->str);
@@ -3092,14 +3093,16 @@ static void ui_textedit_begin(bContext *C, uiBut *but, uiHandleButtonData *data)
 	data->maxlen = ui_but_string_get_max_length(but);
 	if (data->maxlen != 0) {
 		data->str = MEM_callocN(sizeof(char) * data->maxlen, "textedit str");
-		ui_but_string_get(but, data->str, data->maxlen);
+		/* We do not want to truncate precision to default here, it's nice to show value,
+		 * not to edit it - way too much precision is lost then. */
+		ui_but_string_get_ex(but, data->str, data->maxlen, UI_PRECISION_FLOAT_MAX, true, &no_zero_strip);
 	}
 	else {
 		data->is_str_dynamic = true;
 		data->str = ui_but_string_get_dynamic(but, &data->maxlen);
 	}
 
-	if (ui_but_is_float(but) && !ui_but_is_unit(but) && !ui_but_anim_expression_get(but, NULL, 0)) {
+	if (ui_but_is_float(but) && !ui_but_is_unit(but) && !ui_but_anim_expression_get(but, NULL, 0) && !no_zero_strip) {
 		BLI_str_rstrip_float_zero(data->str, '\0');
 	}
 
@@ -6792,8 +6795,8 @@ static bool ui_but_menu(bContext *C, uiBut *but)
 		/* set the prop and pointer data for python access to the hovered ui element; TODO, index could be supported as well*/
 		PointerRNA temp_ptr;
 		RNA_pointer_create(NULL, &RNA_Property, but->rnaprop, &temp_ptr);
-		uiLayoutSetContextPointer(layout,"button_prop", &temp_ptr);
-		uiLayoutSetContextPointer(layout,"button_pointer", ptr);
+		uiLayoutSetContextPointer(layout, "button_prop", &temp_ptr);
+		uiLayoutSetContextPointer(layout, "button_pointer", ptr);
 
 		/* second slower test, saved people finding keyframe items in menus when its not possible */
 		if (is_anim)
@@ -7012,8 +7015,9 @@ static bool ui_but_menu(bContext *C, uiBut *but)
 		}
 
 		/* Set the operator pointer for python access */
-		if (but->opptr)
-			uiLayoutSetContextPointer(layout,"button_operator", but->opptr);
+		if (but->opptr) {
+			uiLayoutSetContextPointer(layout, "button_operator", but->opptr);
+		}
 
 		uiItemS(layout);
 	}
