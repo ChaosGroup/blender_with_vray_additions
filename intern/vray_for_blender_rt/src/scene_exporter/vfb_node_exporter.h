@@ -78,7 +78,9 @@ public:
 	typedef std::vector<BL::NodeTree> NodeTreeVector;
 	typedef std::vector<BL::Node>     NodeVector;
 
-	NodeContext() {}
+	NodeContext()
+		: isWorldNtree (false)
+	{}
 	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object)
 	    : object_context(data, scene, object)
 	    , isWorldNtree(false)
