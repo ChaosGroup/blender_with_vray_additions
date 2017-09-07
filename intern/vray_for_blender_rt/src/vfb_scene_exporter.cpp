@@ -804,6 +804,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			if (instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render())) {
 				flags.set(IF::HIDDEN);
 			}
+
 			if (Blender::IsGeometry(parentOb)) {
 				flags.set(IF::GEOMETRY);
 			}
@@ -904,7 +905,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			sync_object(parentOb, check_updated, overrideAttrs);
 		} else if (!flags.get(IF::HIDDEN)) {
 
-			overrideAttrs.visible = !flags.get(IF::HIDDEN);
+			overrideAttrs.visible = !flags.get(IF::HIDDEN) && m_data_exporter.isObjectVisible(parentOb, OVisibility::HIDE_LAYER);
 			overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
 			overrideAttrs.id = reinterpret_cast<intptr_t>(parentOb.ptr.data);
 
