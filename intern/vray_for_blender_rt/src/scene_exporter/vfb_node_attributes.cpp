@@ -198,7 +198,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 										PluginDesc multTex(multPluginName, "TexFloatOp");
 										multTex.add("float_a", socketValue);
 										multTex.add("float_b", mult);
-										multTex.add("mode", 2); // "product"
+										multTex.add("mode", 0); // "product"
 
 										socketValue = m_exporter->export_plugin(multTex);
 									}

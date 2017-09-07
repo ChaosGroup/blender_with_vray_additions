@@ -750,7 +750,7 @@ void VRayNodeExporter::getVRayNodeAttributes(AttributeValueMap &pluginAttrs,
 									AttributeValueMap multTex;
 									multTex["float_a"] = socketValue;
 									multTex["float_b"] = BOOST_FORMAT_FLOAT(mult);
-									multTex["mode"]    = "2"; // product
+									multTex["mode"]    = "0"; // product
 
 									VRayNodePluginExporter::exportPlugin("TEXTURE", "TexFloatOp", multPluginName, multTex);
 								}
