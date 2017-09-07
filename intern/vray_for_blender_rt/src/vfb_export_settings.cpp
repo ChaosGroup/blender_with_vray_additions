@@ -78,7 +78,11 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	settings_files.project_path  = data.filepath();
 
 	// Read layers if custom are specified
-	use_active_layers = (ActiveLayers)RNA_enum_get(&m_vrayExporter, "activeLayers");
+	use_active_layers = static_cast<ActiveLayers>(RNA_enum_get(&m_vrayExporter, "activeLayers"));
+	if (isPreview) {
+		// preview scene's layers are actually the different objects that the scene is showinge
+		use_active_layers = ActiveLayersScene;
+	}
 	if(use_active_layers == ActiveLayersCustom) {
 		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
