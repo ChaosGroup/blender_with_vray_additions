@@ -454,6 +454,8 @@ bool SceneExporter::export_scene(const bool check_updated)
 
 void SceneExporter::sync(const bool check_updated)
 {
+	SCOPED_TRACE_EX("SceneExporter::sync(%d)", static_cast<int>(check_updated));
+
 	if (!m_frameExporter.isCurrentSubframe()) {
 		m_data_exporter.syncStart(m_isUndoSync);
 	}
@@ -1199,6 +1201,7 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 		}
 
 		const auto obName = ob.name();
+		SCOPED_TRACE_EX("Export task for object (%s)", obName.c_str());
 		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 

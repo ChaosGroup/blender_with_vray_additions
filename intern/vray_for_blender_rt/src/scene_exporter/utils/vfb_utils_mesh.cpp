@@ -303,8 +303,12 @@ private:
 int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, VRayForBlender::Mesh::ExportOptions options, PluginDesc &pluginDesc)
 {
 	int err = 0;
-	WRITE_LOCK_BLENDER_RAII;
 
+	ScopedTraceFormat trace("Waiting for WRITE_LOCK_BLENDER for object (%s)", ob.name().c_str());
+	WRITE_LOCK_BLENDER_RAII;
+	trace.dump();
+
+	SCOPED_TRACE_EX("Exporting mesh for object (%s)", ob.name().c_str());
 	struct ResetModOnExit {
 		~ResetModOnExit() {
 			if (mod) {

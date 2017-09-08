@@ -192,6 +192,7 @@ void DataExporter::fillMtlMulti(BL::Object ob, PluginDesc &mtlMultiDesc)
 
 AttrValue DataExporter::exportSingleMaterial(BL::Object &ob)
 {
+	SCOPED_TRACE_EX("Exporting material for object (%s)", ob.name().c_str());
 	AttrValue mtl = getDefaultMaterial();
 
 	for (auto & slot : Blender::collection(ob.material_slots)) {

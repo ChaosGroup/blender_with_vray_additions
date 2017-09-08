@@ -53,6 +53,8 @@
 #  define CGR_USE_DEBUG      1
 #endif
 
+#define CGR_USE_TRACE_DEBUG 0
+
 #define CGR_USE_CALL_DEBUG  (1 && CGR_USE_DEBUG)
 #define CGR_USE_TIME_DEBUG  (1 && CGR_USE_DEBUG)
 #define CGR_USE_DRAW_DEBUG  (0 && CGR_USE_DEBUG)
@@ -136,6 +138,99 @@
 	fprintf(stdout, "\n"); \
 	fflush(stdout);\
 	}
+
+
+#if CGR_USE_TRACE_DEBUG == 1
+#include <thread>
+#include <chrono>
+#include <cstdarg>
+typedef std::chrono::milliseconds::rep vfb_ms;
+#define VFB_MS_FORMAT "%llu"
+static const auto appStart = std::chrono::high_resolution_clock::now();
+
+inline vfb_ms getTickCount() {
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - appStart).count();
+}
+
+
+#define TRACE_PROMPT COLOR_RED "VFB TRACE "
+#define TID_FORMAT "(%5u)"
+inline unsigned thread_id_short() {
+	return std::hash<std::thread::id>()(std::this_thread::get_id()) % 100000;
+}
+
+#define PRINT_TRACE(...)                                                 \
+	{                                                                    \
+		fprintf(stdout, TRACE_PROMPT TID_FORMAT " [" VFB_MS_FORMAT "] ", \
+			thread_id_short(), getTickCount());                          \
+		fprintf(stdout, __VA_ARGS__);                                    \
+		fprintf(stdout, "\n");                                           \
+		fflush(stdout);                                                  \
+	}
+
+struct ScopedTrace {
+	explicit ScopedTrace(const char * name)
+		: name(name)
+		, startTime(getTickCount())
+	{}
+
+	void dump() {
+		const auto elapsed = getTickCount() - startTime;
+		if (name && elapsed >= 10) {
+			fprintf(stdout, TRACE_PROMPT TID_FORMAT " {" VFB_MS_FORMAT "} %s\n", thread_id_short(), elapsed, name);
+			name = nullptr;
+		}
+	}
+
+	~ScopedTrace() {
+		dump();
+	}
+
+	ScopedTrace(const ScopedTrace &) = delete;
+	ScopedTrace & operator=(const ScopedTrace &) = delete;
+
+	const char * name;
+	vfb_ms startTime;
+};
+
+struct ScopedTraceFormat: public ScopedTrace {
+	ScopedTraceFormat(const char * format, ...)
+		: ScopedTrace(nullptr)
+	{
+		va_list args;
+		va_start(args, format);
+		vsnprintf(buffer, 1024, format, args);
+		va_end(args);
+	}
+
+	void dump() {
+		const auto elapsed = getTickCount() - startTime;
+		if (buffer[0] && elapsed >= 10) {
+			fprintf(stdout, TRACE_PROMPT TID_FORMAT " {" VFB_MS_FORMAT "} %s\n", thread_id_short(), elapsed, buffer);
+			buffer[0] = 0;
+		}
+	}
+
+	~ScopedTraceFormat() {
+		dump();
+	}
+
+	char buffer[1024];
+};
+
+#define SCOPED_TRACE(name) ScopedTrace _scopedTrace ## __COUNTER__ (name);
+#define SCOPED_TRACE_EX(...) ScopedTraceFormat _scopedTraceFormat ## __COUNTER__ (__VA_ARGS__);
+#else
+struct ScopedTrace {
+	void dump() {};
+};
+struct ScopedTraceFormat: public ScopedTrace {
+	ScopedTraceFormat(...) {}
+};
+#define PRINT_TRACE(...)
+#define SCOPED_TRACE(_)
+#define SCOPED_TRACE_EX(...)
+#endif
 
 #define PRINT_INFO_LB(...) {\
 	fprintf(stdout, OUTPUT_PROMPT); \
