@@ -24,7 +24,7 @@ extern "C" {
 }
 
 
-BL::NodeTree VRayForBlender::Nodes::GetNodeTree(BL::ID id, const std::string &attr)
+BL::NodeTree VRayForBlender::Nodes::GetNodeTree(BL::ID & id, const std::string &attr)
 {
 	BL::NodeTree ntree(PointerRNA_NULL);
 

@@ -26,7 +26,7 @@
 namespace VRayForBlender {
 namespace Nodes {
 
-BL::NodeTree  GetNodeTree(BL::ID id, const std::string &attr="ntree");
+BL::NodeTree  GetNodeTree(BL::ID & id, const std::string &attr="ntree");
 BL::NodeTree  GetGroupNodeTree(BL::Node group_node);
 
 BL::NodeSocket  GetSocketByAttr(BL::Node node, const std::string &attrName);
