@@ -787,7 +787,6 @@ std::string DataExporter::getIdUniqueName(ID * id) {
 	const std::string libPrefix("|L");
 	Library * lib = id->lib;
 
-
 	while (lib) {
 		name += libPrefix;
 		name += lib->name;
@@ -827,7 +826,6 @@ std::string DataExporter::cryptomatteNameHierarchy(BL::Object ob) {
 	size += prefix.length();
 
 	std::string result;
-
 	// size for all strings + size for separators
 	result.reserve(size + nameParts.size() + 2);
 
