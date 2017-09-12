@@ -79,10 +79,13 @@ public:
 	typedef std::vector<BL::Node>     NodeVector;
 
 	NodeContext()
-		: isWorldNtree (false)
+	    : material(PointerRNA_NULL)
+	    , isWorldNtree (false)
 	{}
+
 	NodeContext(BL::BlendData data, BL::Scene scene, BL::Object object)
 	    : object_context(data, scene, object)
+	    , material(PointerRNA_NULL)
 	    , isWorldNtree(false)
 	{}
 
@@ -125,6 +128,7 @@ public:
 	ObjectContext  object_context;
 	NodeTreeVector parent;
 	NodeVector     group;
+	BL::Material   material; ///< The material we started export from (can be null)
 	bool           isWorldNtree; ///< True if we are exporting the world ntree
 };
 
@@ -333,6 +337,11 @@ public:
 	std::string       getClipperName(BL::Object ob);
 	static std::string       getIdUniqueName(BL::Pointer ob);
 	static std::string       getIdUniqueName(ID * id);
+
+	/// Used for Cryptomatte
+	static std::string              cryptomatteName(BL::Object ob);
+	static std::string              cryptomatteNameHierarchy(BL::Object ob);
+	static std::vector<std::string> cryptomatteAllNames(BL::Object ob);
 
 	static void              tag_ntree(BL::NodeTree ntree, bool updated=true);
 

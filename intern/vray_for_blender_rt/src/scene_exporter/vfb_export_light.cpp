@@ -256,6 +256,8 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 		}
 	}
 
+	pluginDesc.add("scene_name", AttrListString(cryptomatteAllNames(ob)));
+
 	plugin = m_exporter->export_plugin(pluginDesc);
 
 	return plugin;

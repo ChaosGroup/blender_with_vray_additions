@@ -342,6 +342,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		nodeDesc.add("geometry", geom);
 		nodeDesc.add("material", mtl);
 		nodeDesc.add("objectID", ob.pass_index());
+		nodeDesc.add("scene_name", AttrListString(cryptomatteAllNames(ob)));
 		if (m_settings.use_motion_blur) {
 			setNSamples(nodeDesc, ob);
 		}
@@ -582,6 +583,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 				hairNodeDesc.add("material", hair_mtl);
 				hairNodeDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 				hairNodeDesc.add("objectID", ob.pass_index());
+				hairNodeDesc.add("scene_name", AttrListString(cryptomatteAllNames(ob)));
 
 				m_exporter->export_plugin(hairNodeDesc);
 			}
@@ -595,11 +597,14 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	const auto exportName = "Instancer2@" + getNodeName(ob);
 	const bool visible = isObjectVisible(ob, ObjectVisibility(HIDE_RENDER | HIDE_VIEWPORT));
 
+	const AttrListString sceneNames = cryptomatteAllNames(ob);
+
 	PluginDesc instancerDesc(exportName, "Instancer2");
 	instancerDesc.add("instances", instacer);
 	instancerDesc.add("visible", visible);
 	instancerDesc.add("use_time_instancing", false);
 	instancerDesc.add("shading_needs_ids", true);
+	instancerDesc.add("scene_name", sceneNames);
 
 	const auto & wrapperName = "NodeWrapper@" + exportName;
 	{
@@ -619,6 +624,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	nodeWrapper.add("visible", true);
 	nodeWrapper.add("objectID", ob.pass_index());
 	nodeWrapper.add("material", getDefaultMaterial());
+	nodeWrapper.add("scene_name", sceneNames);
 	if (exportObTm) {
 		nodeWrapper.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 	} else {

@@ -189,6 +189,12 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 	PluginDesc mtlSingleBrdf("MtlSingleBRDF@" + baseName, "MtlSingleBRDF");
 	mtlSingleBrdf.add("brdf", baseBRDF);
 
+	if (context.material) {
+		mtlSingleBrdf.add("scene_name", AttrListString({context.material.name()}));
+	} else {
+		PRINT_WARN("Missing scene_name for MtlSingleBRDF (%s), Cryptomatte with material mode will exclude this one!", baseName.c_str());
+	}
+
 	setAttrsFromNode(ntree, node, fromSocket, context, mtlSingleBrdf, "MtlSingleBRDF", ParamDesc::PluginMaterial);
 	AttrPlugin singleBrdf = m_exporter->export_plugin(mtlSingleBrdf);
 

@@ -304,7 +304,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 	if (itemsPerLine) {
 		pp << "\n" << pp.indent();
 	}
-	pp << "\"" << StripString((*val)[0]) << "\"";
+	pp << "\"" << (*val)[0] << "\"";
 	for (int c = 1; c < val.getCount(); c++) {
 		pp << ",";
 		if (itemsPerLine && c % itemsPerLine == 0) {
@@ -312,7 +312,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 		} else {
 			pp << " ";
 		}
-		pp <<"\"" << StripString((*val)[c]) << "\"";
+		pp <<"\"" << (*val)[c] << "\"";
 	}
 	if (itemsPerLine) {
 		pp.unindent();

@@ -47,6 +47,7 @@ void DataExporter::exportMaterialSettings()
 
 		PluginDesc defaultMtlDesc("DefaultMtl", "MtlSingleBRDF");
 		defaultMtlDesc.add("brdf", m_exporter->export_plugin(defaultBrdfDesc));
+		defaultMtlDesc.add("scene_name", AttrListString({"DEFAULT_MATERIAL"}));
 		m_defaults.default_material = m_exporter->export_plugin(defaultMtlDesc);
 	}
 
@@ -67,6 +68,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 	}
 
 	{
+		SCOPED_TRACE_EX("Locking material cache for object (%s) and material (%s)", ob.name().c_str(), ma.name().c_str());
 		// we could export 2 objects at the same time - so lock to protect read/write
 		std::lock_guard<std::mutex> mtlLock(m_materials_mtx);
 		auto iter = m_exported_materials.find(ma);
@@ -98,6 +100,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 	}
 
 	NodeContext ctx(PointerRNA_NULL, PointerRNA_NULL, ob);
+	ctx.material = ma;
 
 	using PT = ParamDesc::PluginType;
 	auto pluginType = PT::PluginUnknown;
@@ -148,6 +151,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 		const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.as<AttrPlugin>().plugin);
 		PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
 		mtlSingleWrapper.add("brdf", material.as<AttrPlugin>());
+		mtlSingleWrapper.add("scene_name", AttrListString({ma.name()}));
 
 		material = m_exporter->export_plugin(mtlSingleWrapper);
 	}

@@ -21,7 +21,7 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
-
+#include <boost/range/adaptor/reversed.hpp>
 
 #define SPRINTF_FORMAT_INIT_IN_SCOPE()                              \
 	char formatBuff[String::MAX_PLG_LEN] = {0,};                    \
@@ -749,7 +749,6 @@ std::string DataExporter::getNodeName(BL::Object ob)
 	return "Node@" + getIdUniqueName(ob);
 }
 
-
 std::string DataExporter::getMeshName(BL::Object ob)
 {
 	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
@@ -796,6 +795,58 @@ std::string DataExporter::getIdUniqueName(ID * id) {
 	}
 
 	return name;
+}
+
+std::string DataExporter::cryptomatteName(BL::Object ob) {
+	return ob.name();
+}
+
+std::string DataExporter::cryptomatteNameHierarchy(BL::Object ob) {
+	std::vector<std::string> nameParts;
+	const std::string & obName = ob.name();
+	int size = obName.length();
+	nameParts.push_back(obName);
+
+	BL::Object iter = ob.parent();
+	while (iter) {
+		const auto name = iter.name();
+		nameParts.push_back(name);
+		size += name.length();
+		iter = iter.parent();
+	}
+
+	BL::Library lib = ob.library();
+	while (lib) {
+		const auto name = lib.name();
+		nameParts.push_back(name);
+		size += name.length();
+	}
+
+	const std::string prefix = "scene";
+	nameParts.push_back(prefix);
+	size += prefix.length();
+
+	std::string result;
+
+	// size for all strings + size for separators
+	result.reserve(size + nameParts.size() + 2);
+
+	for (const auto & item : boost::adaptors::reverse(nameParts)) {
+		result += item;
+		result += "/";
+	}
+	result.pop_back(); // remove trailing separator
+
+	return result;
+}
+
+std::vector<std::string> DataExporter::cryptomatteAllNames(BL::Object ob) {
+	std::vector<std::string> names;
+
+	names.push_back(cryptomatteName(ob));
+	names.push_back(cryptomatteNameHierarchy(ob));
+
+	return names;
 }
 
 std::string DataExporter::getIdUniqueName(BL::Pointer ob) {
