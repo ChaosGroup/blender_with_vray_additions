@@ -490,9 +490,6 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeTexFalloff") {
 		attrValue = exportVRayNodeTexFalloff(ntree, node, fromSocket, context);
 	}
-	else if (nodeClass == "VRayNodeTexEdges") {
-		attrValue = exportVRayNodeTexEdges(ntree, node, fromSocket, context);
-	}
 	else if (nodeClass == "VRayNodeTexLayered") {
 		attrValue = exportVRayNodeTexLayered(ntree, node, fromSocket, context);
 	}

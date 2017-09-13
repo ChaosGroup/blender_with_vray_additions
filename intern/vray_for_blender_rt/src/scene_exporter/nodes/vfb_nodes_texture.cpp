@@ -168,22 +168,6 @@ void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::N
 }
 
 
-AttrValue DataExporter::exportVRayNodeTexEdges(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
-{
-	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
-	                      "TexEdges");
-
-	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
-
-	auto * attr = pluginDesc.get("pixel_width");
-	if (attr) {
-		pluginDesc.add("world_width", attr->attrValue);
-	}
-
-	return m_exporter->export_plugin(pluginDesc);
-}
-
-
 AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	AttrValue plugin;
