@@ -102,6 +102,20 @@ PluginWriter &PluginWriter::writeStr(const char *str)
 	return *this;
 }
 
+namespace {
+void python_write_file(PyObject * file, const char * data)
+{
+	PyObject * result = PyObject_CallMethod(file, _C("write"), _C("s"), data);
+	if (!result || PyErr_Occurred()) {
+		PyErr_PrintEx(0);
+		PyErr_Clear();
+		return;
+	}
+
+	Py_DECREF(result);
+}
+}
+
 void PluginWriter::processItems(const char * val)
 {
 	// this function will not be called concurrently
@@ -109,14 +123,14 @@ void PluginWriter::processItems(const char * val)
 
 	const int maxRep = m_items.size();
 	for (int c = 0; c < maxRep && m_items.front().isDone(); ++c) {
-		PyObject_CallMethod(m_file, _C("write"), _C("s"), m_items.front().getData());
+		python_write_file(m_file, m_items.front().getData());
 		m_items.pop_front();
 	}
 
 	if (val && *val) {
 		if (m_items.empty()) {
 			// no items left in que, just write current value
-			PyObject_CallMethod(m_file, _C("write"), _C("s"), val);
+			python_write_file(m_file, val);
 		} else {
 			m_items.push_back(WriteItem(val));
 		}
@@ -126,13 +140,14 @@ void PluginWriter::processItems(const char * val)
 
 void PluginWriter::blockFlushAll()
 {
+	SCOPED_TRACE("PluginWriter::blockFlushAll()");
 	for (int c = 0; c < m_items.size(); ++c) {
 		auto & item = m_items[c];
 		// lazy wait for item
 		while (!item.isDone()) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
-		PyObject_CallMethod(m_file, _C("write"), _C("s"), item.getData());
+		python_write_file(m_file, item.getData());
 	}
 
 	m_items.clear();
@@ -304,7 +319,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 	if (itemsPerLine) {
 		pp << "\n" << pp.indent();
 	}
-	pp << "\"" << (*val)[0] << "\"";
+	pp << "\"" << StripString((*val)[0], "/") << "\"";
 	for (int c = 1; c < val.getCount(); c++) {
 		pp << ",";
 		if (itemsPerLine && c % itemsPerLine == 0) {
@@ -312,7 +327,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 		} else {
 			pp << " ";
 		}
-		pp <<"\"" << (*val)[c] << "\"";
+		pp <<"\"" << StripString((*val)[c], "/") << "\"";
 	}
 	if (itemsPerLine) {
 		pp.unindent();
