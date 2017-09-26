@@ -178,11 +178,12 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
 								float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
 
+								float threshold = 1.f;
 								if (attrDesc.options & ParamDesc::AttrOptionInvertMultiplier) {
 									mult = std::max(0.0f, 1.0f - mult);
 								}
 
-								if (mult != 1.0f) {
+								if (mult != threshold) {
 									char multPluginName[String::MAX_PLG_LEN] = {0, };
 
 									// XXX: Name here could be an issue with group nodes
@@ -191,9 +192,10 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 										sock.node().name().c_str(),
 										sock.name().c_str());
 
-
-
-									const bool is_float_socket = (sock.rna_type().identifier().find("Float") != std::string::npos);
+									const bool is_float_socket = (
+										sock.rna_type().identifier().find("Float") != std::string::npos ||
+										(attrDesc.options & ParamDesc::AttrOptionExportAsColor) == 0 // if this is set we export float output as color so we must use TexAColorOp
+									);
 									if (is_float_socket) {
 										PluginDesc multTex(multPluginName, "TexFloatOp");
 										multTex.add("float_a", socketValue);
