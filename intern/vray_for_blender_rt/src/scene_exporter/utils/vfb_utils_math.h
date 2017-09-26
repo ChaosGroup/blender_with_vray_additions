@@ -22,6 +22,7 @@
 #include "vfb_rna.h"
 
 #include <cmath>
+#include <algorithm>
 #include <string>
 
 
@@ -43,6 +44,22 @@ T clamp(T value, T min, T max) {
 	} else {
 		return value;
 	}
+}
+
+template <typename T>
+T Abs(T value) {
+	return value < 0 ? -value : value;
+}
+
+template <typename T>
+bool isZero(T value, T eps) {
+	return abs(value) < Max( Abs( value ) * eps, eps );
+}
+
+inline bool floatEqual(float a, float b) {
+	const float diff = fabs(a - b);
+	const float eps = 1e-6f;
+	return diff < std::max<float>(eps * diff, eps);
 }
 
 } // namespace Math

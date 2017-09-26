@@ -23,6 +23,7 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_math.h"
 
 #include "utils/cgr_paths.h"
 #include "BLI_path_util.h"
@@ -183,7 +184,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 									mult = std::max(0.0f, 1.0f - mult);
 								}
 
-								if (mult != threshold) {
+								if (Math::floatEqual(threshold, mult)) {
 									char multPluginName[String::MAX_PLG_LEN] = {0, };
 
 									// XXX: Name here could be an issue with group nodes
