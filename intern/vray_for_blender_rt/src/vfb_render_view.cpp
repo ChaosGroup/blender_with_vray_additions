@@ -363,73 +363,73 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		                          ? BL::Object(m_active_camera)
 		                          : m_view3d.camera();
 
-		if (!(cameraObject && cameraObject.data())) {
-			PRINT_ERROR("View camera is not found!")
+		if (!cameraObject || !cameraObject.data() || cameraObject.type() != BL::Object::type_CAMERA) {
+			PRINT_ERROR("View camera is not found!");
+			return;
 		}
-		else {
-			rctf view_border;
 
-			// NOTE: Taken from source/blender/editors/space_view3d/view3d_draw.c:
-			// static void view3d_camera_border(...) {...}
-			//
-			bool no_zoom = false;
-			bool no_shift = false;
+		rctf view_border;
 
-			Scene *scene = (Scene *)m_scene.ptr.data;
-			const ARegion *ar = (const ARegion*)m_region.ptr.data;
-			const View3D *v3d = (const View3D *)m_view3d.ptr.data;
-			const RegionView3D *rv3d = (const RegionView3D *)m_region3d.ptr.data;
+		// NOTE: Taken from source/blender/editors/space_view3d/view3d_draw.c:
+		// static void view3d_camera_border(...) {...}
+		//
+		bool no_zoom = false;
+		bool no_shift = false;
 
-			CameraParams params;
-			rctf rect_view, rect_camera;
+		Scene *scene = (Scene *)m_scene.ptr.data;
+		const ARegion *ar = (const ARegion*)m_region.ptr.data;
+		const View3D *v3d = (const View3D *)m_view3d.ptr.data;
+		const RegionView3D *rv3d = (const RegionView3D *)m_region3d.ptr.data;
 
-			/* get viewport viewplane */
-			BKE_camera_params_init(&params);
-			BKE_camera_params_from_view3d(&params, v3d, rv3d);
-			if (no_zoom)
-				params.zoom = 1.0f;
-			BKE_camera_params_compute_viewplane(&params, ar->winx, ar->winy, 1.0f, 1.0f);
-			rect_view = params.viewplane;
+		CameraParams params;
+		rctf rect_view, rect_camera;
 
-			/* get camera viewplane */
-			BKE_camera_params_init(&params);
+		/* get viewport viewplane */
+		BKE_camera_params_init(&params);
+		BKE_camera_params_from_view3d(&params, v3d, rv3d);
+		if (no_zoom)
+			params.zoom = 1.0f;
+		BKE_camera_params_compute_viewplane(&params, ar->winx, ar->winy, 1.0f, 1.0f);
+		rect_view = params.viewplane;
 
-			/* fallback for non camera objects */
-			params.clipsta = v3d->near;
-			params.clipend = v3d->far;
-			BKE_camera_params_from_object(&params, v3d->camera);
-			if (no_shift) {
-				params.shiftx = 0.0f;
-				params.shifty = 0.0f;
-			}
+		/* get camera viewplane */
+		BKE_camera_params_init(&params);
 
-			BKE_camera_params_compute_viewplane(&params, scene->r.xsch, scene->r.ysch, scene->r.xasp, scene->r.yasp);
-			rect_camera = params.viewplane;
-
-			/* get camera border within viewport */
-			view_border.xmin = ((rect_camera.xmin - rect_view.xmin) / BLI_rctf_size_x(&rect_view)) * ar->winx;
-			view_border.xmax = ((rect_camera.xmax - rect_view.xmin) / BLI_rctf_size_x(&rect_view)) * ar->winx;
-			view_border.ymin = ((rect_camera.ymin - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
-			view_border.ymax = ((rect_camera.ymax - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
-
-			// NOTE: +2 to match camera border
-			const int render_w = view_border.xmax - view_border.xmin + 2;
-			const int render_h = view_border.ymax - view_border.ymin + 2;
-
-			// Render size
-			viewParams.renderSize.w = render_w;
-			viewParams.renderSize.h = render_h;
-
-			// Viewport settings
-			viewParams.viewport_w      = render_w;
-			viewParams.viewport_h      = render_h;
-			viewParams.viewport_offs_x = view_border.xmin;
-			viewParams.viewport_offs_y = view_border.ymin;
-
-			m_data_exporter.fillCameraData(cameraObject, viewParams);
-
-			AspectCorrectFovOrtho(viewParams);
+		/* fallback for non camera objects */
+		params.clipsta = v3d->near;
+		params.clipend = v3d->far;
+		BKE_camera_params_from_object(&params, v3d->camera);
+		if (no_shift) {
+			params.shiftx = 0.0f;
+			params.shifty = 0.0f;
 		}
+
+		BKE_camera_params_compute_viewplane(&params, scene->r.xsch, scene->r.ysch, scene->r.xasp, scene->r.yasp);
+		rect_camera = params.viewplane;
+
+		/* get camera border within viewport */
+		view_border.xmin = ((rect_camera.xmin - rect_view.xmin) / BLI_rctf_size_x(&rect_view)) * ar->winx;
+		view_border.xmax = ((rect_camera.xmax - rect_view.xmin) / BLI_rctf_size_x(&rect_view)) * ar->winx;
+		view_border.ymin = ((rect_camera.ymin - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
+		view_border.ymax = ((rect_camera.ymax - rect_view.ymin) / BLI_rctf_size_y(&rect_view)) * ar->winy;
+
+		// NOTE: +2 to match camera border
+		const int render_w = view_border.xmax - view_border.xmin + 2;
+		const int render_h = view_border.ymax - view_border.ymin + 2;
+
+		// Render size
+		viewParams.renderSize.w = render_w;
+		viewParams.renderSize.h = render_h;
+
+		// Viewport settings
+		viewParams.viewport_w      = render_w;
+		viewParams.viewport_h      = render_h;
+		viewParams.viewport_offs_x = view_border.xmin;
+		viewParams.viewport_offs_y = view_border.ymin;
+
+		m_data_exporter.fillCameraData(cameraObject, viewParams);
+
+		AspectCorrectFovOrtho(viewParams);
 	}
 	else {
 		static const float sensor_size = 32.0f;
@@ -526,7 +526,7 @@ ViewParams SceneExporter::get_current_view_params()
 	}
 	else {
 		BL::Object sceneCamera(m_active_camera);
-		if (!sceneCamera) {
+		if (!sceneCamera || sceneCamera.type() != BL::Object::type_CAMERA) {
 			PRINT_ERROR("Active scene camera is not set!")
 		}
 		else {

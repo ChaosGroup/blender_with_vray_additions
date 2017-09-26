@@ -149,7 +149,7 @@ private:
 /// Simplifies motion blur and animation export (both requre multi frame export)
 class FrameExportManager {
 public:
-	FrameExportManager(BL::Scene scene, ExporterSettings & settings);
+	FrameExportManager(BL::Scene scene, ExporterSettings & settings, BL::BlendData & data);
 
 	/// Update internal data from the passes ExporterSettings
 	/// needed because settings change
@@ -173,7 +173,7 @@ public:
 	}
 
 	/// Get the correct camera for current frame (used for camera loop)
-	BL::Camera getActiveCamera();
+	BL::Object getActiveCamera();
 
 	/// Call function for each frame that needs to be exported so next frame can be rendered
 	void forEachExportFrame(std::function<bool(FrameExportManager &)> callback);
@@ -242,7 +242,8 @@ public:
 private:
 	ExporterSettings &m_settings; ///< The global settings for the exporter
 	BL::Scene m_scene; ///< Current scene
-	std::vector<BL::Camera> m_loopCameras; ///< All cameras with 'camera_loop' enabled if anim is Camera Loop
+	BL::BlendData m_data; ///< The blender data conext
+	std::vector<BL::Object> m_loopCameras; ///< All cameras with 'camera_loop' enabled if anim is Camera Loop
 
 	float m_sceneSavedSubframe; ///< m_scene.frame_subframe() on init, used to restore scene to correct frame
 	int m_sceneSavedFrame; ///< m_scene.frame_current() on init, used to restore scene to correct frame
@@ -344,6 +345,8 @@ public:
 	                                      BL::BlendData       data,
 	                                      BL::Scene           scene);
 
+	BL::Object           get_active_camera() const { return BL::Object(m_active_camera.ptr); }
+
 	PythonGIL            m_pyGIL;
 protected:
 	virtual void         create_exporter();
@@ -362,7 +365,7 @@ protected:
 
 	// this is the camera that should be used for exporting
 	// as it can be controlled by the exporter, by default it is m_scene.camera()
-	BL::Camera           m_active_camera;
+	BL::Object           m_active_camera;
 
 	// will store the python thread state when this exporter must change python data
 	void                *m_python_thread_state;

@@ -458,7 +458,7 @@ public:
 
 	void              clearMaterialCache();
 
-	void              setActiveCamera(BL::Camera camera);
+	void              setActiveCamera(BL::Object camera);
 	void              refreshHideLists();
 	bool              isObjectInHideList(BL::Object ob, const std::string listName) const;
 
@@ -551,7 +551,7 @@ private:
 	bool              m_layer_changed;
 	bool              m_is_preview;
 
-	BL::Camera        m_active_camera;
+	BL::Object        m_active_camera;
 	// should be set on each sync with setComputedLayers
 	uint32_t          m_computedLayers;
 	uint32_t          m_scene_layers;

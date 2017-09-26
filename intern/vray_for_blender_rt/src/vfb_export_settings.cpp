@@ -105,16 +105,16 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	// Find if we need hide from view
 	if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
-		BL::BlendData::cameras_iterator caIt;
-		for (data.cameras.begin(caIt); caIt != data.cameras.end(); ++caIt) {
-			BL::Camera camera_data = *caIt;
+		for (auto ob : Blender::collection(scene.objects)) {
+			if (ob.type() == BL::Object::type_CAMERA) {
+				auto dataPtr = ob.data().ptr;
+				PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
 
-			PointerRNA vrayCamera = RNA_pointer_get(&camera_data.ptr, "vray");
-
-			if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-				if (RNA_boolean_get(&vrayCamera, "hide_from_view")) {
-					use_hide_from_view = true;
-					break;
+				if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+					if (RNA_boolean_get(&vrayCamera, "hide_from_view")) {
+						use_hide_from_view = true;
+						break;
+					}
 				}
 			}
 		}
@@ -122,7 +122,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		BL::Object camera(scene.camera());
 		// NOTE: Could happen if scene has no camera and we initing exporter for
 		// proxy export, for example.
-		if (camera) {
+		if (camera && camera.type() == BL::Object::type_CAMERA) {
 			BL::Camera camera_data(camera.data());
 
 			PointerRNA vrayCamera = RNA_pointer_get(&camera_data.ptr, "vray");

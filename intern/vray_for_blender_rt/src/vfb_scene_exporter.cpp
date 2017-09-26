@@ -99,9 +99,10 @@ std::vector<int> &SubframesHandler::getSubframeValues() {
 	return m_subframeValues;
 }
 
-FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings)
+FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings, BL::BlendData & data)
 	: m_settings(settings)
 	, m_scene(scene)
+	, m_data(data)
 	, m_subframes(scene, m_settings.use_motion_blur)
 {
 	updateFromSettings();
@@ -136,20 +137,18 @@ void FrameExportManager::updateFromSettings()
 	if (m_settings.settings_animation.use) {
 		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 			if (m_loopCameras.empty()) {
-				BL::Scene::objects_iterator obIt;
-				for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
-					BL::Object ob(*obIt);
+				for (auto & ob : Blender::collection(m_scene.objects)) {
 					if (ob.type() == BL::Object::type_CAMERA) {
 						auto dataPtr = ob.data().ptr;
 						PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
 						if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-							m_loopCameras.push_back(BL::Camera(ob));
+							m_loopCameras.push_back(ob);
 						}
 					}
 				}
 
-				std::sort(m_loopCameras.begin(), m_loopCameras.end(), [](const BL::Camera & l, const BL::Camera & r) {
-					return const_cast<BL::Camera&>(l).name() < const_cast<BL::Camera&>(r).name();
+				std::sort(m_loopCameras.begin(), m_loopCameras.end(), [](const BL::Object & l, const BL::Object & r) {
+					return const_cast<BL::Object&>(l).name() < const_cast<BL::Object&>(r).name();
 				});
 
 				if (m_loopCameras.empty()) {
@@ -164,7 +163,7 @@ void FrameExportManager::updateFromSettings()
 			m_frameToRender = 0;
 			m_animationFrameStep = 0;
 		} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
-			// frae by frame is actually not animation and we need to export current frame only
+			// frame by frame is actually not animation and we need to export current frame only
 			m_frameToRender = m_sceneSavedFrame + m_sceneSavedSubframe; // only current frame
 			m_animationFrameStep = 0; // no animation
 		} else {
@@ -244,7 +243,7 @@ void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManage
 	}
 }
 
-BL::Camera FrameExportManager::getActiveCamera()
+BL::Object FrameExportManager::getActiveCamera()
 {
 	return m_loopCameras[m_frameToRender];
 }
@@ -290,7 +289,7 @@ SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::B
     , m_active_camera(view3d ? view3d.camera() : scene.camera())
     , m_python_thread_state(nullptr)
     , m_exporter(nullptr)
-    , m_frameExporter(m_scene, m_settings)
+    , m_frameExporter(m_scene, m_settings, m_data)
     , m_data_exporter(m_settings)
 	, m_renderWidth(-1)
 	, m_renderHeight(-1)
@@ -348,7 +347,11 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 	m_view3d = BL::SpaceView3D(context.space_data());
 	m_region3d = context.region_data();
 	m_region = context.region();
-	m_active_camera = BL::Camera(m_view3d ? m_view3d.camera() : scene.camera());
+
+	BL::Object cameraOB = m_view3d ? m_view3d.camera() : scene.camera();
+	if (cameraOB.type() == BL::Object::type_CAMERA) {
+		m_active_camera = cameraOB;
+	}
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 

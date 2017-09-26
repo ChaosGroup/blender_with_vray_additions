@@ -67,9 +67,11 @@ uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers) {
 	return layer;
 }
 
-void DataExporter::setActiveCamera(BL::Camera camera)
+void DataExporter::setActiveCamera(BL::Object camera)
 {
-	m_active_camera = camera;
+	if (camera.type() == BL::Object::type_CAMERA) {
+		m_active_camera = camera;
+	}
 }
 
 void DataExporter::refreshHideLists()
@@ -81,7 +83,7 @@ void DataExporter::refreshHideLists()
 		return;
 	}
 
-	auto cameraData = BL::Object(m_active_camera).data().ptr;
+	auto cameraData = m_active_camera.data().ptr;
 	PointerRNA vrayCamera = RNA_pointer_get(&cameraData, "vray");
 	if (!RNA_boolean_get(&vrayCamera, "hide_from_view")) {
 		return;
