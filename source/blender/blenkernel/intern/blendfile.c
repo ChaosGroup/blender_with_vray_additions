@@ -100,6 +100,7 @@ static bool wm_scene_is_visible(wmWindowManager *wm, Scene *scene)
 	return false;
 }
 
+
 /**
  * Context matching, handle no-ui case
  *
@@ -231,6 +232,11 @@ static void setup_app_data(
 		BKE_blender_userdef_free_data(&U);
 
 		U = *bfd->user;
+
+		// XXX: this is really a function declaraion
+		extern bAddon * Addons_new();
+		bAddon * addon = Addons_new();
+		strcpy(addon->module, "vb30");
 
 		/* Security issue: any blend file could include a USER block.
 		 *
