@@ -397,7 +397,7 @@ AttrValue DataExporter::exportAsset(BL::Object ob, bool check_updated, const Obj
 		sceneDesc.add("transform", AttrTransformFromBlTransform(ob.matrix_world()));
 	}
 
-	sceneDesc.add("filepath", String::GetFullFilepath(RNA_std_string_get(&vrayAsset, "sceneFilepath")));
+	sceneDesc.add("filepath", String::GetFullFilepath(RNA_std_string_get(&vrayAsset, "sceneFilepath"), reinterpret_cast<ID*>(ob.ptr.id.data)));
 	sceneDesc.add("use_transform", RNA_boolean_get(&vrayAsset, "sceneUseTransform"));
 	sceneDesc.add("add_nodes", RNA_boolean_get(&vrayAsset, "sceneAddNodes"));
 	sceneDesc.add("add_lights", RNA_boolean_get(&vrayAsset, "sceneAddLights"));
