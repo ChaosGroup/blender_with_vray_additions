@@ -31,7 +31,9 @@
 #include <deque>
 #include <mutex>
 
+#ifdef WITH_OSL
 #include <OSL/oslquery.h>
+#endif
 
 using namespace VRayForBlender;
 
