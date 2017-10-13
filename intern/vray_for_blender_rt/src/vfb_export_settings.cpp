@@ -32,6 +32,7 @@ ExporterSettings::ExporterSettings()
     , current_bake_object(PointerRNA_NULL)
     , camera_stereo_left(PointerRNA_NULL)
     , camera_stereo_right(PointerRNA_NULL)
+    , background_scene(PointerRNA_NULL)
 {}
 
 
@@ -47,6 +48,8 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	settings_dr.init(scene);
 	settings_dr.use = settings_dr.use && !isPreview; // && !isViewport; viewport DR?
+
+	background_scene = BL::Scene(RNA_pointer_get(&scene.ptr, "background_set"));
 
 	m_vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
 	m_vrayExporter = RNA_pointer_get(&m_vrayScene, "Exporter");

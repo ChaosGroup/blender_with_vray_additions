@@ -197,6 +197,8 @@ struct ExporterSettings {
 	BL::Object        camera_stereo_left;
 	BL::Object        camera_stereo_right;
 
+	BL::Scene         background_scene;
+
 	RenderMode        render_mode;
 
 	float                      getViewportResolutionPercentage() const { return m_viewportResolution; }

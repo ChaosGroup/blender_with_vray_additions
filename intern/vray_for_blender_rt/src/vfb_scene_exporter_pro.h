@@ -61,6 +61,8 @@ public:
 	void              cb_on_bucket_ready(const VRayBaseTypes::AttrImage & image);
 
 private:
+	void              for_each_exported_frame(FrameExportManager & frameExp, bool &isFirstExport, bool isFileExport);
+
 	typedef std::chrono::high_resolution_clock::time_point time_point;
 	typedef std::vector<BL::RenderResult> RenderResults;
 

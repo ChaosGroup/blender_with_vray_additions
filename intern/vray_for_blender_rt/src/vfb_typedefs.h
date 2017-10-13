@@ -25,6 +25,7 @@
 #include <string>
 
 #include "vfb_rna.h"
+#include <RNA_blender_cpp.h>
 
 // do this here so it is availabe everywhere we might use hash map/set
 namespace std {

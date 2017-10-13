@@ -104,6 +104,55 @@ bool ProductionExporter::wait_for_frame_render()
 	return !stop;
 }
 
+
+void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, bool &isFirstExport, bool isFileExport)
+{
+	using AnimMode = SettingsAnimation::AnimationMode;
+
+	const auto aMode = m_settings.settings_animation.mode;
+	{
+		std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
+		std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
+		if (!isFileExport) {
+			std::lock(uLock, lock);
+		}
+
+		const FrameExportManager::BlenderFramePair sceneFramePair(m_scene.frame_current(), m_scene.frame_subframe());
+		const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
+
+		if (sceneFramePair != setFramePair) {
+			m_scene.frame_set(setFramePair.frame, setFramePair.subframe);
+		}
+		if (aMode == AnimMode::AnimationModeCameraLoop) {
+			m_active_camera = frameExp.getActiveCamera();
+		}
+	}
+	// set this on the settings obj so it is accessible from data exporter
+	m_settings.settings_animation.frame_current = frameExp.getCurrentFrame();
+
+	// set the frame to export (so values are inserted for that time)
+	if (aMode == AnimMode::AnimationModeCameraLoop) {
+		// for camera loop render frames == export frames
+		// and also export frame is constant
+		m_exporter->set_current_frame(frameExp.getCurrentRenderFrame() + 1); // frames are 1 based
+	} else {
+		m_exporter->set_current_frame(frameExp.getCurrentFrame());
+	}
+
+	if (!isFirstExport && aMode == AnimMode::AnimationModeFullNoGeometry) {
+		m_settings.export_meshes = false;
+	}
+
+	if (!isFirstExport && (aMode == AnimMode::AnimationModeFullCamera || aMode == AnimMode::AnimationModeCameraLoop)) {
+		sync_view(false);
+	} else {
+		// sync(!isFirstExport);
+		sync(false); // TODO: can we make blender keep the updated/data_updated tag?
+	}
+
+	isFirstExport = false;
+}
+
 bool ProductionExporter::export_scene(const bool)
 {
 	using AnimMode = SettingsAnimation::AnimationMode;
@@ -135,48 +184,17 @@ bool ProductionExporter::export_scene(const bool)
 
 		// export current render frame data
 		m_frameExporter.forEachExportFrame([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
-			const auto aMode = m_settings.settings_animation.mode;
-			{
-				std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
-				std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
-				if (!isFileExport) {
-					std::lock(uLock, lock);
-				}
-
-				const FrameExportManager::BlenderFramePair sceneFramePair(m_scene.frame_current(), m_scene.frame_subframe());
-				const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
-
-				if (sceneFramePair != setFramePair) {
-					m_scene.frame_set(setFramePair.frame, setFramePair.subframe);
-				}
-				if (aMode == AnimMode::AnimationModeCameraLoop) {
-					m_active_camera = frameExp.getActiveCamera();
-				}
+			bool isFirstCopy = isFirstExport;
+			for_each_exported_frame(frameExp, isFirstExport, isFileExport);
+			// export background if we have
+			if (m_settings.background_scene) {
+				BL::Scene main = m_scene;
+				m_scene = m_settings.background_scene;
+				// pass isFirstCopy here because for_each_exported_frame will change it
+				// but 'first' export should be first for both scenes
+				for_each_exported_frame(frameExp, isFirstCopy, isFileExport);
+				m_scene = main;
 			}
-			// set this on the settings obj so it is accessible from data exporter
-			m_settings.settings_animation.frame_current = frameExp.getCurrentFrame();
-
-			// set the frame to export (so values are inserted for that time)
-			if (aMode == AnimMode::AnimationModeCameraLoop) {
-				// for camera loop render frames == export frames
-				// and also export frame is constant
-				m_exporter->set_current_frame(frameExp.getCurrentRenderFrame() + 1); // frames are 1 based
-			} else {
-				m_exporter->set_current_frame(frameExp.getCurrentFrame());
-			}
-
-			if (!isFirstExport && aMode == AnimMode::AnimationModeFullNoGeometry) {
-				m_settings.export_meshes = false;
-			}
-
-			if (!isFirstExport && (aMode == AnimMode::AnimationModeFullCamera || aMode == AnimMode::AnimationModeCameraLoop)) {
-				sync_view(false);
-			} else {
-				// sync(!isFirstExport);
- 				sync(false); // TODO: can we make blender keep the updated/data_updated tag?
-			}
-
-			isFirstExport = false;
 			return true;
 		});
 
