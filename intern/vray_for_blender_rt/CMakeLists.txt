@@ -46,6 +46,11 @@ set(INC
 	${OPENEXR_INCLUDE_DIRS}
 )
 
+include_directories(${CMAKE_BINARY_DIR}/source/creator)
+if (NOT WITH_MANUAL_BUILDINFO)
+	message(WARNING "VRay For Blender requires -DWITH_MANUAL_BUILDINFO=ON to write build hash in exported .vrscene files")
+endif()
+
 if (WIN32)
 	list(APPEND INC ${LIBDIR}/osl/include)
 else()
