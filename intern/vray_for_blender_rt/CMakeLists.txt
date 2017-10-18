@@ -46,6 +46,7 @@ set(INC
 	${OPENEXR_INCLUDE_DIRS}
 )
 
+# we need to include buildinfo.h so we can write build hash in .vrscene files
 include_directories(${CMAKE_BINARY_DIR}/source/creator)
 if (NOT WITH_MANUAL_BUILDINFO)
 	message(WARNING "VRay For Blender requires -DWITH_MANUAL_BUILDINFO=ON to write build hash in exported .vrscene files")
