@@ -89,7 +89,7 @@ public:
 	virtual void         export_vrscene(const std::string&) {}
 
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
-	AttrPlugin           export_plugin(const PluginDesc &pluginDesc, bool replace = false);
+	AttrPlugin           export_plugin(const PluginDesc &pluginDesc, bool replace = false, bool dontExport = false);
 	virtual void         replace_plugin(const std::string &, const std::string &) {};
 
 	virtual int          remove_plugin_impl(const std::string&) { return 0; }
@@ -97,6 +97,7 @@ public:
 
 	virtual float        get_last_rendered_frame() const { return last_rendered_frame; }
 	virtual void         set_current_frame(float val)    { current_scene_frame = val; }
+	virtual float        get_current_frame() const       { return current_scene_frame; }
 	virtual bool         is_aborted() const { return false; }
 
 	virtual RenderImage  get_image() { return RenderImage(); }

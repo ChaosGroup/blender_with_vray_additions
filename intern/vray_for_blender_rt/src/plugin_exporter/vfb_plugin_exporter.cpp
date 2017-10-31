@@ -54,9 +54,9 @@ int PluginExporter::remove_plugin(const std::string &name) {
 	return result;
 }
 
-AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool replace)
+AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool replace, bool dontExport)
 {
-	if (is_prepass) {
+	if (is_prepass || dontExport) {
 		return AttrPlugin(pluginDesc.pluginName);
 	}
 
