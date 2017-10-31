@@ -21,6 +21,7 @@
 #include "vfb_utils_object.h"
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_string.h"
+#include "DNA_object_types.h"
 
 uint32_t to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
@@ -593,22 +594,102 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 	}
 }
 
+namespace
+{
 
-AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm)
+bool instancerItemCompare(const AttrInstancer::Item & left, const AttrInstancer::Item & right) {
+	return left.index < right.index;
+};
+
+void sortInstancerParticles(AttrInstancer & instancer) {
+	if (instancer.data.getCount()) {
+		std::sort(instancer.data.getData()->begin(), instancer.data.getData()->end(), instancerItemCompare);
+	}
+}
+
+AttrInstancer::Item * getParticle(AttrInstancer & instancer, int index) {
+	AttrInstancer::Item findItem;
+	findItem.index = index;
+
+	auto iter = std::lower_bound(instancer.data.getData()->begin(), instancer.data.getData()->end(), findItem, instancerItemCompare);
+	if (iter != instancer.data.getData()->end()) {
+		if (iter->index == index) {
+			return &*iter;
+		}
+	}
+	return nullptr;
+}
+
+}
+
+AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
+	const auto & wrapperName = "NodeWrapper@" + exportName;
+	PluginDesc nodeWrapper(wrapperName, "Node");
+	AttrInstancer * exportData = nullptr;
+	const float saveFrame = m_exporter->get_current_frame();
+
+	bool freeExportData = false;
+	// this is passed on data flush (the last key frame)
+	if (!m_settings.calculate_instancer_velocity || !checkMBlur) {
+		exportData = &instancer;
+		m_exporter->set_current_frame(exportData->frameNumber);
+	} else if (m_settings.use_motion_blur) {
+		// if we have mblur we need to calculate velocity TM for particles
+		// so we save data for current frame and export previous calculating velocity
+
+		// sort this so we can lookup fast by instance index
+		sortInstancerParticles(instancer);
+		AttrInstancer *savedData = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(m_instMtx);
+			auto iter = m_prevFrameInstancer.find(exportName);
+			// first frame for this instancer - just save it
+			if (iter == m_prevFrameInstancer.end()) {
+				m_prevFrameInstancer.emplace(std::make_pair(exportName, InstancerData{instancer, ob, dupliType, exportObTm}));
+				return m_exporter->export_plugin(nodeWrapper, false, true);
+			}
+			savedData = &iter->second.instancer;
+		}
+
+		// we have data for prev frame
+		for (int c = 0; c < savedData->data.getCount(); c++) {
+			auto & particle = (*savedData->data.getData())[c];
+
+			AttrInstancer::Item * currentFrameItem = getParticle(instancer, particle.index);
+			if (currentFrameItem) {
+				// put destination on velocity
+				particle.vel = currentFrameItem->tm;
+			}
+		}
+		// copy container here
+		exportData = new AttrInstancer(*savedData);
+		// we need to change this so interpolate(FRAME, DATA) writes correct frame
+		m_exporter->set_current_frame(exportData->frameNumber);
+		freeExportData = true;
+
+		// put current frame in map
+		{
+			std::lock_guard<std::mutex> lock(m_instMtx);
+			auto iter = m_prevFrameInstancer.find(exportName);
+			BLI_assert(iter != m_prevFrameInstancer.end() && "Plugin is in m_prevFrameInstancer but not found");
+			iter->second.instancer = instancer;
+		}
+	}
+	BLI_assert(exportData && "Instancer should not be null");
+
 	const bool visible = isObjectVisible(ob, ObjectVisibility(HIDE_RENDER | HIDE_VIEWPORT));
 
 	const AttrListString sceneNames = cryptomatteAllNames(ob);
 
 	PluginDesc instancerDesc(exportName, "Instancer2");
-	instancerDesc.add("instances", instacer);
+	instancerDesc.add("instances", *exportData);
 	instancerDesc.add("visible", visible);
 	instancerDesc.add("use_time_instancing", false);
 	instancerDesc.add("shading_needs_ids", true);
 	instancerDesc.add("scene_name", sceneNames);
 
-	const auto & wrapperName = "NodeWrapper@" + exportName;
 	{
 		auto lock = raiiLock();
 		// track instancer
@@ -616,7 +697,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		// also track node wrapper
 		m_id_track.insert(ob, wrapperName, dupliType);
 	}
-	PluginDesc nodeWrapper(wrapperName, "Node");
+
 	if (m_settings.use_motion_blur) {
 		setNSamples(nodeWrapper, ob);
 	}
@@ -638,5 +719,20 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		nodeWrapper.add("transform", tm);
 	}
 
-	return m_exporter->export_plugin(nodeWrapper);
+	auto plgValue = m_exporter->export_plugin(nodeWrapper);
+	m_exporter->set_current_frame(saveFrame);
+	if (freeExportData) {
+		delete exportData;
+	}
+
+	return plgValue;
+}
+
+void DataExporter::flushInstancerData()
+{
+	std::lock_guard<std::mutex> lock(m_instMtx);
+	for (auto & iter : m_prevFrameInstancer) {
+		exportVrayInstacer2(iter.second.ob, iter.second.instancer, iter.second.dupliType, iter.second.exportObTm, false);
+	}
+	m_prevFrameInstancer.clear();
 }

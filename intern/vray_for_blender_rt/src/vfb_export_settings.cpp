@@ -54,6 +54,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	m_vrayScene    = RNA_pointer_get(&scene.ptr, "vray");
 	m_vrayExporter = RNA_pointer_get(&m_vrayScene, "Exporter");
 
+	calculate_instancer_velocity = RNA_boolean_get(&m_vrayExporter, "calculate_instancer_velocity");
 	export_hair         = RNA_boolean_get(&m_vrayExporter, "use_hair");
 	export_fluids       = RNA_boolean_get(&m_vrayExporter, "use_smoke");
 	use_displace_subdiv = RNA_boolean_get(&m_vrayExporter, "use_displace");

@@ -217,6 +217,8 @@ bool ProductionExporter::export_scene(const bool)
 		}
 	}
 
+	m_data_exporter.flushInstancerData();
+
 	PRINT_INFO_EX("Total sync time %.3f sec.", totalSyncTime);
 
 	if (!isFileExport) {

@@ -409,7 +409,8 @@ public:
 	AttrValue         exportAsset(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
-	AttrValue         exportVrayInstacer2(BL::Object ob, AttrInstancer & instacer, IdTrack::PluginType dupliType, bool exportObTm = false);
+	AttrValue         exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm = false, bool checkMBlur = true);
+	void              flushInstancerData();
 	void              exportEnvironment(NodeContext &context);
 	void              exportLightLinker();
 
@@ -567,6 +568,16 @@ private:
 	MaterialCache     m_exported_materials;
 	std::mutex        m_materials_mtx;
 
+
+	struct InstancerData {
+		AttrInstancer instancer;
+		BL::Object ob;
+		IdTrack::PluginType dupliType;
+		bool exportObTm;
+	};
+	typedef std::unordered_map<std::string, InstancerData> InstCache;
+	InstCache         m_prevFrameInstancer;
+	std::mutex        m_instMtx;
 };
 
 // implemented in vfb_export_object.cpp
