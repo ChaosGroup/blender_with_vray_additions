@@ -195,9 +195,7 @@ void FrameExportManager::rewind()
 
 void FrameExportManager::reset()
 {
-	if (m_scene.frame_current() != m_sceneSavedFrame) {
-		m_scene.frame_set(m_sceneSavedFrame, 0.f);
-	}
+	m_scene.frame_set(m_sceneSavedFrame, 0.f);
 	updateFromSettings();
 }
 

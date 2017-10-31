@@ -230,7 +230,7 @@ public:
 		{}
 
 		bool operator!=(const BlenderFramePair &right) const {
-			return frame != right.frame || !(fabs(subframe - right.subframe) < 1e-3);
+			return frame != right.frame || !(fabs(subframe - right.subframe) < 1e-4);
 		}
 	};
 
