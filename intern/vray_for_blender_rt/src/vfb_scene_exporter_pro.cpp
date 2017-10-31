@@ -239,8 +239,8 @@ bool ProductionExporter::export_scene(const bool)
 
 		switch (m_settings.settings_files.output_type) {
 		case SettingsFiles::OutputDirType::OutputDirTypeTmp:
-			break;
 			vrsceneDest = (boost::filesystem::temp_directory_path() / "appsdk.vrscene").string();
+			break;
 		case SettingsFiles::OutputDirType::OutputDirTypeUser:
 			vrsceneDest = VRayForBlender::String::AbsFilePath(m_settings.settings_files.output_dir, blendPath) + "/appsdk.vrscene";
 			break;
