@@ -642,7 +642,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 	const float saveFrame = m_exporter->get_current_frame();
 
 	bool freeExportData = false;
-	// this is passed on data flush (the last key frame)
+	// checkMBlur == false is passed on data flush (the last key frame)
 	if (m_settings.use_motion_blur && m_settings.calculate_instancer_velocity && checkMBlur) {
 		// if we have mblur we need to calculate velocity TM for particles
 		// so we save data for current frame and export previous calculating velocity
