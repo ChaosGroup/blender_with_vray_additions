@@ -22,6 +22,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_string.h"
 #include "DNA_object_types.h"
+#include "vfb_utils_math.h"
 
 uint32_t to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
@@ -620,6 +621,16 @@ AttrInstancer::Item * getParticle(AttrInstancer & instancer, int index) {
 	return nullptr;
 }
 
+inline bool isVecZero(const AttrVector & vec)
+{
+	return Math::floatEqual(vec.x, 0.f) && Math::floatEqual(vec.y, 0.f) && Math::floatEqual(vec.z, 0.f);
+}
+
+inline bool isTmZero(const AttrTransform & tm)
+{
+	return isVecZero(tm.offs) && isVecZero(tm.m.v0) && isVecZero(tm.m.v1) && isVecZero(tm.m.v2);
+}
+
 }
 
 AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
@@ -632,10 +643,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 
 	bool freeExportData = false;
 	// this is passed on data flush (the last key frame)
-	if (!m_settings.calculate_instancer_velocity || !checkMBlur) {
-		exportData = &instancer;
-		m_exporter->set_current_frame(exportData->frameNumber);
-	} else if (m_settings.use_motion_blur) {
+	if (m_settings.use_motion_blur && m_settings.calculate_instancer_velocity && checkMBlur) {
 		// if we have mblur we need to calculate velocity TM for particles
 		// so we save data for current frame and export previous calculating velocity
 
@@ -653,6 +661,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 			savedData = &iter->second.instancer;
 		}
 
+		const float frameStep = instancer.frameNumber - savedData->frameNumber;
 		// we have data for prev frame
 		for (int c = 0; c < savedData->data.getCount(); c++) {
 			auto & particle = (*savedData->data.getData())[c];
@@ -660,7 +669,13 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 			AttrInstancer::Item * currentFrameItem = getParticle(instancer, particle.index);
 			if (currentFrameItem) {
 				// put destination on velocity
-				particle.vel = currentFrameItem->tm;
+				//particle.vel = currentFrameItem->tm - particle.tm;
+				memset(&particle.vel, 0, sizeof(particle.vel));
+				particle.vel = currentFrameItem->tm - particle.tm;
+				if (!isTmZero(particle.vel)) {
+					particle.vel = particle.vel / frameStep;
+				}
+
 			}
 		}
 		// copy container here
@@ -676,8 +691,10 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 			BLI_assert(iter != m_prevFrameInstancer.end() && "Plugin is in m_prevFrameInstancer but not found");
 			iter->second.instancer = instancer;
 		}
+	} else {
+		exportData = &instancer;
+		m_exporter->set_current_frame(exportData->frameNumber);
 	}
-	BLI_assert(exportData && "Instancer should not be null");
 
 	const bool visible = isObjectVisible(ob, ObjectVisibility(HIDE_RENDER | HIDE_VIEWPORT));
 

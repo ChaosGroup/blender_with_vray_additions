@@ -95,7 +95,7 @@ public:
 	typedef ObjectCollection::iterator                        ObjectCollectionIt;
 
 	SubframesHandler() = delete;
-	SubframesHandler(BL::Scene &scene, bool use_motion_blur);
+	SubframesHandler(BL::Scene scene, bool use_motion_blur);
 
 	/// Collects all the objects from the scene that have subframes
 	void update(bool use_motion_blur);
@@ -138,7 +138,7 @@ public:
 
 private:
 	int              m_currentSubframeDivision; /// current subframe division that is exported
-	BL::Scene       &m_scene; /// current scene that is exported
+	BL::Scene        m_scene; /// current scene that is exported
 	ObjectCollection m_objectsWithSubframes; /// all objects in the scene with subframes
 	std::vector<int> m_subframeValues; /// all different subframe values
 	bool             m_isUpdated; /// is data for subframes updated

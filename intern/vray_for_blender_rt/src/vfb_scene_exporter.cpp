@@ -53,7 +53,7 @@ extern "C" {
 
 using namespace VRayForBlender;
 
-SubframesHandler::SubframesHandler(BL::Scene &scene, bool useMotionBlur)
+SubframesHandler::SubframesHandler(BL::Scene scene, bool useMotionBlur)
 	: m_currentSubframeDivision(0)
 	, m_scene(scene)
 	, m_isUpdated(false)
@@ -64,6 +64,8 @@ SubframesHandler::SubframesHandler(BL::Scene &scene, bool useMotionBlur)
 
 void SubframesHandler::update(bool use_motion_blur) {
 	if (!use_motion_blur) {
+		m_objectsWithSubframes.clear();
+		m_subframeValues.clear();
 		m_isUpdated = true;
 		return;
 	}
@@ -110,6 +112,7 @@ FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & setti
 
 void FrameExportManager::updateFromSettings()
 {
+	m_subframes.update(m_settings.use_motion_blur);
 	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();

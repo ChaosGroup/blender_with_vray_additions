@@ -111,6 +111,40 @@ inline VRayBaseTypes::AttrTransform AttrTransformFromBlTransform(const float dat
 	return tm;
 }
 
+inline AttrMatrix operator-(const AttrMatrix & left, const AttrMatrix & right) {
+	AttrMatrix mtx;
+	mtx.v0 = left.v0 - right.v0;
+	mtx.v1 = left.v1 - right.v1;
+	mtx.v2 = left.v2 - right.v2;
+	return mtx;
+}
+
+inline AttrVector operator/(const AttrVector & v, const float value) {
+	return AttrVector(v.x / value, v.y / value, v.z / value);
+}
+
+inline AttrMatrix operator/(const AttrMatrix & v, const float value) {
+	AttrMatrix mtx;
+	mtx.v0 = v.v0 / value;
+	mtx.v1 = v.v1 / value;
+	mtx.v2 = v.v2 / value;
+	return mtx;
+}
+
+inline AttrTransform operator/(const AttrTransform & left, const float value) {
+	AttrTransform tm;
+	tm.m = left.m / value;
+	tm.offs = left.offs / value;
+	return tm;
+}
+
+inline AttrTransform operator-(const AttrTransform & left, const AttrTransform & right) {
+	AttrTransform tm;
+	tm.m = left.m - right.m;
+	tm.offs = left.offs - right.offs;
+	return tm;
+}
+
 inline VRayBaseTypes::AttrTransform AttrTransformFromBlTransform(const BlTransform &bl_tm) {
 	VRayBaseTypes::AttrTransform tm;
 	memcpy(&tm.m.v0, &bl_tm.data[0], VectorBytesCount);
