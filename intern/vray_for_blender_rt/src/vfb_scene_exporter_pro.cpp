@@ -184,7 +184,6 @@ bool ProductionExporter::export_scene(const bool)
 
 		// export current render frame data
 		m_frameExporter.forEachExportFrame([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
-			PRINT_INFO_EX("Exporting frame [%f]", frameExp.getCurrentFrame());
 			bool isFirstCopy = isFirstExport;
 			for_each_exported_frame(frameExp, isFirstExport, isFileExport);
 			// export background if we have

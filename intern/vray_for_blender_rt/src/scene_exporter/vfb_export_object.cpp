@@ -621,16 +621,6 @@ AttrInstancer::Item * getParticle(AttrInstancer & instancer, int index) {
 	return nullptr;
 }
 
-inline bool isVecZero(const AttrVector & vec)
-{
-	return Math::floatEqual(vec.x, 0.f) && Math::floatEqual(vec.y, 0.f) && Math::floatEqual(vec.z, 0.f);
-}
-
-inline bool isTmZero(const AttrTransform & tm)
-{
-	return isVecZero(tm.offs) && isVecZero(tm.m.v0) && isVecZero(tm.m.v1) && isVecZero(tm.m.v2);
-}
-
 }
 
 AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
@@ -671,7 +661,7 @@ AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & inst
 				// put destination on velocity
 				//particle.vel = currentFrameItem->tm - particle.tm;
 				particle.vel = currentFrameItem->vel - particle.vel;
-				if (!isTmZero(particle.vel) && !Math::floatEqual(frameStep, 0.f)) {
+				if (!Math::floatEqual(frameStep, 0.f)) {
 					particle.vel = particle.vel / frameStep;
 				}
 			} else {
