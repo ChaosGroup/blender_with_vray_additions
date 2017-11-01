@@ -672,7 +672,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 				// put destination on velocity
 				//particle.vel = currentFrameItem->tm - particle.tm;
 				particle.vel = currentFrameItem->vel - particle.vel;
-				if (!isTmZero(particle.vel) && Math::floatEqual(frameStep, 0.f)) {
+				if (!isTmZero(particle.vel) && !Math::floatEqual(frameStep, 0.f)) {
 					particle.vel = particle.vel / frameStep;
 				}
 			} else {
