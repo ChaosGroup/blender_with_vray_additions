@@ -631,17 +631,6 @@ inline bool isTmZero(const AttrTransform & tm)
 	return isVecZero(tm.offs) && isVecZero(tm.m.v0) && isVecZero(tm.m.v1) && isVecZero(tm.m.v2);
 }
 
-std::string tmToStr(const AttrTransform & tm)
-{
-	char buff[1024];
-	sprintf(buff, "{v0(%f, %f, %f) v1(%f, %f, %f), v2(%f, %f, %f), O(%f, %f, %f)}",
-		tm.m.v0.x, tm.m.v0.y, tm.m.v0.z,
-		tm.m.v1.x, tm.m.v1.y, tm.m.v1.z,
-		tm.m.v2.x, tm.m.v2.y, tm.m.v2.z,
-		tm.offs.x, tm.offs.y, tm.offs.z);
-	return buff;
-}
-
 }
 
 AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
@@ -673,6 +662,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		}
 
 		const float frameStep = instancer.frameNumber - savedData->frameNumber;
+		PRINT_INFO_EX("savedFrame [%f], instancerFrame [%f], savedDataFrame [%f]", saveFrame, instancer.frameNumber, savedData->frameNumber);
 		// we have data for prev frame
 		for (int c = 0; c < savedData->data.getCount(); c++) {
 			auto & particle = (*savedData->data.getData())[c];
@@ -682,11 +672,8 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 				// put destination on velocity
 				//particle.vel = currentFrameItem->tm - particle.tm;
 				particle.vel = currentFrameItem->vel - particle.vel;
-				const bool isZero = isTmZero(particle.vel);
-				PRINT_INFO_EX("[%s]::%d Z:[%d] -> %s / %f", ob.name().c_str(), particle.index, static_cast<int>(isZero), tmToStr(particle.vel).c_str(), frameStep);
-				if (!isZero) {
+				if (!isTmZero(particle.vel) && Math::floatEqual(frameStep, 0.f)) {
 					particle.vel = particle.vel / frameStep;
-					PRINT_INFO_EX("[%s]::%d -- %s", ob.name().c_str(), particle.index, tmToStr(particle.vel).c_str())
 				}
 			} else {
 				memset(&particle.vel, 0, sizeof(particle.vel));
