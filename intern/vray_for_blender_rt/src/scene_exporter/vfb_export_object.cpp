@@ -683,7 +683,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 				//particle.vel = currentFrameItem->tm - particle.tm;
 				particle.vel = currentFrameItem->vel - particle.vel;
 				const bool isZero = isTmZero(particle.vel);
-				PRINT_INFO_EX("[%s]::%d [%d] -> %s", ob.name().c_str(), static_cast<int>(isZero), particle.index, tmToStr(particle.vel).c_str());
+				PRINT_INFO_EX("[%s]::%d Z:[%d] -> %s / %f", ob.name().c_str(), particle.index, static_cast<int>(isZero), tmToStr(particle.vel).c_str(), frameStep);
 				if (!isZero) {
 					particle.vel = particle.vel / frameStep;
 					PRINT_INFO_EX("[%s]::%d -- %s", ob.name().c_str(), particle.index, tmToStr(particle.vel).c_str())
