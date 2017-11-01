@@ -946,7 +946,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (noClipper) {
-		m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_INSTACER);
+		m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
 
@@ -1062,7 +1062,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	invert_m4(objectInvertedTm);
 
 	AttrInstancer instances;
-	instances.frameNumber = m_scene.frame_current();
+	instances.frameNumber = m_frameExporter.getCurrentFrame();
 	instances.data.resize(instancesCount + capCount);
 
 	float m4Identity[4][4];
@@ -1199,7 +1199,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		(*instances.data)[c].index = maxInstanceId - (*instances.data)[c].index;
 	}
 
-	m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
+	m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
 }
 
 void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg) {

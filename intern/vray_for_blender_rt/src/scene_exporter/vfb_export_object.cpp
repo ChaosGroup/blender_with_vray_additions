@@ -633,7 +633,7 @@ inline bool isTmZero(const AttrTransform & tm)
 
 }
 
-AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
+AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
 	const auto & wrapperName = "NodeWrapper@" + exportName;
@@ -754,7 +754,7 @@ void DataExporter::flushInstancerData()
 {
 	std::lock_guard<std::mutex> lock(m_instMtx);
 	for (auto & iter : m_prevFrameInstancer) {
-		exportVrayInstacer2(iter.second.ob, iter.second.instancer, iter.second.dupliType, iter.second.exportObTm, false);
+		exportVrayInstancer2(iter.second.ob, iter.second.instancer, iter.second.dupliType, iter.second.exportObTm, false);
 	}
 	m_prevFrameInstancer.clear();
 }
