@@ -670,12 +670,12 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 			if (currentFrameItem) {
 				// put destination on velocity
 				//particle.vel = currentFrameItem->tm - particle.tm;
-				memset(&particle.vel, 0, sizeof(particle.vel));
-				particle.vel = currentFrameItem->tm - particle.tm;
+				particle.vel = currentFrameItem->vel - particle.vel;
 				if (!isTmZero(particle.vel)) {
 					particle.vel = particle.vel / frameStep;
 				}
-
+			} else {
+				memset(&particle.vel, 0, sizeof(particle.vel));
 			}
 		}
 		// copy container here
@@ -693,6 +693,10 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		}
 	} else {
 		exportData = &instancer;
+		for (int c = 0; c < exportData->data.getCount(); c++) {
+			auto & particle = (*exportData->data.getData())[c];
+			memset(&particle.vel, 0, sizeof(particle.vel));
+		}
 		m_exporter->set_current_frame(exportData->frameNumber);
 	}
 

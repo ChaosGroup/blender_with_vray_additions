@@ -926,7 +926,11 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			instancer_item.index = persistendID;
 			instancer_item.node = m_data_exporter.getNodeName(parentOb);
 			instancer_item.tm = AttrTransformFromBlTransform(tm);
-			memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+			if (m_settings.use_motion_blur && m_settings.calculate_instancer_velocity) {
+				instancer_item.vel = AttrTransformFromBlTransform(static_cast<struct DupliObject*>(instance.ptr.data)->mat);
+			} else {
+				memset(&instancer_item.vel, 0, sizeof(instancer_item.vel));
+			}
 			sync_object(parentOb, check_updated, overrideAttrs);
 
 			++instancerIdx;
