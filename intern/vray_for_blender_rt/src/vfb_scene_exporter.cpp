@@ -869,7 +869,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		}
 
 		MHash persistendID;
-		persistendID = maxParticleId - getParticleID(ob, instance, dupliIdx);
+		persistendID = getParticleID(ob, instance, dupliIdx);
 
 		ObjectOverridesAttrs overrideAttrs;
 		overrideAttrs.override = true;
