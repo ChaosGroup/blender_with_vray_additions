@@ -409,7 +409,7 @@ public:
 	AttrValue         exportAsset(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportLight(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	void              exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL::ParticleSystem psys, bool check_updated = false);
-	AttrValue         exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm = false, bool checkMBlur = true);
+	AttrValue         exportVrayInstancer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm = false, bool checkMBlur = true);
 	void              flushInstancerData();
 	void              exportEnvironment(NodeContext &context);
 	void              exportLightLinker();

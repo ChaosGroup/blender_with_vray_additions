@@ -53,20 +53,24 @@ extern "C" {
 
 using namespace VRayForBlender;
 
-SubframesHandler::SubframesHandler(BL::Scene scene, bool useMotionBlur)
+SubframesHandler::SubframesHandler(BL::Scene scene, ExporterSettings & settings)
 	: m_currentSubframeDivision(0)
+	, m_settings(settings)
 	, m_scene(scene)
 	, m_isUpdated(false)
-	, m_useMotionBlur(useMotionBlur)
 {
-	update(m_useMotionBlur);
 }
 
-void SubframesHandler::update(bool use_motion_blur) {
-	if (!use_motion_blur) {
+void SubframesHandler::update() {
+	if (m_isUpdated) {
+		return;
+	}
+	m_isUpdated = true;
+
+	// if there is no mblur - we dont have to export subframes
+	if (!m_settings.use_motion_blur) {
 		m_objectsWithSubframes.clear();
 		m_subframeValues.clear();
-		m_isUpdated = true;
 		return;
 	}
 
@@ -83,21 +87,15 @@ void SubframesHandler::update(bool use_motion_blur) {
 	{
 		m_subframeValues.push_back(it->first);
 	}
-
-	m_isUpdated = true;
 }
 
 SubframesHandler::ObjectCollection &SubframesHandler::getObjectsWithSubframes() {
-	if (!m_isUpdated)
-		update(m_useMotionBlur);
-
+	update();
 	return m_objectsWithSubframes;
 }
 
 std::vector<int> &SubframesHandler::getSubframeValues() {
-	if (!m_isUpdated)
-		update(m_useMotionBlur);
-
+	update();
 	return m_subframeValues;
 }
 
@@ -105,14 +103,14 @@ FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & setti
 	: m_settings(settings)
 	, m_scene(scene)
 	, m_data(data)
-	, m_subframes(scene, m_settings.use_motion_blur)
+	, m_subframes(scene, m_settings)
 {
-	updateFromSettings();
+
 }
 
 void FrameExportManager::updateFromSettings()
 {
-	m_subframes.update(m_settings.use_motion_blur);
+	m_subframes.update();
 	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 	m_animationFrameStep = m_scene.frame_step();
 	m_lastFrameToRender = m_scene.frame_end();
@@ -355,6 +353,7 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 	}
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+	m_frameExporter.updateFromSettings();
 
 	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
@@ -377,6 +376,7 @@ void SceneExporter::init() {
 
 	// make sure we update settings before exporter - it will read from settings
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+	m_frameExporter.updateFromSettings();
 	m_exporter->init();
 
 	// directly bind to the engine
@@ -456,16 +456,8 @@ bool SceneExporter::export_scene(const bool check_updated)
 	return true;
 }
 
-void SceneExporter::sync(const bool check_updated)
+void SceneExporter::calculate_scene_layers()
 {
-	SCOPED_TRACE_EX("SceneExporter::sync(%d)", static_cast<int>(check_updated));
-
-	if (!m_frameExporter.isCurrentSubframe()) {
-		m_data_exporter.syncStart(m_isUndoSync);
-	}
-
-	sync_prepass();
-
 	// duplicate cycle's logic for layers here
 	m_sceneComputedLayers = 0;
 	m_isLocalView = m_view3d && m_view3d.local_view();
@@ -499,6 +491,19 @@ void SceneExporter::sync(const bool check_updated)
 		m_sceneComputedLayers >>= 20;
 	}
 	m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
+}
+
+void SceneExporter::sync(const bool check_updated)
+{
+	SCOPED_TRACE_EX("SceneExporter::sync(%d)", static_cast<int>(check_updated));
+
+	if (!m_frameExporter.isCurrentSubframe()) {
+		m_data_exporter.syncStart(m_isUndoSync);
+	}
+
+	sync_prepass();
+
+	calculate_scene_layers();
 
 	// TODO: this is hack so we can export object dependent on effect before any other objects so we
 	// can hide/show them correctly
@@ -797,7 +802,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	Blender::FlagsArray<IF, IF::FLAGS_COUNT> instanceFlags;
 
 	AttrInstancer instances;
-	instances.frameNumber = m_exporter->get_current_frame();
+	instances.frameNumber = m_frameExporter.getCurrentFrame();
+	PRINT_INFO_EX("Instancer [%s] frame {%f}", ob.name().c_str(), instances.frameNumber);
 	int num_instances = 0;
 	int idx_instances = 0;
 	if (noClipper) {
@@ -940,7 +946,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	}
 
 	if (noClipper) {
-		m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_INSTACER);
+		m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
 
@@ -1056,7 +1062,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	invert_m4(objectInvertedTm);
 
 	AttrInstancer instances;
-	instances.frameNumber = m_scene.frame_current();
+	instances.frameNumber = m_frameExporter.getCurrentFrame();
 	instances.data.resize(instancesCount + capCount);
 
 	float m4Identity[4][4];
@@ -1193,7 +1199,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 		(*instances.data)[c].index = maxInstanceId - (*instances.data)[c].index;
 	}
 
-	m_data_exporter.exportVrayInstacer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
+	m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
 }
 
 void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg) {

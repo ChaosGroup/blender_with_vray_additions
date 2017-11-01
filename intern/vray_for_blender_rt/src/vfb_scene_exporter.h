@@ -95,10 +95,10 @@ public:
 	typedef ObjectCollection::iterator                        ObjectCollectionIt;
 
 	SubframesHandler() = delete;
-	SubframesHandler(BL::Scene scene, bool use_motion_blur);
+	SubframesHandler(BL::Scene scene, ExporterSettings & settings);
 
 	/// Collects all the objects from the scene that have subframes
-	void update(bool use_motion_blur);
+	void update();
 
 	/// Get all the objects from the scene that have subframes
 	ObjectCollection &getObjectsWithSubframes();
@@ -137,12 +137,12 @@ public:
 	}
 
 private:
-	int              m_currentSubframeDivision; /// current subframe division that is exported
-	BL::Scene        m_scene; /// current scene that is exported
-	ObjectCollection m_objectsWithSubframes; /// all objects in the scene with subframes
-	std::vector<int> m_subframeValues; /// all different subframe values
-	bool             m_isUpdated; /// is data for subframes updated
-	bool             m_useMotionBlur; /// is motion blur used(do we need to export subframes)
+	int               m_currentSubframeDivision; /// current subframe division that is exported
+	ExporterSettings &m_settings; /// reference to the settings
+	BL::Scene         m_scene; /// current scene that is exported
+	ObjectCollection  m_objectsWithSubframes; /// all objects in the scene with subframes
+	std::vector<int>  m_subframeValues; /// all different subframe values
+	bool              m_isUpdated; /// is data for subframes updated
 };
 
 /// Class that keeps track of what frames are exported and what need to be exported
@@ -346,6 +346,8 @@ public:
 	                                      BL::Scene           scene);
 
 	BL::Object           get_active_camera() const { return BL::Object(m_active_camera.ptr); }
+
+	void                 calculate_scene_layers();
 
 	PythonGIL            m_pyGIL;
 protected:

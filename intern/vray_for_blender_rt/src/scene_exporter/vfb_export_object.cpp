@@ -633,7 +633,7 @@ inline bool isTmZero(const AttrTransform & tm)
 
 }
 
-AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
+AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & instancer, IdTrack::PluginType dupliType, bool exportObTm, bool checkMBlur)
 {
 	const auto exportName = "Instancer2@" + getNodeName(ob);
 	const auto & wrapperName = "NodeWrapper@" + exportName;
@@ -662,6 +662,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 		}
 
 		const float frameStep = instancer.frameNumber - savedData->frameNumber;
+		PRINT_INFO_EX("savedFrame [%f], instancerFrame [%f], savedDataFrame [%f]", saveFrame, instancer.frameNumber, savedData->frameNumber);
 		// we have data for prev frame
 		for (int c = 0; c < savedData->data.getCount(); c++) {
 			auto & particle = (*savedData->data.getData())[c];
@@ -671,7 +672,7 @@ AttrValue DataExporter::exportVrayInstacer2(BL::Object ob, AttrInstancer & insta
 				// put destination on velocity
 				//particle.vel = currentFrameItem->tm - particle.tm;
 				particle.vel = currentFrameItem->vel - particle.vel;
-				if (!isTmZero(particle.vel)) {
+				if (!isTmZero(particle.vel) && !Math::floatEqual(frameStep, 0.f)) {
 					particle.vel = particle.vel / frameStep;
 				}
 			} else {
@@ -753,7 +754,7 @@ void DataExporter::flushInstancerData()
 {
 	std::lock_guard<std::mutex> lock(m_instMtx);
 	for (auto & iter : m_prevFrameInstancer) {
-		exportVrayInstacer2(iter.second.ob, iter.second.instancer, iter.second.dupliType, iter.second.exportObTm, false);
+		exportVrayInstancer2(iter.second.ob, iter.second.instancer, iter.second.dupliType, iter.second.exportObTm, false);
 	}
 	m_prevFrameInstancer.clear();
 }
