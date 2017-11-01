@@ -347,6 +347,8 @@ public:
 
 	BL::Object           get_active_camera() const { return BL::Object(m_active_camera.ptr); }
 
+	void                 calculate_scene_layers();
+
 	PythonGIL            m_pyGIL;
 protected:
 	virtual void         create_exporter();

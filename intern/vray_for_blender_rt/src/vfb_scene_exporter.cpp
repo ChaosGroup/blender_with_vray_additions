@@ -456,16 +456,8 @@ bool SceneExporter::export_scene(const bool check_updated)
 	return true;
 }
 
-void SceneExporter::sync(const bool check_updated)
+void SceneExporter::calculate_scene_layers()
 {
-	SCOPED_TRACE_EX("SceneExporter::sync(%d)", static_cast<int>(check_updated));
-
-	if (!m_frameExporter.isCurrentSubframe()) {
-		m_data_exporter.syncStart(m_isUndoSync);
-	}
-
-	sync_prepass();
-
 	// duplicate cycle's logic for layers here
 	m_sceneComputedLayers = 0;
 	m_isLocalView = m_view3d && m_view3d.local_view();
@@ -499,6 +491,19 @@ void SceneExporter::sync(const bool check_updated)
 		m_sceneComputedLayers >>= 20;
 	}
 	m_data_exporter.setComputedLayers(m_sceneComputedLayers, m_isLocalView);
+}
+
+void SceneExporter::sync(const bool check_updated)
+{
+	SCOPED_TRACE_EX("SceneExporter::sync(%d)", static_cast<int>(check_updated));
+
+	if (!m_frameExporter.isCurrentSubframe()) {
+		m_data_exporter.syncStart(m_isUndoSync);
+	}
+
+	sync_prepass();
+
+	calculate_scene_layers();
 
 	// TODO: this is hack so we can export object dependent on effect before any other objects so we
 	// can hide/show them correctly
