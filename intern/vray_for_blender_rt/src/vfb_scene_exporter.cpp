@@ -797,7 +797,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	Blender::FlagsArray<IF, IF::FLAGS_COUNT> instanceFlags;
 
 	AttrInstancer instances;
-	instances.frameNumber = m_exporter->get_current_frame();
+	instances.frameNumber = m_frameExporter.getCurrentFrame();
 	int num_instances = 0;
 	int idx_instances = 0;
 	if (noClipper) {
