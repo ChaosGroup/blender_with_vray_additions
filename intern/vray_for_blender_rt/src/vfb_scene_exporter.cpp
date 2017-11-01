@@ -803,7 +803,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 	AttrInstancer instances;
 	instances.frameNumber = m_frameExporter.getCurrentFrame();
-	PRINT_INFO_EX("Instancer [%s] frame {%f}", ob.name().c_str(), instances.frameNumber);
+
 	int num_instances = 0;
 	int idx_instances = 0;
 	if (noClipper) {

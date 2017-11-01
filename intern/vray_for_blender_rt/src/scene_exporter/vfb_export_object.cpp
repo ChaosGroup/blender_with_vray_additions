@@ -662,7 +662,6 @@ AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & inst
 		}
 
 		const float frameStep = instancer.frameNumber - savedData->frameNumber;
-		PRINT_INFO_EX("savedFrame [%f], instancerFrame [%f], savedDataFrame [%f]", saveFrame, instancer.frameNumber, savedData->frameNumber);
 		// we have data for prev frame
 		for (int c = 0; c < savedData->data.getCount(); c++) {
 			auto & particle = (*savedData->data.getData())[c];
