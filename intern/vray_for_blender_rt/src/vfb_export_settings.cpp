@@ -39,15 +39,15 @@ ExporterSettings::ExporterSettings()
 void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene, BL::SpaceView3D view3d)
 {
 	is_viewport = !!view3d;
-	const bool isPreview = engine && engine.is_preview();
+	is_preview = engine && engine.is_preview();
 
 	BL::Scene scene(_scene);
-	if (isPreview) {
+	if (is_preview) {
 		scene = context.scene();
 	}
 
 	settings_dr.init(scene);
-	settings_dr.use = settings_dr.use && !isPreview; // && !isViewport; viewport DR?
+	settings_dr.use = settings_dr.use && !is_preview; // && !isViewport; viewport DR?
 
 	background_scene = BL::Scene(RNA_pointer_get(&scene.ptr, "background_set"));
 
@@ -61,15 +61,15 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	use_select_preview  = RNA_boolean_get(&m_vrayExporter, "select_node_preview");
 	use_subsurf_to_osd  = RNA_boolean_get(&m_vrayExporter, "subsurf_to_osd");
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&m_vrayExporter, "default_mapping");
-	export_meshes       = isPreview ? true : RNA_boolean_get(&m_vrayExporter, "auto_meshes");
+	export_meshes       = is_preview ? true : RNA_boolean_get(&m_vrayExporter, "auto_meshes");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&m_vrayExporter, "data_format");
-	if (isPreview) {
+	if (is_preview) {
 		// force zip for preview so it can be faster if we are writing to file
 		export_file_format = ExportFormat::ExportFormatZIP;
 	}
 
 	PointerRNA BakeView = RNA_pointer_get(&m_vrayScene, "BakeView");
-	use_bake_view = RNA_boolean_get(&BakeView, "use") && !is_viewport && !isPreview; // no bake in viewport
+	use_bake_view = RNA_boolean_get(&BakeView, "use") && !is_viewport && !is_preview; // no bake in viewport
 	if (use_bake_view) {
 		PointerRNA bakeObj = RNA_pointer_get(&m_vrayExporter, "currentBakeObject");
 		current_bake_object = BL::Object(bakeObj);
@@ -82,7 +82,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	settings_files.project_path  = data.filepath();
 
 	use_active_layers = static_cast<ActiveLayers>(RNA_enum_get(&m_vrayExporter, "activeLayers"));
-	if (isPreview) {
+	if (is_preview) {
 		// preview scene's layers are actually the different objects that the scene is showinge
 		use_active_layers = ActiveLayersScene;
 	}
@@ -91,7 +91,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		RNA_boolean_get_array(&m_vrayExporter, "customRenderLayers", active_layers.data);
 	}
 
-	if (isPreview || is_viewport || use_bake_view) {
+	if (is_preview || is_viewport || use_bake_view) {
 		settings_animation.mode = SettingsAnimation::AnimationMode::AnimationModeNone;
 	} else {
 		settings_animation.mode = (SettingsAnimation::AnimationMode)RNA_enum_get(&m_vrayExporter, "animation_mode");
@@ -193,7 +193,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	// disable motion blur for bake render
-	use_motion_blur = use_motion_blur && !use_bake_view && !isPreview;
+	use_motion_blur = use_motion_blur && !use_bake_view && !is_preview;
 
 	std::string overrideName;
 	PointerRNA settingsOptions = RNA_pointer_get(&m_vrayScene, "SettingsOptions");
@@ -233,7 +233,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode"));
 	} else {
 		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "rendering_mode"));
-		if (isPreview || settings_animation.use) {
+		if (is_preview || settings_animation.use) {
 			render_mode = RenderMode::RenderModeProduction;
 		}
 	}
@@ -245,7 +245,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	} else {
 		viewport_image_type = ImageType::RGBA_REAL;
 	}
-	show_vfb = !is_viewport && work_mode != WorkMode::WorkModeExportOnly && !isPreview && RNA_boolean_get(&m_vrayExporter, "display");
+	show_vfb = !is_viewport && work_mode != WorkMode::WorkModeExportOnly && !is_preview && RNA_boolean_get(&m_vrayExporter, "display");
 
 	verbose_level = static_cast<VRayVerboseLevel>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
 }

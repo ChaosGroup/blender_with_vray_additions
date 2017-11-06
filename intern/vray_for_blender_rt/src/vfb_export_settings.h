@@ -180,6 +180,7 @@ struct ExporterSettings {
 	bool              show_vfb;
 	bool              use_bake_view;
 	bool              is_viewport;
+	bool              is_preview;
 
 	bool              calculate_instancer_velocity;
 
