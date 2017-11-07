@@ -251,9 +251,27 @@ BL::Object FrameExportManager::getActiveCamera()
 }
 
 
-// TODO: possible data race when multiple exporters start at the same time
-static HashSet<std::string> RenderSettingsPlugins;
-static HashSet<std::string> RenderGIPlugins;
+static HashSet<std::string> RenderSettingsPlugins = {
+	"SettingsOptions",
+	"SettingsColorMapping",
+	"SettingsDMCSampler",
+	"SettingsImageSampler",
+	"SettingsGI",
+	"SettingsIrradianceMap",
+	"SettingsLightCache",
+	"SettingsDMCGI",
+	"SettingsRaycaster",
+	"SettingsRegionsGenerator",
+	"SettingsOutput",
+	"SettingsRTEngine",
+};
+
+static HashSet<std::string> RenderGIPlugins = {
+	"SettingsGI",
+	"SettingsLightCache",
+	"SettingsIrradianceMap",
+	"SettingsDMCGI",
+};
 
 namespace {
 MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)
@@ -279,50 +297,6 @@ MHash getParticleID(BL::Object arrayGenerator, int arrayIndex)
 }
 }
 
-
-SceneExporter::SceneExporter(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d, BL::RegionView3D region3d, BL::Region region)
-    : m_context(context)
-    , m_engine(engine)
-    , m_data(data)
-    , m_scene(scene)
-    , m_view3d(view3d)
-    , m_region3d(region3d)
-    , m_region(region)
-    , m_active_camera(view3d ? view3d.camera() : scene.camera())
-    , m_python_thread_state(nullptr)
-    , m_exporter(nullptr)
-    , m_frameExporter(m_scene, m_settings, m_data)
-    , m_data_exporter(m_settings)
-	, m_renderWidth(-1)
-	, m_renderHeight(-1)
-    , m_isLocalView(false)
-    , m_isUndoSync(false)
-{
-	if (!RenderSettingsPlugins.size()) {
-		RenderSettingsPlugins.insert("SettingsOptions");
-		RenderSettingsPlugins.insert("SettingsColorMapping");
-		RenderSettingsPlugins.insert("SettingsDMCSampler");
-		RenderSettingsPlugins.insert("SettingsImageSampler");
-		RenderSettingsPlugins.insert("SettingsGI");
-		RenderSettingsPlugins.insert("SettingsIrradianceMap");
-		RenderSettingsPlugins.insert("SettingsLightCache");
-		RenderSettingsPlugins.insert("SettingsDMCGI");
-		RenderSettingsPlugins.insert("SettingsRaycaster");
-		RenderSettingsPlugins.insert("SettingsRegionsGenerator");
-		RenderSettingsPlugins.insert("SettingsOutput");
-		RenderSettingsPlugins.insert("SettingsRTEngine");
-	}
-
-	if (!RenderGIPlugins.size()) {
-		RenderGIPlugins.insert("SettingsGI");
-		RenderGIPlugins.insert("SettingsLightCache");
-		RenderGIPlugins.insert("SettingsIrradianceMap");
-		RenderGIPlugins.insert("SettingsDMCGI");
-	}
-
-	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-	m_frameExporter.updateFromSettings();
-}
 
 void SceneExporter::pause_for_undo()
 {
@@ -374,12 +348,17 @@ SceneExporter::~SceneExporter()
 }
 
 void SceneExporter::init() {
-	create_exporter();
-	BLI_assert(m_exporter && "Failed to create exporter!");
+	BL::Object cameraOB = m_view3d ? m_view3d.camera() : m_scene.camera();
+	if (cameraOB.type() == BL::Object::type_CAMERA) {
+		m_active_camera = cameraOB;
+	}
 
 	// make sure we update settings before exporter - it will read from settings
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 	m_frameExporter.updateFromSettings();
+
+	create_exporter();
+	BLI_assert(m_exporter && "Failed to create exporter!");
 	m_exporter->init();
 
 	// directly bind to the engine

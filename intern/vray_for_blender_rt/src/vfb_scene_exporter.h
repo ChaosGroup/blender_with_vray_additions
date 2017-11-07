@@ -287,7 +287,25 @@ public:
 	              BL::Scene           scene,
 	              BL::SpaceView3D     view3d = PointerRNA_NULL,
 	              BL::RegionView3D    region3d = PointerRNA_NULL,
-	              BL::Region          region = PointerRNA_NULL);
+	              BL::Region          region = PointerRNA_NULL)
+		: m_context(context)
+		, m_engine(engine)
+		, m_data(data)
+		, m_scene(scene)
+		, m_view3d(view3d)
+		, m_region3d(region3d)
+		, m_region(region)
+		, m_active_camera(view3d ? view3d.camera() : scene.camera())
+		, m_python_thread_state(nullptr)
+		, m_exporter(nullptr)
+		, m_frameExporter(m_scene, m_settings, m_data)
+		, m_data_exporter(m_settings)
+		, m_sceneComputedLayers(0)
+		, m_renderWidth(-1)
+		, m_renderHeight(-1)
+		, m_isLocalView(false)
+		, m_isUndoSync(false)
+	{}
 
 	virtual ~SceneExporter();
 

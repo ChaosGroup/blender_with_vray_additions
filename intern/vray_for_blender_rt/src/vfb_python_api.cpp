@@ -216,26 +216,28 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 		RNA_id_pointer_create((ID*)PyLong_AsVoidPtr(pyScene), &scenePtr);
 
 		exporter = new VRayForBlender::ProductionExporter(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
+		exporter->init();
 		if (exporter->get_active_camera().type() != BL::Object::type_CAMERA) {
 			delete exporter;
 			exporter = nullptr;
 			PRINT_ERROR("Scene's active camera is not of type CAMERA");
-		} else {
-			exporter->init();
-			auto pluginExporter = exporter->get_plugin_exporter();
-			if (pluginExporter) {
-				using VRayForBlender::ParamDesc::PluginType;
-				pluginExporter->set_export_file(PluginType::PluginSettings, mainFile);
-				pluginExporter->set_export_file(PluginType::PluginObject, objectFile);
-				pluginExporter->set_export_file(PluginType::PluginEffect, envFile);
-				pluginExporter->set_export_file(PluginType::PluginGeometry, geometryFile);
-				pluginExporter->set_export_file(PluginType::PluginLight, lightsFile);
-				pluginExporter->set_export_file(PluginType::PluginMaterial, materialFile);
-				pluginExporter->set_export_file(PluginType::PluginTexture, textureFile);
-				pluginExporter->set_export_file(PluginType::PluginCamera, cameraFile);
-			}
-			exporter->init_data();
+			return PyLong_FromVoidPtr(exporter);
 		}
+
+		auto pluginExporter = exporter->get_plugin_exporter();
+		if (pluginExporter) {
+			using VRayForBlender::ParamDesc::PluginType;
+			pluginExporter->set_export_file(PluginType::PluginSettings, mainFile);
+			pluginExporter->set_export_file(PluginType::PluginObject, objectFile);
+			pluginExporter->set_export_file(PluginType::PluginEffect, envFile);
+			pluginExporter->set_export_file(PluginType::PluginGeometry, geometryFile);
+			pluginExporter->set_export_file(PluginType::PluginLight, lightsFile);
+			pluginExporter->set_export_file(PluginType::PluginMaterial, materialFile);
+			pluginExporter->set_export_file(PluginType::PluginTexture, textureFile);
+			pluginExporter->set_export_file(PluginType::PluginCamera, cameraFile);
+		}
+		exporter->init_data();
+
 	} else {
 		PRINT_ERROR("Failed to initialize exporter!");
 	}
@@ -290,14 +292,17 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 			exporter->resume_from_undo(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
 		} else {
 			exporter = new VRayForBlender::InteractiveExporter(BL::Context(contextPtr), BL::RenderEngine(enginePtr), BL::BlendData(dataPtr), BL::Scene(scenePtr));
-			if (exporter->get_active_camera().type() != BL::Object::type_CAMERA) {
-				delete exporter;
-				exporter = nullptr;
-				PRINT_ERROR("Scene's active camera is not of type CAMERA");
-				return PyLong_FromVoidPtr(exporter);
-			}
-
 			exporter->init();
+		}
+
+		if (exporter->get_active_camera().type() != BL::Object::type_CAMERA) {
+			delete exporter;
+			exporter = nullptr;
+			PRINT_ERROR("Scene's active camera is not of type CAMERA");
+			return PyLong_FromVoidPtr(exporter);
+		}
+
+		if (!stashed) {
 			exporter->init_data();
 		}
 
