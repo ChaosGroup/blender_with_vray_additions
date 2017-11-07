@@ -428,13 +428,6 @@ void SceneExporter::render_start()
 
 bool SceneExporter::export_scene(const bool check_updated)
 {
-	std::lock_guard<std::mutex> lock(m_syncLock);
-
-	PRINT_INFO_EX("SceneExporter::sync(%i)", check_updated);
-
-	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-	m_exporter->set_render_mode(m_settings.render_mode);
-
 	return true;
 }
 

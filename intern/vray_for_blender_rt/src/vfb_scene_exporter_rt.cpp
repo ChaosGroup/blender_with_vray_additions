@@ -82,6 +82,13 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	FrameStateCheck beforeState(m_settings, m_frameExporter);
 
 	SceneExporter::export_scene(check_updated);
+
+	if (check_updated) {
+		// read settings if this is not first export, since they can change
+		m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+		m_exporter->set_render_mode(m_settings.render_mode);
+	}
+
 	m_frameExporter.updateFromSettings();
 
 	FrameStateCheck afterState(m_settings, m_frameExporter);
