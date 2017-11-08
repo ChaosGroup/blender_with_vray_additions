@@ -1249,9 +1249,13 @@ void SceneExporter::sync_objects(const bool check_updated) {
 	if (!m_frameExporter.isCurrentSubframe()) {
 		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
 		for (auto & ob : Blender::collection(m_scene.objects)) {
-			// export only object without subframes, theese with will be exported later
-			if (!m_frameExporter.hasObjectSubframes(ob)) {
+			// If motion blur is enabled, export only object without subframes, theese with will be exported later
+			if (!m_settings.use_motion_blur) {
 				pre_sync_object(check_updated, ob, wg);
+			} else {
+				if (!m_frameExporter.hasObjectSubframes(ob)) {
+					pre_sync_object(check_updated, ob, wg);
+				}
 			}
 		}
 
