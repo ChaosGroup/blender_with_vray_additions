@@ -124,7 +124,7 @@ bool DataExporter::isObjectInHideList(BL::Object ob, const std::string listName)
 
 void DataExporter::setNSamples(PluginDesc &pluginDesc, BL::Object ob) const
 {
-	int sf_value = Blender::getObjectSubframes(ob);
+	int sf_value = Blender::getObjectKeyframes(ob);
 	if (sf_value > 2) {
 		pluginDesc.add("nsamples", sf_value);
 	}

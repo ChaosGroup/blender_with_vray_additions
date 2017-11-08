@@ -105,9 +105,16 @@ int IsEmitterRenderable(BL::Object ob);
 int IsDuplicatorRenderable(BL::Object ob);
 int IsGeometry(BL::Object ob);
 int IsLight(BL::Object ob);
+
+/// Get the number of subframes selected for the object
 inline int getObjectSubframes(BL::Object ob) {
 	auto vrayOb = RNA_pointer_get(&ob.ptr, "vray");
 	return vrayOb.id.data ? RNA_int_get(&vrayOb, "subframes") : 0;
+}
+
+/// Get the number of keyframes that must be exported for an object (2 + number of subframes)
+inline int getObjectKeyframes(BL::Object ob) {
+	return getObjectSubframes(ob) + 2;
 }
 
 /// Wrapper class over BL::BlendData collections that has begin() method which returns the iterator instead

@@ -22,6 +22,7 @@
 #include "vfb_export_settings.h"
 #include "vfb_plugin_exporter.h"
 #include "vfb_node_exporter.h"
+#include "vfb_utils_blender.h"
 #include "vfb_render_view.h"
 #include "vfb_rna.h"
 
@@ -210,8 +211,7 @@ public:
 
 	/// Does the object has subframes that need to be exported separately
 	bool hasObjectSubframes(BL::Object object) const {
-		auto obVray = RNA_pointer_get(&object.ptr, "vray");
-		return m_settings.use_motion_blur && obVray.id.data && RNA_int_get(&obVray, "subframes") > 2;
+		return Blender::getObjectSubframes(object) > 0;
 	}
 
 	/// Blender frame format

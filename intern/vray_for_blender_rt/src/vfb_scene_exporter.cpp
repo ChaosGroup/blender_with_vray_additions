@@ -75,7 +75,7 @@ void SubframesHandler::update() {
 	}
 
 	for (auto & ob : Blender::collection(m_scene.objects)) {
-		int subframesCount = Blender::getObjectSubframes(ob);
+		int subframesCount = Blender::getObjectKeyframes(ob);
 		if (subframesCount > 2) {
 			m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, ob));
 		}
@@ -222,25 +222,25 @@ void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManage
 			m_lastExportedFrame = m_currentFrame;
 		}
 
-		float firstFrame = m_frameToRender + m_mbIntervalStartOffset;
-		float lastFrame = m_frameToRender + m_mbIntervalStartOffset + (m_mbGeomSamples - 1) * m_mbSampleStep;
-		for (int sd : m_subframes.getSubframeValues()) {
-			for (int i = 0; i < sd; ++i) {
-				m_subframes.setCurrentSubframeDivision(sd);
-				float sfPosition = i / (sd - 1.f);
+		const float firstFrame = m_frameToRender + m_mbIntervalStartOffset;
+		const float lastFrame = m_frameToRender + m_mbIntervalStartOffset + (m_mbGeomSamples - 1) * m_mbSampleStep;
+		const float duration = lastFrame - firstFrame;
 
-				for (int c = 0; c < m_mbGeomSamples; c++) {
-					m_currentFrame = m_frameToRender + m_mbIntervalStartOffset + c * m_mbSampleStep + sfPosition;
-					if (m_currentFrame >= lastFrame && firstFrame != lastFrame) {
-						break;
-					}
+		for (int subframes : m_subframes.getSubframeValues()) {
+			// set the current subframe export, so exporter can get only object having this subframes value
+			m_subframes.setCurrentSubframeDivision(subframes);
 
-					if (!callback(*this)) {
-						break;
-					}
+			const float keyFrameStep = duration / (subframes - 1); // 3 subframes means we have 2 intervals, so substract 1
+
+			for (int c = 0; c < subframes; c++) {
+				m_currentFrame = firstFrame + c * keyFrameStep;
+
+				if (!callback(*this)) {
+					break;
 				}
 			}
 		}
+
 		m_subframes.setCurrentSubframeDivision(0);
 	}
 }
@@ -1249,6 +1249,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 	if (!m_frameExporter.isCurrentSubframe()) {
 		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
 		for (auto & ob : Blender::collection(m_scene.objects)) {
+			// export only object without subframes, theese with will be exported later
 			if (!m_frameExporter.hasObjectSubframes(ob)) {
 				pre_sync_object(check_updated, ob, wg);
 			}
