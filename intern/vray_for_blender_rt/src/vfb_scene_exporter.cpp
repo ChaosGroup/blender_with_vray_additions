@@ -264,6 +264,7 @@ static HashSet<std::string> RenderSettingsPlugins = {
 	"SettingsRegionsGenerator",
 	"SettingsOutput",
 	"SettingsRTEngine",
+	"SettingsUnitsInfo",
 };
 
 static HashSet<std::string> RenderGIPlugins = {
@@ -1302,6 +1303,16 @@ void SceneExporter::sync_render_settings()
 		return;
 	}
 
+	const float sceneFps = m_scene.render().fps() / m_scene.render().fps_base();
+	typedef std::unordered_map<std::string, AttrValue> ProperyList;
+	typedef std::unordered_map<std::string, ProperyList> PluginOverrideList;
+	const PluginOverrideList pluginOverrides = {
+		std::make_pair("SettingsUnitsInfo", ProperyList{
+			std::make_pair("frames_scale", AttrValue(sceneFps)),
+			std::make_pair("seconds_scale", AttrValue(1.f / sceneFps)),
+		}),
+	};
+
 	PointerRNA vrayObject = RNA_pointer_get(&m_scene.ptr, "vray");
 	PointerRNA vrayExporter = RNA_pointer_get(&vrayObject, "Exporter");
 	for (const auto &pluginID : RenderSettingsPlugins) {
@@ -1312,8 +1323,16 @@ void SceneExporter::sync_render_settings()
 
 		PluginDesc pluginDesc(pluginID, pluginID);
 
+		auto plgOverride = pluginOverrides.find(pluginID);
+		if (plgOverride != pluginOverrides.end()) {
+			for (const auto & propOverride : plgOverride->second) {
+				pluginDesc.add(propOverride.first, propOverride.second);
+			}
+		}
+
 		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
 
+		// TODO: rework this to use blender data and not the plugin attrs
 		if (pluginID == "SettingsOutput") {
 			if (!RNA_boolean_get(&vrayExporter, "auto_save_render")) {
 				continue;
