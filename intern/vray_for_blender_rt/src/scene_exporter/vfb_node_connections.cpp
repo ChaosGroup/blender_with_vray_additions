@@ -26,19 +26,6 @@
 
 #include "DNA_node_types.h"
 
-namespace {
-void addPluginOutput(AttrValue &plugin, BL::NodeSocket &toSocket) {
-	if (RNA_struct_find_property(&toSocket.ptr, "vray_attr")) {
-		const std::string &conSockAttrName = RNA_std_string_get(&toSocket.ptr, "vray_attr");
-		if (!conSockAttrName.empty()) {
-			if (!(conSockAttrName == "uvwgen" || conSockAttrName == "bitmap")) {
-				plugin.as<AttrPlugin>().output = conSockAttrName;
-			}
-		}
-	}
-}
-} // namespace
-
 void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
                                          ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin, BL::Node toNode)
 {
@@ -177,12 +164,6 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 		}
 	}
 	else {
-		const std::string & sourceType = RNA_std_string_get(&toSocket.ptr, "bl_idname");
-		const std::string & destType = RNA_std_string_get(&fromSocket.ptr, "bl_idname");
-		static const std::string colorType = "VRaySocketColor", floatType = "VRaySocketFloatColor";
-		const bool float2color = destType == colorType && sourceType == floatType;
-		const bool color2float = destType == floatType && sourceType == colorType;
-
 		if (expMode == ExpModePluginName) {
 			outPlugin = AttrPlugin(DataExporter::GenPluginName(toNode, ntree, context));
 		}
@@ -193,27 +174,14 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 
 		// Check if we need to use specific output
 		if (expMode == ExpModePluginName || expMode == ExpModePlugin) {
-			addPluginOutput(outPlugin, toSocket);
-
-			if (float2color) {
-				// float to color convert TexFloatToColor
-				const std::string converterName = "AutoTexFloatToColor@" + DataExporter::GenPluginName(toNode, ntree, context);
-				if (expMode == ExpModePlugin) {
-					PluginDesc floatToColor(converterName, "TexFloatToColor");
-					floatToColor.add("input", outPlugin);
-					outPlugin = m_exporter->export_plugin(floatToColor);
-				} else {
-					outPlugin = converterName;
-				}
-			} else if (color2float) {
-				// color to float convert TexColorToFloat
-				const std::string converterName = "AutoTexColorToFloat" + DataExporter::GenPluginName(toNode, ntree, context);
-				if (expMode == ExpModePlugin) {
-					PluginDesc floatToColor(converterName, "TexColorToFloat");
-					floatToColor.add("input", outPlugin);
-					outPlugin = m_exporter->export_plugin(floatToColor);
-				} else {
-					outPlugin = converterName;
+			if (RNA_struct_find_property(&toSocket.ptr, "vray_attr")) {
+				const std::string &conSockAttrName = RNA_std_string_get(&toSocket.ptr, "vray_attr");
+				if (!conSockAttrName.empty()) {
+					if (!(conSockAttrName == "uvwgen" ||
+							conSockAttrName == "bitmap"))
+					{
+						outPlugin.as<AttrPlugin>().output = conSockAttrName;
+					}
 				}
 			}
 		}
