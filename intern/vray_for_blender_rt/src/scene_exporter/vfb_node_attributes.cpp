@@ -31,6 +31,8 @@
 #include "BKE_main.h"
 #include "BKE_global.h"
 
+#include <boost/format.hpp>
+
 void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const ParamDesc::AttrDesc &attrDesc, PluginDesc &pluginDesc)
 {
 	// XXX: Check if we could get rid of ID and use (ID*)propGroup->data
@@ -141,6 +143,135 @@ void DataExporter::setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA 
 	}
 }
 
+static bool isColorSocket(VRayNodeSocketType socketVRayType) {
+	return socketVRayType >= vrayNodeSocketColor && socketVRayType <= vrayNodeSocketColorNoValue;
+}
+
+static bool isColorSocket(BL::NodeSocket socket) {
+	return isColorSocket(getVRayNodeSocketType(socket));
+}
+
+static bool isFloatSocket(VRayNodeSocketType socketVRayType) {
+	return socketVRayType >= vrayNodeSocketFloat && socketVRayType <= vrayNodeSocketFloatNoValue;
+}
+
+static bool isFloatSocket(BL::NodeSocket socket) {
+	return isFloatSocket(getVRayNodeSocketType(socket));
+}
+
+static bool needConvertColorToFloat(VRayNodeSocketType curSock, VRayNodeSocketType conSock) {
+	return isColorSocket(conSock) && isFloatSocket(curSock);
+}
+
+static bool needConvertColorToFloat(BL::NodeSocket curSock, BL::NodeSocket conSock) {
+	return needConvertColorToFloat(getVRayNodeSocketType(curSock),
+								   getVRayNodeSocketType(conSock));
+}
+
+static bool needConvertFloatToColor(VRayNodeSocketType curSock, VRayNodeSocketType conSock) {
+	return isFloatSocket(conSock) && isColorSocket(curSock);
+}
+
+static bool needConvertFloatToColor(BL::NodeSocket curSock, BL::NodeSocket conSock) {
+	return needConvertFloatToColor(getVRayNodeSocketType(curSock),
+								   getVRayNodeSocketType(conSock));
+}
+
+static AttrValue exportFloatColorConvertTexture(PluginExporter::Ptr &exporter,
+										   PluginDesc &pluginDesc,
+										   const AttrValue &texture,
+										 const std::string &pluginType)
+{
+	static boost::format texConvertFmt("%s@%s");
+
+	PluginDesc texConvert(str(texConvertFmt % pluginDesc.pluginName % pluginType),
+						  pluginType);
+	texConvert.add("input", texture);
+
+	return exporter->export_plugin(texConvert);
+}
+
+static AttrValue exportFloatTextureAsColor(PluginExporter::Ptr &exporter,
+										   PluginDesc &pluginDesc,
+										   const AttrValue &texture)
+{
+	return exportFloatColorConvertTexture(exporter, pluginDesc, texture, "TexFloatToColor");
+}
+
+static AttrValue exportColorTextureAsFloat(PluginExporter::Ptr &exporter,
+										   PluginDesc &pluginDesc,
+										   const AttrValue &texture)
+{
+	return exportFloatColorConvertTexture(exporter, pluginDesc, texture, "TexColorToFloat");
+}
+
+/// Combine color texture with the multiplier.
+/// @param exporter Plugin exporter.
+/// @param pluginDesc Currently processed plugin.
+/// @param texParamName Parameter name.
+/// @param paramValue Parameter value.
+/// @param paramTexture Parameter texture value.
+/// @param paramTextureAmount Texture multiplier.
+/// @param textureClamp Clamp texture to 1.0f.
+/// @returns Float texture.
+static AttrValue exportCombineTexture(PluginExporter::Ptr &exporter,
+                                      PluginDesc &pluginDesc,
+                                      const std::string &texParamName,
+                                      AttrValue paramValue,
+                                      AttrValue paramTexture,
+                                      float paramTextureAmount,
+                                      int textureClamp = true)
+{
+	static boost::format texCombineFmt("%s|%s@Mult");
+
+	PluginDesc texCombine(str(texCombineFmt % pluginDesc.pluginName % texParamName),
+						  "TexCombineColor");
+	texCombine.add("color", paramValue);
+	texCombine.add("texture", paramTexture);
+	texCombine.add("texture_multiplier", paramTextureAmount);
+	texCombine.add("texture_clamp", textureClamp);
+
+	return exporter->export_plugin(texCombine);
+}
+
+/// Combine color texture with the multiplier.
+/// @param exporter Plugin exporter.
+/// @param pluginDesc Currently processed plugin.
+/// @param texParamName Parameter name.
+/// @param paramValue Parameter value.
+/// @param paramTexture Parameter texture value.
+/// @param paramTextureAmount Texture multiplier.
+/// @param textureClamp Clamp texture to 1.0f.
+/// @returns Float texture.
+static AttrValue exportCombineTextureAsFloat(PluginExporter::Ptr &exporter,
+											 PluginDesc &pluginDesc,
+											 const std::string &texParamName,
+											 AttrValue paramValue,
+											 AttrValue paramTexture,
+											 float paramTextureAmount,
+											 int textureClamp = true)
+{
+	static boost::format texCombineFmt("%s|%s@Mult");
+
+	PluginDesc texCombine(str(texCombineFmt % pluginDesc.pluginName % texParamName),
+						  "TexCombineFloat");
+	texCombine.add("value", paramValue);
+	texCombine.add("texture", paramTexture);
+	texCombine.add("texture_multiplier", paramTextureAmount);
+	texCombine.add("texture_clamp", textureClamp);
+
+	return exporter->export_plugin(texCombine);
+}
+
+/// Returns texture multiplier.
+/// @param socket Node socket.
+static float getSocketMult(BL::NodeSocket socket)
+{
+	if (RNA_struct_find_property(&socket.ptr, "multiplier")) {
+		return RNA_float_get(&socket.ptr, "multiplier") / 100.0f;
+	}
+	return 0.0f;
+}
 
 void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType)
 {
@@ -171,48 +302,50 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 			// PRINT_INFO_EX("  Processing attribute: \"%s\"", attrName.c_str());
 
 			if (ParamDesc::TypeHasSocket(attrType)) {
-				BL::NodeSocket sock = Nodes::GetSocketByAttr(node, attrName);
-				if (sock) {
-					AttrValue socketValue = exportSocket(ntree, sock, context);
-					if (sock.is_linked()) {
+				BL::NodeSocket curSock = Nodes::GetSocketByAttr(node, attrName);
+				if (curSock) {
+					AttrValue socketValue = exportSocket(ntree, curSock, context);
+					if (curSock.is_linked()) {
 						if (socketValue.type == ValueTypePlugin) {
-							if (RNA_struct_find_property(&sock.ptr, "multiplier")) {
-								float mult = RNA_float_get(&sock.ptr, "multiplier") / 100.0f;
+							const float texMult = getSocketMult(curSock);
+							const bool needMult = texMult > 0.0f;
+							bool texIsColor = false;
 
-								float threshold = 1.f;
-								if (attrDesc.options & ParamDesc::AttrOptionInvertMultiplier) {
-									mult = std::max(0.0f, 1.0f - mult);
+							// Currently processed socket.
+							const VRayNodeSocketType curSockType = getVRayNodeSocketType(curSock);
+
+							// Connected socket.
+							const BL::NodeSocket conSock = Nodes::GetConnectedSocket(curSock);
+							const VRayNodeSocketType conSockType = getVRayNodeSocketType(conSock);
+
+							if (needConvertColorToFloat(curSockType, conSockType)) {
+								if (needMult) {
+									// TexCombineFloat expects color texture anyway, no need to convert.
+									texIsColor = true;
 								}
+								else {
+									socketValue = exportColorTextureAsFloat(m_exporter, pluginDesc, socketValue);
+								}
+							}
+							else if (needConvertFloatToColor(curSockType, conSockType)) {
+								socketValue = exportFloatTextureAsColor(m_exporter, pluginDesc, socketValue);
+							}
 
-								if (!Math::floatEqual(threshold, mult)) {
-									char multPluginName[String::MAX_PLG_LEN] = {0, };
-
-									// XXX: Name here could be an issue with group nodes
-									snprintf(multPluginName, sizeof(multPluginName), "N%sS%sA%sMult",
-										DataExporter::GenPluginName(node, ntree, context).c_str(),
-										sock.node().name().c_str(),
-										sock.name().c_str());
-
-									const bool is_float_socket = (
-										sock.rna_type().identifier().find("Float") != std::string::npos &&
-										(attrDesc.options & ParamDesc::AttrOptionExportAsColor) == 0 // if this is set we export float output as color so we must use TexAColorOp
-									);
-									if (is_float_socket) {
-										PluginDesc multTex(multPluginName, "TexFloatOp");
-										multTex.add("float_a", socketValue);
-										multTex.add("float_b", mult);
-										multTex.add("mode", 0); // "product"
-
-										socketValue = m_exporter->export_plugin(multTex);
+							if (needMult) {
+								const AttrValue socketDefValue = exportDefaultSocket(ntree, curSock);
+								if (isFloatSocket(curSockType)) {
+									// TexCombineFloat expects color texture.
+									if (!texIsColor) {
+										socketValue = exportFloatTextureAsColor(m_exporter, pluginDesc, socketValue);
 									}
-									else {
-										PluginDesc multTex(multPluginName, "TexAColorOp");
-										multTex.add("color_a", socketValue);
-										multTex.add("mult_a", mult);
-										multTex.add("mode", 0); // "result_a"
+									socketValue = exportCombineTextureAsFloat(m_exporter, pluginDesc, attrName, socketDefValue, socketValue, texMult);
 
-										socketValue = m_exporter->export_plugin(multTex);
+									if (attrDesc.options & ParamDesc::AttrOptionExportAsColor) {
+										socketValue = exportFloatTextureAsColor(m_exporter, pluginDesc, socketValue);
 									}
+								}
+								else if (isColorSocket(curSockType)) {
+									socketValue = exportCombineTexture(m_exporter, pluginDesc, attrName, socketDefValue, socketValue, texMult);
 								}
 							}
 						}
