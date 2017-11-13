@@ -164,7 +164,7 @@ static bool needConvertColorToFloat(VRayNodeSocketType curSock, VRayNodeSocketTy
 
 static bool needConvertColorToFloat(BL::NodeSocket curSock, BL::NodeSocket conSock) {
 	return needConvertColorToFloat(getVRayNodeSocketType(curSock),
-								   getVRayNodeSocketType(conSock));
+	                               getVRayNodeSocketType(conSock));
 }
 
 static bool needConvertFloatToColor(VRayNodeSocketType curSock, VRayNodeSocketType conSock) {
@@ -173,13 +173,13 @@ static bool needConvertFloatToColor(VRayNodeSocketType curSock, VRayNodeSocketTy
 
 static bool needConvertFloatToColor(BL::NodeSocket curSock, BL::NodeSocket conSock) {
 	return needConvertFloatToColor(getVRayNodeSocketType(curSock),
-								   getVRayNodeSocketType(conSock));
+	                               getVRayNodeSocketType(conSock));
 }
 
 static AttrValue exportFloatColorConvertTexture(PluginExporter::Ptr &exporter,
-										   PluginDesc &pluginDesc,
-										   const AttrValue &texture,
-										 const std::string &pluginType)
+                                                PluginDesc &pluginDesc,
+                                                const AttrValue &texture,
+                                                const std::string &pluginType)
 {
 	PluginDesc texConvert(pluginDesc.pluginName + "@" + pluginType, pluginType);
 	texConvert.add("input", texture);
@@ -195,8 +195,8 @@ static AttrValue exportFloatTextureAsColor(PluginExporter::Ptr &exporter,
 }
 
 static AttrValue exportColorTextureAsFloat(PluginExporter::Ptr &exporter,
-										   PluginDesc &pluginDesc,
-										   const AttrValue &texture)
+                                           PluginDesc &pluginDesc,
+                                           const AttrValue &texture)
 {
 	return exportFloatColorConvertTexture(exporter, pluginDesc, texture, "TexColorToFloat");
 }
