@@ -31,7 +31,6 @@
 #include "BKE_main.h"
 #include "BKE_global.h"
 
-#include <boost/format.hpp>
 
 void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const ParamDesc::AttrDesc &attrDesc, PluginDesc &pluginDesc)
 {
@@ -182,10 +181,7 @@ static AttrValue exportFloatColorConvertTexture(PluginExporter::Ptr &exporter,
 										   const AttrValue &texture,
 										 const std::string &pluginType)
 {
-	static boost::format texConvertFmt("%s@%s");
-
-	PluginDesc texConvert(str(texConvertFmt % pluginDesc.pluginName % pluginType),
-						  pluginType);
+	PluginDesc texConvert(pluginDesc.pluginName + "@" + pluginType, pluginType);
 	texConvert.add("input", texture);
 
 	return exporter->export_plugin(texConvert);
@@ -222,10 +218,7 @@ static AttrValue exportCombineTexture(PluginExporter::Ptr &exporter,
                                       float paramTextureAmount,
                                       int textureClamp = true)
 {
-	static boost::format texCombineFmt("%s|%s@Mult");
-
-	PluginDesc texCombine(str(texCombineFmt % pluginDesc.pluginName % texParamName),
-						  "TexCombineColor");
+	PluginDesc texCombine(pluginDesc.pluginName + "|" + texParamName + "@Mult", "TexCombineColor");
 	texCombine.add("color", paramValue);
 	texCombine.add("texture", paramTexture);
 	texCombine.add("texture_multiplier", paramTextureAmount);
@@ -251,10 +244,7 @@ static AttrValue exportCombineTextureAsFloat(PluginExporter::Ptr &exporter,
 											 float paramTextureAmount,
 											 int textureClamp = true)
 {
-	static boost::format texCombineFmt("%s|%s@Mult");
-
-	PluginDesc texCombine(str(texCombineFmt % pluginDesc.pluginName % texParamName),
-						  "TexCombineFloat");
+	PluginDesc texCombine(pluginDesc.pluginName + "|" + texParamName + "@Mult", "TexCombineFloat");
 	texCombine.add("value", paramValue);
 	texCombine.add("texture", paramTexture);
 	texCombine.add("texture_multiplier", paramTextureAmount);
