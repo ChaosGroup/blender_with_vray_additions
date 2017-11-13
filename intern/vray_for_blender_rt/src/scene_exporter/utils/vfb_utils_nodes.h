@@ -24,6 +24,28 @@
 
 
 namespace VRayForBlender {
+
+enum VRayNodeSocketType {
+	vrayNodeSocketUnknown = -1,
+	vrayNodeSocketBRDF = 0,
+	vrayNodeSocketColor,
+	vrayNodeSocketColorNoValue,
+	vrayNodeSocketCoords,
+	vrayNodeSocketEffect,
+	vrayNodeSocketEnvironment,
+	vrayNodeSocketEnvironmentOverride,
+	vrayNodeSocketFloat,
+	vrayNodeSocketFloatColor,
+	vrayNodeSocketFloatNoValue,
+	vrayNodeSocketInt,
+	vrayNodeSocketMtl,
+	vrayNodeSocketObject,
+	vrayNodeSocketTransform,
+	vrayNodeSocketVector,
+};
+
+VRayNodeSocketType getVRayNodeSocketType(BL::NodeSocket socket);
+
 namespace Nodes {
 
 BL::NodeTree  GetNodeTree(BL::ID & id, const std::string &attr="ntree");

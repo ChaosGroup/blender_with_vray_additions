@@ -140,3 +140,26 @@ BL::Node VRayForBlender::Nodes::GetNodeByType(BL::NodeTree nodeTree, const std::
 	}
 	return BL::Node(PointerRNA_NULL);
 }
+
+VRayForBlender::VRayNodeSocketType VRayForBlender::getVRayNodeSocketType(BL::NodeSocket socket)
+{
+	const std::string &socketTypeStr = socket.rna_type().identifier();
+
+	if (socketTypeStr == "VRaySocketBRDF") return vrayNodeSocketBRDF;
+	if (socketTypeStr == "VRaySocketColor") return vrayNodeSocketColor;
+	if (socketTypeStr == "VRaySocketColorNoValue") return vrayNodeSocketColorNoValue;
+	if (socketTypeStr == "VRaySocketCoords") return vrayNodeSocketCoords;
+	if (socketTypeStr == "VRaySocketEffect") return vrayNodeSocketEffect;
+	if (socketTypeStr == "VRaySocketEnvironment") return vrayNodeSocketEnvironment;
+	if (socketTypeStr == "VRaySocketEnvironmentOverride") return vrayNodeSocketEnvironmentOverride;
+	if (socketTypeStr == "VRaySocketFloat") return vrayNodeSocketFloat;
+	if (socketTypeStr == "VRaySocketFloatColor") return vrayNodeSocketFloatColor;
+	if (socketTypeStr == "VRaySocketFloatNoValue") return vrayNodeSocketFloatNoValue;
+	if (socketTypeStr == "VRaySocketInt") return vrayNodeSocketInt;
+	if (socketTypeStr == "VRaySocketMtl") return vrayNodeSocketMtl;
+	if (socketTypeStr == "VRaySocketObject") return vrayNodeSocketObject;
+	if (socketTypeStr == "VRaySocketTransform") return vrayNodeSocketTransform;
+	if (socketTypeStr == "VRaySocketVector") return vrayNodeSocketVector;
+
+	return vrayNodeSocketUnknown;
+}
