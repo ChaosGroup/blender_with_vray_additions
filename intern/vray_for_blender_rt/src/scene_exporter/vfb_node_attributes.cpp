@@ -341,39 +341,51 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 						}
 					}
 					else {
-						if ((pluginType == ParamDesc::PluginTexture || pluginType == ParamDesc::PluginMaterial) &&
-						    (attrType == ParamDesc::AttrTypePluginUvwgen)) {
+						if (attrType == ParamDesc::AttrTypePluginUvwgen &&
+						    (pluginType == ParamDesc::PluginTexture ||
+						     pluginType == ParamDesc::PluginMaterial))
+						{
+							int skipDefaultUvwGen = false;
+
 							const std::string uvwgenName = "UVW@" + DataExporter::GenPluginName(node, ntree, context);
-							std::string       uvwgenType = "UVWGenObject";
 
-							PluginDesc uvwgenDesc(uvwgenName, uvwgenType);
+							PluginDesc uvwgenDesc(uvwgenName, "UVWGenObject");
 
-							if ((pluginID == "TexBitmap") ||
-							    (DataExporter::GetConnectedNodePluginType(fromSocket) == ParamDesc::PluginLight))
-							{
-								uvwgenDesc.pluginID = "UVWGenChannel";
-								uvwgenDesc.add("uvw_channel", int(0));
-							}
-							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingCube) {
-								uvwgenDesc.pluginID = "UVWGenProjection";
-								uvwgenDesc.add("type", 5);
-								uvwgenDesc.add("object_space", 1);
-							}
-							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingObject) {
-								uvwgenDesc.pluginID = "UVWGenObject";
-								uvwgenDesc.add("uvw_transform", AttrTransform::identity());
-							}
-							else if (m_settings.default_mapping == ExporterSettings::DefaultMappingChannel) {
-								uvwgenDesc.pluginID = "UVWGenChannel";
-								uvwgenDesc.add("uvw_channel", 0);
+							if (fromSocket.node()) {
+								const std::string fromNodePluginID = DataExporter::GetNodePluginID(fromSocket.node());
+								if (fromNodePluginID == "TexTriPlanar") {
+									skipDefaultUvwGen = true;
+								}
 							}
 
-							socketValue = m_exporter->export_plugin(uvwgenDesc);
+							if (!skipDefaultUvwGen) {
+								if ((pluginID == "TexBitmap") ||
+									(DataExporter::GetConnectedNodePluginType(fromSocket) == ParamDesc::PluginLight))
+								{
+									uvwgenDesc.pluginID = "UVWGenChannel";
+									uvwgenDesc.add("uvw_channel", int(0));
+								}
+								else if (m_settings.default_mapping == ExporterSettings::DefaultMappingCube) {
+									uvwgenDesc.pluginID = "UVWGenProjection";
+									uvwgenDesc.add("type", 5);
+									uvwgenDesc.add("object_space", 1);
+								}
+								else if (m_settings.default_mapping == ExporterSettings::DefaultMappingObject) {
+									uvwgenDesc.pluginID = "UVWGenObject";
+									uvwgenDesc.add("uvw_transform", AttrTransform::identity());
+								}
+								else if (m_settings.default_mapping == ExporterSettings::DefaultMappingChannel) {
+									uvwgenDesc.pluginID = "UVWGenChannel";
+									uvwgenDesc.add("uvw_channel", 0);
+								}
+
+								socketValue = m_exporter->export_plugin(uvwgenDesc);
+							}
 						}
-						else if (attrType == ParamDesc::AttrTypeTransform /*|| attrType == "TRANSFORM_TEXTURE"*/) {
+						else if (attrType == ParamDesc::AttrTypeTransform) {
 							socketValue = AttrTransform::identity();
 						}
-						else if (attrType == ParamDesc::AttrTypeMatrix /*|| attrType == "MATRIX_TEXTURE"*/) {
+						else if (attrType == ParamDesc::AttrTypeMatrix) {
 							socketValue = AttrTransform::identity().m;
 						}
 					}
