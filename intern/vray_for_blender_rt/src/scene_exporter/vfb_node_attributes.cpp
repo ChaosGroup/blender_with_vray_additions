@@ -260,7 +260,7 @@ static float getSocketMult(BL::NodeSocket socket)
 	if (RNA_struct_find_property(&socket.ptr, "multiplier")) {
 		return RNA_float_get(&socket.ptr, "multiplier") / 100.0f;
 	}
-	return 0.0f;
+	return 1.0f;
 }
 
 void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType)
