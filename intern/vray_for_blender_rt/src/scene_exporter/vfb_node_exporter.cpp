@@ -884,7 +884,7 @@ bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 	}
 
 	if (m_undo_stack.size() < 2) {
-		BLI_assert(!"Trying to do undo/redo but stach did not have enought states");
+		BLI_assert(!"Trying to do undo/redo but stack did not have enought states");
 		return false;
 	}
 

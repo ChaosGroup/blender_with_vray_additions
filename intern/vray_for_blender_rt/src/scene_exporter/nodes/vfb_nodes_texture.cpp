@@ -310,7 +310,7 @@ AttrValue DataExporter::exportVRayNodeTexMulti(BL::NodeTree &ntree, BL::Node &no
 
 	const int modeIdx = RNA_enum_get(&node.ptr, "mode");
 	const int modeValueMap[] = {0, 1, 2, 3, 4, 6, 30};
-	const int mode = modeValueMap[Math::clamp<int>(modeIdx, 0, sizeof(modeValueMap) - 1)];
+	const int mode = modeValueMap[Math::clamp<int>(modeIdx, 0, sizeof(modeValueMap) / sizeof(modeValueMap[0]) - 1)];
 	pluginDesc.add("mode", mode);
 
 	BL::NodeSocket textureDefaultSock = Nodes::GetInputSocketByName(node, "Default");
@@ -418,6 +418,7 @@ AttrValue DataExporter::exportVRayNodeTexSky(BL::NodeTree &ntree, BL::Node &node
 	}
 	else {
 		BL::Scene::objects_iterator obIt;
+		// TODO: is it possible not to iterate all objects
 		for (m_scene.objects.begin(obIt); obIt != m_scene.objects.end(); ++obIt) {
 			BL::Object ob(*obIt);
 			if (ob && ob.type() == BL::Object::type_LAMP) {

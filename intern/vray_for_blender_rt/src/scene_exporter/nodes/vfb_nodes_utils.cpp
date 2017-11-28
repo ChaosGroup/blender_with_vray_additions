@@ -88,6 +88,7 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 				BL::Object ob(*obIt);
 				if (ob) {
 					if (ob.is_duplicator()) {
+						// TODO: get this from m_id_track
 						ob.dupli_list_create(m_scene, EvalMode::EvalModeRender);
 
 						BL::Object::dupli_list_iterator dupIt;
