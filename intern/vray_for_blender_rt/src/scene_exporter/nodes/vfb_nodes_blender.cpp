@@ -18,6 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
+#include "vfb_utils_blender.h"
 
 
 using namespace VRayForBlender;
@@ -36,7 +37,11 @@ void DataExporter::fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, At
 	BL::ShaderNodeVectorCurve curveNode(node);
 
 	BL::CurveMapping curveMapping = curveNode.mapping();
-	curveMapping.update();
+	{
+		SCOPED_TRACE_EX("Waiting for WRITE_LOCK_BLENDER for CurveMapping for (%s)", node.name().c_str());
+		WRITE_LOCK_BLENDER_RAII
+		curveMapping.update();
+	}
 
 	BL::CurveMap curve = curveMapping.curves[0];
 	if (!curve) {
