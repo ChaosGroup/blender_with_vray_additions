@@ -75,6 +75,10 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		current_bake_object = BL::Object(bakeObj);
 	}
 
+	if (!current_bake_object) {
+		use_bake_view = false;
+	}
+
 	settings_files.use_separate  = RNA_boolean_get(&m_vrayExporter, "useSeparateFiles");
 	settings_files.output_type   = (SettingsFiles::OutputDirType)RNA_enum_ext_get(&m_vrayExporter, "output");
 	settings_files.output_dir    = RNA_std_string_get(&m_vrayExporter, "output_dir");
