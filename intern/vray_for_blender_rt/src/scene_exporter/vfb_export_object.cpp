@@ -228,7 +228,8 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 			}
 		}
 
-		if (is_updated || m_layer_changed) {
+		// changing to Edit Mode causes data update
+		if (is_updated || m_layer_changed || is_data_updated) {
 			// NOTE: It's easier just to reexport full material
 			mtl = exportMtlMulti(ob);
 		}
