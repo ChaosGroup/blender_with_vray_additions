@@ -1318,6 +1318,9 @@ void SceneExporter::sync_render_settings()
 		}),
 	};
 
+	const bool lcFromFileOnly = m_settings.is_viewport;
+	PluginDesc settingsGI("SettingsGI", "SettingsGI"), settingsLC("SettingsLightCache", "SettingsLightCache");
+
 	PointerRNA vrayObject = RNA_pointer_get(&m_scene.ptr, "vray");
 	PointerRNA vrayExporter = RNA_pointer_get(&vrayObject, "Exporter");
 	for (const auto &pluginID : RenderSettingsPlugins) {
@@ -1374,8 +1377,43 @@ void SceneExporter::sync_render_settings()
 			}
 		}
 
-		m_exporter->export_plugin(pluginDesc);
+		if (lcFromFileOnly) {
+			// if we are in viewport we must get both settingsGi and settingsLC and check
+			// that LC is from file or disable it
+			if (pluginID == settingsGI.pluginID) {
+				settingsGI = pluginDesc;
+			} else if (pluginID == settingsLC.pluginID) {
+				settingsLC = pluginDesc;
+			} else {
+				m_exporter->export_plugin(pluginDesc);
+			}
+		} else {
+			m_exporter->export_plugin(pluginDesc);
+		}
 	}
+
+	if (lcFromFileOnly) {
+		bool isLC = false;
+		bool isFile = true;
+
+		auto * engineAttr = settingsGI.get("secondary_engine");
+		auto * modeAttr = settingsLC.get("mode");
+		if (engineAttr) {
+			isLC = engineAttr->attrValue.as<AttrSimpleType<int>>() == 3;
+		}
+		if (modeAttr) {
+			// 2 == from file
+			isFile = modeAttr->attrValue.as<AttrSimpleType<int>>() == 2;
+		}
+
+		if (isLC && !isFile && engineAttr) {
+			// disable secondary engine;
+			engineAttr->attrValue.as<AttrSimpleType<int>>() = 0;
+		}
+		m_exporter->export_plugin(settingsGI);
+		m_exporter->export_plugin(settingsLC);
+	}
+
 }
 
 
