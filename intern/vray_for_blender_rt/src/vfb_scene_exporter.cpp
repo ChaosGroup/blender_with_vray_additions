@@ -1304,7 +1304,7 @@ void SceneExporter::sync_materials()
 
 void SceneExporter::sync_render_settings()
 {
-	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile) {
+	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile && !m_settings.is_viewport) {
 		return;
 	}
 
