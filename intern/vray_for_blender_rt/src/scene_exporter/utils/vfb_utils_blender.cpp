@@ -80,7 +80,7 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 {
 	bool success = true;
 	std::string scriptPath;
-	bool compileFromFile = true, ivalidOSL = false;
+	bool compileFromFile = true;
 	enum OSLNodeMode { INTERNAL = 0, EXTERNAL = 1 };
 	if (RNA_enum_get(&node.ptr, "mode") == EXTERNAL) {
 		scriptPath = RNA_std_string_get(&node.ptr, "filepath");

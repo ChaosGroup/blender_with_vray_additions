@@ -334,7 +334,7 @@ public:
 	void                 sync(const bool check_updated=false);
 	void                 sync_view(const bool check_updated=false);
 	void                 pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg);
-	void                 help_sync_objects();
+
 	void                 sync_objects(const bool check_updated=false);
 	void                 sync_effects(const bool check_updated=false);
 	void                 sync_materials();
@@ -350,12 +350,12 @@ public:
 	void                 tag_redraw();
 
 	virtual void         render_start();
-	void                 render_stop();
 
 	virtual int          is_interrupted();
 	int                  is_viewport() { return !!m_view3d; }
 	int                  is_preview();
 
+	/// Check if engine has flag set when it will be freed because of undo
 	bool                 is_engine_undo_taged();
 	void                 pause_for_undo();
 	void                 resume_from_undo(BL::Context         context,
@@ -383,31 +383,31 @@ protected:
 	BL::RegionView3D     m_region3d;
 	BL::Region           m_region;
 
-	// this is the camera that should be used for exporting
-	// as it can be controlled by the exporter, by default it is m_scene.camera()
+	/// This is the camera that should be used for exporting
+	/// as it can be controlled by the exporter, by default it is m_scene.camera()
 	BL::Object           m_active_camera;
 
-	// will store the python thread state when this exporter must change python data
-	void                *m_python_thread_state;
-	// only used if m_isAnimationRunning is true, since there are 2 threads
-	// lock before python_thread_state_restore and unlock after python_thread_state_save
+	void                *m_python_thread_state; ///< Will store the python thread state when this exporter must change python data
+
+	/// Only used if m_isAnimationRunning is true, since there are 2 threads
+	/// lock before python_thread_state_restore and unlock after python_thread_state_save
 	std::mutex           m_python_state_lock;
 protected:
-	PluginExporter::Ptr  m_exporter;
-	ExporterSettings     m_settings;
-	FrameExportManager   m_frameExporter;
-	DataExporter         m_data_exporter;
-	ViewParams           m_viewParams;
+	PluginExporter::Ptr  m_exporter; ///< Pointer to actuial plugin exporter
+	ExporterSettings     m_settings; ///< Holder for all settings that affect way of export
+	FrameExportManager   m_frameExporter; ///< Handles chaning the current time so all needed keyframe data is exported
+	DataExporter         m_data_exporter; ///< Handle for blender data
+	ViewParams           m_viewParams; ///< The view paraks (current camera, image settings, etc)
 
-	uint32_t             m_sceneComputedLayers;
+	uint32_t             m_sceneComputedLayers; ///< Bool values for each layer compressed in one int
 
-	ThreadManager::Ptr   m_threadManager;
+	ThreadManager::Ptr   m_threadManager; ///< Pointer to the ThreadManager used for object export
 
 	int                  m_renderWidth;
 	int                  m_renderHeight;
 
-	bool                 m_isLocalView;
-	bool                 m_isUndoSync;
+	bool                 m_isLocalView; ///< True if "local view" is enabled
+	bool                 m_isUndoSync; ///< True if the current sync is caused because user did undo action
 private:
 	int                  is_physical_view(BL::Object &cameraObject);
 	int                  is_physical_updated(ViewParams &viewParams);

@@ -155,8 +155,6 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 
 bool ProductionExporter::export_scene(const bool)
 {
-	using AnimMode = SettingsAnimation::AnimationMode;
-
 	SceneExporter::export_scene(false);
 	m_frameExporter.updateFromSettings();
 

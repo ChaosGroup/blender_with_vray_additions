@@ -248,7 +248,6 @@ const char * vrayLogLevelToString(int lvl, ExporterSettings::VRayVerboseLevel st
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::VRayLog) {
-		int level = message.getLogLevel();
 		const char * lvlStr = vrayLogLevelToString(message.getLogLevel(), exporter_settings.verbose_level);
 
 		if (lvlStr) {

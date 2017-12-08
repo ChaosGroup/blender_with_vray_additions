@@ -1309,8 +1309,8 @@ void SceneExporter::sync_render_settings()
 	}
 
 	const float sceneFps = m_scene.render().fps() / m_scene.render().fps_base();
-	typedef std::unordered_map<std::string, AttrValue> ProperyList;
-	typedef std::unordered_map<std::string, ProperyList> PluginOverrideList;
+	typedef HashMap<std::string, AttrValue> ProperyList;
+	typedef HashMap<std::string, ProperyList> PluginOverrideList;
 	const PluginOverrideList pluginOverrides = {
 		std::make_pair("SettingsUnitsInfo", ProperyList{
 			std::make_pair("frames_scale", AttrValue(sceneFps)),
