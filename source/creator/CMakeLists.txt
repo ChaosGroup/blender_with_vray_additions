@@ -590,6 +590,7 @@ if(UNIX AND NOT APPLE)
 				if(${PYTHON_NUMPY_PATH} MATCHES "dist-packages")
 					set(_suffix "dist-packages")
 				endif()
+				message(FATAL_ERROR "DIR [${PYTHON_NUMPY_PATH}/numpy] loc ${TARGETDIR_VER}/python/${_target_LIB}/python${PYTHON_VERSION}/${_suffix}")
 				install(
 					DIRECTORY ${PYTHON_NUMPY_PATH}/numpy
 					DESTINATION ${TARGETDIR_VER}/python/${_target_LIB}/python${PYTHON_VERSION}/${_suffix}

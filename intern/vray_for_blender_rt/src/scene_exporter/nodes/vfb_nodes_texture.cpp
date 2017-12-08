@@ -130,7 +130,7 @@ void DataExporter::fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::N
 		BL::ColorRamp ramp = tex.color_ramp();
 
 		AttrListPlugin  colors;
-		AttrListFloat   positions;
+		AttrListValue   positions;
 		AttrListInt     types;
 
 		int interp;
