@@ -327,7 +327,9 @@ void ZmqExporter::init()
 
 		if (m_client->connected()) {
 			VRayMessage::RendererType type = VRayMessage::RendererType::None;
-			if (is_viewport) {
+			if (exporter_settings.is_preview) {
+				type = VRayMessage::RendererType::Preview;
+			} else if (is_viewport) {
 				type = VRayMessage::RendererType::RT;
 			} else {
 				if (exporter_settings.settings_animation.use) {
