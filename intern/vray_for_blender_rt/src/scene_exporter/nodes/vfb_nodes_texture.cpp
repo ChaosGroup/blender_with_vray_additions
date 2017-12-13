@@ -633,3 +633,25 @@ AttrValue DataExporter::exportVRayNodeTexSoftbox(BL::NodeTree &ntree, BL::Node &
 
 	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 }
+
+
+AttrValue DataExporter::exportVRayNodeTexDistance(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
+{
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+		DataExporter::GetNodePluginID(node));
+
+	BL::NodeSocket objectsSocket = Nodes::GetSocketByAttr(node, "objects");
+	if (objectsSocket.is_linked()) {
+		BL::Node selectorNode = getConnectedNode(ntree, objectsSocket, context);
+		// group selec is handled properly by DataExporter::exportVRayNode
+		if (selectorNode && selectorNode.bl_idname() == "VRayNodeSelectObject") {
+			BL::Object selectedOb = exportVRayNodeSelectObject(ntree, selectorNode, objectsSocket, context);
+			if (selectedOb) {
+				AttrListPlugin objectList = { getNodeName(selectedOb) };
+				pluginDesc.add("objects", objectList);
+			}
+		}
+	}
+
+	return exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+}

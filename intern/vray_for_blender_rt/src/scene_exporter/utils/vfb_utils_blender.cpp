@@ -145,44 +145,6 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 }
 #endif
 
-std::string Blender::GetIDName(BL::ID id, const std::string &)
-{
-#if 1
-	std::string id_name = id.name();
-#else
-	char baseName[MAX_ID_NAME];
-	if (prefix.empty()) {
-		BLI_strncpy(baseName, id->name, MAX_ID_NAME);
-	}
-	else {
-		// NOTE: Skip internal prefix
-		BLI_strncpy(baseName, id->name+2, MAX_ID_NAME);
-	}
-	StripString(baseName);
-
-	std::string id_name = prefix + baseName;
-
-	if(id->lib) {
-		char libFilename[FILE_MAX] = "";
-
-		BLI_split_file_part(id->lib->name+2, libFilename, FILE_MAX);
-		BLI_replace_extension(libFilename, FILE_MAX, "");
-
-		StripString(libFilename);
-
-		id_name.append("LI");
-		id_name.append(libFilename);
-	}
-#endif
-	return id_name;
-}
-
-
-std::string VRayForBlender::Blender::GetIDNameAuto(BL::ID id)
-{
-	return VRayForBlender::Blender::GetIDName(id);
-}
-
 
 BL::Object Blender::GetObjectByName(BL::BlendData data, const std::string &name)
 {

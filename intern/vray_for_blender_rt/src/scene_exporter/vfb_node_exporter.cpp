@@ -457,7 +457,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeSelectObject") {
 		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, context);
 		if (ob) {
-			attrValue = AttrPlugin(Blender::GetIDName(ob));
+			attrValue = AttrPlugin(getNodeName(ob));
 		}
 	}
 	else if (nodeClass == "VRayNodeSelectGroup") {
@@ -510,6 +510,9 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	}
 	else if (nodeClass == "VRayNodeTexRemap") {
 		attrValue = exportVRayNodeTexRemap(ntree, node, fromSocket, context);
+	}
+	else if (nodeClass == "VRayNodeTexDistance") {
+		attrValue = exportVRayNodeTexDistance(ntree, node, fromSocket, context);
 	}
 
 	// Material / BRDF

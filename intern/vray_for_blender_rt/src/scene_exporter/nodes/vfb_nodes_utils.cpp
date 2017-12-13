@@ -60,7 +60,7 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 		for (group.objects.begin(obIt); obIt != group.objects.end(); ++obIt) {
 			BL::Object b_ob(*obIt);
 
-			pluginList.append(getIdUniqueName(b_ob));
+			pluginList.append(getNodeName(b_ob));
 		}
 	}
 

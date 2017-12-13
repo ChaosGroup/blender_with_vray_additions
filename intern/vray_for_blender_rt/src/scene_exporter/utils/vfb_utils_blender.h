@@ -79,9 +79,6 @@ std::string   GetFilepath(const std::string &filepath, ID *holder=nullptr);
 BL::Object    GetObjectByName(BL::BlendData data, const std::string &name);
 BL::Material  GetMaterialByName(BL::BlendData data, const std::string &name);
 
-std::string   GetIDName(BL::ID id, const std::string &prefix="");
-std::string   GetIDNameAuto(BL::ID id);
-
 int           GetMaterialCount(BL::Object ob);
 
 template <typename T>
