@@ -468,6 +468,18 @@ void ZmqExporter::start()
 	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Start));
 }
 
+void ZmqExporter::reset()
+{
+	// TODO: try with clear values up to time
+	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Reset));
+
+	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, exporter_settings.show_vfb));
+	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewport_image_quality));
+	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(exporter_settings.viewport_image_type)));
+	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(exporter_settings.render_mode)));
+
+	m_cachedValues = {}; // reset cache
+}
 
 void ZmqExporter::stop()
 {

@@ -366,6 +366,9 @@ public:
 	/// Export SettingsLightLinker
 	void              sync();
 
+	/// Clear all cached data, used for FrameByFrame export, to clear everything because reset() is called on vray
+	void              reset();
+
 	/// Reset all state that is kept for one sync, must be called after each sync
 	void              resetSyncState();
 

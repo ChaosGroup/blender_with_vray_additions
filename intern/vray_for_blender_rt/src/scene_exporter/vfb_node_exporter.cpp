@@ -318,6 +318,19 @@ void DataExporter::resetSyncState()
 	m_scene_layers = to_int_layer(m_scene.layers());
 }
 
+void DataExporter::reset()
+{
+	auto lock = raiiLock();
+	m_defaults.default_material = AttrPlugin();
+	m_id_cache.clear();
+	m_id_track.clear();
+	clearMaterialCache();
+	// all hidden objects will be checked agains current settings
+	refreshHideLists();
+	// layer did not change since last set
+	m_layer_changed = true;
+	m_scene_layers = to_int_layer(m_scene.layers());
+}
 
 AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket &socket)
 {

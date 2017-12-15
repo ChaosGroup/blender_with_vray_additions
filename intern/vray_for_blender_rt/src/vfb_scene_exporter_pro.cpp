@@ -177,8 +177,19 @@ bool ProductionExporter::export_scene(const bool)
 	double totalSyncTime = 0.;
 	const int renderFrames = m_frameExporter.getRenderFrameCount();
 	bool isFirstExport = true;
+	bool firstFrame = true;
 	for (int c = 0; c < renderFrames; ++c) {
-		clock_t frameBeginTime = clock();
+		const clock_t frameBeginTime = clock();
+
+		if (!firstFrame) {
+			m_viewParams = {};
+			// call reset on vray
+			m_exporter->reset();
+			// clear all cached plugins
+			m_exporter->getPluginManager().clear();
+			// reset all caches and id track
+			m_data_exporter.reset();
+		}
 
 		// export current render frame data
 		m_frameExporter.forEachExportFrame([this, &isFirstExport, isFileExport](FrameExportManager & frameExp) {
@@ -202,7 +213,7 @@ bool ProductionExporter::export_scene(const bool)
 			m_exporter->commit_changes();
 		}
 
-		clock_t frameEndTime = clock();
+		const clock_t frameEndTime = clock();
 		const double frameSyncSeconds = double(frameEndTime - frameBeginTime) / CLOCKS_PER_SEC;
 		totalSyncTime += frameSyncSeconds;
 
@@ -213,6 +224,7 @@ bool ProductionExporter::export_scene(const bool)
 				break;
 			}
 		}
+		firstFrame = false;
 	}
 
 	m_data_exporter.flushInstancerData();
@@ -234,6 +246,7 @@ bool ProductionExporter::export_scene(const bool)
 	// Export stuff after sync
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
 		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
+		// TODO: handle this per frame for FrameByFrame
 		std::string vrsceneDest;
 		std::string blendPath = m_data.filepath();
 

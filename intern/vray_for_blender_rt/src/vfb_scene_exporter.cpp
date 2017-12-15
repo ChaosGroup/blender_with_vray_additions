@@ -163,7 +163,7 @@ void FrameExportManager::updateFromSettings()
 			}
 			m_frameToRender = 0;
 			m_animationFrameStep = 0;
-		} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
+		} else if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame &&  m_settings.exporter_type == ExporterType::ExpoterTypeFile) {
 			// frame by frame is actually not animation and we need to export current frame only
 			m_frameToRender = m_sceneSavedFrame + m_sceneSavedSubframe; // only current frame
 			m_animationFrameStep = 0; // no animation
@@ -175,6 +175,8 @@ void FrameExportManager::updateFromSettings()
 		m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
 	}
 
+	// if we won't use FrameExportManager::forEachExportFrame(), but only export current frame we need to set the current frame
+	m_currentFrame = m_frameToRender;
 }
 
 int FrameExportManager::getRenderFrameCount() const {
@@ -239,6 +241,10 @@ void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManage
 					break;
 				}
 			}
+		}
+
+		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
+			m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache since frame by frame will clear all data after render
 		}
 
 		m_subframes.setCurrentSubframeDivision(0);

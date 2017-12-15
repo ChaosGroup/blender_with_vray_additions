@@ -84,6 +84,7 @@ public:
 	virtual void         sync()  {}
 	virtual void         start() {}
 	virtual void         stop()  {}
+	virtual void         reset() {}
 	virtual bool         is_running() const { return true; }
 
 	virtual void         export_vrscene(const std::string&) {}

@@ -95,6 +95,8 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	const bool needFullSync = !check_updated || beforeState != afterState;
 
 	if (!needFullSync) {
+		// we will sync only object on our render frame, which is the one selected in UI
+		m_exporter->set_current_frame(m_frameExporter.getCurrentRenderFrame());
 		sync(true);
 	} else {
 		if (check_updated) {
