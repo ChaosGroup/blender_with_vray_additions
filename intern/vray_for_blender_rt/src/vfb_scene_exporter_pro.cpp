@@ -387,11 +387,16 @@ void ProductionExporter::render_end()
 {
 	if (m_settings.exporter_type != ExporterType::ExpoterTypeFile) {
 		std::lock_guard<std::mutex> l(m_callback_mtx);
-		m_exporter->stop();
+
+		if (m_settings.close_on_stop) {
+			m_exporter->free();
+		} else {
+			m_exporter->stop();
+		}
+		std::static_pointer_cast<ZmqExporter>(m_exporter)->wait_for_server();
 		m_exporter->set_callback_on_image_ready(ExpoterCallback());
 		m_exporter->set_callback_on_rt_image_updated(ExpoterCallback());
 		m_exporter->set_callback_on_bucket_ready([](const VRayBaseTypes::AttrImage &) {});
-		m_exporter->free();
 	}
 
 	std::lock_guard<PythonGIL> pLock(m_pyGIL);

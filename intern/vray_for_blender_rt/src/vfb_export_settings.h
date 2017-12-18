@@ -181,6 +181,7 @@ struct ExporterSettings {
 	bool              use_bake_view;
 	bool              is_viewport;
 	bool              is_preview;
+	bool              close_on_stop;
 
 	bool              calculate_instancer_velocity;
 

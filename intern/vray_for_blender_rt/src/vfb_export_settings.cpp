@@ -250,6 +250,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		viewport_image_type = ImageType::RGBA_REAL;
 	}
 	show_vfb = !is_viewport && work_mode != WorkMode::WorkModeExportOnly && !is_preview && RNA_boolean_get(&m_vrayExporter, "display");
+	close_on_stop = RNA_boolean_get(&m_vrayExporter, "autoclose");
 
 	verbose_level = static_cast<VRayVerboseLevel>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
 }

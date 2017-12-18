@@ -396,6 +396,12 @@ void ZmqExporter::clear_frame_data(float upTo)
 	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ClearFrameValues, upTo));
 }
 
+void ZmqExporter::wait_for_server()
+{
+	checkZmqClient();
+	m_client->waitForMessages();
+}
+
 void ZmqExporter::sync()
 {
 #define CHECK_UPDATE(name, upd)\

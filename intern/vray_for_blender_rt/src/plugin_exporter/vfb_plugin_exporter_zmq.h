@@ -70,6 +70,7 @@ public:
 	virtual void        start();
 	virtual void        stop();
 	virtual void        reset();
+	void                wait_for_server();
 
 	virtual bool        is_running() const { return m_started; }
 
