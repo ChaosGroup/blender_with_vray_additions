@@ -301,8 +301,6 @@ public:
 		, m_frameExporter(m_scene, m_settings, m_data)
 		, m_data_exporter(m_settings)
 		, m_sceneComputedLayers(0)
-		, m_renderWidth(-1)
-		, m_renderHeight(-1)
 		, m_isLocalView(false)
 		, m_isUndoSync(false)
 	{}
@@ -344,7 +342,7 @@ public:
 	virtual void         setup_callbacks() {}
 	virtual void         draw() {}
 
-	void                 resize(int w, int h);
+	//void                 resize(int w, int h);
 
 	void                 tag_update();
 	void                 tag_redraw();
@@ -397,14 +395,11 @@ protected:
 	ExporterSettings     m_settings; ///< Holder for all settings that affect way of export
 	FrameExportManager   m_frameExporter; ///< Handles chaning the current time so all needed keyframe data is exported
 	DataExporter         m_data_exporter; ///< Handle for blender data
-	ViewParams           m_viewParams; ///< The view paraks (current camera, image settings, etc)
+	ViewParams           m_viewParams; ///< The view params (current camera, image settings, etc)
 
 	uint32_t             m_sceneComputedLayers; ///< Bool values for each layer compressed in one int
 
 	ThreadManager::Ptr   m_threadManager; ///< Pointer to the ThreadManager used for object export
-
-	int                  m_renderWidth;
-	int                  m_renderHeight;
 
 	bool                 m_isLocalView; ///< True if "local view" is enabled
 	bool                 m_isUndoSync; ///< True if the current sync is caused because user did undo action

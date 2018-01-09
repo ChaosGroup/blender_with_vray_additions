@@ -410,19 +410,6 @@ void SceneExporter::free()
 }
 
 
-void SceneExporter::resize(int w, int h) {
-	PRINT_INFO_EX("SceneExporter::resize(%i, %i)", w, h);
-
-	if (m_renderHeight == -1 || m_renderWidth == -1) {
-		m_exporter->set_render_size(w, h);
-	} else if (m_renderHeight != h || m_renderWidth != w) {
-		m_exporter->set_render_size(w, h);
-	}
-
-	m_renderWidth = w;
-	m_renderHeight = h;
-}
-
 void SceneExporter::render_start()
 {
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRender ||

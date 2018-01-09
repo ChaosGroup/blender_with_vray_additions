@@ -49,16 +49,38 @@ namespace {
 	}
 }
 
-void RenderImage::updateImageRegion(float * destination, int destW, int destH, int x, int y, const float * source, int sourceW, int sourceH, int channels)
+void VRayForBlender::updateImageRegion(
+	void * __restrict dest, ImageSize destSize, ImageRegion destRegion,
+	const void * __restrict source, ImageSize sourceSize, ImageRegion sourceRegion, ImageRegion::Options options)
 {
-	y = destH - y;
-	for (int c = 0; c < sourceH; ++c) {
-		const float * src = source + c * sourceW * channels;
-		float * dst = destination + (y - c - 1) * destW * channels + x * channels;
-		memcpy(dst, src, sizeof(float) * sourceW * channels);
+	assert(destRegion.w == sourceRegion.w && destRegion.h == sourceRegion.h && "Source and Destination region's sizes must be equal");
+	assert(destSize.w >= destRegion.w && destSize.h >= destRegion.h && "Image region can't be bigger than dest size!");
+	assert(destRegion.x >= 0 && destRegion.y >= 0 && sourceRegion.x >= 0 && sourceRegion.y >= 0 && "Region's coords must be >= 0");
+	assert(destRegion.x + destRegion.w <= destSize.w && destRegion.y + destRegion.h <= destSize.h && "Destination region must fit inside destination size!");
+	assert(sourceSize.channels == destSize.channels && "Source and destination must have same number of channels");
 
-		::resetAlpha(dst, sourceW, 1, channels);
-		::clamp(dst, sourceW, 1, channels, 1.0f, 1.0f);
+	const int pixelSize = destSize.channels;
+
+	const int destLeftPad = destRegion.x * pixelSize;
+	const int destLineSize = destSize.w * pixelSize;
+
+	const int sourceLineSize = sourceSize.w * pixelSize;
+	const int sourceLeftPad = sourceRegion.x * pixelSize;
+
+	const int destEnd = destSize.h - destRegion.y - 1;
+
+	const int copyLineSize = destRegion.w * pixelSize;
+	for (int c = 0; c < destRegion.h; c++) {
+		float * destLine = reinterpret_cast<float*>(dest) + destLineSize * (destEnd - c) + destLeftPad;
+		const float * sourceLine = reinterpret_cast<const float*>(source) + sourceLineSize * (c + sourceRegion.y) + sourceLeftPad;
+
+		memcpy(destLine, sourceLine, copyLineSize * sizeof(float));
+		if (options & ImageRegion::Options::CLAMP) {
+			::clamp(destLine, destRegion.w, 1, pixelSize, 1.0f, 1.0f);
+		}
+		if (options & ImageRegion::Options::RESET_ALPHA) {
+			::resetAlpha(destLine, destRegion.w, 1, pixelSize);
+		}
 	}
 }
 
@@ -105,10 +127,13 @@ RenderImage::~RenderImage()
 	pixels = nullptr;
 }
 
-void RenderImage::updateRegion(const float *data, int x, int y, int w, int h)
+void RenderImage::updateRegion(const float *source, ImageRegion destRegion)
 {
-	updated += (float)(w * h) / std::max((float)(this->w * this->h), 1.f);
-	RenderImage::updateImageRegion(pixels, this->w, this->h, x, y, data, w, h, channels);
+	updated += (float)(destRegion.w * destRegion.h) / std::max((float)(this->w * this->h), 1.f);
+
+	ImageSize updateSize = {destRegion.w, destRegion.h, channels};
+	using O = ImageRegion::Options;
+	updateImageRegion(pixels, ImageSize{w, h, channels}, destRegion, source, updateSize, updateSize);
 }
 
 void RenderImage::flip()

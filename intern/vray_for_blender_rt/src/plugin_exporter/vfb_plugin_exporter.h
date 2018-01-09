@@ -111,6 +111,7 @@ public:
 	virtual void         set_render_mode(RenderMode) {}
 
 	virtual void         set_render_size(const int&, const int&) {}
+	virtual void         set_render_region(int x, int y, int w, int h, bool crop) {}
 	virtual void         set_viewport_quality(int) {}
 
 	virtual void         set_callback_on_image_ready(ExpoterCallback cb) { callback_on_image_ready = cb; }

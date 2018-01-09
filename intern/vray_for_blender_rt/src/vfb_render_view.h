@@ -33,9 +33,22 @@ struct RenderSizeParams {
 	    , h(0)
 	{}
 
+	RenderSizeParams(int w, int h)
+	    : w(w)
+	    , h(h)
+	{}
+
 	int  w;
 	int  h;
 };
+
+inline bool operator==(const RenderSizeParams & left, const RenderSizeParams & right) {
+	return left.w == right.w  && left.h == right.h;
+}
+
+inline bool operator!=(const RenderSizeParams & left, const RenderSizeParams & right) {
+	return !(left == right);
+}
 
 
 struct RenderViewParams {
@@ -89,6 +102,8 @@ struct ViewParams {
 	ViewParams()
 	    : usePhysicalCamera(false)
 	    , cameraObject(PointerRNA_NULL)
+	    , is_crop(false)
+	    , is_border(false)
 	    , viewport_w(0)
 	    , viewport_h(0)
 	    , viewport_offs_x(0)
@@ -100,8 +115,7 @@ struct ViewParams {
 	}
 
 	int changedSize(const ViewParams &other) const {
-		return (MemberNotEq(renderSize.w) ||
-		        MemberNotEq(renderSize.h));
+		return MemberNotEq(renderSize) || MemberNotEq(regionStart) || MemberNotEq(regionSize);
 	}
 
 	int changedViewPosition(const ViewParams &other) const {
@@ -118,9 +132,14 @@ struct ViewParams {
 	RenderSizeParams  renderSize;
 	RenderViewParams  renderView;
 
+	RenderSizeParams  regionStart;
+	RenderSizeParams  regionSize;
+
 	int               usePhysicalCamera;
 	BL::Object        cameraObject;
 
+	bool              is_crop;
+	bool              is_border;
 	int               viewport_w;
 	int               viewport_h;
 	int               viewport_offs_x;

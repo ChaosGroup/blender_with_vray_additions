@@ -99,7 +99,8 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 
 		fixImage = false;
 		const float * sourceImage = reinterpret_cast<const float *>(img.data.get());
-		updateRegion(sourceImage, img.x, img.y, img.width, img.height);
+
+		updateRegion(sourceImage, {img.x, img.y, img.width, img.height});
 
 	} else if (img.imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 		int channels = 0;
@@ -426,6 +427,17 @@ void ZmqExporter::set_current_frame(float frame)
 		current_scene_frame = frame;
 		checkZmqClient();
 		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCurrentFrame, frame));
+	}
+}
+
+void ZmqExporter::set_render_region(int x, int y, int w, int h, bool crop)
+{
+	checkZmqClient();
+	const AttrListInt region({x, y, w, h});
+	if (crop) {
+		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetCropRegion, region));
+	} else {
+		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderRegion, region));
 	}
 }
 

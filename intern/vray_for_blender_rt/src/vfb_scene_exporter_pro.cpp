@@ -443,7 +443,13 @@ void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img
 				auto pass = result.layers[c].passes[r];
 				if (pass && pass.fullname() == "Combined") {
 					auto * bPass = reinterpret_cast<RenderPass*>(pass.ptr.data);
-					RenderImage::updateImageRegion(bPass->rect, bPass->rectx, bPass->recty, img.x, img.y, reinterpret_cast<const float *>(img.data.get()), img.width, img.height, bPass->channels);
+					ImageSize passSize = {result.resolution_x(), result.resolution_y(), bPass->channels};
+					ImageRegion passRegion = {img.x - m_viewParams.regionStart.w, img.y - m_viewParams.regionStart.h, img.width, img.height};
+
+					ImageSize sourceSize = {img.width, img.height, bPass->channels};
+					ImageRegion sourceRegion = sourceSize;
+
+					updateImageRegion(bPass->rect, passSize, passRegion, img.data.get(), sourceSize, sourceRegion);
 					break;
 				}
 			}
@@ -472,8 +478,9 @@ void ProductionExporter::cb_on_rt_image_updated()
 					BL::RenderPass renderPass(*rpIt);
 					if (renderPass) {
 						RenderImage image = m_exporter->get_pass(renderPass.fullname());
+						RenderSizeParams imageSize = {image.w, image.h};
 
-						if (image && image.w == m_viewParams.renderSize.w && image.h == m_viewParams.renderSize.h) {
+						if (image && (imageSize == m_viewParams.renderSize || imageSize == m_viewParams.regionSize)) {
 							auto resx = result.resolution_x();
 							auto resy = result.resolution_y();
 

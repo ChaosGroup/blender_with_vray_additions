@@ -27,7 +27,10 @@
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_constraint_types.h"
+#include "DNA_object_types.h"
 
+#include "RE_engine.h"
+#include "render_types.h"
 
 using namespace VRayForBlender;
 
@@ -373,10 +376,9 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		// NOTE: Taken from source/blender/editors/space_view3d/view3d_draw.c:
 		// static void view3d_camera_border(...) {...}
 		//
-		bool no_zoom = false;
-		bool no_shift = false;
 
 		Scene *scene = (Scene *)m_scene.ptr.data;
+		auto renderSettings = m_scene.render();
 		const ARegion *ar = (const ARegion*)m_region.ptr.data;
 		const View3D *v3d = (const View3D *)m_view3d.ptr.data;
 		const RegionView3D *rv3d = (const RegionView3D *)m_region3d.ptr.data;
@@ -387,8 +389,6 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		/* get viewport viewplane */
 		BKE_camera_params_init(&params);
 		BKE_camera_params_from_view3d(&params, v3d, rv3d);
-		if (no_zoom)
-			params.zoom = 1.0f;
 		BKE_camera_params_compute_viewplane(&params, ar->winx, ar->winy, 1.0f, 1.0f);
 		rect_view = params.viewplane;
 
@@ -399,11 +399,6 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		params.clipsta = v3d->near;
 		params.clipend = v3d->far;
 		BKE_camera_params_from_object(&params, v3d->camera);
-		if (no_shift) {
-			params.shiftx = 0.0f;
-			params.shifty = 0.0f;
-		}
-
 		BKE_camera_params_compute_viewplane(&params, scene->r.xsch, scene->r.ysch, scene->r.xasp, scene->r.yasp);
 		rect_camera = params.viewplane;
 
@@ -416,6 +411,21 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		// NOTE: +2 to match camera border
 		const int render_w = view_border.xmax - view_border.xmin + 2;
 		const int render_h = view_border.ymax - view_border.ymin + 2;
+
+		if (renderSettings.use_border()) {
+			viewParams.is_crop = renderSettings.use_crop_to_border();
+			viewParams.is_border = true;
+
+			viewParams.regionStart.w = renderSettings.border_min_x() * render_w;
+			viewParams.regionStart.h = render_h - renderSettings.border_max_y() * render_h;
+
+			viewParams.regionSize.w = (renderSettings.border_max_x() - renderSettings.border_min_x()) * render_w;
+			viewParams.regionSize.h = fabs(renderSettings.border_min_y() - renderSettings.border_max_y()) * render_h;
+		} else {
+			viewParams.regionSize = viewParams.regionStart = {};
+			viewParams.is_crop = false;
+			viewParams.is_border = false;
+		}
 
 		// Render size
 		viewParams.renderSize.w = render_w;
@@ -450,6 +460,22 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		viewParams.renderView.ortho = (m_region3d.view_perspective() == BL::RegionView3D::view_perspective_ORTHO);
 		if (viewParams.renderView.ortho) {
 			viewParams.renderView.ortho_width = m_region3d.view_distance() * sensor_size / lens;
+		}
+
+		if(m_view3d.use_render_border()) {
+			viewParams.is_border = true;
+			viewParams.regionStart.w = m_view3d.render_border_min_x() * viewParams.viewport_w;
+			// coordinate system origin is bottom left
+			viewParams.regionStart.h = viewParams.viewport_h - m_view3d.render_border_max_y() * viewParams.viewport_h;
+
+			viewParams.regionSize.w = (m_view3d.render_border_max_x() - m_view3d.render_border_min_x()) * viewParams.viewport_w;
+			viewParams.regionSize.h = fabs(m_view3d.render_border_min_y() - m_view3d.render_border_max_y()) * viewParams.viewport_h;
+
+			viewParams.is_crop = m_scene.render().use_crop_to_border();
+		} else {
+			viewParams.regionSize = viewParams.regionStart = {};
+			viewParams.is_crop = false;
+			viewParams.is_border = false;
 		}
 
 		AspectCorrectFovOrtho(viewParams);
@@ -508,6 +534,24 @@ void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cam
 		viewParams.renderSize.w = renderSettings.resolution_x() * renderSettings.resolution_percentage() / 100;
 		viewParams.renderSize.h = renderSettings.resolution_y() * renderSettings.resolution_percentage() / 100;
 
+		if (renderSettings.use_border()) {
+			viewParams.is_border = true;
+			viewParams.is_crop = renderSettings.use_crop_to_border();
+
+			viewParams.regionStart.w = renderSettings.border_min_x() * viewParams.renderSize.w;
+			viewParams.regionStart.h = viewParams.renderSize.h - renderSettings.border_max_y() * viewParams.renderSize.h;
+
+			const RenderEngine * re = reinterpret_cast<RenderEngine*>(m_engine.ptr.data);
+			viewParams.regionSize.w = re->re->result->rectx;
+			viewParams.regionSize.h = re->re->result->recty;
+		} else {
+			viewParams.regionSize = viewParams.regionStart = {};
+			viewParams.is_crop = false;
+			viewParams.is_border = false;
+		}
+
+		// get render region here
+
 		m_data_exporter.fillCameraData(cameraObject, viewParams);
 
 		AspectCorrectFovOrtho(viewParams);
@@ -521,8 +565,16 @@ ViewParams SceneExporter::get_current_view_params()
 	if (m_view3d) {
 		get_view_from_viewport(viewParams);
 
-		viewParams.renderSize.w *= m_settings.getViewportResolutionPercentage();
-		viewParams.renderSize.h *= m_settings.getViewportResolutionPercentage();
+		const float viewportScale = m_settings.getViewportResolutionPercentage();
+
+		viewParams.renderSize.w *= viewportScale;
+		viewParams.renderSize.h *= viewportScale;
+
+		viewParams.regionSize.w *= viewportScale;
+		viewParams.regionSize.h *= viewportScale;
+
+		viewParams.regionStart.w *= viewportScale;
+		viewParams.regionStart.h *= viewportScale;
 	}
 	else {
 		BL::Object sceneCamera(m_active_camera);
@@ -596,7 +648,8 @@ void SceneExporter::sync_view(const bool check_updated)
 	}
 
 	if (m_viewParams.changedSize(viewParams) || !check_updated) {
-		resize(viewParams.renderSize.w, viewParams.renderSize.h);
+		m_exporter->set_render_size(viewParams.renderSize.w, viewParams.renderSize.h);
+		m_exporter->set_render_region(viewParams.regionStart.w, viewParams.regionStart.h, viewParams.regionSize.w, viewParams.regionSize.h, viewParams.is_crop);
 	}
 
 	if (m_viewParams.changedViewPosition(viewParams)) {

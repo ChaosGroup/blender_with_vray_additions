@@ -171,7 +171,13 @@ void InteractiveExporter::draw()
 		const bool transparent = m_settings.getViewportShowAlpha();
 
 		glPushMatrix();
-		glTranslatef(m_viewParams.viewport_offs_x, m_viewParams.viewport_offs_y, 0.0f);
+		// When initializing view params we multiply all sizes by this scale, but now we need to calculate blender sizes
+		// so we must go back in blender sizes
+		const float vpScale =  m_settings.getViewportResolutionPercentage();
+
+		const int offsetY = m_viewParams.viewport_h - m_viewParams.regionSize.h / vpScale - m_viewParams.regionStart.h / vpScale;
+		const int offsetX = m_viewParams.regionStart.w / vpScale;
+		glTranslatef(m_viewParams.viewport_offs_x + offsetX, m_viewParams.viewport_offs_y + offsetY, 0.0f);
 
 		if (transparent) {
 			glEnable(GL_BLEND);
@@ -196,9 +202,22 @@ void InteractiveExporter::draw()
 			glDisable(GL_TEXTURE_2D);
 			glDeleteTextures(1, &texid);
 
-			glPixelZoom((float)m_viewParams.viewport_w/(float)image.w, (float)m_viewParams.viewport_h/(float)image.h);
+			float xZoom = 1.f;
+			float yZoom = 1.f;
+
+			if (m_viewParams.is_border) {
+				xZoom = m_viewParams.regionSize.w / static_cast<float>(image.w);
+				yZoom = m_viewParams.regionSize.h / static_cast<float>(image.h);
+			} else {
+				xZoom = m_viewParams.viewport_w / static_cast<float>(image.w);
+				yZoom = m_viewParams.viewport_h / static_cast<float>(image.h);
+			}
+
+			glPixelZoom(xZoom, yZoom);
 			glRasterPos2f(0.f, 0.f);
 
+			// TODO: we are directly drawing to screen, if viewportResolution is not 100% then this will not fill the drawing area
+			//       to fix this, we should streach the image manually
 			// we need to manually flip since we cant do it on the device
 			image.flip();
 			glDrawPixels(image.w, image.h, GL_RGBA, GL_FLOAT, image.pixels);
@@ -221,15 +240,18 @@ void InteractiveExporter::draw()
 			glPushMatrix();
 			glTranslatef(0.0f, 0.0f, 0.0f);
 
+			const int w = m_viewParams.is_border ? m_viewParams.regionSize.w / vpScale : m_viewParams.viewport_w;
+			const int h = m_viewParams.is_border ? m_viewParams.regionSize.h / vpScale : m_viewParams.viewport_h;
+
 			glBegin(GL_QUADS);
 			glTexCoord2f(0.0f, 1.0f);
 			glVertex2f(0.0f, 0.0f);
 			glTexCoord2f(1.0f, 1.0f);
-			glVertex2f((float)m_viewParams.viewport_w, 0.0f);
+			glVertex2f(w, 0.0f);
 			glTexCoord2f(1.0f, 0.0f);
-			glVertex2f((float)m_viewParams.viewport_w, (float)m_viewParams.viewport_h);
+			glVertex2f(w, h);
 			glTexCoord2f(0.0f, 0.0f);
-			glVertex2f(0.0f, (float)m_viewParams.viewport_h);
+			glVertex2f(0.0f, h);
 			glEnd();
 
 			glPopMatrix();

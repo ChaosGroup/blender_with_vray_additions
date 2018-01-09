@@ -21,9 +21,55 @@
 
 #include "cgr_config.h"
 #include "vfb_util_defines.h"
+
 #include <utility>
+#include <vector>
+#include <cassert>
+#include <algorithm>
 
 namespace VRayForBlender {
+
+struct ImageSize {
+	int w, h;
+	int channels;
+};
+
+
+struct ImageRegion {
+	ImageRegion(ImageSize sz)
+		: x(0), y(0), w(sz.w), h(sz.h) {}
+
+	ImageRegion(int x, int y, int w, int h)
+		: x(x), y(y), w(w), h(h) {}
+
+	int x, y;
+	int w, h;
+
+	enum Options {
+		NONE        = 0,
+		RESET_ALPHA = 1 << 0, ///< reset alpha to 1.0
+		CLAMP       = 1 << 1, ///< clamp values to [0, 1]
+
+		FROM_RENDERER = RESET_ALPHA | CLAMP, ///< convinient default for images from vray
+	};
+};
+
+
+/// Copy a region from one image to a region in another image
+/// @dest and @source must not overlap, @sourceRegion and @destRegion must have same size
+/// @param dest - memory for the destination
+/// @param destSize - size of the destination memory
+/// @param destRegion - the region in the destination image
+/// @param source - pointer to source memory
+/// @param sourceSize - size of the source image
+/// @param sourceRegion - the region in the source image
+/// @param options - specifies additional actions to be performed on the destination
+void updateImageRegion(
+	void * __restrict dest, ImageSize destSize, ImageRegion destRegion,
+	const void * __restrict source, ImageSize sourceSize, ImageRegion sourceRegion,
+	ImageRegion::Options options = ImageRegion::Options::FROM_RENDERER
+);
+
 
 struct RenderImage {
 	RenderImage()
@@ -48,9 +94,7 @@ struct RenderImage {
 		return !!(pixels);
 	}
 
-	static void updateImageRegion(float * dest, int destW, int destH, int x, int y, const float * source, int sourceW, int sourceH, int channels);
-
-	void   updateRegion(const float *data, int x, int y, int w, int h);
+	void   updateRegion(const float *source, ImageRegion destRegion);
 	void   flip();
 	void   clamp(float max=1.0f, float val=1.0f);
 	void   resetAlpha();
