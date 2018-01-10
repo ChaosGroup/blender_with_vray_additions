@@ -175,8 +175,11 @@ void InteractiveExporter::draw()
 		// so we must go back in blender sizes
 		const float vpScale =  m_settings.getViewportResolutionPercentage();
 
-		const int offsetY = m_viewParams.viewport_h - m_viewParams.regionSize.h / vpScale - m_viewParams.regionStart.h / vpScale;
-		const int offsetX = m_viewParams.regionStart.w / vpScale;
+		int offsetY = 0, offsetX = 0;
+		if (m_viewParams.is_border) {
+			offsetY = m_viewParams.viewport_h - m_viewParams.regionSize.h / vpScale - m_viewParams.regionStart.h / vpScale;
+			offsetX = m_viewParams.regionStart.w / vpScale;
+		}
 		glTranslatef(m_viewParams.viewport_offs_x + offsetX, m_viewParams.viewport_offs_y + offsetY, 0.0f);
 
 		if (transparent) {
