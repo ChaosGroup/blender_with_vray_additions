@@ -42,8 +42,10 @@ enum VRayNodeSocketType {
 	vrayNodeSocketObject,
 	vrayNodeSocketTransform,
 	vrayNodeSocketVector,
+	vrayNodeSocketPlugin,
 };
 
+std::string getVRayNodeSocketTypeName(BL::NodeSocket socket);
 VRayNodeSocketType getVRayNodeSocketType(BL::NodeSocket socket);
 
 namespace Nodes {

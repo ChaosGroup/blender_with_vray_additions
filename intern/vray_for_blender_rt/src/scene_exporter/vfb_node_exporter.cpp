@@ -336,51 +336,53 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 {
 	AttrValue attrValue;
 
-	std::string socketVRayType = socket.rna_type().identifier();
-	if (socketVRayType == "VRaySocketColor" ||
-	    socketVRayType == "VRaySocketEnvironment") {
+	const VRayNodeSocketType socketVRayType = getVRayNodeSocketType(socket);
+	const std::string socketTypeName = getVRayNodeSocketTypeName(socket);
+
+	if (socketVRayType == VRayNodeSocketType::vrayNodeSocketColor ||
+	    socketVRayType == VRayNodeSocketType::vrayNodeSocketEnvironment) {
 		float color[3];
 		RNA_float_get_array(&socket.ptr, "value", color);
 		attrValue = AttrColor(color);
 	}
-	else if (socketVRayType == "VRaySocketEnvironmentOverride") {
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketEnvironmentOverride) {
 		if (RNA_boolean_get(&socket.ptr, "use")) {
 			float color[3];
 			RNA_float_get_array(&socket.ptr, "value", color);
 			attrValue = AttrColor(color);
 		}
 	}
-	else if (socketVRayType == "VRaySocketFloatColor" ||
-	         socketVRayType == "VRaySocketFloat") {
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketFloatColor ||
+	         socketVRayType == VRayNodeSocketType::vrayNodeSocketFloat) {
 		attrValue = RNA_float_get(&socket.ptr, "value");
 	}
-	else if (socketVRayType == "VRaySocketInt") {
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketInt) {
 		attrValue = RNA_int_get(&socket.ptr, "value");
 	}
-	else if (socketVRayType == "VRaySocketVector") {
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketVector) {
 		float vector[3];
 		RNA_float_get_array(&socket.ptr, "value", vector);
 		attrValue = AttrVector(vector);
 	}
-	else if (socketVRayType == "VRaySocketBRDF") {
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketBRDF) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
-		            ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
+		            ntree.name().c_str(), socket.node().name().c_str(), socketTypeName.c_str());
 	}
-	else if (socketVRayType == "VRaySocketPlugin") {
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketPlugin) {
 		attrValue = AttrSimpleType<std::string>(RNA_std_string_get(&socket.ptr, "value"));
 	}
 	// These sockets do not have default value, they must be linked or skipped otherwise.
 	//
-	else if (socketVRayType == "VRaySocketTransform") {}
-	else if (socketVRayType == "VRaySocketFloatNoValue") {}
-	else if (socketVRayType == "VRaySocketColorNoValue") {}
-	else if (socketVRayType == "VRaySocketCoords") {}
-	else if (socketVRayType == "VRaySocketObject") {}
-	else if (socketVRayType == "VRaySocketEffect") {}
-	else if (socketVRayType == "VRaySocketMtl") {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketTransform) {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketFloatNoValue) {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketColorNoValue) {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketCoords) {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketObject) {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketEffect) {}
+	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketMtl) {}
 	else {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
-		            ntree.name().c_str(), socket.node().name().c_str(), socketVRayType.c_str());
+		            ntree.name().c_str(), socket.node().name().c_str(), socketTypeName.c_str());
 	}
 
 	return attrValue;

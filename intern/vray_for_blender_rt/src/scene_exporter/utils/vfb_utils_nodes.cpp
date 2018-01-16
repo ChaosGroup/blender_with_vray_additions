@@ -141,9 +141,19 @@ BL::Node VRayForBlender::Nodes::GetNodeByType(BL::NodeTree nodeTree, const std::
 	return BL::Node(PointerRNA_NULL);
 }
 
+
+std::string VRayForBlender::getVRayNodeSocketTypeName(BL::NodeSocket socket)
+{
+	if (RNA_struct_find_property(&socket.ptr, "vray_socket_base_type")) {
+		return RNA_std_string_get(&socket.ptr, "vray_socket_base_type");
+	}
+	return socket.rna_type().identifier();
+}
+
+
 VRayForBlender::VRayNodeSocketType VRayForBlender::getVRayNodeSocketType(BL::NodeSocket socket)
 {
-	const std::string &socketTypeStr = socket.rna_type().identifier();
+	const std::string & socketTypeStr = getVRayNodeSocketTypeName(socket);
 
 	if (socketTypeStr == "VRaySocketBRDF") return vrayNodeSocketBRDF;
 	if (socketTypeStr == "VRaySocketColor") return vrayNodeSocketColor;
