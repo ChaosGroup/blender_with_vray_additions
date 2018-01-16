@@ -820,9 +820,12 @@ std::string DataExporter::cryptomatteName(BL::Object ob) {
 
 std::string DataExporter::cryptomatteNameHierarchy(BL::Object ob) {
 	std::vector<std::string> nameParts;
-	const std::string & obName = ob.name();
-	int size = obName.length();
-	nameParts.push_back(obName);
+	const char * base = "object";
+	if (isObLamp(ob)) {
+		base = "lamp";
+	}
+	int size = strlen(base);
+	nameParts.push_back(base);
 
 	BL::Object iter = ob.parent();
 	while (iter) {
