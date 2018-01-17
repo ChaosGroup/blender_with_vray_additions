@@ -297,8 +297,9 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 					AttrValue socketValue = exportSocket(ntree, curSock, context);
 					if (curSock.is_linked()) {
 						if (socketValue.type == ValueTypePlugin) {
+							const auto & paramDesc = GetPluginDescription(socketValue.as<AttrPlugin>().plugin);
 							const float texMult = getSocketMult(curSock);
-							const bool needMult = texMult >= 0.0f;
+							const bool needMult = texMult >= 0.0f && paramDesc.pluginType == ParamDesc::PluginTexture;
 							bool texIsColor = false;
 
 							// Currently processed socket.
