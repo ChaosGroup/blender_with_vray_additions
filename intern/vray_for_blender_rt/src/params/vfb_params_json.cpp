@@ -215,6 +215,9 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 				else if (attrType == "LIST") {
 					attrDesc.type = AttrTypeList;
 				}
+				else if (attrType == "PLUGIN_LIST") {
+					attrDesc.type = AttrTypeListPlugin;
+				}
 				else if (attrType == "WIDGET_RAMP") {
 					attrDesc.type = AttrTypeWidgetRamp;
 
