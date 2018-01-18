@@ -143,7 +143,14 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 		m_settings.export_meshes = false;
 	}
 
-	if (!isFirstExport && (aMode == AnimMode::AnimationModeFullCamera || aMode == AnimMode::AnimationModeCameraLoop)) {
+	// for camera-loop we could just sync view, but then we will miss camera's hide lists which
+	// are exported as MtlRenderStats
+	const bool onlyView = !isFirstExport &&
+		(aMode == AnimMode::AnimationModeFullCamera ||
+		 (aMode == AnimMode::AnimationModeCameraLoop && !m_settings.use_hide_from_view)
+	);
+
+	if (onlyView) {
 		sync_view(false);
 	} else {
 		// sync(!isFirstExport);
