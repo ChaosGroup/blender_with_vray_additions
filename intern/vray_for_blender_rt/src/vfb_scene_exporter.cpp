@@ -305,6 +305,20 @@ MHash getParticleID(BL::Object arrayGenerator, int arrayIndex)
 }
 
 
+BL::Object SceneExporter::getActiveCamera(BL::SpaceView3D view3d, BL::Scene scene)
+{
+	// if we have valid 3d view, use it's camera
+	if (view3d) {
+		// user could select any object as current camera
+		BL::Object view3dCamera = view3d.camera();
+		if (view3dCamera.type() == BL::Object::type_CAMERA) {
+			return view3dCamera;
+		}
+	}
+
+	return scene.camera();
+}
+
 void SceneExporter::pause_for_undo()
 {
 	m_context = PointerRNA_NULL;
@@ -330,11 +344,7 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 	m_view3d = BL::SpaceView3D(context.space_data());
 	m_region3d = context.region_data();
 	m_region = context.region();
-
-	BL::Object cameraOB = m_view3d ? m_view3d.camera() : scene.camera();
-	if (cameraOB.type() == BL::Object::type_CAMERA) {
-		m_active_camera = cameraOB;
-	}
+	m_active_camera = SceneExporter::getActiveCamera(m_view3d, m_scene);
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 	m_frameExporter.updateFromSettings();
@@ -355,10 +365,7 @@ SceneExporter::~SceneExporter()
 }
 
 void SceneExporter::init() {
-	BL::Object cameraOB = m_view3d ? m_view3d.camera() : m_scene.camera();
-	if (cameraOB.type() == BL::Object::type_CAMERA) {
-		m_active_camera = cameraOB;
-	}
+	m_active_camera = SceneExporter::getActiveCamera(m_view3d, m_scene);
 
 	// make sure we update settings before exporter - it will read from settings
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);

@@ -365,6 +365,8 @@ public:
 
 	void                 calculate_scene_layers();
 
+	static BL::Object    getActiveCamera(BL::SpaceView3D view3d, BL::Scene scene);
+
 	PythonGIL            m_pyGIL;
 protected:
 	virtual void         create_exporter();

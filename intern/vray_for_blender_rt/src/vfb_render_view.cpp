@@ -363,7 +363,7 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 {
 	if (m_region3d.view_perspective() == BL::RegionView3D::view_perspective_CAMERA) {
 		BL::Object cameraObject = m_view3d.lock_camera_and_layers()
-		                          ? BL::Object(m_active_camera)
+		                          ? m_scene.camera()
 		                          : m_view3d.camera();
 
 		if (!cameraObject || !cameraObject.data() || cameraObject.type() != BL::Object::type_CAMERA) {
@@ -562,6 +562,7 @@ void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cam
 ViewParams SceneExporter::get_current_view_params()
 {
 	ViewParams viewParams;
+	viewParams.cameraObject = SceneExporter::getActiveCamera(m_view3d, m_scene);
 	if (m_view3d) {
 		get_view_from_viewport(viewParams);
 

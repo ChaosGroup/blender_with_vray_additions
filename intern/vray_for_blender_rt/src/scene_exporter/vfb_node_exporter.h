@@ -527,6 +527,10 @@ private:
 
 public:
 
+	const ObjectHideMap & getHiddenCameraObjects() const {
+		return m_hide_lists;
+	}
+
 	/// lock protecting m_id_track, m_undo_stack, m_light_linker
 	std::unique_lock<std::mutex> raiiLock() {
 		return std::unique_lock<std::mutex>(m_maps_mtx);

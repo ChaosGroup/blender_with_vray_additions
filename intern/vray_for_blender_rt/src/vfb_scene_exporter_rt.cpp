@@ -50,17 +50,20 @@ void InteractiveExporter::setup_callbacks()
 
 bool InteractiveExporter::export_scene(const bool check_updated)
 {
-	clock_t begin = clock();
+	const clock_t begin = clock();
 
 	struct FrameStateCheck {
 		FrameExportManager::BlenderFramePair sceneFrame;
+		DataExporter::ObjectHideMap cameraObjects;
+		bool useHideObjects;
 		bool useMotionBlur;
 		float mbDuration;
 		float mbInterval;
 		int mbGeomSamples;
 
-		FrameStateCheck(const ExporterSettings & settings, const FrameExportManager & frameExp)
+		FrameStateCheck(const ExporterSettings & settings, const FrameExportManager & frameExp, DataExporter & dataExporter)
 		    : sceneFrame(frameExp.getCurrentRenderFrame())
+		    , cameraObjects(dataExporter.getHiddenCameraObjects())
 		    , useMotionBlur(settings.use_motion_blur)
 		    , mbDuration(settings.mb_duration)
 		    , mbInterval(settings.mb_offset)
@@ -72,15 +75,20 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 				return true;
 			} else if (useMotionBlur != o.useMotionBlur) {
 				return true;
-			} else {
-				return mbDuration != o.mbDuration || mbInterval != o.mbInterval || mbGeomSamples != o.mbGeomSamples;
+				// if any of these has changed, we must re-export all objects
+			} else if (mbDuration != o.mbDuration || mbInterval != o.mbInterval || mbGeomSamples != o.mbGeomSamples) {
+				return true;
+			} else if (cameraObjects != o.cameraObjects) {
+				// if useHideObjects is true for previous or current sync, then change in camera hide list could indirectly need full re-export
+				// TODO: this can be optimised by collecting all objects in hide lists and checking for changes there
+				return true;
 			}
-		}
 
+			return false;
+		}
 	};
 
-	FrameStateCheck beforeState(m_settings, m_frameExporter);
-
+	const FrameStateCheck beforeState(m_settings, m_frameExporter, m_data_exporter);
 	SceneExporter::export_scene(check_updated);
 
 	if (check_updated) {
@@ -91,7 +99,10 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 
 	m_frameExporter.updateFromSettings();
 
-	FrameStateCheck afterState(m_settings, m_frameExporter);
+	m_active_camera = SceneExporter::getActiveCamera(m_view3d, m_scene);
+	m_data_exporter.setActiveCamera(m_active_camera);
+	m_data_exporter.refreshHideLists();
+	const FrameStateCheck afterState(m_settings, m_frameExporter, m_data_exporter);
 	const bool needFullSync = !check_updated || beforeState != afterState;
 
 	if (!needFullSync) {
