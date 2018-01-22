@@ -297,17 +297,18 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 					AttrValue socketValue = exportSocket(ntree, curSock, context);
 					if (curSock.is_linked()) {
 						if (socketValue.type == ValueTypePlugin) {
-							const auto & paramDesc = GetPluginDescription(socketValue.as<AttrPlugin>().plugin);
 							const float texMult = getSocketMult(curSock);
-							const bool needMult = texMult >= 0.0f && paramDesc.pluginType == ParamDesc::PluginTexture;
 							bool texIsColor = false;
 
 							// Currently processed socket.
 							const VRayNodeSocketType curSockType = getVRayNodeSocketType(curSock);
 
 							// Connected socket.
-							const BL::NodeSocket conSock = Nodes::GetConnectedSocket(curSock);
+							BL::NodeSocket conSock = Nodes::GetConnectedSocket(curSock);
 							const VRayNodeSocketType conSockType = getVRayNodeSocketType(conSock);
+
+							const ParamDesc::PluginType conPluginType = GetNodePluginType(conSock.node());
+							const bool needMult = texMult >= 0.0f && conPluginType == ParamDesc::PluginTexture;
 
 							if (needConvertColorToFloat(curSockType, conSockType)) {
 								if (needMult) {
