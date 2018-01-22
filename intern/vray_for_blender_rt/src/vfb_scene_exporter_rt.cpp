@@ -80,7 +80,6 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 				return true;
 			} else if (cameraObjects != o.cameraObjects) {
 				// if useHideObjects is true for previous or current sync, then change in camera hide list could indirectly need full re-export
-				// TODO: this can be optimised by collecting all objects in hide lists and checking for changes there
 				return true;
 			}
 
