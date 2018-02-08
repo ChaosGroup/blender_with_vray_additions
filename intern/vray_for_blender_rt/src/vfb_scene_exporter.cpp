@@ -99,9 +99,10 @@ std::vector<int> &SubframesHandler::getSubframeValues() {
 	return m_subframeValues;
 }
 
-FrameExportManager::FrameExportManager(BL::Scene scene, ExporterSettings & settings, BL::BlendData & data)
+FrameExportManager::FrameExportManager(BL::Scene & scene, ExporterSettings & settings, BL::BlendData & data, BL::RenderEngine & engine)
 	: m_settings(settings)
 	, m_scene(scene)
+	, m_engine(engine)
 	, m_data(data)
 	, m_subframes(scene, m_settings)
 {
@@ -200,7 +201,7 @@ void FrameExportManager::reset()
 {
 	// NOTE: if frame is changed while in preview, the preview will be restarted because of the change in the scene
 	if (!m_settings.is_preview) {
-		m_scene.frame_set(m_sceneSavedFrame, 0.f);
+		m_engine.frame_set(m_sceneSavedFrame, 0.f);
 		updateFromSettings();
 	}
 }

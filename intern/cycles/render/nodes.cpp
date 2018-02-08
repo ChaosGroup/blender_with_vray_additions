@@ -1801,6 +1801,14 @@ BsdfBaseNode::BsdfBaseNode(const NodeType *node_type)
 	special_type = SHADER_SPECIAL_TYPE_CLOSURE;
 }
 
+bool BsdfBaseNode::has_bump()
+{
+	/* detect if anything is plugged into the normal input besides the default */
+	ShaderInput *normal_in = input("Normal");
+	return (normal_in && normal_in->link &&
+	        normal_in->link->parent->special_type != SHADER_SPECIAL_TYPE_GEOMETRY);
+}
+
 /* BSDF Closure */
 
 BsdfNode::BsdfNode(const NodeType *node_type)
@@ -2439,9 +2447,7 @@ void PrincipledBsdfNode::compile(OSLCompiler& compiler)
 
 bool PrincipledBsdfNode::has_bssrdf_bump()
 {
-	/* detect if anything is plugged into the normal input besides the default */
-	ShaderInput *normal_in = input("Normal");
-	return (normal_in->link && normal_in->link->parent->special_type != SHADER_SPECIAL_TYPE_GEOMETRY);
+	return has_surface_bssrdf() && has_bump();
 }
 
 /* Translucent BSDF Closure */
@@ -4774,7 +4780,7 @@ NODE_DEFINE(OutputNode)
 
 	SOCKET_IN_CLOSURE(surface, "Surface");
 	SOCKET_IN_CLOSURE(volume, "Volume");
-	SOCKET_IN_FLOAT(displacement, "Displacement", 0.0f);
+	SOCKET_IN_VECTOR(displacement, "Displacement", make_float3(0.0f, 0.0f, 0.0f));
 	SOCKET_IN_NORMAL(normal, "Normal", make_float3(0.0f, 0.0f, 0.0f));
 
 	return type;
@@ -5596,6 +5602,188 @@ void TangentNode::compile(OSLCompiler& compiler)
 	compiler.parameter(this, "direction_type");
 	compiler.parameter(this, "axis");
 	compiler.add(this, "node_tangent"); 
+}
+
+/* Bevel */
+
+NODE_DEFINE(BevelNode)
+{
+	NodeType* type = NodeType::add("bevel", create, NodeType::SHADER);
+
+	SOCKET_INT(samples, "Samples", 4);
+
+	SOCKET_IN_FLOAT(radius, "Radius", 0.05f);
+	SOCKET_IN_NORMAL(normal, "Normal", make_float3(0.0f, 0.0f, 0.0f), SocketType::LINK_NORMAL);
+
+	SOCKET_OUT_NORMAL(bevel, "Normal");
+
+	return type;
+}
+
+BevelNode::BevelNode()
+: ShaderNode(node_type)
+{
+}
+
+void BevelNode::compile(SVMCompiler& compiler)
+{
+	ShaderInput *radius_in = input("Radius");
+	ShaderInput *normal_in = input("Normal");
+	ShaderOutput *normal_out = output("Normal");
+
+	compiler.add_node(NODE_BEVEL,
+		compiler.encode_uchar4(samples,
+		                       compiler.stack_assign(radius_in),
+		                       compiler.stack_assign_if_linked(normal_in),
+		                       compiler.stack_assign(normal_out)));
+}
+
+void BevelNode::compile(OSLCompiler& compiler)
+{
+	compiler.parameter(this, "samples");
+	compiler.add(this, "node_bevel");
+}
+
+/* Displacement */
+
+NODE_DEFINE(DisplacementNode)
+{
+	NodeType* type = NodeType::add("displacement", create, NodeType::SHADER);
+
+	static NodeEnum space_enum;
+	space_enum.insert("object", NODE_NORMAL_MAP_OBJECT);
+	space_enum.insert("world", NODE_NORMAL_MAP_WORLD);
+
+	SOCKET_ENUM(space, "Space", space_enum, NODE_NORMAL_MAP_TANGENT);
+
+	SOCKET_IN_FLOAT(height, "Height", 0.0f);
+	SOCKET_IN_FLOAT(midlevel, "Midlevel", 0.5f);
+	SOCKET_IN_FLOAT(scale, "Scale", 1.0f);
+	SOCKET_IN_NORMAL(normal, "Normal", make_float3(0.0f, 0.0f, 0.0f), SocketType::LINK_NORMAL);
+
+	SOCKET_OUT_VECTOR(displacement, "Displacement");
+
+	return type;
+}
+
+DisplacementNode::DisplacementNode()
+: ShaderNode(node_type)
+{
+}
+
+void DisplacementNode::compile(SVMCompiler& compiler)
+{
+	ShaderInput *height_in = input("Height");
+	ShaderInput *midlevel_in = input("Midlevel");
+	ShaderInput *scale_in = input("Scale");
+	ShaderInput *normal_in = input("Normal");
+	ShaderOutput *displacement_out = output("Displacement");
+
+	compiler.add_node(NODE_DISPLACEMENT,
+		compiler.encode_uchar4(compiler.stack_assign(height_in),
+		                       compiler.stack_assign(midlevel_in),
+		                       compiler.stack_assign(scale_in),
+		                       compiler.stack_assign_if_linked(normal_in)),
+	    compiler.stack_assign(displacement_out),
+		space);
+}
+
+void DisplacementNode::compile(OSLCompiler& compiler)
+{
+	compiler.parameter(this, "space");
+	compiler.add(this, "node_displacement");
+}
+
+/* Vector Displacement */
+
+NODE_DEFINE(VectorDisplacementNode)
+{
+	NodeType* type = NodeType::add("vector_displacement", create, NodeType::SHADER);
+
+	static NodeEnum space_enum;
+	space_enum.insert("tangent", NODE_NORMAL_MAP_TANGENT);
+	space_enum.insert("object", NODE_NORMAL_MAP_OBJECT);
+	space_enum.insert("world", NODE_NORMAL_MAP_WORLD);
+
+	SOCKET_ENUM(space, "Space", space_enum, NODE_NORMAL_MAP_TANGENT);
+	SOCKET_STRING(attribute, "Attribute", ustring(""));
+
+	SOCKET_IN_COLOR(vector, "Vector", make_float3(0.0f, 0.0f, 0.0f));
+	SOCKET_IN_FLOAT(midlevel, "Midlevel", 0.0f);
+	SOCKET_IN_FLOAT(scale, "Scale", 1.0f);
+
+	SOCKET_OUT_VECTOR(displacement, "Displacement");
+
+	return type;
+}
+
+VectorDisplacementNode::VectorDisplacementNode()
+: ShaderNode(node_type)
+{
+}
+
+void VectorDisplacementNode::attributes(Shader *shader, AttributeRequestSet *attributes)
+{
+	if(shader->has_surface && space == NODE_NORMAL_MAP_TANGENT) {
+		if(attribute == ustring("")) {
+			attributes->add(ATTR_STD_UV_TANGENT);
+			attributes->add(ATTR_STD_UV_TANGENT_SIGN);
+		}
+		else {
+			attributes->add(ustring((string(attribute.c_str()) + ".tangent").c_str()));
+			attributes->add(ustring((string(attribute.c_str()) + ".tangent_sign").c_str()));
+		}
+
+		attributes->add(ATTR_STD_VERTEX_NORMAL);
+	}
+
+	ShaderNode::attributes(shader, attributes);
+}
+
+void VectorDisplacementNode::compile(SVMCompiler& compiler)
+{
+	ShaderInput *vector_in = input("Vector");
+	ShaderInput *midlevel_in = input("Midlevel");
+	ShaderInput *scale_in = input("Scale");
+	ShaderOutput *displacement_out = output("Displacement");
+	int attr = 0, attr_sign = 0;
+
+	if(space == NODE_NORMAL_MAP_TANGENT) {
+		if(attribute == ustring("")) {
+			attr = compiler.attribute(ATTR_STD_UV_TANGENT);
+			attr_sign = compiler.attribute(ATTR_STD_UV_TANGENT_SIGN);
+		}
+		else {
+			attr = compiler.attribute(ustring((string(attribute.c_str()) + ".tangent").c_str()));
+			attr_sign = compiler.attribute(ustring((string(attribute.c_str()) + ".tangent_sign").c_str()));
+		}
+	}
+
+	compiler.add_node(NODE_VECTOR_DISPLACEMENT,
+		compiler.encode_uchar4(compiler.stack_assign(vector_in),
+		                       compiler.stack_assign(midlevel_in),
+		                       compiler.stack_assign(scale_in),
+		                       compiler.stack_assign(displacement_out)),
+		attr, attr_sign);
+
+	compiler.add_node(space);
+}
+
+void VectorDisplacementNode::compile(OSLCompiler& compiler)
+{
+	if(space == NODE_NORMAL_MAP_TANGENT) {
+		if(attribute == ustring("")) {
+			compiler.parameter("attr_name", ustring("geom:tangent"));
+			compiler.parameter("attr_sign_name", ustring("geom:tangent_sign"));
+		}
+		else {
+			compiler.parameter("attr_name", ustring((string(attribute.c_str()) + ".tangent").c_str()));
+			compiler.parameter("attr_sign_name", ustring((string(attribute.c_str()) + ".tangent_sign").c_str()));
+		}
+	}
+
+	compiler.parameter(this, "space");
+	compiler.add(this, "node_vector_displacement");
 }
 
 CCL_NAMESPACE_END

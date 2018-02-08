@@ -77,6 +77,8 @@
 #  include "intern/openexr/openexr_multi.h"
 #endif
 
+#define DEBUG_PRINT if (G.debug & G_DEBUG_DEPSGRAPH) printf
+
 /*********************** movieclip buffer loaders *************************/
 
 static int sequence_guess_offset(const char *full_name, int head_len, unsigned short numlen)
@@ -1522,12 +1524,12 @@ void BKE_movieclip_make_local(Main *bmain, MovieClip *clip, const bool lib_local
 	BKE_id_make_local_generic(bmain, &clip->id, true, lib_local);
 }
 
-float BKE_movieclip_remap_scene_to_clip_frame(MovieClip *clip, float framenr)
+float BKE_movieclip_remap_scene_to_clip_frame(const MovieClip *clip, float framenr)
 {
 	return framenr - (float) clip->start_frame + 1.0f;
 }
 
-float BKE_movieclip_remap_clip_to_scene_frame(MovieClip *clip, float framenr)
+float BKE_movieclip_remap_clip_to_scene_frame(const MovieClip *clip, float framenr)
 {
 	return framenr + (float) clip->start_frame - 1.0f;
 }
@@ -1588,4 +1590,10 @@ bool BKE_movieclip_put_frame_if_possible(MovieClip *clip,
 	BLI_unlock_thread(LOCK_MOVIECLIP);
 
 	return result;
+}
+
+void BKE_movieclip_eval_update(struct EvaluationContext *UNUSED(eval_ctx), MovieClip *clip)
+{
+	DEBUG_PRINT("%s on %s (%p)\n", __func__, clip->id.name, clip);
+	BKE_tracking_dopesheet_tag_update(&clip->tracking);
 }

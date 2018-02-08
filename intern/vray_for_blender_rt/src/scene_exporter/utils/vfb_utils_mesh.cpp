@@ -31,15 +31,16 @@ struct ChanVertex {
 	    index(0)
 	{}
 
-	ChanVertex(const BlVertUV &uv):
-	    v(AttrVectorFromBlVector(uv)),
-	    index(0)
-	{}
-
-	ChanVertex(const BlVertCol &col):
-	    v(AttrVectorFromBlVector(col)),
-	    index(0)
-	{}
+	template <int size>
+	ChanVertex(const BL::Array<float, size> &data)
+		: v()
+	    , index(0)
+	{
+		float * dest = &v.x;
+		for (int c = 0; c < std::min(3, size); c++) {
+			dest[c] = data[c];
+		}
+	}
 
 	bool operator == (const ChanVertex &other) const {
 		return (v.x == other.v.x) && (v.y == other.v.y) && (v.z == other.v.z);
@@ -563,7 +564,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 		}
 	}
 
-	data.meshes.remove(mesh, false);
+	data.meshes.remove(mesh, false, false, false);
 
 	pluginDesc.add("vertices", vertices);
 	pluginDesc.add("faces", faces);

@@ -22,7 +22,7 @@ from bpy.types import Panel, Menu
 from rna_prop_ui import PropertyPanel
 from bpy.app.translations import pgettext_iface as iface_
 
-from bl_ui.properties_physics_common import (
+from .properties_physics_common import (
     point_cache_ui,
     effector_weights_ui,
     basic_force_field_settings_ui,
@@ -581,10 +581,6 @@ class PARTICLE_PT_physics(ParticleButtonsPanel, Panel):
         layout.row().prop(part, "physics_type", expand=True)
 
         row = layout.row()
-        col = row.column(align=True)
-        col.prop(part, "particle_size")
-        col.prop(part, "size_random", slider=True)
-
         if part.physics_type != 'NO':
             col = row.column(align=True)
             col.prop(part, "mass")
@@ -628,7 +624,7 @@ class PARTICLE_PT_physics(ParticleButtonsPanel, Panel):
                 split = layout.split()
 
                 col = split.column()
-                col.label(text="Fluid properties:")
+                col.label(text="Fluid Properties:")
                 col.prop(fluid, "stiffness", text="Stiffness")
                 col.prop(fluid, "linear_viscosity", text="Viscosity")
                 col.prop(fluid, "buoyancy", text="Buoyancy", slider=True)
@@ -749,7 +745,7 @@ class PARTICLE_PT_physics(ParticleButtonsPanel, Panel):
             if part.physics_type == 'BOIDS':
                 layout.label(text="Relations:")
             elif part.physics_type == 'FLUID':
-                layout.label(text="Fluid interaction:")
+                layout.label(text="Fluid Interaction:")
 
             row = layout.row()
             row.template_list("UI_UL_list", "particle_targets", psys, "targets",
@@ -1081,7 +1077,7 @@ class PARTICLE_PT_render(ParticleButtonsPanel, Panel):
             col = row.column()
             col.prop(part, "trail_count")
             if part.trail_count > 1:
-                col.prop(part, "use_absolute_path_time", text="Length in frames")
+                col.prop(part, "use_absolute_path_time", text="Length in Frames")
                 col = row.column()
                 col.prop(part, "path_end", text="Length", slider=not part.use_absolute_path_time)
                 col.prop(part, "length_random", text="Random", slider=True)
@@ -1089,7 +1085,8 @@ class PARTICLE_PT_render(ParticleButtonsPanel, Panel):
                 col = row.column()
                 col.label(text="")
 
-        if part.render_type in {'OBJECT', 'GROUP'} and not part.use_advanced_hair:
+        if part.type == 'EMITTER' or \
+           (part.render_type in {'OBJECT', 'GROUP'} and part.type == 'HAIR' and not part.use_advanced_hair):
             row = layout.row(align=True)
             row.prop(part, "particle_size")
             row.prop(part, "size_random", slider=True)

@@ -396,11 +396,13 @@ ccl_device_inline float3 background_light_sample(KernelGlobals *kg,
 					     + (1.0f - portal_sampling_pdf) * cdf_pdf);
 				}
 				return D;
-			} else {
+			}
+			else {
 				/* Sample map, but with nonzero portal_sampling_pdf for MIS. */
 				randu = (randu - portal_sampling_pdf) / (1.0f - portal_sampling_pdf);
 			}
-		} else {
+		}
+		else {
 			/* We can't sample a portal.
 			 * Check if we can sample the map instead.
 			 */
@@ -545,7 +547,7 @@ ccl_device_inline bool lamp_light_sample(KernelGlobals *kg,
 
 		float costheta = dot(lightD, D);
 		ls->pdf = invarea/(costheta*costheta*costheta);
-		ls->eval_fac = ls->pdf*kernel_data.integrator.inv_pdf_lights;
+		ls->eval_fac = ls->pdf;
 	}
 #ifdef __BACKGROUND_MIS__
 	else if(type == LIGHT_BACKGROUND) {
@@ -557,7 +559,6 @@ ccl_device_inline bool lamp_light_sample(KernelGlobals *kg,
 		ls->D = -D;
 		ls->t = FLT_MAX;
 		ls->eval_fac = 1.0f;
-		ls->pdf *= kernel_data.integrator.pdf_lights;
 	}
 #endif
 	else {
@@ -620,9 +621,9 @@ ccl_device_inline bool lamp_light_sample(KernelGlobals *kg,
 			float invarea = data2.x;
 			ls->eval_fac = 0.25f*invarea;
 		}
-
-		ls->eval_fac *= kernel_data.integrator.inv_pdf_lights;
 	}
+
+	ls->pdf *= kernel_data.integrator.pdf_lights;
 
 	return (ls->pdf > 0.0f);
 }
@@ -755,8 +756,11 @@ ccl_device bool lamp_light_eval(KernelGlobals *kg, int lamp, float3 P, float3 D,
 		ls->pdf = area_light_sample(P, &light_P, axisu, axisv, 0, 0, false);
 		ls->eval_fac = 0.25f*invarea;
 	}
-	else
+	else {
 		return false;
+	}
+
+	ls->pdf *= kernel_data.integrator.pdf_lights;
 
 	return true;
 }
@@ -772,7 +776,8 @@ ccl_device_inline bool triangle_world_space_vertices(KernelGlobals *kg, int obje
 	if(object_flag & SD_OBJECT_HAS_VERTEX_MOTION && time >= 0.0f) {
 		motion_triangle_vertices(kg, object, prim, time, V);
 		has_motion = true;
-	} else {
+	}
+	else {
 		triangle_vertices(kg, prim, V);
 	}
 
@@ -807,9 +812,7 @@ ccl_device_forceinline float triangle_light_pdf(KernelGlobals *kg, ShaderData *s
 {
 	/* A naive heuristic to decide between costly solid angle sampling
 	 * and simple area sampling, comparing the distance to the triangle plane
-	 * to the length of the edtes of the triangle.
-	 * Looking at two edge of the triangle should be a sufficient heuristic,
-	 * the third edge can't possibly be longer than the sum of the other two. */
+	 * to the length of the edges of the triangle. */
 
 	float3 V[3];
 	bool has_motion = triangle_world_space_vertices(kg, sd->object, sd->prim, sd->time, V);
@@ -841,13 +844,15 @@ ccl_device_forceinline float triangle_light_pdf(KernelGlobals *kg, ShaderData *s
 		/* pdf_triangles is calculated over triangle area, but we're not sampling over its area */
 		if(UNLIKELY(solid_angle == 0.0f)) {
 			return 0.0f;
-		} else {
+		}
+		else {
 			float area = 1.0f;
 			if(has_motion) {
 				/* get the center frame vertices, this is what the PDF was calculated from */
 				triangle_world_space_vertices(kg, sd->object, sd->prim, -1.0f, V);
 				area = triangle_area(V[0], V[1], V[2]);
-			} else {
+			}
+			else {
 				area = 0.5f * len(N);
 			}
 			const float pdf = area * kernel_data.integrator.pdf_triangles;
@@ -877,9 +882,7 @@ ccl_device_forceinline void triangle_light_sample(KernelGlobals *kg, int prim, i
 {
 	/* A naive heuristic to decide between costly solid angle sampling
 	 * and simple area sampling, comparing the distance to the triangle plane
-	 * to the length of the edtes of the triangle.
-	 * Looking at two edge of the triangle should be a sufficient heuristic,
-	 * the third edge can't possibly be longer than the sum of the other two. */
+	 * to the length of the edges of the triangle. */
 
 	float3 V[3];
 	bool has_motion = triangle_world_space_vertices(kg, object, prim, time, V);
@@ -895,7 +898,7 @@ ccl_device_forceinline void triangle_light_sample(KernelGlobals *kg, int prim, i
 
 	/* flip normal if necessary */
 	const int object_flag = kernel_tex_fetch(__object_flag, object);
-	if(!(object_flag & SD_OBJECT_NEGATIVE_SCALE_APPLIED)) {
+	if(object_flag & SD_OBJECT_NEGATIVE_SCALE_APPLIED) {
 		ls->Ng = -ls->Ng;
 	}
 	ls->eval_fac = 1.0f;
@@ -963,32 +966,31 @@ ccl_device_forceinline void triangle_light_sample(KernelGlobals *kg, int prim, i
 
 		const float3 C_ = safe_normalize(q * A + sqrtf(temp) * U);
 
-		/* Finally, select a random point along the edge of the new triangle 
+		/* Finally, select a random point along the edge of the new triangle
 		 * That point on the spherical triangle is the sampled ray direction */
 		const float z = 1.0f - randv * (1.0f - dot(C_, B));
 		ls->D = z * B + safe_sqrtf(1.0f - z*z) * safe_normalize(C_ - dot(C_, B) * B);
 
-		/* calculate intersection with the planar triangle
-		 * mostly standard ray/tri intersection, with u/v clamped */
-		const float3 s1 = cross(ls->D, e1);
-
-		const float divisor = dot(s1, e0);
-		if(UNLIKELY(divisor == 0.0f)) {
+		/* calculate intersection with the planar triangle */
+		if(!ray_triangle_intersect(P, ls->D, FLT_MAX,
+#if defined(__KERNEL_SSE2__) && defined(__KERNEL_SSE__)
+		                           (ssef*)V,
+#else
+		                           V[0], V[1], V[2],
+#endif
+		                           &ls->u, &ls->v, &ls->t)) {
 			ls->pdf = 0.0f;
 			return;
 		}
-		const float inv_divisor = 1.0f/divisor;
-		const float3 d = P - V[0];
-		ls->u = clamp(dot(d, s1)*inv_divisor, 0.0f, 1.0f);
-		const float3 s2 = cross(d, e0);
-		ls->v = clamp(dot(ls->D, s2)*inv_divisor, 0.0f, 1.0f);
-		ls->t = dot(e1, s2)*inv_divisor;
+
 		ls->P = P + ls->D * ls->t;
 
 		/* pdf_triangles is calculated over triangle area, but we're sampling over solid angle */
 		if(UNLIKELY(solid_angle == 0.0f)) {
 			ls->pdf = 0.0f;
-		} else {
+			return;
+		}
+		else {
 			if(has_motion) {
 				/* get the center frame vertices, this is what the PDF was calculated from */
 				triangle_world_space_vertices(kg, object, prim, -1.0f, V);
@@ -1024,20 +1026,21 @@ ccl_device_forceinline void triangle_light_sample(KernelGlobals *kg, int prim, i
 
 /* Light Distribution */
 
-ccl_device int light_distribution_sample(KernelGlobals *kg, float randt)
+ccl_device int light_distribution_sample(KernelGlobals *kg, float *randu)
 {
-	/* this is basically std::upper_bound as used by pbrt, to find a point light or
+	/* This is basically std::upper_bound as used by pbrt, to find a point light or
 	 * triangle to emit from, proportional to area. a good improvement would be to
 	 * also sample proportional to power, though it's not so well defined with
-	 * OSL shaders. */
+	 * arbitrary shaders. */
 	int first = 0;
 	int len = kernel_data.integrator.num_distribution + 1;
+	float r = *randu;
 
 	while(len > 0) {
 		int half_len = len >> 1;
 		int middle = first + half_len;
 
-		if(randt < kernel_tex_fetch(__light_distribution, middle).x) {
+		if(r < kernel_tex_fetch(__light_distribution, middle).x) {
 			len = half_len;
 		}
 		else {
@@ -1046,9 +1049,17 @@ ccl_device int light_distribution_sample(KernelGlobals *kg, float randt)
 		}
 	}
 
-	/* clamping should not be needed but float rounding errors seem to
-	 * make this fail on rare occasions */
-	return clamp(first-1, 0, kernel_data.integrator.num_distribution-1);
+	/* Clamping should not be needed but float rounding errors seem to
+	 * make this fail on rare occasions. */
+	int index = clamp(first-1, 0, kernel_data.integrator.num_distribution-1);
+
+	/* Rescale to reuse random number. this helps the 2D samples within
+	 * each area light be stratified as well. */
+	float distr_min = kernel_tex_fetch(__light_distribution, index).x;
+	float distr_max = kernel_tex_fetch(__light_distribution, index+1).x;
+	*randu = (r - distr_min)/(distr_max - distr_min);
+
+	return index;
 }
 
 /* Generic Light */
@@ -1060,7 +1071,6 @@ ccl_device bool light_select_reached_max_bounces(KernelGlobals *kg, int index, i
 }
 
 ccl_device_noinline bool light_sample(KernelGlobals *kg,
-                                      float randt,
                                       float randu,
                                       float randv,
                                       float time,
@@ -1069,7 +1079,7 @@ ccl_device_noinline bool light_sample(KernelGlobals *kg,
                                       LightSample *ls)
 {
 	/* sample index */
-	int index = light_distribution_sample(kg, randt);
+	int index = light_distribution_sample(kg, &randu);
 
 	/* fetch light data */
 	float4 l = kernel_tex_fetch(__light_distribution, index);

@@ -63,8 +63,26 @@ bool BlenderSync::object_is_mesh(BL::Object& b_ob)
 {
 	BL::ID b_ob_data = b_ob.data();
 
-	return (b_ob_data && (b_ob_data.is_a(&RNA_Mesh) ||
-		b_ob_data.is_a(&RNA_Curve) || b_ob_data.is_a(&RNA_MetaBall)));
+	if(!b_ob_data) {
+		return false;
+	}
+
+	if(b_ob.type() == BL::Object::type_CURVE) {
+		/* Skip exporting curves without faces, overhead can be
+		 * significant if there are many for path animation. */
+		BL::Curve b_curve(b_ob.data());
+
+		return (b_curve.bevel_object() ||
+		        b_curve.extrude() != 0.0f ||
+		        b_curve.bevel_depth() != 0.0f ||
+		        b_curve.dimensions() == BL::Curve::dimensions_2D ||
+		        b_ob.modifiers.length());
+	}
+	else {
+		return (b_ob_data.is_a(&RNA_Mesh) ||
+		        b_ob_data.is_a(&RNA_Curve) ||
+		        b_ob_data.is_a(&RNA_MetaBall));
+	}
 }
 
 bool BlenderSync::object_is_light(BL::Object& b_ob)
@@ -94,6 +112,7 @@ static uint object_ray_visibility(BL::Object& b_ob)
 void BlenderSync::sync_light(BL::Object& b_parent,
                              int persistent_id[OBJECT_PERSISTENT_ID_SIZE],
                              BL::Object& b_ob,
+                             BL::DupliObject& b_dupli_ob,
                              Transform& tfm,
                              bool *use_portal)
 {
@@ -162,13 +181,25 @@ void BlenderSync::sync_light(BL::Object& b_parent,
 	light->shader = used_shaders[0];
 
 	/* shadow */
+	PointerRNA cscene = RNA_pointer_get(&b_scene.ptr, "cycles");
 	PointerRNA clamp = RNA_pointer_get(&b_lamp.ptr, "cycles");
 	light->cast_shadow = get_boolean(clamp, "cast_shadow");
 	light->use_mis = get_boolean(clamp, "use_multiple_importance_sampling");
 	
-	light->samples = get_int(clamp, "samples");
+	int samples = get_int(clamp, "samples");
+	if(get_boolean(cscene, "use_square_samples"))
+		light->samples = samples * samples;
+	else
+		light->samples = samples;
 
 	light->max_bounces = get_int(clamp, "max_bounces");
+
+	if(b_dupli_ob) {
+		light->random_id = b_dupli_ob.random_id();
+	}
+	else {
+		light->random_id = hash_int_2d(hash_string(b_ob.name().c_str()), 0);
+	}
 
 	if(light->type == LIGHT_AREA)
 		light->is_portal = get_boolean(clamp, "is_portal");
@@ -194,6 +225,7 @@ void BlenderSync::sync_background_light(bool use_portal)
 	BL::World b_world = b_scene.world();
 
 	if(b_world) {
+		PointerRNA cscene = RNA_pointer_get(&b_scene.ptr, "cycles");
 		PointerRNA cworld = RNA_pointer_get(&b_world.ptr, "cycles");
 		bool sample_as_light = get_boolean(cworld, "sample_as_light");
 
@@ -212,7 +244,11 @@ void BlenderSync::sync_background_light(bool use_portal)
 				light->use_mis = sample_as_light;
 				light->max_bounces = get_int(cworld, "max_bounces");
 
-				light->samples = get_int(cworld, "samples");
+				int samples = get_int(cworld, "samples");
+				if(get_boolean(cscene, "use_square_samples"))
+					light->samples = samples * samples;
+				else
+					light->samples = samples;
 
 				light->tag_update(scene);
 				light_map.set_recalc(b_world);
@@ -243,7 +279,7 @@ Object *BlenderSync::sync_object(BL::Object& b_parent,
 	if(object_is_light(b_ob)) {
 		/* don't use lamps for excluded layers used as mask layer */
 		if(!motion && !((layer_flag & render_layer.holdout_layer) && (layer_flag & render_layer.exclude_layer)))
-			sync_light(b_parent, persistent_id, b_ob, tfm, use_portal);
+			sync_light(b_parent, persistent_id, b_ob, b_dupli_ob, tfm, use_portal);
 
 		return NULL;
 	}
@@ -255,6 +291,31 @@ Object *BlenderSync::sync_object(BL::Object& b_parent,
 
 	/* Perform object culling. */
 	if(culling.test(scene, b_ob, tfm)) {
+		return NULL;
+	}
+
+	/* Visibility flags for both parent and child. */
+	PointerRNA cobject = RNA_pointer_get(&b_ob.ptr, "cycles");
+	bool use_holdout = (layer_flag & render_layer.holdout_layer) != 0 ||
+	                   get_boolean(cobject, "is_holdout");
+	uint visibility = object_ray_visibility(b_ob) & PATH_RAY_ALL_VISIBILITY;
+
+	if(b_parent.ptr.data != b_ob.ptr.data) {
+		visibility &= object_ray_visibility(b_parent);
+	}
+
+	/* Make holdout objects on excluded layer invisible for non-camera rays. */
+	if(use_holdout && (layer_flag & render_layer.exclude_layer)) {
+		visibility &= ~(PATH_RAY_ALL_VISIBILITY - PATH_RAY_CAMERA);
+	}
+
+	/* Hide objects not on render layer from camera rays. */
+	if(!(layer_flag & render_layer.layer)) {
+		visibility &= ~PATH_RAY_CAMERA;
+	}
+
+	/* Don't export completely invisible objects. */
+	if(visibility == 0) {
 		return NULL;
 	}
 
@@ -298,8 +359,6 @@ Object *BlenderSync::sync_object(BL::Object& b_parent,
 	if(object_map.sync(&object, b_ob, b_parent, key))
 		object_updated = true;
 	
-	bool use_holdout = (layer_flag & render_layer.holdout_layer) != 0;
-	
 	/* mesh sync */
 	object->mesh = sync_mesh(b_ob, object_updated, hide_tris);
 
@@ -312,28 +371,11 @@ Object *BlenderSync::sync_object(BL::Object& b_parent,
 		object_updated = true;
 	}
 
-	/* visibility flags for both parent and child */
-	uint visibility = object_ray_visibility(b_ob) & PATH_RAY_ALL_VISIBILITY;
-	if(b_parent.ptr.data != b_ob.ptr.data) {
-		visibility &= object_ray_visibility(b_parent);
-	}
-
-	/* make holdout objects on excluded layer invisible for non-camera rays */
-	if(use_holdout && (layer_flag & render_layer.exclude_layer)) {
-		visibility &= ~(PATH_RAY_ALL_VISIBILITY - PATH_RAY_CAMERA);
-	}
-
-	/* hide objects not on render layer from camera rays */
-	if(!(layer_flag & render_layer.layer)) {
-		visibility &= ~PATH_RAY_CAMERA;
-	}
-
 	if(visibility != object->visibility) {
 		object->visibility = visibility;
 		object_updated = true;
 	}
 
-	PointerRNA cobject = RNA_pointer_get(&b_ob.ptr, "cycles");
 	bool is_shadow_catcher = get_boolean(cobject, "is_shadow_catcher");
 	if(is_shadow_catcher != object->is_shadow_catcher) {
 		object->is_shadow_catcher = is_shadow_catcher;

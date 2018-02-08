@@ -334,7 +334,7 @@ static Scene *preview_prepare_scene(Main *bmain, Scene *scene, ID *id, int id_ty
 			
 			if (origmat) {
 				/* work on a copy */
-				mat = localize_material(origmat);
+				mat = BKE_material_localize(origmat);
 				sp->matcopy = mat;
 				BLI_addtail(&pr_main->mat, mat);
 				
@@ -479,7 +479,7 @@ static Scene *preview_prepare_scene(Main *bmain, Scene *scene, ID *id, int id_ty
 
 			/* work on a copy */
 			if (origla) {
-				la = localize_lamp(origla);
+				la = BKE_lamp_localize(origla);
 				sp->lampcopy = la;
 				BLI_addtail(&pr_main->lamp, la);
 			}
@@ -515,7 +515,7 @@ static Scene *preview_prepare_scene(Main *bmain, Scene *scene, ID *id, int id_ty
 			World *wrld = NULL, *origwrld = (World *)id;
 
 			if (origwrld) {
-				wrld = localize_world(origwrld);
+				wrld = BKE_world_localize(origwrld);
 				sp->worldcopy = wrld;
 				BLI_addtail(&pr_main->world, wrld);
 			}
@@ -655,7 +655,7 @@ void ED_preview_draw(const bContext *C, void *idp, void *parentp, void *slotp, r
 			}
 		}
 
-		/* start a new preview render job if signalled through sbuts->preview,
+		/* start a new preview render job if signaled through sbuts->preview,
 		 * if no render result was found and no preview render job is running,
 		 * or if the job is running and the size of preview changed */
 		if (force_node_preview ||

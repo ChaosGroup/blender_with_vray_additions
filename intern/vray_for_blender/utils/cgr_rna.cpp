@@ -52,7 +52,7 @@ std::string RNA_std_string_get(PointerRNA *ptr, const std::string &attrName)
 }
 
 
-EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName)
+const EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName)
 {
 	int enum_item_index = RNA_enum_get(ptr, attrName);
 

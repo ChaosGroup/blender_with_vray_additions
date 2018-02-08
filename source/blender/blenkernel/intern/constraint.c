@@ -1018,6 +1018,9 @@ static void vectomat(const float vec[3], const float target_up[3], short axis, s
 		u[2] = 1;
 	}
 
+	/* note: even though 'n' is normalized, don't use 'project_v3_v3v3_normalized' below
+	 * because precision issues cause a problem in near degenerate states, see: T53455. */
+
 	/* project the up vector onto the plane specified by n */
 	project_v3_v3v3(proj, u, n); /* first u onto n... */
 	sub_v3_v3v3(proj, u, proj); /* then onto the plane */
@@ -1930,7 +1933,7 @@ static void samevolume_evaluate(bConstraint *con, bConstraintOb *cob, ListBase *
 	
 	/* calculate normalizing scale factor for non-essential values */
 	if (obsize[data->flag] != 0) 
-		fac = sqrtf(volume / obsize[data->flag]) / obsize[data->flag];
+		fac = sqrtf(volume / obsize[data->flag]);
 	
 	/* apply scaling factor to the channels not being kept */
 	switch (data->flag) {
@@ -4724,7 +4727,7 @@ void BKE_constraints_id_loop(ListBase *conlist, ConstraintIDFunc func, void *use
 /* helper for BKE_constraints_copy(), to be used for making sure that ID's are valid */
 static void con_extern_cb(bConstraint *UNUSED(con), ID **idpoin, bool UNUSED(is_reference), void *UNUSED(userData))
 {
-	if (*idpoin && ID_IS_LINKED_DATABLOCK(*idpoin))
+	if (*idpoin && ID_IS_LINKED(*idpoin))
 		id_lib_extern(*idpoin);
 }
 

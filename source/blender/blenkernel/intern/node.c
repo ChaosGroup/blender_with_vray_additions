@@ -511,6 +511,26 @@ static bNodeSocket *make_socket(bNodeTree *ntree, bNode *UNUSED(node), int in_ou
 	return sock;
 }
 
+void nodeModifySocketType(bNodeTree *ntree, bNode *UNUSED(node), bNodeSocket *sock,
+                          int type, int subtype)
+{
+	const char *idname = nodeStaticSocketType(type, subtype);
+
+	if (!idname) {
+		printf("Error: static node socket type %d undefined\n", type);
+		return;
+	}
+
+	if (sock->default_value) {
+		MEM_freeN(sock->default_value);
+		sock->default_value = NULL;
+	}
+
+	sock->type = type;
+	BLI_strncpy(sock->idname, idname, sizeof(sock->idname));
+	node_socket_set_typeinfo(ntree, sock, nodeSocketTypeFind(idname));
+}
+
 bNodeSocket *nodeAddSocket(bNodeTree *ntree, bNode *node, int in_out, const char *idname,
                            const char *identifier, const char *name)
 {
@@ -1330,7 +1350,7 @@ void ntreeUserDecrefID(bNodeTree *ntree)
 /* *************** Node Preview *********** */
 
 /* XXX this should be removed eventually ...
- * Currently BKE functions are modelled closely on previous code,
+ * Currently BKE functions are modeled closely on previous code,
  * using BKE_node_preview_init_tree to set up previews for a whole node tree in advance.
  * This should be left more to the individual node tree implementations.
  */
@@ -2240,7 +2260,7 @@ static void ntree_interface_type_create(bNodeTree *ntree)
 	/* register a subtype of PropertyGroup */
 	srna = RNA_def_struct_ptr(&BLENDER_RNA, identifier, &RNA_PropertyGroup);
 	RNA_def_struct_ui_text(srna, name, description);
-	RNA_def_struct_duplicate_pointers(srna);
+	RNA_def_struct_duplicate_pointers(&BLENDER_RNA, srna);
 	
 	/* associate the RNA type with the node tree */
 	ntree->interface_type = srna;
@@ -2279,10 +2299,10 @@ StructRNA *ntreeInterfaceTypeGet(bNodeTree *ntree, int create)
 			ntree_interface_identifier(ntree, base, identifier, sizeof(identifier), name, description);
 			
 			/* rename the RNA type */
-			RNA_def_struct_free_pointers(srna);
+			RNA_def_struct_free_pointers(&BLENDER_RNA, srna);
 			RNA_def_struct_identifier(&BLENDER_RNA, srna, identifier);
 			RNA_def_struct_ui_text(srna, name, description);
-			RNA_def_struct_duplicate_pointers(srna);
+			RNA_def_struct_duplicate_pointers(&BLENDER_RNA, srna);
 		}
 	}
 	else if (create) {
@@ -2635,7 +2655,7 @@ void BKE_node_clipboard_add_node(bNode *node)
 	node_info->id = node->id;
 	if (node->id) {
 		BLI_strncpy(node_info->id_name, node->id->name, sizeof(node_info->id_name));
-		if (ID_IS_LINKED_DATABLOCK(node->id)) {
+		if (ID_IS_LINKED(node->id)) {
 			BLI_strncpy(node_info->library_name, node->id->lib->filepath, sizeof(node_info->library_name));
 		}
 		else {
@@ -3077,7 +3097,7 @@ void ntreeUpdateTree(Main *bmain, bNodeTree *ntree)
 			}
 
 			// Tag update for ID.is_updated() / ntree.is_updated()
-			ntree->id.tag |= LIB_TAG_ID_RECALC;
+			ntree->id.tag |= ID_RECALC_ALL;
 			// tag depsgraph to call update on the render engine
 			DAG_id_tag_update_ex(bmain, &ntree->id, ID_NT);
 
@@ -3228,13 +3248,17 @@ void nodeSynchronizeID(bNode *node, bool copy_to_id)
 
 void nodeLabel(bNodeTree *ntree, bNode *node, char *label, int maxlen)
 {
+	label[0] = '\0';
+
 	if (node->label[0] != '\0') {
 		BLI_strncpy(label, node->label, maxlen);
 	}
 	else if (node->typeinfo->labelfunc) {
 		node->typeinfo->labelfunc(ntree, node, label, maxlen);
 	}
-	else {
+
+	/* The previous methods (labelfunc) could not provide an adequate label for the node. */
+	if (label[0] == '\0') {
 		/* Kind of hacky and weak... Ideally would be better to use RNA here. :| */
 		const char *tmp = CTX_IFACE_(BLT_I18NCONTEXT_ID_NODETREE, node->typeinfo->ui_name);
 		if (tmp == node->typeinfo->ui_name) {
@@ -3619,6 +3643,9 @@ static void registerShaderNodes(void)
 	register_node_type_sh_hue_sat();
 
 	register_node_type_sh_attribute();
+	register_node_type_sh_bevel();
+	register_node_type_sh_displacement();
+	register_node_type_sh_vector_displacement();
 	register_node_type_sh_geometry();
 	register_node_type_sh_light_path();
 	register_node_type_sh_light_falloff();

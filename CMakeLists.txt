@@ -45,7 +45,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 	endif()
 endif()
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 if(NOT EXECUTABLE_OUTPUT_PATH)
 	set(FIRST_RUN TRUE)
@@ -195,7 +195,7 @@ endif()
 # Options
 
 # First platform specific non-cached vars
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT (APPLE OR HAIKU))
 	set(WITH_X11 ON)
 endif()
 
@@ -285,11 +285,12 @@ endif()
 if(WITH_X11)
 	option(WITH_X11_XINPUT    "Enable X11 Xinput (tablet support and unicode input)"  ON)
 	option(WITH_X11_XF86VMODE "Enable X11 video mode switching"                       ON)
+	option(WITH_X11_XFIXES    "Enable X11 XWayland cursor warping workaround"         ON)
 	option(WITH_X11_ALPHA     "Enable X11 transparent background"                     ON)
 endif()
 
 if(UNIX AND NOT APPLE)
-	option(WITH_SYSTEM_GLEW "Use GLEW OpenGL wrapper library provided by the operating system" ON)
+	option(WITH_SYSTEM_GLEW "Use GLEW OpenGL wrapper library provided by the operating system" OFF)
 	option(WITH_SYSTEM_GLES "Use OpenGL ES library provided by the operating system"           ON)
 else()
 	# not an option for other OS's
@@ -333,10 +334,6 @@ option(WITH_CODEC_SNDFILE       "Enable libsndfile Support (http://www.mega-nerd
 # Alembic support
 option(WITH_ALEMBIC             "Enable Alembic Support" OFF)
 option(WITH_ALEMBIC_HDF5        "Enable Legacy Alembic Support (not officially supported)" OFF)
-
-if(APPLE)
-	option(WITH_CODEC_QUICKTIME     "Enable Quicktime Support" OFF)
-endif()
 
 # 3D format support
 # Disable opencollada when we don't have precompiled libs
@@ -412,12 +409,14 @@ option(WITH_CYCLES_STANDALONE_GUI	"Build Cycles standalone with GUI" OFF)
 option(WITH_CYCLES_OSL				"Build Cycles with OSL support" ${_init_CYCLES_OSL})
 option(WITH_CYCLES_OPENSUBDIV		"Build Cycles with OpenSubdiv support" ${_init_CYCLES_OPENSUBDIV})
 option(WITH_CYCLES_CUDA_BINARIES	"Build Cycles CUDA binaries" OFF)
+option(WITH_CYCLES_CUBIN_COMPILER	"Build cubins with nvrtc based compiler instead of nvcc" OFF)
 set(CYCLES_CUDA_BINARIES_ARCH sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60 sm_61 CACHE STRING "CUDA architectures to build binaries for")
 mark_as_advanced(CYCLES_CUDA_BINARIES_ARCH)
 unset(PLATFORM_DEFAULT)
 option(WITH_CYCLES_LOGGING	"Build Cycles with logging support" ON)
 option(WITH_CYCLES_DEBUG	"Build Cycles with extra debug capabilities" OFF)
 option(WITH_CYCLES_NATIVE_ONLY	"Build Cycles with native kernel only (which fits current CPU, use for development only)" OFF)
+mark_as_advanced(WITH_CYCLES_CUBIN_COMPILER)
 mark_as_advanced(WITH_CYCLES_LOGGING)
 mark_as_advanced(WITH_CYCLES_DEBUG)
 mark_as_advanced(WITH_CYCLES_NATIVE_ONLY)
@@ -507,7 +506,12 @@ endif()
 # Experimental support of C11 and C++11
 #
 # We default options to whatever default standard in the current compiler.
-if(CMAKE_COMPILER_IS_GNUCC AND (NOT "${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "6.0") AND (NOT WITH_CXX11))
+if(APPLE)
+	set(_c11_init ON)
+	set(_cxx11_init ON)
+	set(WITH_C11 ON)
+	set(WITH_CXX11 ON)
+elseif(CMAKE_COMPILER_IS_GNUCC AND (NOT "${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "6.0") AND (NOT WITH_CXX11))
 	set(_c11_init ON)
 	set(_cxx11_init ON)
 else()
@@ -543,6 +547,9 @@ if(WIN32)
 
 	set(WINDOWS_CODESIGN_PFX_PASSWORD CACHE STRING  "password for pfx file used for codesigning.")
 	mark_as_advanced(WINDOWS_CODESIGN_PFX_PASSWORD)
+
+	option(WINDOWS_USE_VISUAL_STUDIO_FOLDERS "Organize the visual studio project according to source folders." ON)
+	mark_as_advanced(WINDOWS_USE_VISUAL_STUDIO_FOLDERS)
 endif()
 
 # avoid using again
@@ -689,6 +696,7 @@ if(WITH_GHOST_SDL OR WITH_HEADLESS)
 	set(WITH_X11           OFF)
 	set(WITH_X11_XINPUT    OFF)
 	set(WITH_X11_XF86VMODE OFF)
+	set(WITH_X11_XFIXES    OFF)
 	set(WITH_X11_ALPHA     OFF)
 	set(WITH_GHOST_XDND    OFF)
 	set(WITH_INPUT_IME     OFF)
@@ -790,10 +798,6 @@ if(WITH_AUDASPACE)
 	endif()
 endif()
 
-if(APPLE)
-	apple_check_quicktime()
-endif()
-
 #-----------------------------------------------------------------------------
 # Check for valid directories
 # ... a partial checkout may cause this.
@@ -813,6 +817,17 @@ if(WITH_INTERNATIONAL)
 endif()
 
 if(WITH_PYTHON)
+	# While we have this as an '#error' in 'bpy_capi_utils.h',
+	# upgrading Python tends to cause confusion for users who build.
+	# Give the error message early to make this more obvious.
+	#
+	# Do this before main 'platform_*' checks,
+	# because UNIX will search for the old Python paths which may not exist.
+	# giving errors about missing paths before this case is met.
+	if(DEFINED PYTHON_VERSION AND "${PYTHON_VERSION}" VERSION_LESS "3.6")
+		message(FATAL_ERROR "At least Python 3.6 is required to build")
+	endif()
+
 	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/release/scripts/addons/modules")
 		message(WARNING
 			"Addons path '${CMAKE_SOURCE_DIR}/release/scripts/addons' is missing, "
@@ -879,6 +894,14 @@ if(WITH_X11)
 			list(APPEND PLATFORM_LINKLIBS ${X11_Xxf86vmode_LIB})
 		else()
 			set(WITH_X11_XF86VMODE OFF)
+		endif()
+	endif()
+
+	if(WITH_X11_XFIXES)
+		if(X11_Xfixes_LIB)
+			list(APPEND PLATFORM_LINKLIBS ${X11_Xfixes_LIB})
+		else()
+			set(WITH_X11_XFIXES OFF)
 		endif()
 	endif()
 
@@ -1381,6 +1404,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
 	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_NO_DIV_BY_ZERO -Wno-div-by-zero)
 	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_TYPE_LIMITS -Wtype-limits)
 	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_FORMAT_SIGN -Wformat-signedness)
+	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_RESTRICT -Wrestrict)
 
 	# gcc 4.2 gives annoying warnings on every file with this
 	if(NOT "${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "4.3")
@@ -1422,6 +1446,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
 	ADD_CHECK_CXX_COMPILER_FLAG(CXX_WARNINGS CXX_WARN_WRITE_STRINGS -Wwrite-strings)
 	ADD_CHECK_CXX_COMPILER_FLAG(CXX_WARNINGS CXX_WARN_UNDEF -Wundef)
 	ADD_CHECK_CXX_COMPILER_FLAG(CXX_WARNINGS CXX_WARN_FORMAT_SIGN -Wformat-signedness)
+	ADD_CHECK_CXX_COMPILER_FLAG(CXX_WARNINGS CXX_WARN_RESTRICT -Wrestrict)
 
 	# gcc 4.2 gives annoying warnings on every file with this
 	if(NOT "${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "4.3")
@@ -1454,11 +1479,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
 
 elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
 
-	if(APPLE AND WITH_OPENMP) # we need the Intel omp lib linked here to not fail all tests due presence of -fopenmp !
-		set(CMAKE_REQUIRED_FLAGS "-L${LIBDIR}/openmp/lib -liomp5") # these are only used for the checks
-	endif()
-
-	# strange, clang complains these are not supported, but then yses them.
+	# strange, clang complains these are not supported, but then uses them.
 	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_ALL -Wall)
 	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_ERROR_IMPLICIT_FUNCTION_DECLARATION -Werror=implicit-function-declaration)
 	ADD_CHECK_C_COMPILER_FLAG(C_WARNINGS C_WARN_ERROR_RETURN_TYPE  -Werror=return-type)
@@ -1532,6 +1553,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
 		"/wd4800"  # forcing value to bool 'true' or 'false'
 		# errors:
 		"/we4013"  # 'function' undefined; assuming extern returning int
+		"/we4133"  # incompatible pointer types
 		"/we4431"  # missing type specifier - int assumed
 	)
 
@@ -1687,10 +1709,10 @@ include(build_files/cmake/packaging.cmake)
 # Use dynamic loading for OpenMP
 if(WITH_BLENDER)
 	openmp_delayload(blender)
-endif(WITH_BLENDER)
+endif()
 if(WITH_PLAYER)
 	openmp_delayload(blenderplayer)
-endif(WITH_PLAYER)
+endif()
 
 #-----------------------------------------------------------------------------
 # Print Final Configuration
@@ -1749,6 +1771,7 @@ if(FIRST_RUN)
 	info_cfg_option(WITH_INSTALL_PORTABLE)
 	info_cfg_option(WITH_X11_ALPHA)
 	info_cfg_option(WITH_X11_XF86VMODE)
+	info_cfg_option(WITH_X11_XFIXES)
 	info_cfg_option(WITH_X11_XINPUT)
 	info_cfg_option(WITH_MEM_JEMALLOC)
 	info_cfg_option(WITH_MEM_VALGRIND)
@@ -1812,4 +1835,3 @@ endif()
 if(0)
 	print_all_vars()
 endif()
-

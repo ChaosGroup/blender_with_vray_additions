@@ -682,10 +682,10 @@ int GPU_verify_image(
 				if (do_color_management) {
 					srgb_frect = MEM_mallocN(ibuf->x * ibuf->y * sizeof(float) * 4, "floar_buf_col_cor");
 					gpu_verify_high_bit_srgb_buffer(srgb_frect, ibuf);
-					frect = srgb_frect + texwinsy * ibuf->x + texwinsx;
+					frect = srgb_frect + (4 * (texwinsy * ibuf->x + texwinsx));
 				}
 				else {
-					frect = ibuf->rect_float + texwinsy * ibuf->x + texwinsx;
+					frect = ibuf->rect_float + (ibuf->channels * (texwinsy * ibuf->x + texwinsx));
 				}
 			}
 			else {
@@ -2199,7 +2199,7 @@ int GPU_scene_object_lights(Scene *scene, Object *ob, int lay, float viewmat[4][
 		GPU_basic_shader_light_set(count, NULL);
 	
 	/* view direction for specular is not computed correct by default in
-	 * opengl, so we set the settings ourselfs */
+	 * opengl, so we set the settings ourselves */
 	GPU_basic_shader_light_set_viewer(!ortho);
 
 	int count = 0;

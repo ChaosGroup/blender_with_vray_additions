@@ -117,6 +117,7 @@ ustring OSLRenderServices::u_I("I");
 ustring OSLRenderServices::u_u("u");
 ustring OSLRenderServices::u_v("v");
 ustring OSLRenderServices::u_empty;
+ustring OSLRenderServices::u_at_bevel("@bevel");
 
 OSLRenderServices::OSLRenderServices()
 {
@@ -958,20 +959,36 @@ bool OSLRenderServices::texture(ustring filename,
 		return true;
 	}
 #endif
-	bool status;
+	bool status = false;
 
 	if(filename.length() && filename[0] == '@') {
-		int slot = atoi(filename.c_str() + 1);
-		float4 rgba = kernel_tex_image_interp(slot, s, 1.0f - t);
+		if(filename == u_at_bevel) {
+			/* Bevel shader hack. */
+			if(nchannels >= 3) {
+				PathState *state = sd->osl_path_state;
+				int num_samples = (int)s;
+				float radius = t;
+				float3 N = svm_bevel(kg, sd, state, radius, num_samples);
+				result[0] = N.x;
+				result[1] = N.y;
+				result[2] = N.z;
+				status = true;
+			}
+		}
+		else {
+			/* Packed texture. */
+			int slot = atoi(filename.c_str() + 1);
+			float4 rgba = kernel_tex_image_interp(kg, slot, s, 1.0f - t);
 
-		result[0] = rgba[0];
-		if(nchannels > 1)
-			result[1] = rgba[1];
-		if(nchannels > 2)
-			result[2] = rgba[2];
-		if(nchannels > 3)
-			result[3] = rgba[3];
-		status = true;
+			result[0] = rgba[0];
+			if(nchannels > 1)
+				result[1] = rgba[1];
+			if(nchannels > 2)
+				result[2] = rgba[2];
+			if(nchannels > 3)
+				result[3] = rgba[3];
+			status = true;
+		}
 	}
 	else {
 		if(texture_handle != NULL) {
@@ -1043,7 +1060,7 @@ bool OSLRenderServices::texture3d(ustring filename,
 	bool status;
 	if(filename.length() && filename[0] == '@') {
 		int slot = atoi(filename.c_str() + 1);
-		float4 rgba = kernel_tex_image_interp_3d(slot, P.x, P.y, P.z);
+		float4 rgba = kernel_tex_image_interp_3d(kg, slot, P.x, P.y, P.z, INTERPOLATION_NONE);
 
 		result[0] = rgba[0];
 		if(nchannels > 1)
@@ -1197,8 +1214,9 @@ bool OSLRenderServices::trace(TraceOpt &options, OSL::ShaderGlobals *sg,
 	tracedata->init = true;
 	tracedata->sd.osl_globals = sd->osl_globals;
 
-	/* raytrace */
-	return scene_intersect(sd->osl_globals, ray, PATH_RAY_ALL_VISIBILITY, &tracedata->isect, NULL, 0.0f, 0.0f);
+	/* Raytrace, leaving out shadow opaque to avoid early exit. */
+	uint visibility = PATH_RAY_ALL_VISIBILITY - PATH_RAY_SHADOW_OPAQUE;
+	return scene_intersect(sd->osl_globals, ray, visibility, &tracedata->isect, NULL, 0.0f, 0.0f);
 }
 
 

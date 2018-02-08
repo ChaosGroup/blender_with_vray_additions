@@ -186,21 +186,31 @@ static int foreach_libblock_remap_callback(void *user_data, ID *id_self, ID **id
 		const bool skip_never_null = (id_remap_data->flag & ID_REMAP_SKIP_NEVER_NULL_USAGE) != 0;
 
 #ifdef DEBUG_PRINT
-		printf("In %s: Remapping %s (%p) to %s (%p) (skip_indirect: %d)\n",
-		       id->name, old_id->name, old_id, new_id ? new_id->name : "<NONE>", new_id, skip_indirect);
+		printf("In %s: Remapping %s (%p) to %s (%p) (is_indirect: %d, skip_indirect: %d)\n",
+		       id->name, old_id->name, old_id, new_id ? new_id->name : "<NONE>", new_id, is_indirect, skip_indirect);
 #endif
 
 		if ((id_remap_data->flag & ID_REMAP_FLAG_NEVER_NULL_USAGE) && (cb_flag & IDWALK_CB_NEVER_NULL)) {
 			id->tag |= LIB_TAG_DOIT;
 		}
 
-		/* Special hack in case it's Object->data and we are in edit mode (skipped_direct too). */
+		/* Special hack in case it's Object->data and we are in edit mode, and new_id is not NULL
+		 * (otherwise, we follow common NEVER_NULL flags).
+		 * (skipped_indirect too). */
 		if ((is_never_null && skip_never_null) ||
-		    (is_obj_editmode && (((Object *)id)->data == *id_p)) ||
+		    (is_obj_editmode && (((Object *)id)->data == *id_p) && new_id != NULL) ||
 		    (skip_indirect && is_indirect))
 		{
 			if (is_indirect) {
 				id_remap_data->skipped_indirect++;
+				if (is_obj) {
+					Object *ob = (Object *)id;
+					if (ob->data == *id_p && ob->proxy != NULL) {
+						/* And another 'Proudly brought to you by Proxy Hell' hack!
+						 * This will allow us to avoid clearing 'LIB_EXTERN' flag of obdata of proxies... */
+						id_remap_data->skipped_direct++;
+					}
+				}
 			}
 			else if (is_never_null || is_obj_editmode) {
 				id_remap_data->skipped_direct++;
@@ -724,7 +734,7 @@ static int id_relink_to_newid_looper(void *UNUSED(user_data), ID *UNUSED(self_id
  */
 void BKE_libblock_relink_to_newid(ID *id)
 {
-	if (ID_IS_LINKED_DATABLOCK(id))
+	if (ID_IS_LINKED(id))
 		return;
 
 	BKE_library_foreach_ID_link(NULL, id, id_relink_to_newid_looper, NULL, 0);
@@ -951,7 +961,12 @@ void BKE_libblock_free_ex(Main *bmain, void *idv, const bool do_id_user, const b
 	DAG_id_type_tag(bmain, type);
 
 #ifdef WITH_PYTHON
+#ifdef WITH_PYTHON_SAFETY
 	BPY_id_release(id);
+#endif
+	if (id->py_instance) {
+		BPY_DECREF_RNA_INVALIDATE(id->py_instance);
+	}
 #endif
 
 	if (do_id_user) {

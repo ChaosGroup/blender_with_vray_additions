@@ -55,7 +55,7 @@ std::string VRayForBlender::RNA_std_string_get(PointerRNA *ptr, const std::strin
 }
 
 
-EnumPropertyItem *VRayForBlender::RNA_enum_item(PointerRNA *ptr, const char *attrName)
+const EnumPropertyItem *VRayForBlender::RNA_enum_item(PointerRNA *ptr, const char *attrName)
 {
 	int enum_item_index = RNA_enum_get(ptr, attrName);
 

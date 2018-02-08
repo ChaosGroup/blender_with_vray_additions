@@ -889,10 +889,10 @@ void DataExporter::tag_ntree(BL::NodeTree ntree, bool updated)
 	ID *_ntree = (ID*)ntree.ptr.data;
 
 	if (updated) {
-		_ntree->tag |=  LIB_TAG_ID_RECALC_ALL;
+		_ntree->tag |=  ID_RECALC_ALL;
 	}
 	else {
-		_ntree->tag &= ~LIB_TAG_ID_RECALC_ALL;
+		_ntree->tag &= ~ID_RECALC_ALL;
 	}
 }
 

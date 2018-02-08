@@ -2013,7 +2013,8 @@ static int _softbody_calc_forces_slice_in_a_thread(Scene *scene, Object *ob, flo
 			float compare;
 			float bstune = sb->ballstiff;
 
-			for (c=sb->totpoint, obp= sb->bpoint; c>=ifirst+bb; c--, obp++) {
+                        /* running in a slice we must not assume anything done with obp  neither alter the data of obp */
+			for (c=sb->totpoint, obp= sb->bpoint; c>0; c--, obp++) {
 				compare = (obp->colball + bp->colball);
 				sub_v3_v3v3(def, bp->pos, obp->pos);
 				/* rather check the AABBoxes before ever calulating the real distance */
@@ -2038,13 +2039,6 @@ static int _softbody_calc_forces_slice_in_a_thread(Scene *scene, Object *ob, flo
 
 						madd_v3_v3fl(bp->force, def, f * (1.0f - sb->balldamp));
 						madd_v3_v3fl(bp->force, dvel, sb->balldamp);
-
-						/* exploit force(a, b) == -force(b, a) part2/2 */
-						sub_v3_v3v3(dvel, velcenter, obp->vec);
-						mul_v3_fl(dvel, _final_mass(ob, bp));
-
-						madd_v3_v3fl(obp->force, dvel, sb->balldamp);
-						madd_v3_v3fl(obp->force, def, -f * (1.0f - sb->balldamp));
 					}
 				}
 			}
@@ -3412,7 +3406,7 @@ static void softbody_update_positions(Object *ob, SoftBody *sb, float (*vertexCo
  * lloc, lrot, lscale are allowed to be NULL, just in case you don't need it.
  * should be pretty useful for pythoneers :)
  * not! velocity .. 2nd order stuff
- * vcloud_estimate_transform see
+ * vcloud_estimate_transform_v3 see
  */
 
 void SB_estimate_transform(Object *ob, float lloc[3], float lrot[3][3], float lscale[3][3])
@@ -3436,7 +3430,7 @@ void SB_estimate_transform(Object *ob, float lloc[3], float lrot[3][3], float ls
 		copy_v3_v3(opos[a], bp->pos);
 	}
 
-	vcloud_estimate_transform(sb->totpoint, opos, NULL, rpos, NULL, com, rcom, lrot, lscale);
+	vcloud_estimate_transform_v3(sb->totpoint, opos, NULL, rpos, NULL, com, rcom, lrot, lscale);
 	//sub_v3_v3(com, rcom);
 	if (lloc) copy_v3_v3(lloc, com);
 	copy_v3_v3(sb->lcom, com);

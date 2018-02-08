@@ -19,15 +19,17 @@ CCL_NAMESPACE_BEGIN
 ccl_device_inline void path_state_init(KernelGlobals *kg,
                                        ShaderData *stack_sd,
                                        ccl_addr_space PathState *state,
-                                       RNG *rng,
+                                       uint rng_hash,
                                        int sample,
                                        ccl_addr_space Ray *ray)
 {
-	state->flag = PATH_RAY_CAMERA|PATH_RAY_MIS_SKIP;
+	state->flag = PATH_RAY_CAMERA|PATH_RAY_MIS_SKIP|PATH_RAY_TRANSPARENT_BACKGROUND;
 
+	state->rng_hash = rng_hash;
 	state->rng_offset = PRNG_BASE_NUM;
 	state->sample = sample;
 	state->num_samples = kernel_data.integrator.aa_samples;
+	state->branch_factor = 1.0f;
 
 	state->bounce = 0;
 	state->diffuse_bounce = 0;
@@ -58,7 +60,7 @@ ccl_device_inline void path_state_init(KernelGlobals *kg,
 		/* Initialize volume stack with volume we are inside of. */
 		kernel_volume_stack_init(kg, stack_sd, state, ray, state->volume_stack);
 		/* Seed RNG for cases where we can't use stratified samples .*/
-		state->rng_congruential = lcg_init(*rng + sample*0x51633e2d);
+		state->rng_congruential = lcg_init(rng_hash + sample*0x51633e2d);
 	}
 	else {
 		state->volume_stack[0].shader = SHADER_NONE;
@@ -74,22 +76,23 @@ ccl_device_inline void path_state_next(KernelGlobals *kg, ccl_addr_space PathSta
 		state->flag |= PATH_RAY_TRANSPARENT;
 		state->transparent_bounce++;
 
-		/* don't increase random number generator offset here, to avoid some
-		 * unwanted patterns, see path_state_rng_1D_for_decision */
-
 		if(!kernel_data.integrator.transparent_shadows)
 			state->flag |= PATH_RAY_MIS_SKIP;
+
+		/* random number generator next bounce */
+		state->rng_offset += PRNG_BOUNCE_NUM;
 
 		return;
 	}
 
 	state->bounce++;
+	state->flag &= ~(PATH_RAY_ALL_VISIBILITY|PATH_RAY_MIS_SKIP);
 
 #ifdef __VOLUME__
 	if(label & LABEL_VOLUME_SCATTER) {
 		/* volume scatter */
 		state->flag |= PATH_RAY_VOLUME_SCATTER;
-		state->flag &= ~(PATH_RAY_REFLECT|PATH_RAY_TRANSMIT|PATH_RAY_CAMERA|PATH_RAY_TRANSPARENT|PATH_RAY_DIFFUSE|PATH_RAY_GLOSSY|PATH_RAY_SINGULAR|PATH_RAY_MIS_SKIP);
+		state->flag &= ~PATH_RAY_TRANSPARENT_BACKGROUND;
 
 		state->volume_bounce++;
 	}
@@ -99,7 +102,7 @@ ccl_device_inline void path_state_next(KernelGlobals *kg, ccl_addr_space PathSta
 		/* surface reflection/transmission */
 		if(label & LABEL_REFLECT) {
 			state->flag |= PATH_RAY_REFLECT;
-			state->flag &= ~(PATH_RAY_TRANSMIT|PATH_RAY_VOLUME_SCATTER|PATH_RAY_CAMERA|PATH_RAY_TRANSPARENT);
+			state->flag &= ~PATH_RAY_TRANSPARENT_BACKGROUND;
 
 			if(label & LABEL_DIFFUSE)
 				state->diffuse_bounce++;
@@ -110,7 +113,10 @@ ccl_device_inline void path_state_next(KernelGlobals *kg, ccl_addr_space PathSta
 			kernel_assert(label & LABEL_TRANSMIT);
 
 			state->flag |= PATH_RAY_TRANSMIT;
-			state->flag &= ~(PATH_RAY_REFLECT|PATH_RAY_VOLUME_SCATTER|PATH_RAY_CAMERA|PATH_RAY_TRANSPARENT);
+
+			if(!(label & LABEL_TRANSMIT_TRANSPARENT)) {
+				state->flag &= ~PATH_RAY_TRANSPARENT_BACKGROUND;
+			}
 
 			state->transmission_bounce++;
 		}
@@ -118,17 +124,13 @@ ccl_device_inline void path_state_next(KernelGlobals *kg, ccl_addr_space PathSta
 		/* diffuse/glossy/singular */
 		if(label & LABEL_DIFFUSE) {
 			state->flag |= PATH_RAY_DIFFUSE|PATH_RAY_DIFFUSE_ANCESTOR;
-			state->flag &= ~(PATH_RAY_GLOSSY|PATH_RAY_SINGULAR|PATH_RAY_MIS_SKIP);
 		}
 		else if(label & LABEL_GLOSSY) {
 			state->flag |= PATH_RAY_GLOSSY;
-			state->flag &= ~(PATH_RAY_DIFFUSE|PATH_RAY_SINGULAR|PATH_RAY_MIS_SKIP);
 		}
 		else {
 			kernel_assert(label & LABEL_SINGULAR);
-
 			state->flag |= PATH_RAY_GLOSSY|PATH_RAY_SINGULAR|PATH_RAY_MIS_SKIP;
-			state->flag &= ~PATH_RAY_DIFFUSE;
 		}
 	}
 
@@ -142,7 +144,7 @@ ccl_device_inline void path_state_next(KernelGlobals *kg, ccl_addr_space PathSta
 #endif
 }
 
-ccl_device_inline uint path_state_ray_visibility(KernelGlobals *kg, PathState *state)
+ccl_device_inline uint path_state_ray_visibility(KernelGlobals *kg, ccl_addr_space PathState *state)
 {
 	uint flag = state->flag & PATH_RAY_ALL_VISIBILITY;
 
@@ -156,7 +158,9 @@ ccl_device_inline uint path_state_ray_visibility(KernelGlobals *kg, PathState *s
 	return flag;
 }
 
-ccl_device_inline float path_state_continuation_probability(KernelGlobals *kg, ccl_addr_space PathState *state, const float3 throughput)
+ccl_device_inline float path_state_continuation_probability(KernelGlobals *kg,
+                                                            ccl_addr_space PathState *state,
+                                                            const float3 throughput)
 {
 	if(state->flag & PATH_RAY_TRANSPARENT) {
 		/* Transparent rays are treated separately with own max bounces. */
@@ -198,9 +202,9 @@ ccl_device_inline float path_state_continuation_probability(KernelGlobals *kg, c
 #endif
 	}
 
-	/* Probalistic termination: use sqrt() to roughly match typical view
+	/* Probabilistic termination: use sqrt() to roughly match typical view
 	 * transform and do path termination a bit later on average. */
-	return sqrtf(max3(fabs(throughput)));
+	return min(sqrtf(max3(fabs(throughput)) * state->branch_factor), 1.0f);
 }
 
 /* TODO(DingTo): Find more meaningful name for this */
@@ -211,6 +215,31 @@ ccl_device_inline void path_state_modify_bounce(ccl_addr_space PathState *state,
 		state->bounce += 1;
 	else
 		state->bounce -= 1;
+}
+
+ccl_device_inline bool path_state_ao_bounce(KernelGlobals *kg, ccl_addr_space PathState *state)
+{
+    if(state->bounce <= kernel_data.integrator.ao_bounces) {
+        return false;
+    }
+
+    int bounce = state->bounce - state->transmission_bounce - (state->glossy_bounce > 0);
+    return (bounce > kernel_data.integrator.ao_bounces);
+}
+
+ccl_device_inline void path_state_branch(ccl_addr_space PathState *state,
+                                         int branch,
+                                         int num_branches)
+{
+	state->rng_offset += PRNG_BOUNCE_NUM;
+
+	if(num_branches > 1) {
+		/* Path is splitting into a branch, adjust so that each branch
+		 * still gets a unique sample from the same sequence. */
+		state->sample = state->sample*num_branches + branch;
+		state->num_samples = state->num_samples*num_branches;
+		state->branch_factor *= num_branches;
+	}
 }
 
 CCL_NAMESPACE_END

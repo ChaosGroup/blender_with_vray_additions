@@ -441,7 +441,7 @@ void VRsceneExporter::exportObjectsPost()
 			const float float_frame = frame_current + f;
 
 			// Set exporter settings
-			scene.frame_set(frame_current, f);
+			ExporterSettings::gSet.b_engine.frame_set(frame_current, f);
 			VRayExportable::initInterpolate(float_frame);
 			ExporterSettings::gSet.m_frameCurrent = float_frame;
 			ExporterSettings::gSet.m_frameStep    = subframe_step;
@@ -458,7 +458,7 @@ void VRsceneExporter::exportObjectsPost()
 		}
 
 		// Restore settings
-		scene.frame_set(frame_current, 0.0f);
+		ExporterSettings::gSet.b_engine.frame_set(frame_current, 0.0f);
 		VRayExportable::initInterpolate(frame_current);
 		ExporterSettings::gSet.m_frameCurrent = m_frameCurrent;
 		ExporterSettings::gSet.m_frameStep    = m_frameStep;

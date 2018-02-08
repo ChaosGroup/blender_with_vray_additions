@@ -5,6 +5,7 @@ import argparse
 import glob
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import sys
@@ -42,7 +43,8 @@ def print_message(message, type=None, status=''):
         status_text = "  FAILED  "
     else:
         status_text = status
-    print("[{}]" . format(status_text), end="")
+    if status_text:
+        print("[{}]" . format(status_text), end="")
     print(COLORS.ENDC, end="")
     print(" {}" . format(message))
     sys.stdout.flush()
@@ -52,38 +54,60 @@ def render_file(filepath):
     dirname = os.path.dirname(filepath)
     basedir = os.path.dirname(dirname)
     subject = os.path.basename(dirname)
+
+    custom_args = os.getenv('CYCLESTEST_ARGS')
+    custom_args = shlex.split(custom_args) if custom_args else []
+
+    # OSL and GPU examples
+    # custom_args += ["--python-expr", "import bpy; bpy.context.scene.cycles.shading_system = True"]
+    # custom_args += ["--python-expr", "import bpy; bpy.context.scene.cycles.device = 'GPU'"]
+
     if subject == 'opengl':
-        command = (
+        command = [
             BLENDER,
             "--window-geometry", "0", "0", "1", "1",
             "-noaudio",
             "--factory-startup",
             "--enable-autoexec",
             filepath,
-            "-E", "CYCLES",
-            # Run with OSL enabled
-            # "--python-expr", "import bpy; bpy.context.scene.cycles.shading_system = True",
+            "-E", "CYCLES"]
+        command += custom_args
+        command += [
             "-o", TEMP_FILE_MASK,
             "-F", "PNG",
             '--python', os.path.join(basedir,
                                      "util",
-                                     "render_opengl.py")
-        )
+                                     "render_opengl.py")]
+    elif subject == 'bake':
+        command = [
+            BLENDER,
+            "-b",
+            "-noaudio",
+            "--factory-startup",
+            "--enable-autoexec",
+            filepath,
+            "-E", "CYCLES"]
+        command += custom_args
+        command += [
+            "-o", TEMP_FILE_MASK,
+            "-F", "PNG",
+            '--python', os.path.join(basedir,
+                                     "util",
+                                     "render_bake.py")]
     else:
-        command = (
+        command = [
             BLENDER,
             "--background",
             "-noaudio",
             "--factory-startup",
             "--enable-autoexec",
             filepath,
-            "-E", "CYCLES",
-            # Run with OSL enabled
-            # "--python-expr", "import bpy; bpy.context.scene.cycles.shading_system = True",
+            "-E", "CYCLES"]
+        command += custom_args
+        command += [
             "-o", TEMP_FILE_MASK,
             "-F", "PNG",
-            "-f", "1",
-            )
+            "-f", "1"]
     try:
         output = subprocess.check_output(command)
         if VERBOSE:
@@ -114,17 +138,28 @@ def test_get_name(filepath):
 def test_get_images(filepath):
     testname = test_get_name(filepath)
     dirpath = os.path.dirname(filepath)
-    ref_dirpath = os.path.join(dirpath, "reference_renders")
+
+    old_dirpath = os.path.join(dirpath, "reference_renders")
+    old_img = os.path.join(old_dirpath, testname + ".png")
+
+    ref_dirpath = os.path.join(OUTDIR, os.path.basename(dirpath), "ref")
     ref_img = os.path.join(ref_dirpath, testname + ".png")
+    if not os.path.exists(ref_dirpath):
+        os.makedirs(ref_dirpath)
+    if os.path.exists(old_img):
+        shutil.copy(old_img, ref_img)
+
     new_dirpath = os.path.join(OUTDIR, os.path.basename(dirpath))
     if not os.path.exists(new_dirpath):
         os.makedirs(new_dirpath)
     new_img = os.path.join(new_dirpath, testname + ".png")
+
     diff_dirpath = os.path.join(OUTDIR, os.path.basename(dirpath), "diff")
     if not os.path.exists(diff_dirpath):
         os.makedirs(diff_dirpath)
     diff_img = os.path.join(diff_dirpath, testname + ".diff.png")
-    return ref_img, new_img, diff_img
+
+    return old_img, ref_img, new_img, diff_img
 
 
 class Report:
@@ -136,13 +171,14 @@ class Report:
     def output(self):
         # write intermediate data for single test
         outdir = os.path.join(OUTDIR, self.testname)
-        f = open(os.path.join(outdir, "failed.data"), "w")
-        f.write(self.failed_tests)
-        f.close()
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
 
-        f = open(os.path.join(outdir, "passed.data"), "w")
-        f.write(self.passed_tests)
-        f.close()
+        filepath = os.path.join(outdir, "failed.data")
+        pathlib.Path(filepath).write_text(self.failed_tests)
+
+        filepath = os.path.join(outdir, "passed.data")
+        pathlib.Path(filepath).write_text(self.passed_tests)
 
         # gather intermediate data for all tests
         failed_data = sorted(glob.glob(os.path.join(OUTDIR, "*/failed.data")))
@@ -152,9 +188,11 @@ class Report:
         passed_tests = ""
 
         for filename in failed_data:
-            failed_tests += open(os.path.join(OUTDIR, filename), "r").read()
+            filepath = os.path.join(OUTDIR, filename)
+            failed_tests += pathlib.Path(filepath).read_text()
         for filename in passed_data:
-            passed_tests += open(os.path.join(OUTDIR, filename), "r").read()
+            filepath = os.path.join(OUTDIR, filename)
+            passed_tests += pathlib.Path(filepath).read_text()
 
         # write html for all tests
         self.html = """
@@ -162,7 +200,7 @@ class Report:
 <head>
     <title>Cycles Test Report</title>
     <style>
-        img {{ image-rendering: pixelated; width: 256; background-color: #000; }}
+        img {{ image-rendering: pixelated; width: 256px; background-color: #000; }}
         img.render {{
             background-color: #fff;
             background-image:
@@ -182,7 +220,7 @@ class Report:
 
             background-position:0 0, 25px 0, 25px -25px, 0px 25px;
         }}
-        table td:first-child {{ width: 100%; }}
+        table td:first-child {{ width: 256px; }}
     </style>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css">
 </head>
@@ -204,23 +242,26 @@ class Report:
             """ . format(failed_tests, passed_tests)
 
         filepath = os.path.join(OUTDIR, "report.html")
-        f = open(filepath, "w")
-        f.write(self.html)
-        f.close()
+        pathlib.Path(filepath).write_text(self.html)
 
         print_message("Report saved to: " + pathlib.Path(filepath).as_uri())
 
+    def relative_url(self, filepath):
+        relpath = os.path.relpath(filepath, OUTDIR)
+        return pathlib.Path(relpath).as_posix()
+
     def add_test(self, filepath, error):
         name = test_get_name(filepath)
+        name = name.replace('_', ' ')
 
-        ref_img, new_img, diff_img = test_get_images(filepath)
+        old_img, ref_img, new_img, diff_img = test_get_images(filepath)
 
         status = error if error else ""
         style = """ style="background-color: #f99;" """ if error else ""
 
-        new_url = pathlib.Path(new_img).as_uri()
-        ref_url = pathlib.Path(ref_img).as_uri()
-        diff_url = pathlib.Path(diff_img).as_uri()
+        new_url = self.relative_url(new_img)
+        ref_url = self.relative_url(ref_img)
+        diff_url = self.relative_url(diff_img)
 
         test_html = """
             <tr{}>
@@ -240,7 +281,7 @@ class Report:
 
 
 def verify_output(report, filepath):
-    ref_img, new_img, diff_img = test_get_images(filepath)
+    old_img, ref_img, new_img, diff_img = test_get_images(filepath)
 
     # copy new image
     if os.path.exists(new_img):
@@ -248,25 +289,35 @@ def verify_output(report, filepath):
     if os.path.exists(TEMP_FILE):
         shutil.copy(TEMP_FILE, new_img)
 
+    update = os.getenv('CYCLESTEST_UPDATE')
 
-    if not os.path.exists(ref_img):
-        return False
+    if os.path.exists(ref_img):
+        # diff test with threshold
+        command = (
+            IDIFF,
+            "-fail", "0.016",
+            "-failpercent", "1",
+            ref_img,
+            TEMP_FILE,
+            )
+        try:
+            subprocess.check_output(command)
+            failed = False
+        except subprocess.CalledProcessError as e:
+            if VERBOSE:
+                print_message(e.output.decode("utf-8"))
+            failed = e.returncode != 1
+    else:
+        if not update:
+            return False
 
-    # diff test with threshold
-    command = (
-        IDIFF,
-        "-fail", "0.016",
-        "-failpercent", "1",
-        ref_img,
-        TEMP_FILE,
-        )
-    try:
-        subprocess.check_output(command)
+        failed = True
+
+    if failed and update:
+        # update reference
+        shutil.copy(new_img, ref_img)
+        shutil.copy(new_img, old_img)
         failed = False
-    except subprocess.CalledProcessError as e:
-        if VERBOSE:
-            print_message(e.output.decode("utf-8"))
-        failed = e.returncode != 1
 
     # generate diff image
     command = (

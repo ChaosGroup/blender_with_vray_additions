@@ -22,7 +22,6 @@
 
 #include <limits>
 
-#include "util/util_debug.h"
 #include "util/util_defines.h"
 
 /* SSE Intrinsics includes
@@ -347,7 +346,10 @@ __forceinline size_t __bscf(size_t& v)
 
 #endif /* _WIN32 */
 
-#if !(defined(__SSE4_1__) || defined(__SSE4_2__))
+/* Test __KERNEL_SSE41__ for MSVC which does not define __SSE4_1__, and test
+ * __SSE4_1__ to avoid OpenImageIO conflicts with our emulation macros on other
+ * platforms when compiling code outside the kernel. */
+#if !(defined(__KERNEL_SSE41__) || defined(__SSE4_1__) || defined(__SSE4_2__))
 
 /* Emulation of SSE4 functions with SSE2 */
 
@@ -361,7 +363,12 @@ __forceinline size_t __bscf(size_t& v)
 #define _mm_blendv_ps _mm_blendv_ps_emu
 __forceinline __m128 _mm_blendv_ps_emu( __m128 value, __m128 input, __m128 mask)
 {
-    return _mm_or_ps(_mm_and_ps(mask, input), _mm_andnot_ps(mask, value)); 
+    __m128i isignmask = _mm_set1_epi32(0x80000000);
+    __m128 signmask = _mm_castsi128_ps(isignmask);
+    __m128i iandsign = _mm_castps_si128(_mm_and_ps(mask, signmask));
+    __m128i icmpmask = _mm_cmpeq_epi32(iandsign, isignmask);
+    __m128 cmpmask = _mm_castsi128_ps(icmpmask);
+    return _mm_or_ps(_mm_and_ps(cmpmask, input), _mm_andnot_ps(cmpmask, value));
 }
 
 #undef _mm_blend_ps
@@ -435,7 +442,7 @@ __forceinline __m128 _mm_round_ps_emu( __m128 value, const int flags)
   return value;
 }
 
-#endif /* !(defined(__SSE4_1__) || defined(__SSE4_2__)) */
+#endif /* !(defined(__KERNEL_SSE41__) || defined(__SSE4_1__) || defined(__SSE4_2__)) */
 
 #else  /* __KERNEL_SSE2__ */
 
@@ -447,12 +454,21 @@ ccl_device_inline int bitscan(int value)
 {
 	assert(value != 0);
 	int bit = 0;
-	while(value >>= 1) {
+	while((value & (1 << bit)) == 0) {
 		++bit;
 	}
 	return bit;
 }
 
+ccl_device_inline int __bsr(int value)
+{
+	assert(value != 0);
+	int bit = 0;
+	while(value >>= 1) {
+		++bit;
+	}
+	return bit;
+}
 
 #endif /* __KERNEL_SSE2__ */
 

@@ -162,7 +162,7 @@ void BKE_id_lib_local_paths(Main *bmain, Library *lib, ID *id)
 
 void id_lib_extern(ID *id)
 {
-	if (id && ID_IS_LINKED_DATABLOCK(id)) {
+	if (id && ID_IS_LINKED(id)) {
 		BLI_assert(BKE_idcode_is_linkable(GS(id->name)));
 		if (id->tag & LIB_TAG_INDIRECT) {
 			id->tag -= LIB_TAG_INDIRECT;
@@ -309,7 +309,7 @@ void BKE_id_expand_local(Main *bmain, ID *id)
  */
 void BKE_id_copy_ensure_local(Main *bmain, const ID *old_id, ID *new_id)
 {
-	if (ID_IS_LINKED_DATABLOCK(old_id)) {
+	if (ID_IS_LINKED(old_id)) {
 		BKE_id_expand_local(bmain, new_id);
 		BKE_id_lib_local_paths(bmain, old_id->lib, new_id);
 	}
@@ -328,7 +328,7 @@ void BKE_id_make_local_generic(Main *bmain, ID *id, const bool id_in_mainlist, c
 	 * In case we make a whole lib's content local, we always want to localize, and we skip remapping (done later).
 	 */
 
-	if (!ID_IS_LINKED_DATABLOCK(id)) {
+	if (!ID_IS_LINKED(id)) {
 		return;
 	}
 
@@ -417,7 +417,7 @@ bool id_make_local(Main *bmain, ID *id, const bool test, const bool lib_local)
 		if (type == ID_OB || type == ID_MA) {
 			IDP_make_local(id->properties, bmain);
 			if (type == ID_OB) {
-				Object * ob = id;
+				Object * ob = (Object*)id;
 				if (ob->type == OB_LAMP) {
 					IDP_make_local(((ID*)ob->data)->properties, bmain);
 				}
@@ -559,7 +559,7 @@ static int id_copy_libmanagement_cb(void *user_data, ID *UNUSED(id_self), ID **i
  *
  * \note Usercount of new copy is always set to 1.
  *
- * \param bmain Main database, may be NULL only if LIB_ID_COPY_NO_MAIN is specified.
+ * \param bmain Main database, may be NULL only if LIB_ID_CREATE_NO_MAIN is specified.
  * \param id Source datablock.
  * \param r_newid Pointer to new (copied) ID pointer.
  * \param flag Set of copy options, see DNA_ID.h enum for details (leave to zero for default, full copy).
@@ -573,13 +573,23 @@ bool BKE_id_copy_ex(Main *bmain, const ID *id, ID **r_newid, const int flag, con
                             ID_IP  /* Deprecated */
 
 	BLI_assert(test || (r_newid != NULL));
-	if (r_newid != NULL) {
-		*r_newid = NULL;
-	}
+	/* Early output is source is NULL. */
 	if (id == NULL) {
 		return false;
 	}
-
+	/* Make sure destination pointer is all good. */
+	if ((flag & LIB_ID_CREATE_NO_ALLOCATE) == 0) {
+		if (r_newid != NULL) {
+			*r_newid = NULL;
+		}
+	}
+	else {
+		if (r_newid != NULL && *r_newid != NULL) {
+			/* Allow some garbage non-initialized memory to go in. */
+			const size_t size = BKE_libblock_get_alloc_info(GS(id->name), NULL);
+			memset(*r_newid, 0, size);
+		}
+	}
 	if (ELEM(GS(id->name), LIB_ID_TYPES_NOCOPY)) {
 		return false;
 	}
@@ -695,7 +705,11 @@ bool BKE_id_copy_ex(Main *bmain, const ID *id, ID **r_newid, const int flag, con
 	/* Do not make new copy local in case we are copying outside of main...
 	 * XXX TODO: is this behavior OK, or should we need own flag to control that? */
 	if ((flag & LIB_ID_CREATE_NO_MAIN) == 0) {
+		BLI_assert((flag & LIB_ID_COPY_KEEP_LIB) == 0);
 		BKE_id_copy_ensure_local(bmain, id, *r_newid);
+	}
+	else {
+		(*r_newid)->lib = id->lib;
 	}
 
 	return true;
@@ -989,7 +1003,7 @@ void BKE_main_lib_objects_recalc_all(Main *bmain)
 
 	/* flag for full recalc */
 	for (ob = bmain->object.first; ob; ob = ob->id.next) {
-		if (ID_IS_LINKED_DATABLOCK(ob)) {
+		if (ID_IS_LINKED(ob)) {
 			DAG_id_tag_update(&ob->id, OB_RECALC_OB | OB_RECALC_DATA | OB_RECALC_TIME);
 		}
 	}
@@ -1666,7 +1680,7 @@ static ID *is_dupid(ListBase *lb, ID *id, const char *name)
 	
 	for (idtest = lb->first; idtest; idtest = idtest->next) {
 		/* if idtest is not a lib */ 
-		if (id != idtest && !ID_IS_LINKED_DATABLOCK(idtest)) {
+		if (id != idtest && !ID_IS_LINKED(idtest)) {
 			/* do not test alphabetic! */
 			/* optimized */
 			if (idtest->name[2] == name[0]) {
@@ -1731,7 +1745,7 @@ static bool check_for_dupid(ListBase *lb, ID *id, char *name)
 		for (idtest = lb->first; idtest; idtest = idtest->next) {
 			int nrtest;
 			if ( (id != idtest) &&
-			     !ID_IS_LINKED_DATABLOCK(idtest) &&
+			     !ID_IS_LINKED(idtest) &&
 			     (*name == *(idtest->name + 2)) &&
 			     STREQLEN(name, idtest->name + 2, left_len) &&
 			     (BLI_split_name_num(leftest, &nrtest, idtest->name + 2, '.') == left_len)
@@ -1813,12 +1827,8 @@ bool new_id(ListBase *lb, ID *id, const char *tname)
 	char name[MAX_ID_NAME - 2];
 
 	/* if library, don't rename */
-	if (ID_IS_LINKED_DATABLOCK(id))
+	if (ID_IS_LINKED(id))
 		return false;
-
-	/* if no libdata given, look up based on ID */
-	if (lb == NULL)
-		lb = which_libbase(G.main, GS(id->name));
 
 	/* if no name given, use name of current ID
 	 * else make a copy (tname args can be const) */
@@ -1974,7 +1984,7 @@ static void library_make_local_copying_check(ID *id, GSet *loop_tags, MainIDRela
  *
  * Current version uses regular id_make_local callback, with advanced pre-processing step to detect all cases of
  * IDs currently indirectly used, but which will be used by local data only once this function is finished.
- * This allows to avoid any uneeded duplication of IDs, and hence all time lost afterwards to remove
+ * This allows to avoid any unneeded duplication of IDs, and hence all time lost afterwards to remove
  * orphaned linked data-blocks...
  */
 void BKE_library_make_local(
@@ -2180,8 +2190,8 @@ void BKE_library_make_local(
 			 * was not used locally would be a nasty bug! */
 			if (is_local || is_lib) {
 				printf("Warning, made-local proxy object %s will loose its link to %s, "
-					   "because the linked-in proxy is referenced (is_local=%i, is_lib=%i).\n",
-					   id->newid->name, ob->proxy->id.name, is_local, is_lib);
+				       "because the linked-in proxy is referenced (is_local=%i, is_lib=%i).\n",
+				       id->newid->name, ob->proxy->id.name, is_local, is_lib);
 			}
 			else {
 				/* we can switch the proxy'ing from the linked-in to the made-local proxy.
@@ -2237,8 +2247,8 @@ void BKE_library_make_local(
 				 * was not used locally would be a nasty bug! */
 				else if (is_local || is_lib) {
 					printf("Warning, made-local proxy object %s will loose its link to %s, "
-						   "because the linked-in proxy is referenced (is_local=%i, is_lib=%i).\n",
-						   id->newid->name, ob->proxy->id.name, is_local, is_lib);
+					       "because the linked-in proxy is referenced (is_local=%i, is_lib=%i).\n",
+					       id->newid->name, ob->proxy->id.name, is_local, is_lib);
 				}
 				else {
 					/* we can switch the proxy'ing from the linked-in to the made-local proxy.
@@ -2363,7 +2373,6 @@ void BLI_libblock_ensure_unique_name(Main *bmain, const char *name)
 	ListBase *lb;
 	ID *idtest;
 
-
 	lb = which_libbase(bmain, GS(name));
 	if (lb == NULL) return;
 	
@@ -2422,10 +2431,10 @@ void BKE_library_filepath_set(Library *lib, const char *filepath)
 
 void BKE_id_tag_set_atomic(ID *id, int tag)
 {
-	atomic_fetch_and_or_uint32((uint32_t *)&id->tag, tag);
+	atomic_fetch_and_or_int32(&id->tag, tag);
 }
 
 void BKE_id_tag_clear_atomic(ID *id, int tag)
 {
-	atomic_fetch_and_and_uint32((uint32_t *)&id->tag, ~tag);
+	atomic_fetch_and_and_int32(&id->tag, ~tag);
 }

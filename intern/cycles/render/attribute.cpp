@@ -18,7 +18,6 @@
 #include "render/mesh.h"
 #include "render/attribute.h"
 
-#include "util/util_debug.h"
 #include "util/util_foreach.h"
 #include "util/util_transform.h"
 
@@ -500,6 +499,16 @@ Attribute *AttributeSet::find(AttributeRequest& req)
 		return find(req.name);
 	else
 		return find(req.std);
+}
+
+void AttributeSet::remove(Attribute *attribute)
+{
+	if(attribute->std == ATTR_STD_NONE) {
+		remove(attribute->name);
+	}
+	else {
+		remove(attribute->std);
+	}
 }
 
 void AttributeSet::resize(bool reserve_only)

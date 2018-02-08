@@ -436,7 +436,7 @@ static int apply_objects_internal(
 				changed = false;
 			}
 
-			if (ID_IS_LINKED_DATABLOCK(obdata)) {
+			if (ID_IS_LINKED(obdata)) {
 				BKE_reportf(reports, RPT_ERROR,
 				            "Cannot apply to library data: Object \"%s\", %s \"%s\", aborting",
 				            ob->id.name + 2, BKE_idcode_to_name(GS(obdata->name)), obdata->name + 2);
@@ -720,7 +720,8 @@ enum {
 	GEOMETRY_TO_ORIGIN = 0,
 	ORIGIN_TO_GEOMETRY,
 	ORIGIN_TO_CURSOR,
-	ORIGIN_TO_CENTER_OF_MASS
+	ORIGIN_TO_CENTER_OF_MASS_SURFACE,
+	ORIGIN_TO_CENTER_OF_MASS_VOLUME,
 };
 
 static int object_origin_set_exec(bContext *C, wmOperator *op)
@@ -842,7 +843,7 @@ static int object_origin_set_exec(bContext *C, wmOperator *op)
 			if (ob->data == NULL) {
 				/* special support for dupligroups */
 				if ((ob->transflag & OB_DUPLIGROUP) && ob->dup_group && (ob->dup_group->id.tag & LIB_TAG_DOIT) == 0) {
-					if (ID_IS_LINKED_DATABLOCK(ob->dup_group)) {
+					if (ID_IS_LINKED(ob->dup_group)) {
 						tot_lib_error++;
 					}
 					else {
@@ -867,17 +868,28 @@ static int object_origin_set_exec(bContext *C, wmOperator *op)
 					}
 				}
 			}
-			else if (ID_IS_LINKED_DATABLOCK(ob->data)) {
+			else if (ID_IS_LINKED(ob->data)) {
 				tot_lib_error++;
 			}
 
 			if (obedit == NULL && ob->type == OB_MESH) {
 				Mesh *me = ob->data;
 
-				if (centermode == ORIGIN_TO_CURSOR) { /* done */ }
-				else if (centermode == ORIGIN_TO_CENTER_OF_MASS)    { BKE_mesh_center_centroid(me, cent); }
-				else if (around == V3D_AROUND_CENTER_MEAN)          { BKE_mesh_center_median(me, cent); }
-				else                                                { BKE_mesh_center_bounds(me, cent); }
+				if (centermode == ORIGIN_TO_CURSOR) {
+					/* done */
+				}
+				else if (centermode == ORIGIN_TO_CENTER_OF_MASS_SURFACE) {
+					BKE_mesh_center_of_surface(me, cent);
+				}
+				else if (centermode == ORIGIN_TO_CENTER_OF_MASS_VOLUME) {
+					BKE_mesh_center_of_volume(me, cent);
+				}
+				else if (around == V3D_AROUND_CENTER_MEAN) {
+					BKE_mesh_center_median(me, cent);
+				}
+				else {
+					BKE_mesh_center_bounds(me, cent);
+				}
 
 				negate_v3_v3(cent_neg, cent);
 				BKE_mesh_translate(me, cent_neg, 1);
@@ -1082,18 +1094,21 @@ static int object_origin_set_exec(bContext *C, wmOperator *op)
 
 void OBJECT_OT_origin_set(wmOperatorType *ot)
 {
-	static EnumPropertyItem prop_set_center_types[] = {
+	static const EnumPropertyItem prop_set_center_types[] = {
 		{GEOMETRY_TO_ORIGIN, "GEOMETRY_ORIGIN", 0, "Geometry to Origin", "Move object geometry to object origin"},
 		{ORIGIN_TO_GEOMETRY, "ORIGIN_GEOMETRY", 0, "Origin to Geometry",
-		                     "Move object origin to center of object geometry"},
+		 "Calculate the center of geometry based on the current pivot point (median, otherwise bounding-box)"},
 		{ORIGIN_TO_CURSOR, "ORIGIN_CURSOR", 0, "Origin to 3D Cursor",
-		                   "Move object origin to position of the 3D cursor"},
-		{ORIGIN_TO_CENTER_OF_MASS, "ORIGIN_CENTER_OF_MASS", 0, "Origin to Center of Mass",
-		                           "Move object origin to the object center of mass (assuming uniform density)"},
+		 "Move object origin to position of the 3D cursor"},
+		/* Intentional naming mismatch since some scripts refer to this. */
+		{ORIGIN_TO_CENTER_OF_MASS_SURFACE, "ORIGIN_CENTER_OF_MASS", 0, "Origin to Center of Mass (Surface)",
+		 "Calculate the center of mass from the surface area"},
+		{ORIGIN_TO_CENTER_OF_MASS_VOLUME, "ORIGIN_CENTER_OF_VOLUME", 0, "Origin to Center of Mass (Volume)",
+		 "Calculate the center of mass from the volume (must be manifold geometry with consistent normals)"},
 		{0, NULL, 0, NULL, NULL}
 	};
 	
-	static EnumPropertyItem prop_set_bounds_types[] = {
+	static const EnumPropertyItem prop_set_bounds_types[] = {
 		{V3D_AROUND_CENTER_MEAN, "MEDIAN", 0, "Median Center", ""},
 		{V3D_AROUND_CENTER_BOUNDS, "BOUNDS", 0, "Bounds Center", ""},
 		{0, NULL, 0, NULL, NULL}

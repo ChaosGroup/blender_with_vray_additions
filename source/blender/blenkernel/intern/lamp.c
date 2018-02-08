@@ -136,6 +136,8 @@ void BKE_lamp_copy_data(Main *bmain, Lamp *la_dst, const Lamp *la_src, const int
 	la_dst->curfalloff = curvemapping_copy(la_src->curfalloff);
 
 	if (la_src->nodetree) {
+		/* Note: nodetree is *not* in bmain, however this specific case is handled at lower level
+		 *       (see BKE_libblock_copy_ex()). */
 		BKE_id_copy_ex(bmain, (ID *)la_src->nodetree, (ID **)&la_dst->nodetree, flag, false);
 	}
 
@@ -154,7 +156,7 @@ Lamp *BKE_lamp_copy(Main *bmain, const Lamp *la)
 	return la_copy;
 }
 
-Lamp *localize_lamp(Lamp *la)
+Lamp *BKE_lamp_localize(Lamp *la)
 {
 	/* TODO replace with something like
 	 * 	Lamp *la_copy;
@@ -170,7 +172,7 @@ Lamp *localize_lamp(Lamp *la)
 
 	for (a = 0; a < MAX_MTEX; a++) {
 		if (lan->mtex[a]) {
-			lan->mtex[a] = MEM_mallocN(sizeof(MTex), "localize_lamp");
+			lan->mtex[a] = MEM_mallocN(sizeof(MTex), __func__);
 			memcpy(lan->mtex[a], la->mtex[a], sizeof(MTex));
 		}
 	}

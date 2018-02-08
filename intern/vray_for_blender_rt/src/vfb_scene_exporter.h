@@ -150,7 +150,7 @@ private:
 /// Simplifies motion blur and animation export (both requre multi frame export)
 class FrameExportManager {
 public:
-	FrameExportManager(BL::Scene scene, ExporterSettings & settings, BL::BlendData & data);
+	FrameExportManager(BL::Scene & scene, ExporterSettings & settings, BL::BlendData & data, BL::RenderEngine & engine);
 
 	/// Update internal data from the passes ExporterSettings
 	/// needed because settings change
@@ -242,6 +242,7 @@ public:
 private:
 	ExporterSettings &m_settings; ///< The global settings for the exporter
 	BL::Scene m_scene; ///< Current scene
+	BL::RenderEngine m_engine;
 	BL::BlendData m_data; ///< The blender data conext
 	std::vector<BL::Object> m_loopCameras; ///< All cameras with 'camera_loop' enabled if anim is Camera Loop
 
@@ -298,7 +299,7 @@ public:
 		, m_active_camera(view3d ? view3d.camera() : scene.camera())
 		, m_python_thread_state(nullptr)
 		, m_exporter(nullptr)
-		, m_frameExporter(m_scene, m_settings, m_data)
+		, m_frameExporter(m_scene, m_settings, m_data, m_engine)
 		, m_data_exporter(m_settings)
 		, m_sceneComputedLayers(0)
 		, m_isLocalView(false)

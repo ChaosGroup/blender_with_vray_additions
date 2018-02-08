@@ -54,7 +54,7 @@ int          RNA_enum_ext_get(PointerRNA *ptr, const char *attrName);
 std::string  RNA_enum_identifier_get(PointerRNA *ptr, const char *attrName);
 std::string  RNA_enum_name_get(PointerRNA *ptr, const char *attrName);
 
-EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName);
+const EnumPropertyItem *RNA_enum_item(PointerRNA *ptr, const char *attrName);
 
 } // namespace VRayForBlender
 

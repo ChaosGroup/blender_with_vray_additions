@@ -127,8 +127,8 @@ void BKE_mesh_calc_normals_mapping_ex(
 		return;
 	}
 
-	if (!pnors) pnors = MEM_callocN(sizeof(float[3]) * (size_t)numPolys, __func__);
-	/* if (!fnors) fnors = MEM_callocN(sizeof(float[3]) * numFaces, "face nors mesh.c"); */ /* NO NEED TO ALLOC YET */
+	if (!pnors) pnors = MEM_calloc_arrayN((size_t)numPolys, sizeof(float[3]), __func__);
+	/* if (!fnors) fnors = MEM_calloc_arrayN(numFaces, sizeof(float[3]), "face nors mesh.c"); */ /* NO NEED TO ALLOC YET */
 
 
 	if (only_face_normals == false) {
@@ -173,10 +173,14 @@ typedef struct MeshCalcNormalsData {
 	const MLoop *mloop;
 	MVert *mverts;
 	float (*pnors)[3];
+	float (*lnors_weighted)[3];
 	float (*vnors)[3];
 } MeshCalcNormalsData;
 
-static void mesh_calc_normals_poly_task_cb(void *userdata, const int pidx)
+static void mesh_calc_normals_poly_cb(
+        void *__restrict userdata, 
+        const int pidx,
+        const ParallelRangeTLS *__restrict UNUSED(tls))
 {
 	MeshCalcNormalsData *data = userdata;
 	const MPoly *mp = &data->mpolys[pidx];
@@ -184,7 +188,10 @@ static void mesh_calc_normals_poly_task_cb(void *userdata, const int pidx)
 	BKE_mesh_calc_poly_normal(mp, data->mloop + mp->loopstart, data->mverts, data->pnors[pidx]);
 }
 
-static void mesh_calc_normals_poly_accum_task_cb(void *userdata, const int pidx)
+static void mesh_calc_normals_poly_prepare_cb(
+        void *__restrict userdata, 
+        const int pidx,
+        const ParallelRangeTLS *__restrict UNUSED(tls))
 {
 	MeshCalcNormalsData *data = userdata;
 	const MPoly *mp = &data->mpolys[pidx];
@@ -193,7 +200,7 @@ static void mesh_calc_normals_poly_accum_task_cb(void *userdata, const int pidx)
 
 	float pnor_temp[3];
 	float *pnor = data->pnors ? data->pnors[pidx] : pnor_temp;
-	float (*vnors)[3] = data->vnors;
+	float (*lnors_weighted)[3] = data->lnors_weighted;
 
 	const int nverts = mp->totloop;
 	float (*edgevecbuf)[3] = BLI_array_alloca(edgevecbuf, (size_t)nverts);
@@ -220,42 +227,61 @@ static void mesh_calc_normals_poly_accum_task_cb(void *userdata, const int pidx)
 			v_prev = v_curr;
 		}
 		if (UNLIKELY(normalize_v3(pnor) == 0.0f)) {
-			pnor[2] = 1.0f; /* other axis set to 0.0 */
+			pnor[2] = 1.0f; /* other axes set to 0.0 */
 		}
 	}
 
 	/* accumulate angle weighted face normal */
-	/* inline version of #accumulate_vertex_normals_poly */
+	/* inline version of #accumulate_vertex_normals_poly_v3,
+	 * split between this threaded callback and #mesh_calc_normals_poly_accum_cb. */
 	{
 		const float *prev_edge = edgevecbuf[nverts - 1];
 
 		for (i = 0; i < nverts; i++) {
+			const int lidx = mp->loopstart + i;
 			const float *cur_edge = edgevecbuf[i];
 
 			/* calculate angle between the two poly edges incident on
 			 * this vertex */
 			const float fac = saacos(-dot_v3v3(cur_edge, prev_edge));
 
-			/* accumulate */
-			for (int k = 3; k--; ) {
-				atomic_add_and_fetch_fl(&vnors[ml[i].v][k], pnor[k] * fac);
-			}
+			/* Store for later accumulation */
+			mul_v3_v3fl(lnors_weighted[lidx], pnor, fac);
+
 			prev_edge = cur_edge;
 		}
 	}
+}
 
+static void mesh_calc_normals_poly_finalize_cb(
+        void *__restrict userdata,
+        const int vidx,
+        const ParallelRangeTLS *__restrict UNUSED(tls))
+{
+	MeshCalcNormalsData *data = userdata;
+
+	MVert *mv = &data->mverts[vidx];
+	float *no = data->vnors[vidx];
+
+	if (UNLIKELY(normalize_v3(no) == 0.0f)) {
+		/* following Mesh convention; we use vertex coordinate itself for normal in this case */
+		normalize_v3_v3(no, mv->co);
+	}
+
+	normal_float_to_short_v3(mv->no, no);
 }
 
 void BKE_mesh_calc_normals_poly(
         MVert *mverts, float (*r_vertnors)[3], int numVerts,
         const MLoop *mloop, const MPoly *mpolys,
-        int UNUSED(numLoops), int numPolys, float (*r_polynors)[3],
+        int numLoops, int numPolys, float (*r_polynors)[3],
         const bool only_face_normals)
 {
 	float (*pnors)[3] = r_polynors;
-	float (*vnors)[3] = r_vertnors;
-	bool free_vnors = false;
-	int i;
+
+	ParallelRangeSettings settings;
+	BLI_parallel_range_settings_defaults(&settings);
+	settings.min_iter_per_thread = 1024;
 
 	if (only_face_normals) {
 		BLI_assert((pnors != NULL) || (numPolys == 0));
@@ -265,13 +291,17 @@ void BKE_mesh_calc_normals_poly(
 		    .mpolys = mpolys, .mloop = mloop, .mverts = mverts, .pnors = pnors,
 		};
 
-		BLI_task_parallel_range(0, numPolys, &data, mesh_calc_normals_poly_task_cb, (numPolys > BKE_MESH_OMP_LIMIT));
+		BLI_task_parallel_range(0, numPolys, &data, mesh_calc_normals_poly_cb, &settings);
 		return;
 	}
 
+	float (*vnors)[3] = r_vertnors;
+	float (*lnors_weighted)[3] = MEM_malloc_arrayN((size_t)numLoops, sizeof(*lnors_weighted), __func__);
+	bool free_vnors = false;
+
 	/* first go through and calculate normals for all the polys */
 	if (vnors == NULL) {
-		vnors = MEM_callocN(sizeof(*vnors) * (size_t)numVerts, __func__);
+		vnors = MEM_calloc_arrayN((size_t)numVerts, sizeof(*vnors), __func__);
 		free_vnors = true;
 	}
 	else {
@@ -279,26 +309,27 @@ void BKE_mesh_calc_normals_poly(
 	}
 
 	MeshCalcNormalsData data = {
-	    .mpolys = mpolys, .mloop = mloop, .mverts = mverts, .pnors = pnors, .vnors = vnors,
+	    .mpolys = mpolys, .mloop = mloop, .mverts = mverts,
+	    .pnors = pnors, .lnors_weighted = lnors_weighted, .vnors = vnors
 	};
 
-	BLI_task_parallel_range(0, numPolys, &data, mesh_calc_normals_poly_accum_task_cb, (numPolys > BKE_MESH_OMP_LIMIT));
+	/* Compute poly normals, and prepare weighted loop normals. */
+	BLI_task_parallel_range(0, numPolys, &data, mesh_calc_normals_poly_prepare_cb, &settings);
 
-	for (i = 0; i < numVerts; i++) {
-		MVert *mv = &mverts[i];
-		float *no = vnors[i];
-
-		if (UNLIKELY(normalize_v3(no) == 0.0f)) {
-			/* following Mesh convention; we use vertex coordinate itself for normal in this case */
-			normalize_v3_v3(no, mv->co);
-		}
-
-		normal_float_to_short_v3(mv->no, no);
+	/* Actually accumulate weighted loop normals into vertex ones. */
+	/* Unfortunately, not possible to thread that (not in a reasonable, totally lock- and barrier-free fashion),
+	 * since several loops will point to the same vertex... */
+	for (int lidx = 0; lidx < numLoops; lidx++) {
+		add_v3_v3(vnors[mloop[lidx].v], data.lnors_weighted[lidx]);
 	}
+
+	/* Normalize and validate computed vertex normals. */
+	BLI_task_parallel_range(0, numVerts, &data, mesh_calc_normals_poly_finalize_cb, &settings);
 
 	if (free_vnors) {
 		MEM_freeN(vnors);
 	}
+	MEM_freeN(lnors_weighted);
 }
 
 void BKE_mesh_calc_normals(Mesh *mesh)
@@ -319,9 +350,13 @@ void BKE_mesh_calc_normals_tessface(
         const MFace *mfaces, int numFaces,
         float (*r_faceNors)[3])
 {
-	float (*tnorms)[3] = MEM_callocN(sizeof(*tnorms) * (size_t)numVerts, "tnorms");
-	float (*fnors)[3] = (r_faceNors) ? r_faceNors : MEM_callocN(sizeof(*fnors) * (size_t)numFaces, "meshnormals");
+	float (*tnorms)[3] = MEM_calloc_arrayN((size_t)numVerts, sizeof(*tnorms), "tnorms");
+	float (*fnors)[3] = (r_faceNors) ? r_faceNors : MEM_calloc_arrayN((size_t)numFaces, sizeof(*fnors), "meshnormals");
 	int i;
+
+	if (!tnorms || !fnors) {
+		goto cleanup;
+	}
 
 	for (i = 0; i < numFaces; i++) {
 		const MFace *mf = &mfaces[i];
@@ -334,8 +369,9 @@ void BKE_mesh_calc_normals_tessface(
 		else
 			normal_tri_v3(f_no, mverts[mf->v1].co, mverts[mf->v2].co, mverts[mf->v3].co);
 
-		accumulate_vertex_normals(tnorms[mf->v1], tnorms[mf->v2], tnorms[mf->v3], n4,
-		                          f_no, mverts[mf->v1].co, mverts[mf->v2].co, mverts[mf->v3].co, c4);
+		accumulate_vertex_normals_v3(
+		        tnorms[mf->v1], tnorms[mf->v2], tnorms[mf->v3], n4,
+		        f_no, mverts[mf->v1].co, mverts[mf->v2].co, mverts[mf->v3].co, c4);
 	}
 
 	/* following Mesh convention; we use vertex coordinate itself for normal in this case */
@@ -350,6 +386,7 @@ void BKE_mesh_calc_normals_tessface(
 		normal_float_to_short_v3(mv->no, no);
 	}
 	
+cleanup:
 	MEM_freeN(tnorms);
 
 	if (fnors != r_faceNors)
@@ -362,9 +399,13 @@ void BKE_mesh_calc_normals_looptri(
         const MLoopTri *looptri, int looptri_num,
         float (*r_tri_nors)[3])
 {
-	float (*tnorms)[3] = MEM_callocN(sizeof(*tnorms) * (size_t)numVerts, "tnorms");
-	float (*fnors)[3] = (r_tri_nors) ? r_tri_nors : MEM_callocN(sizeof(*fnors) * (size_t)looptri_num, "meshnormals");
+	float (*tnorms)[3] = MEM_calloc_arrayN((size_t)numVerts, sizeof(*tnorms), "tnorms");
+	float (*fnors)[3] = (r_tri_nors) ? r_tri_nors : MEM_calloc_arrayN((size_t)looptri_num, sizeof(*fnors), "meshnormals");
 	int i;
+
+	if (!tnorms || !fnors) {
+		goto cleanup;
+	}
 
 	for (i = 0; i < looptri_num; i++) {
 		const MLoopTri *lt = &looptri[i];
@@ -379,7 +420,7 @@ void BKE_mesh_calc_normals_looptri(
 		        f_no,
 		        mverts[vtri[0]].co, mverts[vtri[1]].co, mverts[vtri[2]].co);
 
-		accumulate_vertex_normals_tri(
+		accumulate_vertex_normals_tri_v3(
 		        tnorms[vtri[0]], tnorms[vtri[1]], tnorms[vtri[2]],
 		        f_no, mverts[vtri[0]].co, mverts[vtri[1]].co, mverts[vtri[2]].co);
 	}
@@ -396,6 +437,7 @@ void BKE_mesh_calc_normals_looptri(
 		normal_float_to_short_v3(mv->no, no);
 	}
 
+cleanup:
 	MEM_freeN(tnorms);
 
 	if (fnors != r_tri_nors)
@@ -845,7 +887,7 @@ static void split_loop_nor_fan_do(LoopSplitTaskDataCommon *common_data, LoopSpli
 //		printf("\thandling edge %d / loop %d\n", mlfan_curr->e, mlfan_curr_index);
 
 		{
-			/* Code similar to accumulate_vertex_normals_poly. */
+			/* Code similar to accumulate_vertex_normals_poly_v3. */
 			/* Calculate angle between the two poly edges incident on this vertex. */
 			const float fac = saacos(dot_v3v3(vec_curr, vec_prev));
 			/* Accumulate */
@@ -1136,7 +1178,7 @@ static void loop_split_generator(TaskPool *pool, LoopSplitTaskDataCommon *common
 
 				if (pool) {
 					if (data_idx == 0) {
-						data_buff = MEM_callocN(sizeof(*data_buff) * LOOP_SPLIT_TASK_BLOCK_SIZE, __func__);
+						data_buff = MEM_calloc_arrayN(LOOP_SPLIT_TASK_BLOCK_SIZE, sizeof(*data_buff), __func__);
 					}
 					data = &data_buff[data_idx];
 				}
@@ -1266,10 +1308,10 @@ void BKE_mesh_normals_loop_split(
 	 * store the negated value of loop index instead of INDEX_INVALID to retrieve the real value later in code).
 	 * Note also that lose edges always have both values set to 0!
 	 */
-	int (*edge_to_loops)[2] = MEM_callocN(sizeof(*edge_to_loops) * (size_t)numEdges, __func__);
+	int (*edge_to_loops)[2] = MEM_calloc_arrayN((size_t)numEdges, sizeof(*edge_to_loops), __func__);
 
 	/* Simple mapping from a loop to its polygon index. */
-	int *loop_to_poly = r_loop_to_poly ? r_loop_to_poly : MEM_mallocN(sizeof(*loop_to_poly) * (size_t)numLoops, __func__);
+	int *loop_to_poly = r_loop_to_poly ? r_loop_to_poly : MEM_malloc_arrayN((size_t)numLoops, sizeof(*loop_to_poly), __func__);
 
 	MPoly *mp;
 	int mp_index;
@@ -1423,8 +1465,8 @@ static void mesh_normals_loop_custom_set(
 	 */
 	MLoopNorSpaceArray lnors_spacearr = {NULL};
 	BLI_bitmap *done_loops = BLI_BITMAP_NEW((size_t)numLoops, __func__);
-	float (*lnors)[3] = MEM_callocN(sizeof(*lnors) * (size_t)numLoops, __func__);
-	int *loop_to_poly = MEM_mallocN(sizeof(int) * (size_t)numLoops, __func__);
+	float (*lnors)[3] = MEM_calloc_arrayN((size_t)numLoops, sizeof(*lnors), __func__);
+	int *loop_to_poly = MEM_malloc_arrayN((size_t)numLoops, sizeof(int), __func__);
 	/* In this case we always consider split nors as ON, and do not want to use angle to define smooth fans! */
 	const bool use_split_normals = true;
 	const float split_angle = (float)M_PI;
@@ -1639,7 +1681,7 @@ void BKE_mesh_normals_loop_to_vertex(
 	const MLoop *ml;
 	int i;
 
-	int *vert_loops_nbr = MEM_callocN(sizeof(*vert_loops_nbr) * (size_t)numVerts, __func__);
+	int *vert_loops_nbr = MEM_calloc_arrayN((size_t)numVerts, sizeof(*vert_loops_nbr), __func__);
 
 	copy_vn_fl((float *)r_vert_clnors, 3 * numVerts, 0.0f);
 
@@ -2002,11 +2044,14 @@ float BKE_mesh_calc_poly_area(
  * - http://forums.cgsociety.org/archive/index.php?t-756235.html
  * - http://www.globalspec.com/reference/52702/203279/4-8-the-centroid-of-a-tetrahedron
  *
- * \note volume is 6x actual volume, and centroid is 4x actual volume-weighted centroid
- * (so division can be done once at the end)
- * \note results will have bias if polygon is non-planar.
+ * \note
+ * - Volume is 6x actual volume, and centroid is 4x actual volume-weighted centroid
+ *   (so division can be done once at the end).
+ * - Results will have bias if polygon is non-planar.
+ * - The resulting volume will only be correct if the mesh is manifold and has consistent face winding
+ *   (non-contiguous face normals or holes in the mesh surface).
  */
-static float mesh_calc_poly_volume_and_weighted_centroid(
+static float mesh_calc_poly_volume_centroid(
         const MPoly *mpoly, const MLoop *loopstart, const MVert *mvarray,
         float r_cent[3])
 {
@@ -2041,6 +2086,43 @@ static float mesh_calc_poly_volume_and_weighted_centroid(
 	}
 
 	return total_volume;
+}
+
+/**
+ * \note
+ * - Results won't be correct if polygon is non-planar.
+ * - This has the advantage over #mesh_calc_poly_volume_centroid
+ *   that it doesn't depend on solid geometry, instead it weights the surface by volume.
+ */
+static float mesh_calc_poly_area_centroid(
+        const MPoly *mpoly, const MLoop *loopstart, const MVert *mvarray,
+        float r_cent[3])
+{
+	int i;
+	float tri_area;
+	float total_area = 0.0f;
+	float v1[3], v2[3], v3[3], normal[3], tri_cent[3];
+
+	BKE_mesh_calc_poly_normal(mpoly, loopstart, mvarray, normal);
+	copy_v3_v3(v1, mvarray[loopstart[0].v].co);
+	copy_v3_v3(v2, mvarray[loopstart[1].v].co);
+	zero_v3(r_cent);
+
+	for (i = 2; i < mpoly->totloop; i++) {
+		copy_v3_v3(v3, mvarray[loopstart[i].v].co);
+
+		tri_area = area_tri_signed_v3(v1, v2, v3, normal);
+		total_area += tri_area;
+
+		mid_v3_v3v3v3(tri_cent, v1, v2, v3);
+		madd_v3_v3fl(r_cent, tri_cent, tri_area);
+
+		copy_v3_v3(v2, v3);
+	}
+
+	mul_v3_fl(r_cent, 1.0f / total_area);
+
+	return total_area;
 }
 
 #if 0 /* slow version of the function below */
@@ -2157,7 +2239,40 @@ bool BKE_mesh_center_bounds(const Mesh *me, float r_cent[3])
 	return false;
 }
 
-bool BKE_mesh_center_centroid(const Mesh *me, float r_cent[3])
+bool BKE_mesh_center_of_surface(const Mesh *me, float r_cent[3])
+{
+	int i = me->totpoly;
+	MPoly *mpoly;
+	float poly_area;
+	float total_area = 0.0f;
+	float poly_cent[3];
+
+	zero_v3(r_cent);
+
+	/* calculate a weighted average of polygon centroids */
+	for (mpoly = me->mpoly; i--; mpoly++) {
+		poly_area = mesh_calc_poly_area_centroid(mpoly, me->mloop + mpoly->loopstart, me->mvert, poly_cent);
+
+		madd_v3_v3fl(r_cent, poly_cent, poly_area);
+		total_area += poly_area;
+	}
+	/* otherwise we get NAN for 0 polys */
+	if (me->totpoly) {
+		mul_v3_fl(r_cent, 1.0f / total_area);
+	}
+
+	/* zero area faces cause this, fallback to median */
+	if (UNLIKELY(!is_finite_v3(r_cent))) {
+		return BKE_mesh_center_median(me, r_cent);
+	}
+
+	return (me->totpoly != 0);
+}
+
+/**
+ * \note Mesh must be manifold with consistent face-winding, see #mesh_calc_poly_volume_centroid for details.
+ */
+bool BKE_mesh_center_of_volume(const Mesh *me, float r_cent[3])
 {
 	int i = me->totpoly;
 	MPoly *mpoly;
@@ -2169,7 +2284,7 @@ bool BKE_mesh_center_centroid(const Mesh *me, float r_cent[3])
 
 	/* calculate a weighted average of polyhedron centroids */
 	for (mpoly = me->mpoly; i--; mpoly++) {
-		poly_volume = mesh_calc_poly_volume_and_weighted_centroid(mpoly, me->mloop + mpoly->loopstart, me->mvert, poly_cent);
+		poly_volume = mesh_calc_poly_volume_centroid(mpoly, me->mloop + mpoly->loopstart, me->mvert, poly_cent);
 
 		/* poly_cent is already volume-weighted, so no need to multiply by the volume */
 		add_v3_v3(r_cent, poly_cent);
@@ -2189,6 +2304,7 @@ bool BKE_mesh_center_centroid(const Mesh *me, float r_cent[3])
 
 	return (me->totpoly != 0);
 }
+
 /** \} */
 
 
@@ -2557,9 +2673,9 @@ int BKE_mesh_recalc_tessellation(
 	/* allocate the length of totfaces, avoid many small reallocs,
 	 * if all faces are tri's it will be correct, quads == 2x allocs */
 	/* take care. we are _not_ calloc'ing so be sure to initialize each field */
-	mface_to_poly_map = MEM_mallocN(sizeof(*mface_to_poly_map) * (size_t)looptri_num, __func__);
-	mface             = MEM_mallocN(sizeof(*mface) *             (size_t)looptri_num, __func__);
-	lindices          = MEM_mallocN(sizeof(*lindices) *          (size_t)looptri_num, __func__);
+	mface_to_poly_map = MEM_malloc_arrayN((size_t)looptri_num, sizeof(*mface_to_poly_map), __func__);
+	mface             = MEM_malloc_arrayN((size_t)looptri_num, sizeof(*mface), __func__);
+	lindices          = MEM_malloc_arrayN((size_t)looptri_num, sizeof(*lindices), __func__);
 
 	mface_index = 0;
 	mp = mpoly;
@@ -2675,7 +2791,7 @@ int BKE_mesh_recalc_tessellation(
 				mul_v2_m3v3(projverts[j], axis_mat, mvert[ml->v].co);
 			}
 
-			BLI_polyfill_calc_arena((const float (*)[2])projverts, mp_totloop, 1, tris, arena);
+			BLI_polyfill_calc_arena(projverts, mp_totloop, 1, tris, arena);
 
 			/* apply fill */
 			for (j = 0; j < totfilltri; j++) {
@@ -2874,7 +2990,7 @@ void BKE_mesh_recalc_looptri(
 				mul_v2_m3v3(projverts[j], axis_mat, mvert[ml->v].co);
 			}
 
-			BLI_polyfill_calc_arena((const float (*)[2])projverts, mp_totloop, 1, tris, arena);
+			BLI_polyfill_calc_arena(projverts, mp_totloop, 1, tris, arena);
 
 			/* apply fill */
 			for (j = 0; j < totfilltri; j++) {
@@ -2939,7 +3055,7 @@ int BKE_mesh_mpoly_to_mface(struct CustomData *fdata, struct CustomData *ldata,
 	const bool hasLNor = CustomData_has_layer(ldata, CD_NORMAL);
 
 	/* over-alloc, ngons will be skipped */
-	mface = MEM_mallocN(sizeof(*mface) * (size_t)totpoly, __func__);
+	mface = MEM_malloc_arrayN((size_t)totpoly, sizeof(*mface), __func__);
 
 	mpoly = CustomData_get_layer(pdata, CD_MPOLY);
 	mloop = CustomData_get_layer(ldata, CD_MLOOP);
@@ -3107,7 +3223,6 @@ static void bm_corners_to_loops_ex(ID *id, CustomData *fdata, CustomData *ldata,
 		else {
 			const int side = (int)sqrtf((float)(fd->totdisp / corners));
 			const int side_sq = side * side;
-			const size_t disps_size = sizeof(float[3]) * (size_t)side_sq;
 
 			for (i = 0; i < tot; i++, disps += side_sq, ld++) {
 				ld->totdisp = side_sq;
@@ -3116,12 +3231,12 @@ static void bm_corners_to_loops_ex(ID *id, CustomData *fdata, CustomData *ldata,
 				if (ld->disps)
 					MEM_freeN(ld->disps);
 
-				ld->disps = MEM_mallocN(disps_size, "converted loop mdisps");
+				ld->disps = MEM_malloc_arrayN((size_t)side_sq, sizeof(float[3]), "converted loop mdisps");
 				if (fd->disps) {
-					memcpy(ld->disps, disps, disps_size);
+					memcpy(ld->disps, disps, (size_t)side_sq * sizeof(float[3]));
 				}
 				else {
-					memset(ld->disps, 0, disps_size);
+					memset(ld->disps, 0, (size_t)side_sq * sizeof(float[3]));
 				}
 			}
 		}
@@ -3183,7 +3298,7 @@ void BKE_mesh_convert_mfaces_to_mpolys_ex(ID *id, CustomData *fdata, CustomData 
 	CustomData_free(pdata, totpoly_i);
 
 	totpoly = totface_i;
-	mpoly = MEM_callocN(sizeof(MPoly) * (size_t)totpoly, "mpoly converted");
+	mpoly = MEM_calloc_arrayN((size_t)totpoly, sizeof(MPoly), "mpoly converted");
 	CustomData_add_layer(pdata, CD_MPOLY, CD_ASSIGN, mpoly, totpoly);
 
 	numTex = CustomData_number_of_layers(fdata, CD_MTFACE);
@@ -3195,7 +3310,7 @@ void BKE_mesh_convert_mfaces_to_mpolys_ex(ID *id, CustomData *fdata, CustomData 
 		totloop += mf->v4 ? 4 : 3;
 	}
 
-	mloop = MEM_callocN(sizeof(MLoop) * (size_t)totloop, "mloop converted");
+	mloop = MEM_calloc_arrayN((size_t)totloop, sizeof(MLoop), "mloop converted");
 
 	CustomData_add_layer(ldata, CD_MLOOP, CD_ASSIGN, mloop, totloop);
 
@@ -3594,7 +3709,7 @@ void BKE_mesh_calc_relative_deform(
 	const MPoly *mp;
 	int i;
 
-	int *vert_accum = MEM_callocN(sizeof(*vert_accum) * (size_t)totvert, __func__);
+	int *vert_accum = MEM_calloc_arrayN((size_t)totvert, sizeof(*vert_accum), __func__);
 
 	memset(vert_cos_new, '\0', sizeof(*vert_cos_new) * (size_t)totvert);
 

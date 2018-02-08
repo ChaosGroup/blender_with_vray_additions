@@ -121,7 +121,7 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 		const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
 
 		if (sceneFramePair != setFramePair) {
-			m_scene.frame_set(setFramePair.frame, setFramePair.subframe);
+			m_engine.frame_set(setFramePair.frame, setFramePair.subframe);
 		}
 		if (aMode == AnimMode::AnimationModeCameraLoop) {
 			m_active_camera = frameExp.getActiveCamera();

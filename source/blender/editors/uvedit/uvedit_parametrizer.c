@@ -2185,7 +2185,7 @@ static void p_chart_simplify_compute(PChart *chart)
 		e->u.nextcollapse = NULL;
 
 	/* pop edge collapse out of heap one by one */
-	while (!BLI_heap_empty(heap)) {
+	while (!BLI_heap_is_empty(heap)) {
 		if (ncollapsed == NCOLLAPSE)
 			break;
 
@@ -4483,7 +4483,7 @@ static void param_pack_rotate(ParamHandle *handle)
 
 		p_chart_uv_to_array(chart, points);
 
-		angle = BLI_convexhull_aabb_fit_points_2d((const float (*)[2])points, chart->nverts);
+		angle = BLI_convexhull_aabb_fit_points_2d(points, chart->nverts);
 
 		MEM_freeN(points);
 

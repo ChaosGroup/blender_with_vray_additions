@@ -64,20 +64,14 @@ struct MapVertex {
 		index = 0;
 	}
 
-	MapVertex(const UvVert &uv) {
-		MapVertex();
-
-		v[0] = uv.data[0];
-		v[1] = uv.data[1];
-		v[2] = 0.0f;
-	}
-
-	MapVertex(const ColVert &col) {
-		MapVertex();
-
-		v[0] = col.data[0];
-		v[1] = col.data[1];
-		v[2] = col.data[2];
+	template <int size>
+	MapVertex(const BL::Array<float, size> &data)
+		: v()
+	    , index(0)
+	{
+		for (int c = 0; c < std::min(3, size); c++) {
+			v[c] = data[c];
+		}
 	}
 
 	bool operator == (const MapVertex &_v) const {
@@ -237,7 +231,7 @@ void GeomStaticMesh::init()
 
 		initHash();
 
-		b_data.meshes.remove(b_mesh, false);
+		b_data.meshes.remove(b_mesh, false, false, false);
 		b_mesh = BL::Mesh(PointerRNA_NULL);
 	}
 }

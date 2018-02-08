@@ -244,6 +244,8 @@ void BKE_material_copy_data(Main *bmain, Material *ma_dst, const Material *ma_sr
 	}
 
 	if (ma_src->nodetree) {
+		/* Note: nodetree is *not* in bmain, however this specific case is handled at lower level
+		 *       (see BKE_libblock_copy_ex()). */
 		BKE_id_copy_ex(bmain, (ID *)ma_src->nodetree, (ID **)&ma_dst->nodetree, flag, false);
 	}
 
@@ -265,7 +267,7 @@ Material *BKE_material_copy(Main *bmain, const Material *ma)
 }
 
 /* XXX (see above) material copy without adding to main dbase */
-Material *localize_material(Material *ma)
+Material *BKE_material_localize(Material *ma)
 {
 	/* TODO replace with something like
 	 * 	Material *ma_copy;
@@ -361,6 +363,8 @@ Material ***give_matarar_id(ID *id)
 			return &(((Curve *)id)->mat);
 		case ID_MB:
 			return &(((MetaBall *)id)->mat);
+		default:
+			break;
 	}
 	return NULL;
 }
@@ -377,6 +381,8 @@ short *give_totcolp_id(ID *id)
 			return &(((Curve *)id)->totcol);
 		case ID_MB:
 			return &(((MetaBall *)id)->totcol);
+		default:
+			break;
 	}
 	return NULL;
 }
@@ -396,6 +402,8 @@ static void material_data_index_remove_id(ID *id, short index)
 		case ID_MB:
 			/* meta-elems don't have materials atm */
 			break;
+		default:
+			break;
 	}
 }
 
@@ -413,6 +421,8 @@ static void material_data_index_clear_id(ID *id)
 			break;
 		case ID_MB:
 			/* meta-elems don't have materials atm */
+			break;
+		default:
 			break;
 	}
 }
@@ -708,8 +718,8 @@ void assign_material(Object *ob, Material *ma, short act, int assign_type)
 	if (act < 1) act = 1;
 	
 	/* prevent crashing when using accidentally */
-	BLI_assert(!ID_IS_LINKED_DATABLOCK(ob));
-	if (ID_IS_LINKED_DATABLOCK(ob)) return;
+	BLI_assert(!ID_IS_LINKED(ob));
+	if (ID_IS_LINKED(ob)) return;
 	
 	/* test arraylens */
 	
@@ -982,7 +992,7 @@ static void do_init_render_material(Material *ma, int r_mode, float *amb)
 		Group *group;
 
 		for (group = G.main->group.first; group; group = group->id.next) {
-			if (!ID_IS_LINKED_DATABLOCK(group) && STREQ(group->id.name, ma->group->id.name)) {
+			if (!ID_IS_LINKED(group) && STREQ(group->id.name, ma->group->id.name)) {
 				ma->group = group;
 			}
 		}
@@ -1197,7 +1207,6 @@ void material_drivers_update(Scene *scene, Material *ma, float ctime)
 bool BKE_object_material_slot_remove(Object *ob)
 {
 	Material *mao, ***matarar;
-	Object *obt;
 	short *totcolp;
 	short a, actcol;
 	
@@ -1245,11 +1254,13 @@ bool BKE_object_material_slot_remove(Object *ob)
 	}
 	
 	actcol = ob->actcol;
-	obt = G.main->object.first;
-	while (obt) {
-	
+
+	for (Object *obt = G.main->object.first; obt; obt = obt->id.next) {
 		if (obt->data == ob->data) {
-			
+			/* Can happen when object material lists are used, see: T52953 */
+			if (actcol > obt->totcol) {
+				continue;
+			}
 			/* WATCH IT: do not use actcol from ob or from obt (can become zero) */
 			mao = obt->mat[actcol - 1];
 			if (mao)
@@ -1269,7 +1280,6 @@ bool BKE_object_material_slot_remove(Object *ob)
 				obt->matbits = NULL;
 			}
 		}
-		obt = obt->id.next;
 	}
 
 	/* check indices from mesh */
@@ -2091,7 +2101,7 @@ int do_version_tface(Main *main)
 	
 	/* 1st part: marking mesh materials to update */
 	for (me = main->mesh.first; me; me = me->id.next) {
-		if (ID_IS_LINKED_DATABLOCK(me)) continue;
+		if (ID_IS_LINKED(me)) continue;
 
 		/* get the active tface layer */
 		index = CustomData_get_active_layer_index(&me->fdata, CD_MTFACE);
@@ -2145,7 +2155,7 @@ int do_version_tface(Main *main)
 				 * at doversion time: direct_link might not have happened on it,
 				 * so ma->mtex is not pointing to valid memory yet.
 				 * later we could, but it's better not */
-				else if (ID_IS_LINKED_DATABLOCK(ma))
+				else if (ID_IS_LINKED(ma))
 					continue;
 				
 				/* material already marked as disputed */
@@ -2210,7 +2220,7 @@ int do_version_tface(Main *main)
 
 	/* we shouldn't loop through the materials created in the loop. make the loop stop at its original length) */
 	for (ma = main->mat.first, a = 0; ma; ma = ma->id.next, a++) {
-		if (ID_IS_LINKED_DATABLOCK(ma)) continue;
+		if (ID_IS_LINKED(ma)) continue;
 
 		/* disputed material */
 		if (ma->game.flag == MAT_BGE_DISPUTED) {
