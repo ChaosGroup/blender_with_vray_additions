@@ -1,6 +1,8 @@
 #include "vfb_plugin_writer.h"
 #include "BLI_fileops.h"
 
+#include "Python.h"
+
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
@@ -35,10 +37,12 @@ bool PluginWriter::WriteItem::isDone() const {
 	return m_ready.load(std::memory_order_acquire);
 }
 
-const char * PluginWriter::WriteItem::getData() const {
+const char * PluginWriter::WriteItem::getData(int &len) const {
 	if (m_isAsync) {
+		len = -1;
 		return m_asyncData;
 	} else {
+		len = m_data.length();
 		return m_data.c_str();
 	}
 }
@@ -72,15 +76,17 @@ PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
 	std::swap(m_isAsync, other.m_isAsync);
 }
 
+PluginWriter::PluginWriter(ThreadManager::Ptr tm, const char *fileName, ExporterSettings::ExportFormat format)
+	: PluginWriter(tm, fopen(fileName, "rb"), format)
+{}
 
-PluginWriter::PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat format)
+PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat format)
 	: m_threadManager(tm)
     , m_depth(1)
     , m_animationFrame(-FLT_MAX)
-    , m_file(pyFile)
+    , m_file(file)
     , m_format(format)
-{
-}
+{}
 
 bool PluginWriter::good() const
 {
@@ -103,7 +109,7 @@ PluginWriter &PluginWriter::writeStr(const char *str)
 }
 
 namespace {
-void python_write_file(PyObject * file, const char * data)
+void write_file_impl(PyObject * file, const char * data, int)
 {
 	PyObject * result = PyObject_CallMethod(file, _C("write"), _C("s"), data);
 	if (!result || PyErr_Occurred()) {
@@ -114,6 +120,14 @@ void python_write_file(PyObject * file, const char * data)
 
 	Py_DECREF(result);
 }
+
+void write_file_impl(FILE * file, const char * data, int len = -1)
+{
+	const int writeLen = len == -1 ? strlen(data) : len;
+	if (fwrite(data, 1, writeLen, file) != writeLen) {
+		PRINT_ERROR("Failed to write to file!");
+	}
+}
 }
 
 void PluginWriter::processItems(const char * val)
@@ -123,14 +137,16 @@ void PluginWriter::processItems(const char * val)
 
 	const int maxRep = m_items.size();
 	for (int c = 0; c < maxRep && m_items.front().isDone(); ++c) {
-		python_write_file(m_file, m_items.front().getData());
+		int len = 0;
+		const char * data = m_items.front().getData(len);
+		write_file_impl(m_file, data, len);
 		m_items.pop_front();
 	}
 
 	if (val && *val) {
 		if (m_items.empty()) {
 			// no items left in que, just write current value
-			python_write_file(m_file, val);
+			write_file_impl(m_file, val);
 		} else {
 			m_items.push_back(WriteItem(val));
 		}
@@ -147,7 +163,9 @@ void PluginWriter::blockFlushAll()
 		while (!item.isDone()) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
-		python_write_file(m_file, item.getData());
+		int len = 0;
+		const char * data = item.getData(len);
+		write_file_impl(m_file, data, len);
 	}
 
 	m_items.clear();

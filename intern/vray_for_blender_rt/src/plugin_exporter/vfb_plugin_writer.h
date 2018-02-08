@@ -21,7 +21,10 @@ namespace VRayForBlender {
 
 class PluginWriter {
 public:
-	PluginWriter(ThreadManager::Ptr tm, PyObject *pyFile, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
+	typedef FILE file_t;
+
+	PluginWriter(ThreadManager::Ptr tm, const char *fileName, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
+	PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
 
 	PluginWriter &writeStr(const char *str);
 
@@ -30,7 +33,7 @@ public:
 
 	bool good() const;
 
-	PyObject *getFile() { return m_file; }
+	file_t *getFile() { return m_file; }
 	void setAnimationFrame(float frame) { m_animationFrame = frame; }
 	float getAnimationFrame() const { return m_animationFrame; }
 
@@ -83,7 +86,7 @@ private:
 		bool isDone() const;
 
 		/// Get the data of this item
-		const char * getData() const;
+		const char * getData(int &len) const;
 
 		/// Mark this item as done and store the pointer provided
 		void asyncDone(const char * data);
@@ -132,13 +135,13 @@ private:
 	/// 2. write val if queue is empty or add it to the queue
 	void processItems(const char * val = nullptr);
 
-	std::mutex                      m_itemMutex; //< only used to syncronize waiting for items
+	std::mutex                      m_itemMutex; ///< only used to syncronize waiting for items
 	std::condition_variable         m_itemDoneVar; ///< used to block on blockFlushAll
 	std::deque<WriteItem>           m_items; ///< Item queue for all items to be writen to files
 	ThreadManager::Ptr              m_threadManager; ///< Thread manager for async items
 	int                             m_depth; ///< Current indentation depth
 	float                           m_animationFrame; ///< The current animation frame
-	PyObject                       *m_file; ///< The file object coming from python api
+	file_t                         *m_file; ///< The file object coming from python api
 	ExporterSettings::ExportFormat  m_format; ///< The file format (ASCII, HEX, ZIP)
 
 private:

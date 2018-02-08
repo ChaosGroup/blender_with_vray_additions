@@ -49,7 +49,7 @@ private:
 
 private:
 	typedef HashMap<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> TypeToWriterMap;
-	typedef HashMap<intptr_t, std::shared_ptr<PluginWriter>> FileToWriterMap;
+	typedef HashMap<std::string, std::shared_ptr<PluginWriter>> FileToWriterMap;
 
 
 	FileToWriterMap               m_fileWritersMap;

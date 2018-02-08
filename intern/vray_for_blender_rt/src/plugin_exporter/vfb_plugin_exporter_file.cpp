@@ -38,20 +38,32 @@ VrsceneExporter::VrsceneExporter(const ExporterSettings & settings)
 
 }
 
+std::string getStdString(PyObject *file)
+{
+	Py_ssize_t len = -1;
+	const char * data = PyUnicode_AsUTF8AndSize(file, &len);
+	if (data) {
+		return std::string(data, len);
+	}
+	PyErr_Clear();
+	return std::string();
+}
+
 void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file)
 {
 	if (file) {
+		const std::string &fileName = getStdString(file);
 		std::shared_ptr<PluginWriter> writer;
-		auto iter = m_fileWritersMap.find(reinterpret_cast<intptr_t>(file));
+		auto iter = m_fileWritersMap.find(fileName);
 
 		if (iter == m_fileWritersMap.end()) {
 			// ensure only one PluginWriter is instantiated for a file
-			writer.reset(new PluginWriter(m_threadManager, file, exporter_settings.export_file_format));
+			writer.reset(new PluginWriter(m_threadManager, fileName.c_str(), exporter_settings.export_file_format));
 			if (!writer) {
 				BLI_assert("Failed to create PluginWriter for python file!");
 				return;
 			}
-			m_fileWritersMap[reinterpret_cast<intptr_t>(file)] = writer;
+			m_fileWritersMap[fileName] = writer;
 		} else {
 			writer = iter->second;
 		}
