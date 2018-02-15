@@ -149,11 +149,7 @@ void IDP_ID_Tag(IDProperty * prop, short tag, bool set);
 #  define IDP_IDPArray(prop)  _Generic((prop), \
 	IDProperty *:             ((IDProperty *) (prop)->data.pointer), \
 	const IDProperty *: ((const IDProperty *) (prop)->data.pointer))
-<<<<<<< HEAD
-#  define IDP_Id(prop)        _Generic(prop, \
-=======
 #  define IDP_Id(prop)  _Generic((prop), \
->>>>>>> master
 	IDProperty *:             ((ID *) (prop)->data.pointer), \
 	const IDProperty *: ((const ID *) (prop)->data.pointer))
 #else
