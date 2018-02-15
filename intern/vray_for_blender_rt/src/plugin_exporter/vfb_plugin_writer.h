@@ -25,6 +25,7 @@ public:
 
 	PluginWriter(ThreadManager::Ptr tm, const char *fileName, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
 	PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat = ExporterSettings::ExportFormatHEX);
+	~PluginWriter();
 
 	PluginWriter &writeStr(const char *str);
 

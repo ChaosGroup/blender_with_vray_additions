@@ -77,7 +77,7 @@ PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
 }
 
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, const char *fileName, ExporterSettings::ExportFormat format)
-	: PluginWriter(tm, fopen(fileName, "rb"), format)
+	: PluginWriter(tm, fopen(fileName, "ab"), format)
 {}
 
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat format)
@@ -86,7 +86,30 @@ PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings
     , m_animationFrame(-FLT_MAX)
     , m_file(file)
     , m_format(format)
+{
+	if (!file) {
+		PRINT_ERROR("Plugin Writer create with invalid file pointer!");
+	}
+}
+
+namespace
+{
+void closeFile(FILE * file)
+{
+	if (file) {
+		fclose(file);
+	}
+}
+
+void closeFile(PyObject * file)
 {}
+
+}
+
+PluginWriter::~PluginWriter()
+{
+	closeFile(m_file);
+}
 
 bool PluginWriter::good() const
 {
