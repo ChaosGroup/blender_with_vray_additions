@@ -201,7 +201,7 @@ void FrameExportManager::reset()
 {
 	// NOTE: if frame is changed while in preview, the preview will be restarted because of the change in the scene
 	if (!m_settings.is_preview) {
-		m_engine.frame_set(m_sceneSavedFrame, 0.f);
+		changeSceneFrame(m_sceneSavedFrame, 0.f);
 		updateFromSettings();
 	}
 }

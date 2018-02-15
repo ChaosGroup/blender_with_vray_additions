@@ -239,6 +239,19 @@ public:
 		return BlenderFramePair(value);
 	}
 
+	/// Change current frame
+	/// @param frame - the whole part of the frame
+	/// @param subframe - the fractional part of the frame
+	void changeSceneFrame(int frame, float subframe) {
+		m_scene.frame_set(m_data.ptr.data, frame, subframe);
+	}
+
+	/// Change current frame
+	/// @param pair - pair containing whole and fractional part of frame pair
+	void changeSceneFrame(const BlenderFramePair & pair) {
+		changeSceneFrame(pair.frame, pair.subframe);
+	}
+
 private:
 	ExporterSettings &m_settings; ///< The global settings for the exporter
 	BL::Scene m_scene; ///< Current scene
