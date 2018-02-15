@@ -840,6 +840,7 @@ std::string DataExporter::cryptomatteNameHierarchy(BL::Object ob) {
 		const auto name = lib.name();
 		nameParts.push_back(name);
 		size += name.length();
+		lib = lib.library();
 	}
 
 	const std::string prefix = "scene";
