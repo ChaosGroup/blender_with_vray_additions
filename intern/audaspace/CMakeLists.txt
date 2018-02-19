@@ -231,6 +231,7 @@ if(WITH_CODEC_FFMPEG)
 		ffmpeg
 	)
 	list(APPEND INC_SYS
+		${LIBDIR}/ffmpeg/include
 		${FFMPEG_INCLUDE_DIRS}
 	)
 	list(APPEND SRC
