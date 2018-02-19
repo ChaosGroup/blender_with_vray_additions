@@ -839,6 +839,13 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 	// if parent is empty or it is hidden in some way, do not show base objects
 	const bool hide_from_parent = !m_data_exporter.isObjectVisible(ob) || ob.type() == BL::Object::type_EMPTY;
 
+	// objects create by linked group should all be hidden
+	// NOTE: this is different than a group of only linked objects
+	bool linkedGroup = false;
+	if (BL::Group group = ob.dupli_group()) {
+		linkedGroup = !!group.library();
+	}
+
 	int c = 0;
 	for (auto & instance : Blender::collection(ob.dupli_list)) {
 		if (is_interrupted()) {
@@ -894,7 +901,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			sync_object(parentOb, check_updated, overrideAttrs);
 		} else if (!flags.get(IF::HIDDEN)) {
 
-			overrideAttrs.visible = !flags.get(IF::HIDDEN) && m_data_exporter.isObjectVisible(parentOb, OVisibility::HIDE_LAYER);
+			// if object instancing this child is from group, then we need to hide all of the sources since they are implicitly linked in this scene
+			overrideAttrs.visible = !flags.get(IF::HIDDEN) && m_data_exporter.isObjectVisible(parentOb, OVisibility::HIDE_LAYER) && !linkedGroup;
 			overrideAttrs.tm = AttrTransformFromBlTransform(parentOb.matrix_world());
 			overrideAttrs.id = reinterpret_cast<intptr_t>(parentOb.ptr.data);
 
