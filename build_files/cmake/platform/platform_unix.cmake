@@ -24,9 +24,12 @@
 # Libraries configuration for any *nix system including Linux and Unix.
 
 # Detect precompiled library directory
-set(LIBDIR_NAME ${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR})
-string(TOLOWER ${LIBDIR_NAME} LIBDIR_NAME)
-set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/${LIBDIR_NAME})
+
+if (NOT LIBDIR)
+	set(LIBDIR_NAME ${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR})
+	string(TOLOWER ${LIBDIR_NAME} LIBDIR_NAME)
+	set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/${LIBDIR_NAME})
+endif()
 
 if(EXISTS ${LIBDIR})
 	file(GLOB LIB_SUBDIRS ${LIBDIR}/*)
