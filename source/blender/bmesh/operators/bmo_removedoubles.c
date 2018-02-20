@@ -571,7 +571,7 @@ static void bmesh_find_doubles_common(
         BMOperator *optarget, BMOpSlot *optarget_slot)
 {
 	const BMOpSlot *slot_verts = BMO_slot_get(op->slots_in, "verts");
-	BMVert * const *verts = (BMVert **)slot_verts->data.buf;
+	BMVert        **verts = (BMVert **)slot_verts->data.buf;
 	const int       verts_len = slot_verts->len;
 
 	bool has_keep_vert = false;
