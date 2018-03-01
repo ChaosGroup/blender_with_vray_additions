@@ -2792,7 +2792,7 @@ int BKE_node_instance_hash_haskey(bNodeInstanceHash *hash, bNodeInstanceKey key)
 
 int BKE_node_instance_hash_size(bNodeInstanceHash *hash)
 {
-	return BLI_ghash_size(hash->ghash);
+	return BLI_ghash_len(hash->ghash);
 }
 
 void BKE_node_instance_hash_clear_tags(bNodeInstanceHash *hash)
@@ -3004,6 +3004,7 @@ IDProperty *get_dvn(Scene* scene) {
 
 void ntreeVerifyNodes(struct Main *main, struct ID *id)
 {
+	/// HACK: faster check for verifyfunc, without it we get very slow delete on large scenes
 	IDProperty *dvn;
 	int defined_validate_nodes;
 	
@@ -3012,13 +3013,13 @@ void ntreeVerifyNodes(struct Main *main, struct ID *id)
 	
 	if (!BLI_listbase_is_single(&main->scene)) {
 		ID *iter_scene;
-		BLI_LISTBASE_CIRCULAR_FORWARD_BEGIN(&main->scene, iter_scene, main->scene.first) {
+		LISTBASE_CIRCULAR_FORWARD_BEGIN(&main->scene, iter_scene, main->scene.first) {
 			dvn = get_dvn((Scene*)iter_scene);
 			defined_validate_nodes = dvn ? IDP_Int(dvn) : 1;
 			if (defined_validate_nodes) {
 				break;
 			}
-		} BLI_LISTBASE_CIRCULAR_FORWARD_END(&main->scene, iter_scene, main->scene.first);
+		} LISTBASE_CIRCULAR_FORWARD_END(&main->scene, iter_scene, main->scene.first);
 	}
 
 	if (!defined_validate_nodes) {
@@ -3671,6 +3672,7 @@ static void registerShaderNodes(void)
 	register_node_type_sh_holdout();
 	register_node_type_sh_volume_absorption();
 	register_node_type_sh_volume_scatter();
+	register_node_type_sh_volume_principled();
 	register_node_type_sh_subsurface_scattering();
 	register_node_type_sh_mix_shader();
 	register_node_type_sh_add_shader();

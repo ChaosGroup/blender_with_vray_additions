@@ -45,7 +45,7 @@
 #include "DNA_sequence_types.h"
 #include "DNA_space_types.h"
 #include "DNA_screen_types.h"
-#include "DNA_object_force.h"
+#include "DNA_object_force_types.h"
 #include "DNA_object_types.h"
 #include "DNA_mask_types.h"
 #include "DNA_mesh_types.h"
@@ -1732,6 +1732,24 @@ void blo_do_versions_270(FileData *fd, Library *UNUSED(lib), Main *main)
 		/* Fix related to VGroup modifiers creating named defgroup CD layers! See T51520. */
 		for (Mesh *me = main->mesh.first; me; me = me->id.next) {
 			CustomData_set_layer_name(&me->vdata, CD_MDEFORMVERT, 0, "");
+		}
+	}
+
+	if (!MAIN_VERSION_ATLEAST(main, 279, 3)) {
+		if (!DNA_struct_elem_find(fd->filesdna, "SmokeDomainSettings", "float", "clipping")) {
+			Object *ob;
+			ModifierData *md;
+
+			for (ob = main->object.first; ob; ob = ob->id.next) {
+				for (md = ob->modifiers.first; md; md = md->next) {
+					if (md->type == eModifierType_Smoke) {
+						SmokeModifierData *smd = (SmokeModifierData *)md;
+						if (smd->domain) {
+							smd->domain->clipping = 1e-3f;
+						}
+					}
+				}
+			}
 		}
 	}
 
