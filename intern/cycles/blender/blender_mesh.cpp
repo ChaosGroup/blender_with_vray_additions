@@ -335,10 +335,13 @@ static void create_mesh_volume_attribute(BL::Object& b_ob,
 	if(!b_domain)
 		return;
 
+	mesh->volume_isovalue = b_domain.clipping();
+
 	Attribute *attr = mesh->attributes.add(std);
 	VoxelAttribute *volume_data = attr->data_voxel();
-	bool is_float, is_linear;
+	ImageMetaData metadata;
 	bool animated = false;
+	bool use_alpha = true;
 
 	volume_data->manager = image_manager;
 	volume_data->slot = image_manager->add_image(
@@ -346,11 +349,10 @@ static void create_mesh_volume_attribute(BL::Object& b_ob,
 	        b_ob.ptr.data,
 	        animated,
 	        frame,
-	        is_float,
-	        is_linear,
 	        INTERPOLATION_LINEAR,
 	        EXTENSION_CLIP,
-	        true);
+	        use_alpha,
+	        metadata);
 }
 
 static void create_mesh_volume_attributes(Scene *scene,
@@ -367,6 +369,8 @@ static void create_mesh_volume_attributes(Scene *scene,
 		create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_FLAME, frame);
 	if(mesh->need_attribute(scene, ATTR_STD_VOLUME_HEAT))
 		create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_HEAT, frame);
+	if(mesh->need_attribute(scene, ATTR_STD_VOLUME_TEMPERATURE))
+		create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_TEMPERATURE, frame);
 	if(mesh->need_attribute(scene, ATTR_STD_VOLUME_VELOCITY))
 		create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_VELOCITY, frame);
 }
