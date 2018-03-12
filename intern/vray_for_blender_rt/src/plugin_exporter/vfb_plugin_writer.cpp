@@ -104,6 +104,9 @@ void closeFile(FILE * file)
 void closeFile(PyObject * file)
 {}
 
+void flushFile(FILE * file) {
+	fflush(file);
+}
 }
 
 PluginWriter::~PluginWriter()
@@ -190,7 +193,7 @@ void PluginWriter::blockFlushAll()
 		const char * data = item.getData(len);
 		write_file_impl(m_file, data, len);
 	}
-
+	flushFile(m_file);
 	m_items.clear();
 }
 
