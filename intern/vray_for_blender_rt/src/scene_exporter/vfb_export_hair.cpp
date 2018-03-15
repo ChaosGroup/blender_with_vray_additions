@@ -26,6 +26,7 @@ extern "C" {
 #include "BKE_particle.h"
 }
 
+using namespace VRayForBlender;
 
 // Taken from "source/blender/render/intern/source/convertblender.c" and modified
 //

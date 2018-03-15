@@ -24,6 +24,7 @@
 #include "vfb_utils_string.h"
 #include "vfb_params_json.h"
 
+using namespace VRayForBlender;
 
 int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &, NodeContext &, PluginDesc &pluginDesc)
 {

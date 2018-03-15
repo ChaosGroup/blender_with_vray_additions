@@ -24,7 +24,9 @@
 #include "DNA_object_types.h"
 #include "vfb_utils_math.h"
 
-uint32_t to_int_layer(const BlLayers & layers) {
+using namespace VRayForBlender;
+
+uint32_t VRayForBlender::to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
 	for (int c = 0; c < 20; ++c) {
 		res |= layers[c];
@@ -32,7 +34,7 @@ uint32_t to_int_layer(const BlLayers & layers) {
 	return res;
 }
 
-uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers) {
+uint32_t VRayForBlender::get_layer(BL::Object ob, bool use_local, uint32_t scene_layers) {
 	const bool is_light = (ob.data() && ob.data().is_a(&RNA_Lamp));
 	uint32_t layer = 0;
 

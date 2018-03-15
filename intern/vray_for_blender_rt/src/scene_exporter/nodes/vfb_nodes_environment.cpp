@@ -19,6 +19,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 
+using namespace VRayForBlender;
 
 void DataExporter::exportEnvironment(NodeContext &context)
 {

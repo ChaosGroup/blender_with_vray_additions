@@ -20,6 +20,8 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_string.h"
 
+using namespace VRayForBlender;
+
 AttrValue DataExporter::exportVRayNodeBRDFLayered(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &/*fromSocket*/, NodeContext &context)
 {
 	const std::string &pluginName = DataExporter::GenPluginName(node, ntree, context);

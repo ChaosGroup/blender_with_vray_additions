@@ -21,6 +21,7 @@
 
 #include <unordered_set>
 #include <unordered_map>
+#include <map>
 #include <vector>
 #include <string>
 
@@ -49,6 +50,10 @@ using HashSet = std::unordered_set<KeyT, HashT>;
 
 template <typename KeyT, typename ValT, typename HashT = std::hash<KeyT>>
 using HashMap = std::unordered_map<KeyT, ValT, HashT>;
+
+template <typename KeyT, typename ValT, class LessCompare = std::less<KeyT>>
+using TreeMap = std::map<KeyT, ValT, LessCompare>;
+
 
 
 typedef HashSet<std::string> StringHashSet;

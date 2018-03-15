@@ -24,6 +24,7 @@
 
 #include <boost/format.hpp>
 
+using namespace VRayForBlender;
 
 AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const ObjectOverridesAttrs & override)
 {

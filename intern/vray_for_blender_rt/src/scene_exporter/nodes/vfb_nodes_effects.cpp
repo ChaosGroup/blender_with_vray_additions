@@ -24,6 +24,7 @@
 
 #include <algorithm>
 
+using namespace VRayForBlender;
 
 static BL::SmokeModifier GetSmokeModifier(BL::Object ob)
 {

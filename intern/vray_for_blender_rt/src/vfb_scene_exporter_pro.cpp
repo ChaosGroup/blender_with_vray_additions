@@ -36,6 +36,8 @@
 using namespace std;
 using namespace std::chrono;
 
+using namespace VRayForBlender;
+
 void ProductionExporter::create_exporter()
 {
 	SceneExporter::create_exporter();

@@ -22,6 +22,7 @@
 
 #include <boost/format.hpp>
 
+using namespace VRayForBlender;
 
 AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {

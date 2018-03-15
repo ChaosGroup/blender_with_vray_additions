@@ -19,6 +19,8 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 
+using namespace VRayForBlender;
+
 AttrValue DataExporter::exportVRayNodeRenderChannelLightSelect(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
 	// override plugin id to be "RenderChannelColor"

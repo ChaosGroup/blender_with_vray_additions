@@ -19,6 +19,7 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_mesh.h"
 
+using namespace VRayForBlender;
 
 AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs & oattrs)
 {

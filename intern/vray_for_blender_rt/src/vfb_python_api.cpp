@@ -18,7 +18,6 @@
 
 #include "cgr_config.h"
 
-#include <Python.h>
 #include <queue>
 
 #include "cgr_vray_for_blender_rt.h"

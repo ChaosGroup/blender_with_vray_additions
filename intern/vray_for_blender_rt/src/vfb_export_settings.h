@@ -19,11 +19,14 @@
 #ifndef VRAY_FOR_BLENDER_EXPORT_SETTINGS_H
 #define VRAY_FOR_BLENDER_EXPORT_SETTINGS_H
 
-#include <Python.h>
-
+#include "vfb_typedefs.h"
 #include "vfb_rna.h"
+#include "vfb_params_desc.h"
+
 #include "vfb_plugin_exporter_types.h"
 #include "base_types.h"
+
+#include "Python.h"
 
 namespace VRayForBlender {
 

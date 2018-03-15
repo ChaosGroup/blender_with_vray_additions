@@ -24,8 +24,6 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 
-#include <Python.h>
-
 #include <memory>
 #include <functional>
 #include <type_traits>
@@ -33,6 +31,8 @@
 #ifdef WITH_OSL
 #include <OSL/oslquery.h>
 #endif
+
+#include <Python.h>
 
 // This is global because multiple mt exporters could run at the same time
 static boost::shared_mutex vfbExporterBlenderLock;
@@ -61,11 +61,10 @@ struct OSLManager {
 };
 #endif
 
-
 inline void freePyObject(PyObject * ob) {
-	if (ob) {
-		Py_DECREF(ob);
-	}
+       if (ob) {
+               Py_DECREF(ob);
+       }
 }
 
 typedef std::unique_ptr<PyObject, void (*)(PyObject *)> PyObjectRAII;

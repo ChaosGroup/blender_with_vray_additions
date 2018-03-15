@@ -18,6 +18,8 @@
 #include "vfb_node_exporter.h"
 #include "vfb_utils_nodes.h"
 
+using namespace VRayForBlender;
+
 AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, const ObjectOverridesAttrs & override)
 {
 	AttrValue attrValue;

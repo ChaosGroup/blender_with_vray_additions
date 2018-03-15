@@ -31,6 +31,7 @@
 #include "BKE_main.h"
 #include "BKE_global.h"
 
+using namespace VRayForBlender;
 
 void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const ParamDesc::AttrDesc &attrDesc, PluginDesc &pluginDesc)
 {
@@ -176,7 +177,7 @@ static bool needConvertFloatToColor(BL::NodeSocket curSock, BL::NodeSocket conSo
 	                               getVRayNodeSocketType(conSock));
 }
 
-static AttrValue exportFloatColorConvertTexture(PluginExporter::Ptr &exporter,
+static AttrValue exportFloatColorConvertTexture(std::shared_ptr<PluginExporter> &exporter,
                                                 PluginDesc &pluginDesc,
                                                 const AttrValue &texture,
                                                 const std::string &pluginType)
@@ -187,14 +188,14 @@ static AttrValue exportFloatColorConvertTexture(PluginExporter::Ptr &exporter,
 	return exporter->export_plugin(texConvert);
 }
 
-static AttrValue exportFloatTextureAsColor(PluginExporter::Ptr &exporter,
+static AttrValue exportFloatTextureAsColor(std::shared_ptr<PluginExporter> &exporter,
 										   PluginDesc &pluginDesc,
 										   const AttrValue &texture)
 {
 	return exportFloatColorConvertTexture(exporter, pluginDesc, texture, "TexFloatToColor");
 }
 
-static AttrValue exportColorTextureAsFloat(PluginExporter::Ptr &exporter,
+static AttrValue exportColorTextureAsFloat(std::shared_ptr<PluginExporter> &exporter,
                                            PluginDesc &pluginDesc,
                                            const AttrValue &texture)
 {
@@ -210,7 +211,7 @@ static AttrValue exportColorTextureAsFloat(PluginExporter::Ptr &exporter,
 /// @param paramTextureAmount Texture multiplier.
 /// @param textureClamp Clamp texture to 1.0f.
 /// @returns Float texture.
-static AttrValue exportCombineTexture(PluginExporter::Ptr &exporter,
+static AttrValue exportCombineTexture(std::shared_ptr<PluginExporter> &exporter,
                                       PluginDesc &pluginDesc,
                                       const std::string &texParamName,
                                       AttrValue paramValue,
@@ -236,7 +237,7 @@ static AttrValue exportCombineTexture(PluginExporter::Ptr &exporter,
 /// @param paramTextureAmount Texture multiplier.
 /// @param textureClamp Clamp texture to 1.0f.
 /// @returns Float texture.
-static AttrValue exportCombineTextureAsFloat(PluginExporter::Ptr &exporter,
+static AttrValue exportCombineTextureAsFloat(std::shared_ptr<PluginExporter> &exporter,
 											 PluginDesc &pluginDesc,
 											 const std::string &texParamName,
 											 AttrValue paramValue,

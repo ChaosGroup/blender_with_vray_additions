@@ -20,6 +20,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_mesh.h"
 
+using namespace VRayForBlender;
 
 AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {

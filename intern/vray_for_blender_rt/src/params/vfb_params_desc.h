@@ -19,9 +19,7 @@
 #ifndef VRAY_FOR_BLENDER_PLUGIN_DESC_H
 #define VRAY_FOR_BLENDER_PLUGIN_DESC_H
 
-#include <string>
-#include <map>
-
+#include "vfb_typedefs.h"
 
 namespace VRayForBlender {
 namespace ParamDesc {
@@ -154,7 +152,7 @@ struct AttrDesc {
 	Options      options;
 };
 
-typedef std::map<std::string, AttrDesc> MapAttrDesc;
+typedef HashMap<std::string, AttrDesc> MapAttrDesc;
 
 
 struct PluginDesc {

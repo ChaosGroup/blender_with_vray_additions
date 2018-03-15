@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "vfb_typedefs.h"
 #include "vfb_params_json.h"
 
 #ifdef _MSC_VER
@@ -72,9 +73,11 @@ using namespace VRayForBlender;
 using namespace VRayForBlender::ParamDesc;
 
 
-typedef std::map<std::string, PluginDesc> MapPluginDesc;
+typedef TreeMap<std::string, PluginDesc> MapPluginDesc;
+typedef HashMap<PluginType, PluginDescList> MapPluginType;
 
-
+/// Used to map type to vector of plugin descriptions
+static MapPluginType PluginTypeToDescription;
 static MapPluginDesc PluginDescriptions;
 
 

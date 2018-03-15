@@ -16,11 +16,17 @@
  * limitations under the License.
  */
 
+#include "vfb_params_json.h"
+#include "vfb_plugin_exporter.h"
+#include "vfb_node_exporter.h"
 #include "vfb_export_settings.h"
 #include "cgr_config.h"
 #include "utils/vfb_utils_blender.h"
 
+#include "cgr_config.h"
+
 #include <boost/asio/ip/host_name.hpp>
+#include <boost/optional/optional.hpp>
 
 
 using namespace VRayForBlender;

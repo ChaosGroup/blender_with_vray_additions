@@ -26,6 +26,8 @@
 
 #include "DNA_node_types.h"
 
+using namespace VRayForBlender;
+
 void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
                                          ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin, BL::Node toNode)
 {
