@@ -94,10 +94,6 @@ PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
 	std::swap(m_isAsync, other.m_isAsync);
 }
 
-PluginWriter::PluginWriter(ThreadManager::Ptr tm, const char *fileName, ExporterSettings::ExportFormat format)
-	: PluginWriter(tm, fopen(fileName, "ab"), format)
-{}
-
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat format)
 	: m_threadManager(tm)
     , m_depth(1)
@@ -110,26 +106,9 @@ PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings
 	}
 }
 
-namespace
-{
-void closeFile(FILE * file)
-{
-	if (file) {
-		fclose(file);
-	}
-}
-
-void closeFile(PyObject * file)
-{}
-
-void flushFile(FILE * file) {
-	fflush(file);
-}
-}
-
 PluginWriter::~PluginWriter()
 {
-	closeFile(m_file);
+	fclose(m_file);
 }
 
 bool PluginWriter::good() const
@@ -211,7 +190,7 @@ void PluginWriter::blockFlushAll()
 		const char * data = item.getData(len);
 		write_file_impl(m_file, data, len);
 	}
-	flushFile(m_file);
+	fflush(m_file);
 	m_items.clear();
 }
 

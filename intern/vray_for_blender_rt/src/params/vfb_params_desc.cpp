@@ -47,7 +47,7 @@ VRayForBlender::ParamDesc::PluginType VRayForBlender::ParamDesc::GetPluginTypeFr
 	else if (typeString == "EFFECT") {
 		pluginType = ParamDesc::PluginEffect;
 	}
-	else if (typeString == "SETTINGS") {
+	else if (typeString == "SETTINGS" || typeString == "SETTINGS_GLOBAL") {
 		pluginType = ParamDesc::PluginSettings;
 	}
 	else if (typeString == "CAMERA") {

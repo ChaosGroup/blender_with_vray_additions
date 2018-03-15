@@ -488,8 +488,8 @@ void SceneExporter::sync(const bool check_updated)
 	sync_effects(false);
 	m_exporter->set_prepass(false);
 
-
-	sync_render_settings();
+	m_settingsExporter.exportPlugins(m_exporter, m_settings, m_scene);
+	//sync_render_settings();
 	// Export once per viewport session
 	if (!check_updated && !is_viewport()) {
 		sync_render_channels();

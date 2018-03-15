@@ -144,6 +144,18 @@ struct ExporterSettings {
 		LevelAll
 	};
 
+	enum DeviceType {
+		DeviceTypeCPU,
+		DeviceTypeGPU,
+	};
+
+	enum GIEngine {
+		EngineIrradianceMap,
+		EngineBruteForce,
+		EngineLightCache,
+		EngineSphericalharmonics,
+	};
+
 	using ImageType = VRayBaseTypes::AttrImage::ImageType;
 	using RenderMode = VRayBaseTypes::RenderMode;
 
@@ -184,6 +196,7 @@ struct ExporterSettings {
 	bool              use_bake_view;
 	bool              is_viewport;
 	bool              is_preview;
+	bool              is_gpu;
 	bool              close_on_stop;
 
 	bool              calculate_instancer_velocity;
@@ -219,6 +232,56 @@ private:
 	float                      m_viewportResolution;
 
 };
+
+struct DataExporter;
+struct PluginExporter;
+struct PluginDesc;
+
+/// Class that will handle all Settings* plugins
+/// If any override must be applied to any Settings* plugin it should be done in the class
+struct VRaySettingsExporter {
+
+	VRaySettingsExporter(DataExporter &dataExporter)
+		: scene(PointerRNA_NULL)
+		, dataExporter(dataExporter)
+	{}
+
+	/// Export all plugins
+	/// @param pluginExporter - pointer to the plugin exporter
+	/// @param settings - ref to current export settings
+	/// @param scene - blender scene object to read settings data from
+	void exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, const ExporterSettings &settings, BL::Scene &scene, BL::Context &context);
+private:
+	/// Get overrides for specific plugin description
+	/// @param pluginId - the id of the plugin
+	/// @param propertyGroup [out] - RNA pointer to the blender property group
+	/// @param pluginDesc [out] - plugin desc to fill in overrides
+	/// @return - true if we want to export the plugin, false if we want to skip it
+	bool checkPluginOverrides(const std::string &pluginId, PointerRNA &propertyGroup, PluginDesc &pluginDesc);
+
+	/// Export single plugin
+	/// @param desc - the description of the plugin params
+	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc);
+
+	/// Export SettingsGI and SettingsLightCache
+	void exportLCGISettings();
+
+	BL::Scene scene; ///< The current scene
+	BL::Context context; ///< The context passed to the exporter
+	std::shared_ptr<PluginExporter> pluginExporter; ///< Pointer to plugin exporter
+	DataExporter &dataExporter; ///< Ref to the data exporter (used to fill from prop group)
+	ExporterSettings settings; ///< Export settings
+
+	PointerRNA vrayObject; ///< The scene.vray object
+	PointerRNA vrayExporter; ///< The scene.vray.Exporter object
+
+	/// Set of plugins we want to skip for various reasons
+	static const HashSet<std::string> IgnoredPlugins;
+
+	/// Settings plugins exported after SettingsOutput
+	static const HashSet<std::string> DelayPlugins;
+};
+
 
 } // namespace VRayForBlender
 

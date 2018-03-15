@@ -26,7 +26,6 @@
 #include "cgr_config.h"
 
 #include <boost/asio/ip/host_name.hpp>
-#include <boost/optional/optional.hpp>
 
 
 using namespace VRayForBlender;
@@ -374,7 +373,7 @@ void VRaySettingsExporter::exportPlugins(std::shared_ptr<PluginExporter> pluginE
 		if (!settings.is_gpu && (desc->pluginID == "RTEngine" || desc->pluginID == "SettingsRTEngine")) {
 			continue;
 		}
-
+		
 		if (!settings.show_vfb && desc->pluginID == "EffectLens") {
 			continue;
 		}
@@ -392,53 +391,6 @@ void VRaySettingsExporter::exportPlugins(std::shared_ptr<PluginExporter> pluginE
 	}
 
 	exportLCGISettings();
-}
-
-template <typename T>
-boost::optional<T> get(PointerRNA &ptr, const char *name)
-{
-	return boost::optional<T>();
-}
-
-template <>
-boost::optional<bool> get(PointerRNA &ptr, const char *name)
-{
-	boost::optional<bool> result;
-	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
-	if (prop) {
-		result = RNA_property_boolean_get(&ptr, prop);
-	}
-	return result;
-}
-
-template <>
-boost::optional<PointerRNA> get(PointerRNA &ptr, const char *name)
-{
-	boost::optional<PointerRNA> result;
-	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
-	if (prop) {
-		result = RNA_property_pointer_get(&ptr, prop);
-	}
-	return result;
-}
-
-template <>
-boost::optional<std::string> get(PointerRNA &ptr, const char *name)
-{
-	boost::optional<std::string> result;
-	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
-	if (prop) {
-		result = "";
-		result->resize(RNA_property_string_length(&ptr, prop));
-		result = RNA_property_string_get(&ptr, prop, &(*result)[0]);
-	}
-	return result;
-}
-
-template <typename T>
-T get(PointerRNA &ptr, const std::string & name)
-{
-	return get(ptr, name.c_str());
 }
 
 bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, PointerRNA &propertyGroup, PluginDesc &pluginDesc)

@@ -46,8 +46,9 @@ public:
 	virtual AttrPlugin  export_plugin_impl(const PluginDesc &pluginDesc);
 	virtual void        set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file);
 private:
+	FILE *              getFile(VRayForBlender::ParamDesc::PluginType type, const char *filePath);
+	void                writeIncludes();
 
-private:
 	typedef HashMap<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> TypeToWriterMap;
 	typedef HashMap<std::string, std::shared_ptr<PluginWriter>> FileToWriterMap;
 
@@ -55,8 +56,10 @@ private:
 	FileToWriterMap               m_fileWritersMap;
 	TypeToWriterMap               m_Writers;
 	ThreadManager::Ptr            m_threadManager;
+	HashMap<std::string, FILE*>   m_fileMap;
 	bool                          m_Synced;
 	std::string                   m_FileDir;
+	std::string                   m_includesString;
 };
 
 } // namespace VRayForBlender

@@ -314,6 +314,7 @@ public:
 		, m_exporter(nullptr)
 		, m_frameExporter(m_scene, m_settings, m_data, m_engine)
 		, m_data_exporter(m_settings)
+		, m_settingsExporter(m_data_exporter)
 		, m_sceneComputedLayers(0)
 		, m_isLocalView(false)
 		, m_isUndoSync(false)
@@ -412,6 +413,7 @@ protected:
 	FrameExportManager   m_frameExporter; ///< Handles chaning the current time so all needed keyframe data is exported
 	DataExporter         m_data_exporter; ///< Handle for blender data
 	ViewParams           m_viewParams; ///< The view params (current camera, image settings, etc)
+	VRaySettingsExporter m_settingsExporter; ///< Exporter for all Settings* plugins
 
 	uint32_t             m_sceneComputedLayers; ///< Bool values for each layer compressed in one int
 

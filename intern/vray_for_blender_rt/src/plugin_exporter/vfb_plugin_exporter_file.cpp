@@ -49,6 +49,31 @@ std::string getStdString(PyObject *file)
 	return std::string();
 }
 
+FILE * VrsceneExporter::getFile(VRayForBlender::ParamDesc::PluginType type, const char *filePath)
+{
+	const char * mode = "w";
+	if (!exporter_settings.export_meshes && type == ParamDesc::PluginType::PluginGeometry) {
+		mode = "r";
+	}
+
+	auto iter = m_fileMap.find(filePath);
+	if (iter == m_fileMap.end()) {
+		if (type != VRayForBlender::ParamDesc::PluginChannel &&
+			type != VRayForBlender::ParamDesc::PluginFilter &&
+			type != VRayForBlender::ParamDesc::PluginSettings &&
+			exporter_settings.settings_files.use_separate) {
+
+			m_includesString += "\n#include \"" + fs::basename(filePath) + ".vrscene\"";
+		}
+
+
+		FILE *file = fopen(filePath, mode);
+		m_fileMap.insert(std::make_pair(filePath, file));
+		return file;
+	}
+	return iter->second;
+}
+
 void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file)
 {
 	if (file) {
@@ -58,7 +83,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 
 		if (iter == m_fileWritersMap.end()) {
 			// ensure only one PluginWriter is instantiated for a file
-			writer.reset(new PluginWriter(m_threadManager, fileName.c_str(), exporter_settings.export_file_format));
+			writer.reset(new PluginWriter(m_threadManager, getFile(type, fileName.c_str()), exporter_settings.export_file_format));
 			if (!writer) {
 				BLI_assert("Failed to create PluginWriter for python file!");
 				return;
@@ -125,6 +150,20 @@ void VrsceneExporter::sync()
 	}
 
 	m_threadManager->stop();
+	writeIncludes();
+}
+
+void VrsceneExporter::writeIncludes()
+{
+	if (!exporter_settings.settings_files.use_separate) {
+		return;
+	}
+	const auto writerPtr = m_Writers[ParamDesc::PluginSettings];
+	if (!writerPtr) {
+		PRINT_ERROR("Missing file for PluginSettings");
+		return;
+	}
+	*writerPtr << m_includesString;
 }
 
 

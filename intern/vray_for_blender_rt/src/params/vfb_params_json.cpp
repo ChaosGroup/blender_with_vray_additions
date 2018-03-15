@@ -104,6 +104,8 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 			pluginDesc.pluginID   = fileName;
 			pluginDesc.pluginType = ParamDesc::GetPluginTypeFromString(pTree.get_child("Type").data());
 
+			PluginTypeToDescription[pluginDesc.pluginType].push_back(&pluginDesc);
+
 			for (auto &v : pTree.get_child("Parameters")) {
 				const std::string &attrName = v.second.get_child("attr").data();
 				const std::string &attrType = v.second.get_child("type").data();
@@ -258,4 +260,10 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 const VRayForBlender::ParamDesc::PluginDesc& VRayForBlender::GetPluginDescription(const std::string &pluginID)
 {
 	return PluginDescriptions[pluginID];
+}
+
+const PluginDescList & VRayForBlender::GetPluginsOfType(PluginType type)
+{
+	/// if type does not exist, we will just create and return empty list
+	return PluginTypeToDescription[type];
 }
