@@ -412,6 +412,28 @@ boost::optional<bool> get(PointerRNA &ptr, const char *name)
 }
 
 template <>
+boost::optional<int> get(PointerRNA &ptr, const char *name)
+{
+	boost::optional<int> result;
+	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
+	if (prop) {
+		result = RNA_property_int_get(&ptr, prop);
+	}
+	return result;
+}
+
+template <>
+boost::optional<float> get(PointerRNA &ptr, const char *name)
+{
+	boost::optional<float> result;
+	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
+	if (prop) {
+		result = RNA_property_float_get(&ptr, prop);
+	}
+	return result;
+}
+
+template <>
 boost::optional<PointerRNA> get(PointerRNA &ptr, const char *name)
 {
 	boost::optional<PointerRNA> result;
@@ -436,40 +458,39 @@ boost::optional<std::string> get(PointerRNA &ptr, const char *name)
 }
 
 template <typename T>
-T get(PointerRNA &ptr, const std::string & name)
+boost::optional<T> get(PointerRNA &ptr, const std::string & name)
 {
 	return get(ptr, name.c_str());
 }
 
 bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, PointerRNA &propertyGroup, PluginDesc &pluginDesc)
 {
-	if (!RNA_struct_find_property(&vrayObject, pluginId.c_str())) {
+	if (auto propGrp = get<PointerRNA>(vrayObject, pluginId)) {
+		propertyGroup = *propGrp;
+	} else {
 		PRINT_WARN("Could not find property group for %s", pluginId.c_str());
 		return false;
 	}
-	propertyGroup = RNA_pointer_get(&vrayObject, pluginId.c_str());
 
 	if (pluginId == "SettingsRegionsGenerator") {
-		if (RNA_boolean_get(&propertyGroup, "lock_size")) {
-			pluginDesc.add("yc", AttrValue(RNA_int_get(&propertyGroup, "xc")));
+		if (auto lockSize = get<bool>(propertyGroup, "lock_size")) {
+			if (auto xc = get<int>(propertyGroup, "xc")) {
+				pluginDesc.add("yc", AttrValue(*xc));
+			}
 		}
 	} else if (pluginId.find("Filter") == 0) {
 		const char * imageSampler = "SettingsImageSampler";
-		if (!RNA_struct_find_property(&vrayObject, imageSampler)) {
-			PRINT_WARN("Could not find property group for %s", imageSampler);
-		} else {
-			PointerRNA samplerGroup = RNA_pointer_get(&vrayObject, imageSampler);
-			if (RNA_enum_name_get(&samplerGroup, "filter_type") != pluginId) {
+		if (auto sampler = get<PointerRNA>(vrayObject, imageSampler)) {
+			if (RNA_enum_name_get(&*sampler, "filter_type") != pluginId) {
 				return false;
 			}
+		} else {
+			PRINT_WARN("Could not find property group for %s", imageSampler);
 		}
 	} else if (pluginId == "SphericalHarmonicsExporter" || pluginId == "SphericalHarmonicsRenderer") {
 		const char * settingsGi = "SettingsGI";
-		if (!RNA_struct_find_property(&vrayObject, settingsGi)) {
-			PRINT_WARN("Could not find property group for %s", settingsGi);
-		} else {
-			PointerRNA giGroup = RNA_pointer_get(&vrayObject, settingsGi);
-			if (static_cast<ExporterSettings::GIEngine>(RNA_enum_ext_get(&giGroup, "primary_engine")) != ExporterSettings::EngineSphericalharmonics) {
+		if (auto gi = get<PointerRNA>(vrayObject, settingsGi)) {
+			if (static_cast<ExporterSettings::GIEngine>(RNA_enum_ext_get(&*gi, "primary_engine")) != ExporterSettings::EngineSphericalharmonics) {
 				return false;
 			}
 
@@ -482,6 +503,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 					return false;
 				}
 			}
+		} else {
+			PRINT_WARN("Could not find property group for %s", settingsGi);
 		}
 	} else if (pluginId == "SettingsUnitsInfo") {
 		const float sceneFps = scene.render().fps() / scene.render().fps_base();
@@ -489,13 +512,27 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		pluginDesc.add("seconds_scale", AttrValue(1.f / sceneFps));
 	} else if (pluginId == "SettingsColorMapping") {
 		BL::Scene mainScene = context.scene();
-		PointerRNA mainVrayObject = RNA_pointer_get(&mainScene.ptr, "vray");
-		PointerRNA settingsCM = RNA_pointer_get(&mainVrayObject, pluginId.c_str());
 
-		// override preview collor mapping with parent scene's collor mapping
-		if (settings.is_preview && RNA_boolean_get(&settingsCM, "preview_use_scene_cm")) {
-			propertyGroup = settingsCM;
+		if (auto vrayObj = get<PointerRNA>(mainScene.ptr, "vray")) {
+			if (auto settingsCM = get<PointerRNA>(*vrayObj, pluginId.c_str())) {
+
+				// override preview collor mapping with parent scene's collor mapping
+				if (settings.is_preview) {
+					if (auto useCM = get<bool>(*settingsCM, "preview_use_scene_cm") && *useCM) {
+						propertyGroup = *settingsCM;
+					}
+				}
+			}
 		}
+	} else if (pluginId == "SettingsImageSampler") {
+		if (auto useDmc = get<bool>(propertyGroup, "use_dmc_treshhold") && *useDmc) {
+			if (auto dmc = get<PointerRNA>(vrayObject, "SettingsDMCSampler")) {
+				if (auto threshold = get<float>(*dmc, "adaptive_threshold")) {
+					pluginDesc.add("dmc_threshold", AttrValue(*threshold));
+				}
+			}
+		}
+
 	}
 
 	return true;
@@ -507,7 +544,6 @@ void VRaySettingsExporter::exportLCGISettings()
 	PluginDesc settingsLC("SettingsLightCache", "SettingsLightCache");
 
 	PointerRNA vrayObject = RNA_pointer_get(&scene.ptr, "vray");
-	PointerRNA vrayExporter = RNA_pointer_get(&vrayObject, "Exporter");
 	
 	{
 		PointerRNA giPropGroup = RNA_pointer_get(&vrayObject, settingsGI.pluginID.c_str());
