@@ -112,6 +112,7 @@ void VrsceneExporter::init()
 void VrsceneExporter::free()
 {
 	m_Writers.clear();
+	m_fileWritersMap.clear();
 }
 
 
