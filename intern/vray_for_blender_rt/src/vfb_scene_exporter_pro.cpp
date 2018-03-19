@@ -189,7 +189,7 @@ bool ProductionExporter::export_scene(const bool)
 	for (int c = 0; c < renderFrames; ++c) {
 		const clock_t frameBeginTime = clock();
 
-		if (!firstFrame) {
+		if (!firstFrame && m_settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
 			m_viewParams = {};
 			// call reset on vray
 			m_exporter->reset();
