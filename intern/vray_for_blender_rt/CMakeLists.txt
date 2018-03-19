@@ -46,9 +46,6 @@ set(INC
 	${OPENEXR_INCLUDE_DIRS}
 )
 
-# we need to include buildinfo.h so we can write build hash in .vrscene files
-include_directories(${CMAKE_BINARY_DIR}/source/creator)
-
 if (WIN32)
 	list(APPEND INC ${LIBDIR}/osl/include)
 else()
@@ -105,4 +102,4 @@ endif()
 list(REMOVE_DUPLICATES INC)
 blender_add_lib(vray_for_blender_rt "${HEADERS};${SOURCES}" "${INC}" "${INC_SYS}")
 
-add_dependencies(vray_for_blender_rt bf_rna buildinfo)
+add_dependencies(vray_for_blender_rt bf_rna)

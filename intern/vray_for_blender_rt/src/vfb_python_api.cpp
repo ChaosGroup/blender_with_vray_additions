@@ -31,8 +31,9 @@
 #include "zmq_wrapper.hpp"
 #include "vfb_plugin_exporter_zmq.h"
 
-#include "buildinfo.h"
+#include <Python.h>
 
+using namespace VRayForBlender;
 
 VRayForBlender::ClientPtr heartbeatClient;
 std::mutex heartbeatLock;
@@ -619,11 +620,6 @@ static PyObject* vfb_osl_setstdosl_path(PyObject * /*self*/, PyObject *args) {
 }
 
 
-static PyObject* vfb_get_build_hash(PyObject*)
-{
-	return Py_BuildValue("s", BUILD_HASH);
-}
-
 static PyMethodDef methods[] = {
     { "load",                vfb_load,   METH_VARARGS, ""},
     { "unload", (PyCFunction)vfb_unload, METH_NOARGS,  ""},
@@ -645,8 +641,6 @@ static PyMethodDef methods[] = {
 
     { "osl_update_node", vfb_osl_update_node_func, METH_VARARGS, ""},
     { "osl_set_stdosl_path", vfb_osl_setstdosl_path, METH_VARARGS, ""},
-
-    { "get_build_hash", reinterpret_cast<PyCFunction>(vfb_get_build_hash), METH_NOARGS, ""},
 
     {NULL, NULL, 0, NULL},
 };
