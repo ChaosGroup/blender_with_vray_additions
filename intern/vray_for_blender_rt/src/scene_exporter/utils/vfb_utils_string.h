@@ -35,11 +35,9 @@ std::string StripString(std::string &str);
 
 /// Expand some variables from the provided string
 /// $C is camera name, $S is scene name, $F is blend file name
-/// also supports python's datetime placeholders like %H %M %S, etc.1
-/// Calling with empty ext will not append it or the dot
-std::string ExpandFilenameVariables(const std::string & expr, const std::string & camera, const std::string & scene, const std::string & blendPath, const std::string & ext = "");
-
-
+/// @param expr - path containing variables and/or starting with //
+/// @param context - the current blender context
+/// @return - full path string with variables expanded
 std::string ExpandFilenameVariables(const std::string & expr, BL::Context & context);
 
 /// If path starts with // then prepend it with current blend file name

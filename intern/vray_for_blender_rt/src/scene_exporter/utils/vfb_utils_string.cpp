@@ -143,59 +143,6 @@ std::string VRayForBlender::String::ExpandFilenameVariables(const std::string & 
 	return expandedPath;
 }
 
-std::string VRayForBlender::String::ExpandFilenameVariables(
-	const std::string & expr,
-	const std::string & camera,
-	const std::string & scene,
-	const std::string & blendPath,
-	const std::string & ext)
-{
-	std::string timeReplace = doPythonTimeReplace(expr);
-	std::string result = "";
-
-	for (int c = 0; c < timeReplace.length(); ++c) {
-		if (timeReplace[c] == '$' && c + 1 < timeReplace.length()) {
-			char type = timeReplace[++c];
-			switch (type) {
-			case 'C':
-				result.append(camera);
-				break;
-			case 'S':
-				result.append(scene);
-				break;
-			case 'F':
-				if (blendPath == "") {
-					result.append("default");
-				} else {
-					// basename(blendPath) + remove extension
-					const auto nameStart = blendPath.find_last_of("/\\");
-					const auto lastDot = blendPath.find_last_of(".");
-					std::string name;
-					if (nameStart != std::string::npos) {
-						name = blendPath.substr(nameStart + 1, lastDot - nameStart - 1);
-					} else {
-						name = blendPath.substr(0, lastDot);
-					}
-					result.append(name);
-				}
-				break;
-			default:
-				result.push_back('_');
-				result.push_back(type);
-				PRINT_WARN("Unknown format variable \"$%c\" in img_file", type);
-			}
-		} else {
-			result.push_back(timeReplace[c]);
-		}
-	}
-	if (ext != "") {
-		result.push_back('.');
-		return result + ext;
-	} else {
-		return result;
-	}
-}
-
 
 std::string VRayForBlender::String::AbsFilePath(const std::string & path, const std::string & blendPath)
 {
