@@ -34,6 +34,7 @@
 
 namespace VRayForBlender {
 
+// Invalid value for frame number, if set to a property, interpolate will not be used
 const float INVALID_FRAME = -FLT_MAX;
 
 // import everything, as these are types used extensively in this namespace

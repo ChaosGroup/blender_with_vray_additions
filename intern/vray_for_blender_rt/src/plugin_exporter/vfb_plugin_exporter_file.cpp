@@ -36,7 +36,6 @@ using namespace VRayForBlender;
 
 VrsceneExporter::VrsceneExporter(const ExporterSettings & settings)
 	: PluginExporter(settings)
-    , m_Synced(false)
 {
 	namespace pt = boost::posix_time;
 	m_headerString.reserve(1024);
@@ -64,23 +63,17 @@ FILE * VrsceneExporter::getFile(VRayForBlender::ParamDesc::PluginType type, cons
 		mode = "r";
 	}
 
-	auto iter = m_fileMap.find(filePath);
-	if (iter == m_fileMap.end()) {
-		if (type != VRayForBlender::ParamDesc::PluginChannel &&
-			type != VRayForBlender::ParamDesc::PluginFilter &&
-			type != VRayForBlender::ParamDesc::PluginSettings &&
-			exporter_settings.settings_files.use_separate) {
+	if (type != VRayForBlender::ParamDesc::PluginChannel &&
+		type != VRayForBlender::ParamDesc::PluginFilter &&
+		type != VRayForBlender::ParamDesc::PluginSettings &&
+		exporter_settings.settings_files.use_separate) {
 
-			m_includesString += "\n#include \"" + fs::basename(filePath) + ".vrscene\"";
-		}
-
-
-		FILE *file = fopen(filePath, mode);
-		fwrite(m_headerString.c_str(), 1, m_headerString.size(), file);
-		m_fileMap.insert(std::make_pair(filePath, file));
-		return file;
+		m_includesString += "\n#include \"" + fs::basename(filePath) + ".vrscene\"";
 	}
-	return iter->second;
+
+	FILE *file = fopen(filePath, mode);
+	fwrite(m_headerString.c_str(), 1, m_headerString.size(), file);
+	return file;
 }
 
 void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type, PyObject *file)
@@ -94,7 +87,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 			// ensure only one PluginWriter is instantiated for a file
 			writer.reset(new PluginWriter(m_threadManager, getFile(type, fileName.c_str()), exporter_settings.export_file_format));
 			if (!writer) {
-				BLI_assert("Failed to create PluginWriter for python file!");
+				BLI_assert(!"Failed to create PluginWriter for python file!");
 				return;
 			}
 			m_fileWritersMap[fileName] = writer;
@@ -106,22 +99,22 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 		case VRayForBlender::ParamDesc::PluginChannel:
 		case VRayForBlender::ParamDesc::PluginFilter:
 		case VRayForBlender::ParamDesc::PluginSettings:
-			m_Writers[ParamDesc::PluginFilter] = writer;
-			m_Writers[ParamDesc::PluginChannel] = writer;
-			m_Writers[ParamDesc::PluginSettings] = writer;
+			m_writers[ParamDesc::PluginFilter] = writer;
+			m_writers[ParamDesc::PluginChannel] = writer;
+			m_writers[ParamDesc::PluginSettings] = writer;
 			break;
 		case VRayForBlender::ParamDesc::PluginBRDF:
 		case VRayForBlender::ParamDesc::PluginMaterial:
-			m_Writers[ParamDesc::PluginBRDF] = writer;
-			m_Writers[ParamDesc::PluginMaterial] = writer;
+			m_writers[ParamDesc::PluginBRDF] = writer;
+			m_writers[ParamDesc::PluginMaterial] = writer;
 			break;
 		case VRayForBlender::ParamDesc::PluginTexture:
 		case VRayForBlender::ParamDesc::PluginUvwgen:
-			m_Writers[ParamDesc::PluginTexture] = writer;
-			m_Writers[ParamDesc::PluginUvwgen] = writer;
+			m_writers[ParamDesc::PluginTexture] = writer;
+			m_writers[ParamDesc::PluginUvwgen] = writer;
 			break;
 		default:
-			m_Writers[type] = writer;
+			m_writers[type] = writer;
 		}
 	} else {
 		PRINT_ERROR("Setting nullptr file for %d", static_cast<int>(type));
@@ -146,7 +139,7 @@ void VrsceneExporter::init()
 void VrsceneExporter::free()
 {
 	writeIncludes();
-	m_Writers.clear();
+	m_writers.clear();
 	m_fileWritersMap.clear();
 }
 
@@ -154,7 +147,6 @@ void VrsceneExporter::free()
 void VrsceneExporter::sync()
 {
 	PRINT_INFO_EX("Flushing all data to files");
-	m_Synced = true;
 	for (auto & writer : m_fileWritersMap) {
 		writer.second->blockFlushAll();
 	}
@@ -167,7 +159,7 @@ void VrsceneExporter::writeIncludes()
 	if (!exporter_settings.settings_files.use_separate) {
 		return;
 	}
-	const auto writerPtr = m_Writers[ParamDesc::PluginSettings];
+	const auto writerPtr = m_writers[ParamDesc::PluginSettings];
 	if (!writerPtr) {
 		PRINT_ERROR("Missing file for PluginSettings");
 		return;
@@ -194,7 +186,6 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 	AttrPlugin plugin;
 	plugin.plugin = name;
-	m_Synced = false;
 
 	const ParamDesc::PluginDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
 
@@ -208,18 +199,18 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		writerType = ParamDesc::PluginObject;
 	}
 
-	auto writerPtr = m_Writers[writerType];
+	auto writerPtr = m_writers[writerType];
 	if (!writerPtr) {
 		if (pluginDesc.pluginID == "Node" || pluginDesc.pluginID == "Instancer") {
-			writerPtr = m_Writers[ParamDesc::PluginObject];
+			writerPtr = m_writers[ParamDesc::PluginObject];
 		} else if (pluginDesc.pluginID.find("Render") != std::string::npos) {
-			writerPtr = m_Writers[ParamDesc::PluginSettings];
+			writerPtr = m_writers[ParamDesc::PluginSettings];
 		} else if (pluginDesc.pluginID.find("Light") != std::string::npos) {
-			writerPtr = m_Writers[ParamDesc::PluginLight];
+			writerPtr = m_writers[ParamDesc::PluginLight];
 		}
 
 		if (!writerPtr) {
-			writerPtr = m_Writers[ParamDesc::PluginSettings];
+			writerPtr = m_writers[ParamDesc::PluginSettings];
 			if (!writerPtr) {
 				PRINT_ERROR("Failed to get plugin writer for type %d exporting %s with id [%s]",
 					writerType, name.c_str(), pluginDesc.pluginID.c_str());
@@ -230,7 +221,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 	PluginWriter & writer = *writerPtr;
 	// dont set frame for settings file when DR is off and seperate files is on and current file is Settings
-	const bool setFrame = writer != *m_Writers[ParamDesc::PluginSettings];
+	const bool setFrame = writerType != ParamDesc::PluginSettings;
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << " {\n";
 	if (exporter_settings.settings_animation.use || exporter_settings.use_motion_blur) {
