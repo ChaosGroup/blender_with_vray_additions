@@ -136,6 +136,7 @@ void VrsceneExporter::init()
 
 void VrsceneExporter::free()
 {
+	writeIncludes();
 	m_Writers.clear();
 	m_fileWritersMap.clear();
 }
@@ -150,7 +151,6 @@ void VrsceneExporter::sync()
 	}
 
 	m_threadManager->stop();
-	writeIncludes();
 }
 
 void VrsceneExporter::writeIncludes()

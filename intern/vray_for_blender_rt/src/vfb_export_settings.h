@@ -192,6 +192,8 @@ struct ExporterSettings {
 	bool              use_select_preview;
 	bool              use_subsurf_to_osd;
 
+	bool              auto_save_render;
+
 	bool              show_vfb;
 	bool              use_bake_view;
 	bool              is_viewport;
@@ -233,24 +235,30 @@ private:
 
 };
 
-struct DataExporter;
-struct PluginExporter;
+class DataExporter;
+class PluginExporter;
 struct PluginDesc;
+struct ViewParams;
+class FrameExportManager;
 
 /// Class that will handle all Settings* plugins
 /// If any override must be applied to any Settings* plugin it should be done in the class
 struct VRaySettingsExporter {
 
-	VRaySettingsExporter(DataExporter &dataExporter)
+	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter)
 		: scene(PointerRNA_NULL)
+		, context(PointerRNA_NULL)
 		, dataExporter(dataExporter)
+		, settings(settings)
+		, viewParams(viewParams)
+		, frameExporter(frameExporter)
 	{}
 
 	/// Export all plugins
 	/// @param pluginExporter - pointer to the plugin exporter
-	/// @param settings - ref to current export settings
 	/// @param scene - blender scene object to read settings data from
-	void exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, const ExporterSettings &settings, BL::Scene &scene, BL::Context &context);
+	/// @param context - the current context
+	void exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, BL::Scene &scene, BL::Context &context);
 private:
 	/// Get overrides for specific plugin description
 	/// @param pluginId - the id of the plugin
@@ -261,7 +269,7 @@ private:
 
 	/// Export single plugin
 	/// @param desc - the description of the plugin params
-	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc);
+	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc) noexcept;
 
 	/// Export SettingsGI and SettingsLightCache
 	void exportLCGISettings();
@@ -270,9 +278,11 @@ private:
 	BL::Context context; ///< The context passed to the exporter
 	std::shared_ptr<PluginExporter> pluginExporter; ///< Pointer to plugin exporter
 	DataExporter &dataExporter; ///< Ref to the data exporter (used to fill from prop group)
-	ExporterSettings settings; ///< Export settings
+	const ExporterSettings &settings; ///< Export settings
+	const ViewParams &viewParams; ///< Viewparams we use to get img width and height
+	const FrameExportManager &frameExporter; ///< Frame exporter used to get anim stand and end
 
-	PointerRNA vrayObject; ///< The scene.vray object
+	PointerRNA vrayScene; ///< The scene.vray object
 	PointerRNA vrayExporter; ///< The scene.vray.Exporter object
 
 	/// Set of plugins we want to skip for various reasons

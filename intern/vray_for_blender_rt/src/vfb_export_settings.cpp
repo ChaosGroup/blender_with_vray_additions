@@ -16,19 +16,26 @@
  * limitations under the License.
  */
 
+#include "cgr_config.h"
+
 #include "vfb_params_json.h"
 #include "vfb_plugin_exporter.h"
+#include "vfb_scene_exporter.h"
 #include "vfb_node_exporter.h"
 #include "vfb_export_settings.h"
-#include "cgr_config.h"
+#include "vfb_render_view.h"
+
 #include "utils/vfb_utils_blender.h"
+#include "utils/vfb_utils_string.h"
 
 #include "cgr_config.h"
 
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/optional/optional.hpp>
+#include <boost/filesystem.hpp>
 
 
+namespace fs = boost::filesystem;
 using namespace VRayForBlender;
 
 
@@ -66,6 +73,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	use_displace_subdiv = RNA_boolean_get(&m_vrayExporter, "use_displace");
 	use_select_preview  = RNA_boolean_get(&m_vrayExporter, "select_node_preview");
 	use_subsurf_to_osd  = RNA_boolean_get(&m_vrayExporter, "subsurf_to_osd");
+	auto_save_render    = RNA_boolean_get(&m_vrayExporter, "auto_save_render");
 	default_mapping     = (DefaultMapping)RNA_enum_ext_get(&m_vrayExporter, "default_mapping");
 	export_meshes       = is_preview ? true : RNA_boolean_get(&m_vrayExporter, "auto_meshes");
 	export_file_format  = (ExportFormat)RNA_enum_ext_get(&m_vrayExporter, "data_format");
@@ -334,12 +342,14 @@ const HashSet<std::string> VRaySettingsExporter::IgnoredPlugins = {
 	"SettingsLightTree",
 	"SettingsColorMappingModo",
 	"SettingsDR",
+	"OutputTest",
 	// Deprecated
 	"SettingsPhotonMap",
 	"RTEngine",
-	// Manually exporter
+	// Manually exported
 	"SettingsGI",
 	"SettingsLightCache",
+	"SettingsLightLinker"
 };
 
 const HashSet<std::string> VRaySettingsExporter::DelayPlugins = {
@@ -352,15 +362,14 @@ const HashSet<std::string> VRaySettingsExporter::DelayPlugins = {
 	"SettingsVRST",
 };
 
-void VRaySettingsExporter::exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, const ExporterSettings &settings, BL::Scene &scene, BL::Context &context)
+void VRaySettingsExporter::exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, BL::Scene &scene, BL::Context &context)
 {
 	this->pluginExporter = pluginExporter;
 	this->scene = scene;
-	this->settings = settings;
 	this->context = context;
 
-	vrayObject = RNA_pointer_get(&scene.ptr, "vray");
-	vrayExporter = RNA_pointer_get(&vrayObject, "Exporter");
+	vrayScene = RNA_pointer_get(&scene.ptr, "vray");
+	vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
 
 	PluginDescList delayPlugins;
 	delayPlugins.reserve(DelayPlugins.size());
@@ -394,145 +403,295 @@ void VRaySettingsExporter::exportPlugins(std::shared_ptr<PluginExporter> pluginE
 	exportLCGISettings();
 }
 
+
+struct PropNotFound
+	: std::exception
+{
+	PropNotFound(const char * const prop)
+		: std::exception(prop)
+	{}
+};
+
+/// Generic get for some type of property from RNA pointer
+/// If the the type is wrong it will just the property value's memory as the requested type
+/// @throw - PropNotFound if the property does not exist
 template <typename T>
-boost::optional<T> get(PointerRNA &ptr, const char *name)
+T get(PointerRNA &ptr, const char *name)
 {
-	return boost::optional<T>();
+	static_assert(false, "Not implemented type for get<T>(PointerRNA&, const char *)");
+	return T();
 }
 
 template <>
-boost::optional<bool> get(PointerRNA &ptr, const char *name)
+bool get(PointerRNA &ptr, const char *name)
 {
-	boost::optional<bool> result;
 	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
 	if (prop) {
-		result = RNA_property_boolean_get(&ptr, prop);
+		return RNA_property_boolean_get(&ptr, prop);
 	}
-	return result;
+	throw PropNotFound(name);
 }
 
 template <>
-boost::optional<int> get(PointerRNA &ptr, const char *name)
+int get(PointerRNA &ptr, const char *name)
 {
-	boost::optional<int> result;
 	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
 	if (prop) {
-		result = RNA_property_int_get(&ptr, prop);
+		return RNA_property_int_get(&ptr, prop);
 	}
-	return result;
+	throw PropNotFound(name);
 }
 
 template <>
-boost::optional<float> get(PointerRNA &ptr, const char *name)
+float get(PointerRNA &ptr, const char *name)
 {
-	boost::optional<float> result;
 	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
 	if (prop) {
-		result = RNA_property_float_get(&ptr, prop);
+		return RNA_property_float_get(&ptr, prop);
 	}
-	return result;
+	throw PropNotFound(name);
 }
 
 template <>
-boost::optional<PointerRNA> get(PointerRNA &ptr, const char *name)
+PointerRNA get(PointerRNA &ptr, const char *name)
 {
-	boost::optional<PointerRNA> result;
 	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
 	if (prop) {
-		result = RNA_property_pointer_get(&ptr, prop);
+		return RNA_property_pointer_get(&ptr, prop);
 	}
-	return result;
+	throw PropNotFound(name);
 }
 
 template <>
-boost::optional<std::string> get(PointerRNA &ptr, const char *name)
+std::string get(PointerRNA &ptr, const char *name)
 {
-	boost::optional<std::string> result;
 	PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
 	if (prop) {
+		std::string result;
 		result = "";
-		result->resize(RNA_property_string_length(&ptr, prop));
-		result = RNA_property_string_get(&ptr, prop, &(*result)[0]);
+		result.resize(RNA_property_string_length(&ptr, prop));
+		RNA_property_string_get(&ptr, prop, &result[0]);
+		return result;
 	}
-	return result;
+	throw PropNotFound(name);
 }
 
 template <typename T>
-boost::optional<T> get(PointerRNA &ptr, const std::string & name)
+T get(PointerRNA &ptr, const std::string & name)
 {
-	return get(ptr, name.c_str());
+	return get<T>(ptr, name.c_str());
 }
 
 bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, PointerRNA &propertyGroup, PluginDesc &pluginDesc)
 {
-	if (auto propGrp = get<PointerRNA>(vrayObject, pluginId)) {
-		propertyGroup = *propGrp;
-	} else {
-		PRINT_WARN("Could not find property group for %s", pluginId.c_str());
-		return false;
-	}
+	propertyGroup = get<PointerRNA>(vrayScene, pluginId);
 
 	if (pluginId == "SettingsRegionsGenerator") {
-		if (auto lockSize = get<bool>(propertyGroup, "lock_size")) {
-			if (auto xc = get<int>(propertyGroup, "xc")) {
-				pluginDesc.add("yc", AttrValue(*xc));
-			}
+		if (get<bool>(propertyGroup, "lock_size")) {
+			pluginDesc.add("yc", AttrValue(get<int>(propertyGroup, "xc")));
 		}
 	} else if (pluginId.find("Filter") == 0) {
 		const char * imageSampler = "SettingsImageSampler";
-		if (auto sampler = get<PointerRNA>(vrayObject, imageSampler)) {
-			if (RNA_enum_name_get(&*sampler, "filter_type") != pluginId) {
-				return false;
-			}
-		} else {
-			PRINT_WARN("Could not find property group for %s", imageSampler);
+			PointerRNA sampler = get<PointerRNA>(vrayScene, imageSampler);
+		if (RNA_enum_name_get(&sampler, "filter_type") != pluginId) {
+			return false;
 		}
 	} else if (pluginId == "SphericalHarmonicsExporter" || pluginId == "SphericalHarmonicsRenderer") {
 		const char * settingsGi = "SettingsGI";
-		if (auto gi = get<PointerRNA>(vrayObject, settingsGi)) {
-			if (static_cast<ExporterSettings::GIEngine>(RNA_enum_ext_get(&*gi, "primary_engine")) != ExporterSettings::EngineSphericalharmonics) {
+		PointerRNA gi = get<PointerRNA>(vrayScene, settingsGi);
+		if (static_cast<ExporterSettings::GIEngine>(RNA_enum_ext_get(&gi, "primary_engine")) != ExporterSettings::EngineSphericalharmonics) {
+			return false;
+		}
+
+		if (RNA_enum_get(&vrayExporter, "spherical_harmonics") == 0) {
+			if (pluginId == "SphericalHarmonicsRenderer") {
 				return false;
 			}
-
-			if (RNA_enum_get(&vrayExporter, "spherical_harmonics") == 0) {
-				if (pluginId == "SphericalHarmonicsRenderer") {
-					return false;
-				}
-			} else {
-				if (pluginId == "SphericalHarmonicsExporter") {
-					return false;
-				}
-			}
 		} else {
-			PRINT_WARN("Could not find property group for %s", settingsGi);
+			if (pluginId == "SphericalHarmonicsExporter") {
+				return false;
+			}
 		}
 	} else if (pluginId == "SettingsUnitsInfo") {
 		const float sceneFps = scene.render().fps() / scene.render().fps_base();
 		pluginDesc.add("frames_scale", AttrValue(sceneFps));
 		pluginDesc.add("seconds_scale", AttrValue(1.f / sceneFps));
+
+		PointerRNA unitSettings = get<PointerRNA>(scene.ptr, "unit_settings");
+		if (RNA_enum_get(&unitSettings, "system") != 0) {
+			pluginDesc.add("meters_scale", get<float>(unitSettings, "scale_length"));
+		}
 	} else if (pluginId == "SettingsColorMapping") {
 		BL::Scene mainScene = context.scene();
 
-		if (auto vrayObj = get<PointerRNA>(mainScene.ptr, "vray")) {
-			if (auto settingsCM = get<PointerRNA>(*vrayObj, pluginId.c_str())) {
+		PointerRNA vrayObj = get<PointerRNA>(mainScene.ptr, "vray");
+		PointerRNA settingsCM = get<PointerRNA>(vrayObj, pluginId.c_str());
 
-				// override preview collor mapping with parent scene's collor mapping
-				if (settings.is_preview) {
-					if (auto useCM = get<bool>(*settingsCM, "preview_use_scene_cm") && *useCM) {
-						propertyGroup = *settingsCM;
+		// override preview collor mapping with parent scene's collor mapping
+		if (settings.is_preview && get<bool>(settingsCM, "preview_use_scene_cm")) {
+			propertyGroup = settingsCM;
+		}
+	} else if (pluginId == "SettingsImageSampler") {
+		if (get<bool>(propertyGroup, "use_dmc_treshhold")) {
+			PointerRNA dmcSampler = get<PointerRNA>(vrayScene, "SettingsDMCSampler");
+			pluginDesc.add("dmc_threshold", AttrValue(get<float>(dmcSampler, "adaptive_threshold")));
+		}
+
+		{
+			const int minSubdiv = get<int>(propertyGroup, "progressive_minSubdivs");
+			const int maxSubdiv = get<int>(propertyGroup, "progressive_maxSubdivs");
+
+			if (minSubdiv > maxSubdiv) {
+				pluginDesc.add("progressive_minSubdivs", maxSubdiv);
+				pluginDesc.add("progressive_maxSubdivs", minSubdiv);
+			}
+		}
+
+		{
+			const int maxRate = get<int>(propertyGroup, "subdivision_maxRate");
+			const int minRate = get<int>(propertyGroup, "subdivision_minRate");
+
+			if (minRate > maxRate) {
+				pluginDesc.add("subdivision_minRate", maxRate);
+				pluginDesc.add("subdivision_maxRate", minRate);
+			}
+		}
+
+		enum class RenderMaskMode { Disable, None, Objects, ObjectId };
+		const RenderMaskMode maskMode = static_cast<RenderMaskMode>(RNA_enum_ext_get(&propertyGroup, "render_mask_mode"));
+
+		if (maskMode == RenderMaskMode::Objects) {
+			// TODO: get list of user-selected objects in the scene (maybe do this after scene export since we need plugin names
+		} else if (maskMode == RenderMaskMode::ObjectId) {
+			std::string objectIds = get<std::string>(propertyGroup, "render_mask_object_ids");
+			if (objectIds.empty()) {
+				pluginDesc.add("render_mask_mode", static_cast<int>(RenderMaskMode::Disable));
+			} else {
+				// "123;11;1234" -> [123, 11, 1234]
+				std::replace(objectIds.begin(), objectIds.end(), ';', ' ');
+				std::stringstream strm(objectIds);
+				AttrListInt ids;
+				int val;
+				while (strm >> val) {
+					ids.append(val);
+				}
+				pluginDesc.add("render_mask_object_ids", ids);
+			}
+		}
+	} else if (pluginId == "SettingsIrradianceMap") {
+		const int minRate = get<int>(propertyGroup, "min_rate");
+		const int maxRate = get<int>(propertyGroup, "max_rate");
+		if (minRate > maxRate) {
+			PRINT_WARN("SettingsIrradianceMap: \"Min. Rate\" is more than \"Max. Rate\"");
+			pluginDesc.add("min_rate", maxRate);
+			pluginDesc.add("max_rate", minRate);
+		}
+
+		if (get<bool>(vrayExporter, "draft")) {
+			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 5.0));
+		}
+	} else if (pluginId == "SettingsLightCache") {
+		if (get<bool>(propertyGroup, "num_passes_auto")) {
+			pluginDesc.add("num_passes", scene.render().threads());
+		}
+
+		if (get<bool>(vrayExporter, "draft")) {
+			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 10.0));
+		}
+	} else if (pluginId == "SettingsOptions") {
+		if (settings.settings_dr.use && settings.settings_dr.sharing_type == SettingsDR::SharingTypeTransfer) {
+			pluginDesc.add("misc_transferAssets", true);
+		}
+		// remove mtl_override
+	} else if (pluginId == "SettingsOutput") {
+		int width = viewParams.renderSize.w;
+		int height = viewParams.renderSize.h;
+
+		if (BL::Object camera = scene.camera()) {
+			auto cameraData = camera.data();
+			PointerRNA vrayCamera = get<PointerRNA>(cameraData.ptr, "vray");
+
+			if (settings.is_gpu) {
+				if (settings.use_stereo_camera) {
+					width *= 2;
+				}
+			} else {
+				PointerRNA stereoSettings = get<PointerRNA>(vrayScene, "VRayStereoscopicSettings");
+				PointerRNA stereoCamera = get<PointerRNA>(vrayCamera, "CameraStereoscopic");
+
+				if (get<bool>(stereoSettings, "use") && !get<bool>(stereoCamera, "use")) {
+					if (get<bool>(stereoSettings, "adjust_resolution")) {
+						width *= 2;
 					}
 				}
 			}
 		}
-	} else if (pluginId == "SettingsImageSampler") {
-		if (auto useDmc = get<bool>(propertyGroup, "use_dmc_treshhold") && *useDmc) {
-			if (auto dmc = get<PointerRNA>(vrayObject, "SettingsDMCSampler")) {
-				if (auto threshold = get<float>(*dmc, "adaptive_threshold")) {
-					pluginDesc.add("dmc_threshold", AttrValue(*threshold));
-				}
+
+		if (settings.use_bake_view) {
+			height = width;
+		}
+
+		const char *widths[] = {"img_width", "bmp_width", "rgn_width", "r_width"},
+				   *heights[] = {"img_height", "bmp_height", "rgn_height", "r_height"};
+
+		for (int c = 0; c < sizeof(widths) / sizeof(widths[0]); c++) {
+			pluginDesc.add(widths[c], width);
+			pluginDesc.add(heights[c], height);
+		}
+
+		if (!(settings.is_preview || settings.auto_save_render)) {
+			pluginDesc.add("img_file", "");
+			pluginDesc.add("img_dir", "");
+		} else {
+			const std::string &imgDir = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_dir"), context);
+			// make sure the directory exists
+			fs::create_directories(imgDir);
+
+			std::string imgFile = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_file"), context);
+
+			enum ImageFormat {PNG, JPG, TIFF, TGA, SGI, EXR, VRIMG};
+			const ImageFormat format = static_cast<ImageFormat>(RNA_enum_ext_get(&propertyGroup, "img_format"));
+			const char *extensions[] = {".png", ".jpg", ".tiff", ".tga", ".sgi", ".exr", ".vrimg"};
+
+			if (format >= PNG && format <= VRIMG) {
+				imgFile += extensions[format];
+			} else {
+				imgFile += extensions[PNG];
+			}
+
+			pluginDesc.add("img_dir", imgDir);
+			pluginDesc.add("img_file", imgFile);
+
+			if (settings.is_preview) {
+				pluginDesc.add("img_file_needFrameNumber", false);
+			}
+
+			// EXR == 5
+			if (RNA_enum_get(&propertyGroup, "img_format") == 5 && !get<bool>(propertyGroup, "relements_separateFiles")) {
+				pluginDesc.add("img_rawFile", true);
 			}
 		}
 
+		pluginDesc.add("anim_start", frameExporter.getFirstFrame());
+		pluginDesc.add("anim_end", frameExporter.getLastFrame());
+		pluginDesc.add("frame_start", frameExporter.getFirstFrame());
+
+		if (settings.is_preview) {
+			pluginDesc.add("img_noAlpha", true);
+		}
+	} else if (pluginId == "SettingsRTEngine") {
+		pluginDesc.add("enabled", true);
+
+		// TODO: verify this is correct
+		if (settings.is_viewport) {
+			pluginDesc.add("noise_threshold", 0.f);
+		} else {
+			pluginDesc.add("noise_threshold", get<float>(propertyGroup, "noise_threshold"));
+		}
+	} else if (pluginId == "SettingsVFB") {
+		if (!get<bool>(propertyGroup, "use")) {
+			return false;
+		}
 	}
 
 	return true;
@@ -543,17 +702,23 @@ void VRaySettingsExporter::exportLCGISettings()
 	PluginDesc settingsGI("SettingsGI", "SettingsGI");
 	PluginDesc settingsLC("SettingsLightCache", "SettingsLightCache");
 
-	PointerRNA vrayObject = RNA_pointer_get(&scene.ptr, "vray");
-	
-	{
-		PointerRNA giPropGroup = RNA_pointer_get(&vrayObject, settingsGI.pluginID.c_str());
-		dataExporter.setAttrsFromPropGroupAuto(settingsGI, &giPropGroup, settingsGI.pluginID);
+	PointerRNA giPropGroup;
+	PointerRNA lcPropGroup;
+
+	try {
+		checkPluginOverrides(settingsGI.pluginID, giPropGroup, settingsGI);
+	} catch (PropNotFound &ex) {
+		PRINT_ERROR("Property \"%s\" not found when exporting SettingsGI", ex.what());
 	}
 
-	{
-		PointerRNA lcPropGroup = RNA_pointer_get(&vrayObject, settingsLC.pluginID.c_str());
-		dataExporter.setAttrsFromPropGroupAuto(settingsLC, &lcPropGroup, settingsLC.pluginID);
+	try {
+		checkPluginOverrides(settingsLC.pluginID, lcPropGroup, settingsLC);
+	} catch (PropNotFound &ex) {
+		PRINT_ERROR("Property \"%s\" not found when exporting SettingsLightCache", ex.what());
 	}
+
+	dataExporter.setAttrsFromPropGroupAuto(settingsLC, &lcPropGroup, settingsLC.pluginID);
+	dataExporter.setAttrsFromPropGroupAuto(settingsGI, &giPropGroup, settingsGI.pluginID);
 	
 	/// for viewport rendering Light Cache can be only 'From File' mode
 	/// if it is not we should disable it
@@ -574,21 +739,24 @@ void VRaySettingsExporter::exportLCGISettings()
 			// disable secondary engine;
 			engineAttr->attrValue.as<AttrSimpleType<int>>() = 0;
 		}
-
-		pluginExporter->export_plugin(settingsGI);
-		pluginExporter->export_plugin(settingsLC);
 	}
+
+	pluginExporter->export_plugin(settingsGI);
+	pluginExporter->export_plugin(settingsLC);
 }
 
-void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginDesc &desc)
+void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginDesc &desc) noexcept
 {
 	PointerRNA propGroup;
 	PluginDesc pluginDesc(desc.pluginID, desc.pluginID);
-
-	if (!checkPluginOverrides(desc.pluginID, propGroup, pluginDesc)) {
-		return;
+	try {
+		if (!checkPluginOverrides(desc.pluginID, propGroup, pluginDesc)) {
+			return;
+		}
+		dataExporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, desc.pluginID);
+		pluginExporter->export_plugin(pluginDesc);
+	} catch (PropNotFound &ex) {
+		PRINT_ERROR("Property \"%s\" not found when exporting %s", ex.what(), desc.pluginID.c_str());
 	}
 
-	dataExporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, desc.pluginID);
-	pluginExporter->export_plugin(pluginDesc);
 }
