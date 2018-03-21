@@ -221,26 +221,49 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 	PluginWriter & writer = *writerPtr;
 	// dont set frame for settings file when DR is off and seperate files is on and current file is Settings
-	bool setFrame = !(
-	    !exporter_settings.settings_dr.use              &&
-	    exporter_settings.settings_files.use_separate   &&
-	    writer == *m_Writers[ParamDesc::PluginSettings]
-	);
+	const bool setFrame = writer != *m_Writers[ParamDesc::PluginSettings];
 
 	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << " {\n";
 	if (exporter_settings.settings_animation.use || exporter_settings.use_motion_blur) {
 		if (setFrame) {
 			writer.setAnimationFrame(this->current_scene_frame);
 		} else {
-			writer.setAnimationFrame(-1);
+			writer.setAnimationFrame(INVALID_FRAME);
 		}
 	}
 
+	const float writerFrame = writer.getAnimationFrame();
+	const ParamDesc::PluginDesc &desc = GetPluginDescription(pluginDesc.pluginID);
+
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;
+		if (attr.attrValue.type == ValueTypeUnknown) {
+			continue;
+		}
 
-		if (attr.attrValue.type != ValueTypeUnknown) {
-			writer << KVPair<AttrValue>(attr.attrName, attr.attrValue);
+		bool forceNoFrame = false;
+		const auto attrIter = desc.attributes.find(attr.attrName);
+		if (attrIter != desc.attributes.end()) {
+			// filepaths are not animated
+			if (attrIter->second.type == ParamDesc::AttrTypeDirpath || attrIter->second.type == ParamDesc::AttrTypeFilepath) {
+				forceNoFrame = true;
+			}
+			// generic lists different from Instancer2::instances are not animated
+			if (attrIter->second.type == ParamDesc::AttrTypeList && pluginDesc.pluginID != "Instancer2") {
+				forceNoFrame = true;
+			}
+		}
+
+		bool restoreFrame = false;
+		if (forceNoFrame || (attr.time == INVALID_FRAME && writerFrame != INVALID_FRAME)) {
+			writer.setAnimationFrame(INVALID_FRAME);
+			restoreFrame = true;
+		}
+
+		writer << KVPair<AttrValue>(attr.attrName, attr.attrValue);
+
+		if (restoreFrame) {
+			writer.setAnimationFrame(writerFrame);
 		}
 	}
 

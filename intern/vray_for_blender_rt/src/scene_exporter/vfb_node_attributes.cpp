@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#include <boost/format.hpp>
-
 #include "vfb_params_json.h"
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
@@ -30,6 +28,10 @@
 #include "BLI_fileops.h"
 #include "BKE_main.h"
 #include "BKE_global.h"
+
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 using namespace VRayForBlender;
 
@@ -48,22 +50,20 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 		PropertyType propType = RNA_property_type(prop);
 
 		if (propType == PROP_STRING) {
-			std::string absFilepath = RNA_std_string_get(propGroup, attrName);
-			if (NOT(absFilepath.empty())) {
+			std::string absFilePath = RNA_std_string_get(propGroup, attrName);
+			if (NOT(absFilePath.empty())) {
 				PropertySubType propSubType = RNA_property_subtype(prop);
 				if (propSubType == PROP_FILEPATH || propSubType == PROP_DIRPATH) {
-					char fixedPath[PATH_MAX];
-					strncpy(fixedPath, absFilepath.c_str(), PATH_MAX);
-					BLI_path_abs(fixedPath, m_data.filepath().c_str());
-					absFilepath = fixedPath;
+					absFilePath = String::ExpandFilenameVariables(absFilePath, m_context);
 
 					if (propSubType == PROP_FILEPATH) {
-						absFilepath = BlenderUtils::GetFullFilepath(absFilepath, holder);
-						absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
+						absFilePath = BlenderUtils::GetFullFilepath(absFilePath, holder);
+						absFilePath = BlenderUtils::CopyDRAsset(absFilePath);
 					}
 				}
 
-				pluginDesc.add(attrName, absFilepath);
+				// set time to INVALID_FRAME so we dont writer interpolate() for paths
+				pluginDesc.add(PluginAttr(attrName, absFilePath, INVALID_FRAME));
 			}
 		}
 		else if (propType == PROP_BOOLEAN) {
@@ -393,6 +393,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 						}
 					}
 
+					// set time to INVALID_FRAME so we dont write interpolate() for plugins
 					pluginDesc.add(attrName, socketValue);
 				}
 			}

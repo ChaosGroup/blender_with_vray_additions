@@ -39,6 +39,9 @@ std::string StripString(std::string &str);
 /// Calling with empty ext will not append it or the dot
 std::string ExpandFilenameVariables(const std::string & expr, const std::string & camera, const std::string & scene, const std::string & blendPath, const std::string & ext = "");
 
+
+std::string ExpandFilenameVariables(const std::string & expr, BL::Context & context);
+
 /// If path starts with // then prepend it with current blend file name
 std::string AbsFilePath(const std::string & path, const std::string & blendPath);
 

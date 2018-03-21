@@ -173,6 +173,13 @@ public:
 		return m_mbGeomSamples;
 	}
 
+	/// Get the number of the first frame to render
+	/// It is either scene.frame_start or 1 if Camera Loop is enabled
+	int getFirstFrame() const;
+
+	/// Get the last frame to render, depends on first frame, frame step and animation mode
+	int getLastFrame() const;
+
 	/// Get the correct camera for current frame (used for camera loop)
 	BL::Object getActiveCamera();
 
@@ -314,7 +321,7 @@ public:
 		, m_exporter(nullptr)
 		, m_frameExporter(m_scene, m_settings, m_data, m_engine)
 		, m_data_exporter(m_settings)
-		, m_settingsExporter(m_data_exporter)
+		, m_settingsExporter(m_data_exporter, m_settings, m_viewParams, m_frameExporter)
 		, m_sceneComputedLayers(0)
 		, m_isLocalView(false)
 		, m_isUndoSync(false)

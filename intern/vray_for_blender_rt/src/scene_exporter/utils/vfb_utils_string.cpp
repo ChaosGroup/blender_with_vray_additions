@@ -19,13 +19,15 @@
 #include "vfb_utils_string.h"
 #include "cgr_config.h"
 #include "vfb_utils_blender.h"
-#include <boost/filesystem.hpp>
 
 #include "BLI_string.h"
 #include "BLI_path_util.h"
 #include "DNA_ID.h"
 #include "BKE_main.h"
 #include "BKE_global.h"
+
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <Python.h>
 
@@ -112,6 +114,34 @@ std::string doPythonTimeReplace(const std::string & expr)
 
 }
 
+
+std::string VRayForBlender::String::ExpandFilenameVariables(const std::string & expr, BL::Context & context)
+{
+	namespace fs = boost::filesystem;
+	namespace alg = boost::algorithm;
+
+	const std::string & blendPath = context.blend_data().filepath();
+
+	std::string expandedPath;
+	if (expr.find("//") == 0) {
+		fs::path prefixPath;
+		if (blendPath.empty()) {
+			prefixPath = fs::temp_directory_path();
+		} else {
+			prefixPath = fs::path(blendPath).parent_path();
+		}
+
+		expandedPath = (prefixPath / fs::path(expr.substr(2))).string();
+	} else {
+		expandedPath = expr;
+	}
+
+	alg::replace_all(expandedPath, "$F", fs::path(blendPath).filename().string());
+	alg::replace_all(expandedPath, "$C", context.scene().camera().name());
+	alg::replace_all(expandedPath, "$S", context.scene().name());
+
+	return expandedPath;
+}
 
 std::string VRayForBlender::String::ExpandFilenameVariables(
 	const std::string & expr,

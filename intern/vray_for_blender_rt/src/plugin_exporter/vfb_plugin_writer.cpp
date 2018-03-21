@@ -97,7 +97,7 @@ PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat format)
 	: m_threadManager(tm)
     , m_depth(1)
-    , m_animationFrame(-FLT_MAX)
+    , m_animationFrame(INVALID_FRAME)
     , m_file(file)
     , m_format(format)
 {

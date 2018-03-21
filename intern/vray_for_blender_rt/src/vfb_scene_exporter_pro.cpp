@@ -165,8 +165,8 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 
 bool ProductionExporter::export_scene(const bool)
 {
-	SceneExporter::export_scene(false);
 	m_frameExporter.updateFromSettings();
+	SceneExporter::export_scene(false);
 
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
 

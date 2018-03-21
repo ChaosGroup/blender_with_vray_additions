@@ -30,8 +30,11 @@
 
 #include "BLI_math.h"
 
+#include <cstdio>
 
 namespace VRayForBlender {
+
+const float INVALID_FRAME = -FLT_MAX;
 
 // import everything, as these are types used extensively in this namespace
 using namespace VRayBaseTypes;

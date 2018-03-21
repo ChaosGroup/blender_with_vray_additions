@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#include <boost/format.hpp>
-
 #include "vfb_params_json.h"
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
