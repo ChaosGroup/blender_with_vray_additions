@@ -52,7 +52,6 @@ private:
 	typedef HashMap<ParamDesc::PluginType, std::shared_ptr<PluginWriter>, std::hash<int>> TypeToWriterMap;
 	typedef HashMap<std::string, std::shared_ptr<PluginWriter>> FileToWriterMap;
 
-
 	FileToWriterMap               m_fileWritersMap;
 	TypeToWriterMap               m_Writers;
 	ThreadManager::Ptr            m_threadManager;
@@ -60,6 +59,7 @@ private:
 	bool                          m_Synced;
 	std::string                   m_FileDir;
 	std::string                   m_includesString;
+	std::string                   m_headerString;
 };
 
 } // namespace VRayForBlender

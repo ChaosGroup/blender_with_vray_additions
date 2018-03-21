@@ -24,8 +24,11 @@
 #include "BLI_fileops.h"
 #include "BLI_path_util.h"
 #include "BLI_utildefines.h"
+#include "BKE_global.h"
+#include "BKE_main.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/date_time.hpp>
 namespace fs = boost::filesystem;
 
 using namespace VRayForBlender;
@@ -35,7 +38,12 @@ VrsceneExporter::VrsceneExporter(const ExporterSettings & settings)
 	: PluginExporter(settings)
     , m_Synced(false)
 {
+	namespace pt = boost::posix_time;
+	m_headerString.reserve(1024);
 
+	m_headerString += "// V-Ray For Blender\n";
+	m_headerString += "// " + pt::to_simple_string(pt::second_clock::local_time()) + "\n";
+	m_headerString += std::string("// Build hash [") + G.main->build_hash  + "] \n\n";
 }
 
 std::string getStdString(PyObject *file)
@@ -68,6 +76,7 @@ FILE * VrsceneExporter::getFile(VRayForBlender::ParamDesc::PluginType type, cons
 
 
 		FILE *file = fopen(filePath, mode);
+		fwrite(m_headerString.c_str(), 1, m_headerString.size(), file);
 		m_fileMap.insert(std::make_pair(filePath, file));
 		return file;
 	}
