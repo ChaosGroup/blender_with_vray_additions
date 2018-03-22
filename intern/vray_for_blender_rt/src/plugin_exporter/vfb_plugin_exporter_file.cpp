@@ -201,7 +201,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 	auto writerPtr = m_writers[writerType];
 	if (!writerPtr) {
-		if (pluginDesc.pluginID == "Node" || pluginDesc.pluginID == "Instancer") {
+		if (pluginDesc.pluginID == "Node" || pluginDesc.pluginID == "Instancer2") {
 			writerPtr = m_writers[ParamDesc::PluginObject];
 		} else if (pluginDesc.pluginID.find("Render") != std::string::npos) {
 			writerPtr = m_writers[ParamDesc::PluginSettings];
