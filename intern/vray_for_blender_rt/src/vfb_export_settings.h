@@ -144,12 +144,12 @@ struct ExporterSettings {
 		LevelAll
 	};
 
-	enum DeviceType {
+	enum class DeviceType {
 		DeviceTypeCPU,
 		DeviceTypeGPU,
 	};
 
-	enum GIEngine {
+	enum class GIEngine {
 		EngineIrradianceMap,
 		EngineBruteForce,
 		EngineLightCache,

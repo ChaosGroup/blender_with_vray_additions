@@ -270,7 +270,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 
 	is_gpu = false;
 	if (exporter_type == ExpoterTypeFile) {
-		is_gpu = DeviceTypeGPU == static_cast<DeviceType>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
+		is_gpu = DeviceType::DeviceTypeGPU == static_cast<DeviceType>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
 	} else if (exporter_type == ExpoterTypeZMQ) {
 		is_gpu = render_mode == RenderMode::RenderModeRtGpu || render_mode == RenderMode::RenderModeRtGpuOpenCL;
 	}
@@ -499,7 +499,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 	} else if (pluginId == "SphericalHarmonicsExporter" || pluginId == "SphericalHarmonicsRenderer") {
 		const char * settingsGi = "SettingsGI";
 		PointerRNA gi = get<PointerRNA>(vrayScene, settingsGi);
-		if (static_cast<ExporterSettings::GIEngine>(RNA_enum_ext_get(&gi, "primary_engine")) != ExporterSettings::EngineSphericalharmonics) {
+		if (static_cast<ExporterSettings::GIEngine>(RNA_enum_ext_get(&gi, "primary_engine")) != ExporterSettings::GIEngine::EngineSphericalharmonics) {
 			return false;
 		}
 
