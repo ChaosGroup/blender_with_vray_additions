@@ -362,7 +362,7 @@ const HashSet<std::string> VRaySettingsExporter::DelayPlugins = {
 	"SettingsVRST",
 };
 
-void VRaySettingsExporter::exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, BL::Scene &scene, BL::Context &context)
+void VRaySettingsExporter::exportPlugins(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context)
 {
 	this->pluginExporter = pluginExporter;
 	this->scene = scene;

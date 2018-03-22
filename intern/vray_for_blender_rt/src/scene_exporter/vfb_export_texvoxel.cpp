@@ -224,7 +224,7 @@ void TexVoxelData::initSmoke() {
 }
 
 
-AttrValue TexVoxelData::export_plugins(std::shared_ptr<PluginExporter> exporter)
+AttrValue TexVoxelData::export_plugins(PluginExporterPtr exporter)
 {
 	PluginDesc uvPlanarWorld("UVW" + m_name, "UVWGenPlanarWorld");
 	uvPlanarWorld.add("uvw_transform", AttrTransformFromBlTransform(m_uvw_transform));

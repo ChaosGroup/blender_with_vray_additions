@@ -158,7 +158,7 @@ protected:
 
 };
 
-std::shared_ptr<PluginExporter> ExporterCreate(ExporterType type, const ExporterSettings & settings);
+PluginExporterPtr ExporterCreate(ExporterType type, const ExporterSettings & settings);
 
 } // namespace VRayForBlender
 

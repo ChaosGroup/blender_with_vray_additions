@@ -333,7 +333,7 @@ public:
 	virtual void         init();
 	        void         init_data();
 	void                 free();
-	std::shared_ptr<PluginExporter>  get_plugin_exporter() { return m_exporter; };
+	PluginExporterPtr  get_plugin_exporter() { return m_exporter; };
 
 public:
 
@@ -415,7 +415,7 @@ protected:
 	/// lock before python_thread_state_restore and unlock after python_thread_state_save
 	std::mutex           m_python_state_lock;
 protected:
-	std::shared_ptr<PluginExporter>  m_exporter; ///< Pointer to actuial plugin exporter
+	PluginExporterPtr  m_exporter; ///< Pointer to actuial plugin exporter
 	ExporterSettings     m_settings; ///< Holder for all settings that affect way of export
 	FrameExportManager   m_frameExporter; ///< Handles chaning the current time so all needed keyframe data is exported
 	DataExporter         m_data_exporter; ///< Handle for blender data

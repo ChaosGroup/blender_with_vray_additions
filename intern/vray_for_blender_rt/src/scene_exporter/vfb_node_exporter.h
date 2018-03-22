@@ -361,7 +361,7 @@ public:
 	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
 	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
-	void              init(std::shared_ptr<PluginExporter> exporter);
+	void              init(PluginExporterPtr exporter);
 	/// Go trough IdTrack and find all unused plugins and remove them
 	/// Export SettingsLightLinker
 	void              sync();
@@ -568,7 +568,7 @@ private:
 	uint32_t          m_scene_layers;
 	ObjectHideMap     m_hide_lists;
 
-	std::shared_ptr<PluginExporter> m_exporter;
+	PluginExporterPtr m_exporter;
 	ExporterSettings &m_settings;
 	DataDefaults      m_defaults;
 

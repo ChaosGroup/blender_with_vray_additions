@@ -244,7 +244,6 @@ class FrameExportManager;
 /// Class that will handle all Settings* plugins
 /// If any override must be applied to any Settings* plugin it should be done in the class
 struct VRaySettingsExporter {
-
 	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter)
 		: scene(PointerRNA_NULL)
 		, context(PointerRNA_NULL)
@@ -258,7 +257,8 @@ struct VRaySettingsExporter {
 	/// @param pluginExporter - pointer to the plugin exporter
 	/// @param scene - blender scene object to read settings data from
 	/// @param context - the current context
-	void exportPlugins(std::shared_ptr<PluginExporter> pluginExporter, BL::Scene &scene, BL::Context &context);
+	void exportPlugins(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context);
+
 private:
 	/// Get overrides for specific plugin description
 	/// @param pluginId - the id of the plugin
@@ -276,7 +276,7 @@ private:
 
 	BL::Scene scene; ///< The current scene
 	BL::Context context; ///< The context passed to the exporter
-	std::shared_ptr<PluginExporter> pluginExporter; ///< Pointer to plugin exporter
+	PluginExporterPtr pluginExporter; ///< Pointer to plugin exporter
 	DataExporter &dataExporter; ///< Ref to the data exporter (used to fill from prop group)
 	const ExporterSettings &settings; ///< Export settings
 	const ViewParams &viewParams; ///< Viewparams we use to get img width and height

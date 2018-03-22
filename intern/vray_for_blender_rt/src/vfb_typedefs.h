@@ -24,6 +24,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "vfb_rna.h"
 #include <RNA_blender_cpp.h>
@@ -54,9 +55,15 @@ using HashMap = std::unordered_map<KeyT, ValT, HashT>;
 template <typename KeyT, typename ValT, class LessCompare = std::less<KeyT>>
 using TreeMap = std::map<KeyT, ValT, LessCompare>;
 
-
-
 typedef HashSet<std::string> StringHashSet;
+
+namespace VRayForBlender
+{
+
+class PluginExporter;
+typedef std::shared_ptr<PluginExporter> PluginExporterPtr;
+
+} // namespace VRayForBlender
 
 
 #endif // VRAY_FOR_BLENDER_STD_TYPEDEFS_H
