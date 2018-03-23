@@ -667,7 +667,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			}
 
 			// EXR == 5
-			if (RNA_enum_get(&propertyGroup, "img_format") == 5 && !get<bool>(propertyGroup, "relements_separateFiles")) {
+			if (format == EXR && !get<bool>(propertyGroup, "relements_separateFiles")) {
 				pluginDesc.add("img_rawFile", true);
 			}
 		}
