@@ -230,7 +230,8 @@ struct LightSelect {
 	enum ChannelType {
 		Raw,
 		Diffuse,
-		Specular
+		Specular,
+		Full
 	};
 
 	void addLightSelect(BL::Object lamp, ChannelType chType, const std::string & chName) {

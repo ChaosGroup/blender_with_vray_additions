@@ -244,6 +244,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 			case LightSelect::ChannelType::Raw: typeName = "channels_raw"; break;
 			case LightSelect::ChannelType::Diffuse: typeName = "channels_diffuse"; break;
 			case LightSelect::ChannelType::Specular: typeName = "channels_specular"; break;
+			case LightSelect::ChannelType::Full: typeName = "channels_full"; break;
 			}
 			AttrListPlugin plList;
 			for (const auto & chanName : chanTypeMap.second) {
