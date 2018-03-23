@@ -201,7 +201,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 
 	auto writerPtr = m_writers[writerType];
 	if (!writerPtr) {
-		if (pluginDesc.pluginID == "Node" || pluginDesc.pluginID == "Instancer2") {
+		if (pluginDesc.pluginID == "Node" || pluginDesc.pluginID.find("Instancer") == 0) {
 			writerPtr = m_writers[ParamDesc::PluginObject];
 		} else if (pluginDesc.pluginID.find("Render") != std::string::npos) {
 			writerPtr = m_writers[ParamDesc::PluginSettings];
@@ -248,8 +248,8 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			if (attrIter->second.type == ParamDesc::AttrTypeDirpath || attrIter->second.type == ParamDesc::AttrTypeFilepath) {
 				forceNoFrame = true;
 			}
-			// generic lists different from Instancer2::instances are not animated
-			if (attrIter->second.type == ParamDesc::AttrTypeList && pluginDesc.pluginID != "Instancer2") {
+			// generic lists different from Instancer[2]::instances are not animated
+			if (attrIter->second.type == ParamDesc::AttrTypeList && pluginDesc.pluginID.find("Instancer") == std::string::npos) {
 				forceNoFrame = true;
 			}
 		}

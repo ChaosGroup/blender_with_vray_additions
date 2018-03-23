@@ -634,7 +634,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		const char *widths[] = {"img_width", "bmp_width", "rgn_width", "r_width"};
 		const char *heights[] = {"img_height", "bmp_height", "rgn_height", "r_height"};
 
-		for (int c = 0; c < sizeof(widths) / sizeof(widths[0]); c++) {
+		for (int c = 0; c < ArraySize(widths); c++) {
 			pluginDesc.add(widths[c], width);
 			pluginDesc.add(heights[c], height);
 		}
