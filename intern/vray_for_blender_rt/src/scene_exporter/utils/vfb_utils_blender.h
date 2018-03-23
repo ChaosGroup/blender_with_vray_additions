@@ -62,9 +62,9 @@ struct OSLManager {
 #endif
 
 inline void freePyObject(PyObject * ob) {
-       if (ob) {
-               Py_DECREF(ob);
-       }
+	if (ob) {
+		Py_DECREF(ob);
+	}
 }
 
 typedef std::unique_ptr<PyObject, void (*)(PyObject *)> PyObjectRAII;

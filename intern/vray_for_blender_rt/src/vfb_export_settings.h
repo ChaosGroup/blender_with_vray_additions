@@ -244,13 +244,16 @@ class FrameExportManager;
 /// Class that will handle all Settings* plugins
 /// If any override must be applied to any Settings* plugin it should be done in the class
 struct VRaySettingsExporter {
-	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter)
+	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter, const ObList &selectedObjects)
 		: scene(PointerRNA_NULL)
 		, context(PointerRNA_NULL)
 		, dataExporter(dataExporter)
 		, settings(settings)
 		, viewParams(viewParams)
 		, frameExporter(frameExporter)
+		, selectedObjects(selectedObjects)
+		, vrayScene(PointerRNA_NULL)
+		, vrayExporter(PointerRNA_NULL)
 	{}
 
 	/// Export all plugins
@@ -281,6 +284,7 @@ private:
 	const ExporterSettings &settings; ///< Export settings
 	const ViewParams &viewParams; ///< Viewparams we use to get img width and height
 	const FrameExportManager &frameExporter; ///< Frame exporter used to get anim stand and end
+	const ObList &selectedObjects; ///< Selected objects
 
 	PointerRNA vrayScene; ///< The scene.vray object
 	PointerRNA vrayExporter; ///< The scene.vray.Exporter object

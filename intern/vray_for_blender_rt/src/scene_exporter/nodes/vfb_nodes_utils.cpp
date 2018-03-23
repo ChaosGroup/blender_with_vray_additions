@@ -146,23 +146,27 @@ void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 }
 
 
-HashSet<BL::Object> DataExporter::getObjectList(const std::string ob_name, const std::string group_name)
+HashSet<BL::Object> DataExporter::getObjectList(const std::string &obName, const std::string &groupName)
 {
 	HashSet<BL::Object> objects, additional;
 
-	for (auto & ob : Blender::collection(m_scene.objects)) {
-		if (ob.name() == ob_name) {
-			objects.insert(ob);
-			break;
+	if (!obName.empty()) {
+		for (auto & ob : Blender::collection(m_scene.objects)) {
+			if (ob.name() == obName) {
+				objects.insert(ob);
+				break;
+			}
 		}
 	}
 
-	for (auto & group : Blender::collection(m_data.groups)) {
-		if (group.name() == group_name) {
-			for (auto & object : Blender::collection(group.objects)) {
-				objects.insert(object);
+	if (!groupName.empty()) {
+		for (auto & group : Blender::collection(m_data.groups)) {
+			if (group.name() == groupName) {
+				for (auto & object : Blender::collection(group.objects)) {
+					objects.insert(object);
+				}
+				break;
 			}
-			break;
 		}
 	}
 

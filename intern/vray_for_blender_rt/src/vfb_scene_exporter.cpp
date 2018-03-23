@@ -1258,6 +1258,11 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 			sync_object(ob, check_updated);
 		}
 
+		if (ob.select()) {
+			m_selectedObjects.push_back(ob);
+		}
+
+
 	}, ThreadManager::Priority::LOW);
 }
 

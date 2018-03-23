@@ -347,7 +347,7 @@ public:
 
 	static void              tag_ntree(BL::NodeTree ntree, bool updated=true);
 
-	HashSet<BL::Object>       getObjectList(const std::string ob_name, const std::string group_name);
+	HashSet<BL::Object>       getObjectList(const std::string &obName, const std::string &groupName);
 
 	void              fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, AttrListFloat &points, AttrListInt &types);
 	void              fillRampAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context,
