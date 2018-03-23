@@ -682,7 +682,6 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 	} else if (pluginId == "SettingsRTEngine") {
 		pluginDesc.add("enabled", true);
 
-		// TODO: verify this is correct
 		if (settings.is_viewport) {
 			pluginDesc.add("noise_threshold", 0.f);
 		} else {
