@@ -269,7 +269,7 @@ private:
 
 	/// Export single plugin
 	/// @param desc - the description of the plugin params
-	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc) noexcept;
+	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc);
 
 	/// Export SettingsGI and SettingsLightCache
 	void exportLCGISettings();

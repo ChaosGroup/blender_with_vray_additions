@@ -744,7 +744,7 @@ void VRaySettingsExporter::exportLCGISettings()
 	pluginExporter->export_plugin(settingsLC);
 }
 
-void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginDesc &desc) noexcept
+void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginDesc &desc)
 {
 	PointerRNA propGroup;
 	PluginDesc pluginDesc(desc.pluginID, desc.pluginID);
