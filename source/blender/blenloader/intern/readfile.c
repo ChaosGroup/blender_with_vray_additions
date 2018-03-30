@@ -8156,7 +8156,7 @@ static const char *dataname(short id_code)
 		case ID_WO: return "Data from WO";
 		case ID_SCR: return "Data from SCR";
 		case ID_VF: return "Data from VF";
-		case ID_TXT	: return "Data from TXT";
+		case ID_TXT: return "Data from TXT";
 		case ID_SPK: return "Data from SPK";
 		case ID_SO: return "Data from SO";
 		case ID_NT: return "Data from NT";
@@ -8293,6 +8293,7 @@ static BHead *read_libblock(FileData *fd, Main *main, BHead *bhead, const short 
 	id->us = ID_FAKE_USERS(id);
 	id->icon_id = 0;
 	id->newid = NULL;  /* Needed because .blend may have been saved with crap value here... */
+	id->recalc = 0;
 	
 	/* this case cannot be direct_linked: it's just the ID part */
 	if (bhead->code == ID_ID) {
@@ -9298,9 +9299,9 @@ static void expand_nodetree(FileData *fd, Main *mainvar, bNodeTree *ntree)
 	}
 
 	for (sock = ntree->inputs.first; sock; sock = sock->next)
-		expand_doit(fd, mainvar, sock->prop);
+		expand_idprops(fd, mainvar, sock->prop);
 	for (sock = ntree->outputs.first; sock; sock = sock->next)
-		expand_doit(fd, mainvar, sock->prop);
+		expand_idprops(fd, mainvar, sock->prop);
 }
 
 static void expand_texture(FileData *fd, Main *mainvar, Tex *tex)
