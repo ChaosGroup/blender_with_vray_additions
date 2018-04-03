@@ -31,8 +31,9 @@
 #include "cgr_config.h"
 
 #include <boost/asio/ip/host_name.hpp>
-#include <boost/optional/optional.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 
 
 namespace fs = boost::filesystem;
@@ -561,21 +562,43 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		const RenderMaskMode maskMode = static_cast<RenderMaskMode>(RNA_enum_ext_get(&propertyGroup, "render_mask_mode"));
 
 		if (maskMode == RenderMaskMode::Objects) {
-			// TODO: get list of user-selected objects in the scene (maybe do this after scene export since we need plugin names
+			AttrListPlugin selectedObjectsList;
+			if (get<bool>(propertyGroup, "render_mask_objects_selected")) {
+				// for each selected object, get all exported plugins
+				for (const BL::Object &ob : selectedObjects) {
+					for (const std::string &pluginName : dataExporter.m_id_track.getAllObjectPlugins(ob)) {
+						selectedObjectsList.append(pluginName);
+					}
+				}
+			} else {
+				// for each object in the group, get all exported plugins
+				for (const BL::Object &object: dataExporter.getObjectList("", get<std::string>(propertyGroup, "render_mask_objects"))) {
+					for (const std::string &pluginName : dataExporter.m_id_track.getAllObjectPlugins(object)) {
+						selectedObjectsList.append(pluginName);
+					}
+				}
+			}
+
+			if (selectedObjectsList.empty()) {
+				pluginDesc.add("render_mask_mode", static_cast<int>(RenderMaskMode::Disable));
+			} else {
+				pluginDesc.add("render_mask_objects", selectedObjectsList);
+			}
 		} else if (maskMode == RenderMaskMode::ObjectId) {
 			std::string objectIds = get<std::string>(propertyGroup, "render_mask_object_ids");
 			if (objectIds.empty()) {
 				pluginDesc.add("render_mask_mode", static_cast<int>(RenderMaskMode::Disable));
 			} else {
-				// "123;11;1234" -> [123, 11, 1234]
-				std::replace(objectIds.begin(), objectIds.end(), ';', ' ');
-				std::stringstream strm(objectIds);
-				AttrListInt ids;
-				int val;
-				while (strm >> val) {
-					ids.append(val);
+				AttrListInt objectIdList;
+				typedef boost::split_iterator<std::string::iterator> SplitIter;
+				auto tokenFinder = boost::token_finder(boost::algorithm::is_any_of(";"), boost::token_compress_on);
+				for (auto iter = boost::make_split_iterator(objectIds, tokenFinder); iter != SplitIter(); ++iter) {
+					int id;
+					if (boost::conversion::try_lexical_convert(*iter, id)) {
+						objectIdList.append(id);
+					}
 				}
-				pluginDesc.add("render_mask_object_ids", ids);
+				pluginDesc.add("render_mask_object_ids", objectIdList);
 			}
 		}
 	} else if (pluginId == "SettingsIrradianceMap") {
