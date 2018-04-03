@@ -590,6 +590,17 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		if (get<bool>(vrayExporter, "draft")) {
 			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 5.0));
 		}
+
+		if (!get<bool>(propertyGroup, "auto_save")) {
+			pluginDesc.add("auto_save_file", AttrIgnore());
+		}
+
+		// There is no file prop when we are calculating it
+		enum Mode {SingleFrame, MultiFrame, FromFile, AddToMap, IncrementalToMap, Bucket, AnimationPrepass, AnimationRender};
+		const Mode mode = static_cast<Mode>(RNA_enum_ext_get(&propertyGroup, "mode"));
+		if (mode != FromFile) {
+			pluginDesc.add("file", AttrIgnore());
+		}
 	} else if (pluginId == "SettingsLightCache") {
 		if (get<bool>(propertyGroup, "num_passes_auto")) {
 			pluginDesc.add("num_passes", scene.render().threads());
@@ -597,6 +608,17 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 
 		if (get<bool>(vrayExporter, "draft")) {
 			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 10.0));
+		}
+
+		if (!get<bool>(propertyGroup, "auto_save")) {
+			pluginDesc.add("auto_save_file", AttrIgnore());
+		}
+
+		// There is no file prop when we are calculating it
+		enum Mode { SingleFrame, FlyTrough, FromFile, ProgressivePathTracing };
+		const Mode mode = static_cast<Mode>(RNA_enum_ext_get(&propertyGroup, "mode"));
+		if (mode != FromFile) {
+			pluginDesc.add("file", AttrIgnore());
 		}
 	} else if (pluginId == "SettingsOptions") {
 		if (settings.settings_dr.use && settings.settings_dr.sharing_type == SettingsDR::SharingTypeTransfer) {
@@ -640,8 +662,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		}
 
 		if (!(settings.is_preview || settings.auto_save_render)) {
-			pluginDesc.add("img_file", "");
-			pluginDesc.add("img_dir", "");
+			pluginDesc.add("img_file", AttrIgnore());
+			pluginDesc.add("img_dir", AttrIgnore());
 		} else {
 			const std::string &imgDir = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_dir"), context);
 			// make sure the directory exists
@@ -690,6 +712,17 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 	} else if (pluginId == "SettingsVFB") {
 		if (!get<bool>(propertyGroup, "use")) {
 			return false;
+		}
+	} else if (pluginId == "SettingsCaustics") {
+		if (!get<bool>(propertyGroup, "auto_save")) {
+			pluginDesc.add("auto_save_file", AttrIgnore());
+		}
+
+		// There is no file prop when we are calculating it
+		enum Mode { New, FromFile };
+		const Mode mode = static_cast<Mode>(RNA_enum_ext_get(&propertyGroup, "mode"));
+		if (mode == New) {
+			pluginDesc.add("file", AttrIgnore());
 		}
 	}
 
