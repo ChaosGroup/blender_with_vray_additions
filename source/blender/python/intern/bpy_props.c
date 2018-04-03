@@ -3050,7 +3050,7 @@ PyObject *BPy_PointerProperty(PyObject *self, PyObject *args, PyObject *kw)
 
 		static const char *_keywords[] = {
 			"attr", "type", "name", "description", "options",
-			"tags", "poll", "set", "update", NULL,
+			"tags", "poll", "update", "set", NULL,
 		};
 		static _PyArg_Parser _parser = {"s#O|ssO!O!OOO:PointerProperty", _keywords, 0};
 		if (!_PyArg_ParseTupleAndKeywordsFast(
@@ -3058,7 +3058,7 @@ PyObject *BPy_PointerProperty(PyObject *self, PyObject *args, PyObject *kw)
 		        &id, &id_len,
 		        &type, &name, &description,
 		        &PySet_Type, &pyopts, &PySet_Type, &py_tags,
-		        &poll_cb, &update_cb))
+		        &poll_cb, &update_cb, &set_cb))
 		{
 			return NULL;
 		}

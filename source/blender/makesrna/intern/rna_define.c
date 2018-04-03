@@ -137,15 +137,38 @@ void rna_freelistN(ListBase *listbase)
 	listbase->first = listbase->last = NULL;
 }
 
+static int istrstr(const char * haystack, const char * needle) {
+	if (!haystack) {
+		return 0;
+	}
+
+	while (*haystack) {
+		const char * iter = needle;
+		const char * save = haystack + 1;
+
+		while (*iter && *haystack && *iter == tolower(*haystack)) {
+			++iter;
+			++haystack;
+		}
+		if (!*iter) {
+			return 1;
+		}
+		haystack = save;
+	}
+	return 0;
+}
+
 static void rna_brna_structs_add(BlenderRNA *brna, StructRNA *srna)
 {
 	rna_addtail(&brna->structs, srna);
 	brna->structs_len += 1;
+	// NOTE(VRAY): we need vray dynamic types to be accessible trough bpy.types for now
+	const int isVray = *srna->identifier && istrstr(srna->identifier, "vray");
 
 	/* This exception is only needed for pre-processing.
 	 * otherwise we don't allow empty names. */
-	if ((srna->flag & STRUCT_PUBLIC_NAMESPACE) &&
-	    (srna->identifier[0] != '\0'))
+	if ((srna->flag & STRUCT_PUBLIC_NAMESPACE &&
+	    srna->identifier[0] != '\0') || isVray)
 	{
 		BLI_ghash_insert(brna->structs_map, (void *)srna->identifier, srna);
 	}

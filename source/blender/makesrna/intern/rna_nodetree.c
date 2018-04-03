@@ -7763,7 +7763,7 @@ static void rna_def_node(BlenderRNA *brna)
 	RNA_def_struct_register_funcs(srna, "rna_Node_register", "rna_Node_unregister", NULL);
 	RNA_def_struct_idprops_func(srna, "rna_Node_idprops");
 	// NOTE(VRAY): we need this so our dynamic types inheriting this are visible in bpy.types
-	RNA_def_struct_flag(srna, STRUCT_PUBLIC_NAMESPACE_INHERIT);
+	// RNA_def_struct_flag(srna, STRUCT_PUBLIC_NAMESPACE_INHERIT);
 	
 	prop = RNA_def_property(srna, "type", PROP_ENUM, PROP_NONE);
 	RNA_def_property_enum_sdna(prop, NULL, "type");

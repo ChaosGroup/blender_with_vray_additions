@@ -835,7 +835,7 @@ static void rna_def_ID_properties(BlenderRNA *brna)
 	RNA_def_struct_register_funcs(srna, "rna_PropertyGroup_register", "rna_PropertyGroup_unregister", NULL);
 	RNA_def_struct_refine_func(srna, "rna_PropertyGroup_refine");
 	// NOTE(VRAY): we need this so our dynamic types inheriting this are visible in bpy.types
-	RNA_def_struct_flag(srna, STRUCT_PUBLIC_NAMESPACE_INHERIT);
+	// RNA_def_struct_flag(srna, STRUCT_PUBLIC_NAMESPACE_INHERIT);
 
 	/* important so python types can have their name used in list views
 	 * however this isn't prefect because it overrides how python would set the name
