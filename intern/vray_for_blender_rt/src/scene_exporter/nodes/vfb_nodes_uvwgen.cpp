@@ -21,6 +21,7 @@
 #include "vfb_utils_math.h"
 #include "vfb_utils_mesh.h"
 
+using namespace VRayForBlender;
 
 AttrValue DataExporter::exportVRayNodeUVWGenChannel(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {

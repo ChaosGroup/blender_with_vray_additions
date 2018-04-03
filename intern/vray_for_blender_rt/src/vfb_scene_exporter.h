@@ -173,6 +173,13 @@ public:
 		return m_mbGeomSamples;
 	}
 
+	/// Get the number of the first frame to render
+	/// It is either scene.frame_start or 1 if Camera Loop is enabled
+	int getFirstFrame() const;
+
+	/// Get the last frame to render, depends on first frame, frame step and animation mode
+	int getLastFrame() const;
+
 	/// Get the correct camera for current frame (used for camera loop)
 	BL::Object getActiveCamera();
 
@@ -314,6 +321,7 @@ public:
 		, m_exporter(nullptr)
 		, m_frameExporter(m_scene, m_settings, m_data, m_engine)
 		, m_data_exporter(m_settings)
+		, m_settingsExporter(m_data_exporter, m_settings, m_viewParams, m_frameExporter)
 		, m_sceneComputedLayers(0)
 		, m_isLocalView(false)
 		, m_isUndoSync(false)
@@ -325,7 +333,7 @@ public:
 	virtual void         init();
 	        void         init_data();
 	void                 free();
-	PluginExporter::Ptr  get_plugin_exporter() { return m_exporter; };
+	PluginExporterPtr  get_plugin_exporter() { return m_exporter; };
 
 public:
 
@@ -407,11 +415,12 @@ protected:
 	/// lock before python_thread_state_restore and unlock after python_thread_state_save
 	std::mutex           m_python_state_lock;
 protected:
-	PluginExporter::Ptr  m_exporter; ///< Pointer to actuial plugin exporter
+	PluginExporterPtr    m_exporter; ///< Pointer to actuial plugin exporter
 	ExporterSettings     m_settings; ///< Holder for all settings that affect way of export
 	FrameExportManager   m_frameExporter; ///< Handles chaning the current time so all needed keyframe data is exported
 	DataExporter         m_data_exporter; ///< Handle for blender data
 	ViewParams           m_viewParams; ///< The view params (current camera, image settings, etc)
+	VRaySettingsExporter m_settingsExporter; ///< Exporter for all Settings* plugins
 
 	uint32_t             m_sceneComputedLayers; ///< Bool values for each layer compressed in one int
 

@@ -1,10 +1,28 @@
+/*
+ * Copyright (c) 2015, Chaos Software Ltd
+ *
+ * V-Ray For Blender
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "vfb_export_settings.h"
 #include "vfb_plugin_writer.h"
 #include "BLI_fileops.h"
 
 #include "Python.h"
 
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
+#include <algorithm>
 
 using namespace VRayBaseTypes;
 
@@ -76,14 +94,10 @@ PluginWriter::WriteItem::WriteItem(WriteItem && other): WriteItem() {
 	std::swap(m_isAsync, other.m_isAsync);
 }
 
-PluginWriter::PluginWriter(ThreadManager::Ptr tm, const char *fileName, ExporterSettings::ExportFormat format)
-	: PluginWriter(tm, fopen(fileName, "ab"), format)
-{}
-
 PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings::ExportFormat format)
 	: m_threadManager(tm)
     , m_depth(1)
-    , m_animationFrame(-FLT_MAX)
+    , m_animationFrame(INVALID_FRAME)
     , m_file(file)
     , m_format(format)
 {
@@ -92,26 +106,9 @@ PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings
 	}
 }
 
-namespace
-{
-void closeFile(FILE * file)
-{
-	if (file) {
-		fclose(file);
-	}
-}
-
-void closeFile(PyObject * file)
-{}
-
-void flushFile(FILE * file) {
-	fflush(file);
-}
-}
-
 PluginWriter::~PluginWriter()
 {
-	closeFile(m_file);
+	fclose(m_file);
 }
 
 bool PluginWriter::good() const
@@ -193,7 +190,7 @@ void PluginWriter::blockFlushAll()
 		const char * data = item.getData(len);
 		write_file_impl(m_file, data, len);
 	}
-	flushFile(m_file);
+	fflush(m_file);
 	m_items.clear();
 }
 

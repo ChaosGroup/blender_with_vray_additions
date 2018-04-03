@@ -19,6 +19,7 @@
 #ifndef VRAY_FOR_BLENDER_DATA_EXPORTER_H
 #define VRAY_FOR_BLENDER_DATA_EXPORTER_H
 
+#include "vfb_node_exporter.h"
 #include "vfb_plugin_exporter.h"
 #include "vfb_export_settings.h"
 #include "vfb_typedefs.h"
@@ -35,8 +36,7 @@
 #include <OSL/oslquery.h>
 #endif
 
-using namespace VRayForBlender;
-
+namespace VRayForBlender {
 
 const char* const EnvironmentMappingType[] = {
     "angular",
@@ -362,7 +362,7 @@ public:
 	void              fillPhysicalCamera(ViewParams &viewParams, PluginDesc &physCamDesc);
 	void              fillMtlMulti(BL::Object ob, PluginDesc &pluginDesc);
 
-	void              init(PluginExporter::Ptr exporter);
+	void              init(PluginExporterPtr exporter);
 	/// Go trough IdTrack and find all unused plugins and remove them
 	/// Export SettingsLightLinker
 	void              sync();
@@ -569,7 +569,7 @@ private:
 	uint32_t          m_scene_layers;
 	ObjectHideMap     m_hide_lists;
 
-	PluginExporter::Ptr m_exporter;
+	PluginExporterPtr m_exporter;
 	ExporterSettings &m_settings;
 	DataDefaults      m_defaults;
 
@@ -584,7 +584,7 @@ private:
 		IdTrack::PluginType dupliType;
 		bool exportObTm;
 	};
-	typedef std::unordered_map<std::string, InstancerData> InstCache;
+	typedef HashMap<std::string, InstancerData> InstCache;
 	InstCache         m_prevFrameInstancer;
 	std::mutex        m_instMtx;
 };
@@ -592,4 +592,6 @@ private:
 // implemented in vfb_export_object.cpp
 uint32_t to_int_layer(const BlLayers & layers);
 uint32_t get_layer(BL::Object ob, bool use_local, uint32_t scene_layers);
+
+}; // namespace VRayForBlender
 #endif // VRAY_FOR_BLENDER_DATA_EXPORTER_H

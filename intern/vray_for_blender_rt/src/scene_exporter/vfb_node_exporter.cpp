@@ -199,7 +199,7 @@ std::string DataExporter::GetNodePluginID(BL::Node node)
 }
 
 
-void DataExporter::init(PluginExporter::Ptr exporter)
+void DataExporter::init(PluginExporterPtr exporter)
 {
 	m_exporter = exporter;
 	m_evalMode = exporter->get_is_viewport() ? EvalModePreview : EvalModeRender;

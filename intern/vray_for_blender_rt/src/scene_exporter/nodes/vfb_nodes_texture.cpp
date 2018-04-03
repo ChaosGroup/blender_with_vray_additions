@@ -24,6 +24,7 @@
 #include "vfb_utils_string.h"
 #include "vfb_params_json.h"
 
+using namespace VRayForBlender;
 
 int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &, NodeContext &, PluginDesc &pluginDesc)
 {
@@ -34,7 +35,6 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 			BL::Image image(imageTexture.image());
 			if (image) {
 				std::string absFilepath = Blender::GetFilepath(image.filepath(), (ID*)ntree.ptr.data);
-				//absFilepath = BlenderUtils::CopyDRAsset(absFilepath);
 
 				if(image.source() == BL::Image::source_SEQUENCE) {
 					BL::ImageUser imageUser = imageTexture.image_user();
@@ -70,7 +70,7 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 					pluginDesc.add("frame_number", seqFrame);
 				}
 
-				pluginDesc.add("file", absFilepath);
+				pluginDesc.add(PluginAttr("file", absFilepath, INVALID_FRAME));
 			}
 
 			PointerRNA vrayScene = RNA_pointer_get(&m_scene.ptr, "vray");

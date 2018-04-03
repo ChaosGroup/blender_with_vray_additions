@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "vfb_typedefs.h"
 #include "vfb_params_json.h"
 
 #ifdef _MSC_VER
@@ -72,9 +73,11 @@ using namespace VRayForBlender;
 using namespace VRayForBlender::ParamDesc;
 
 
-typedef std::map<std::string, PluginDesc> MapPluginDesc;
+typedef TreeMap<std::string, PluginDesc> MapPluginDesc;
+typedef HashMap<PluginType, PluginDescList> MapPluginType;
 
-
+/// Used to map type to vector of plugin descriptions
+static MapPluginType PluginTypeToDescription;
 static MapPluginDesc PluginDescriptions;
 
 
@@ -100,6 +103,8 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 			PluginDesc &pluginDesc = PluginDescriptions[fileName];
 			pluginDesc.pluginID   = fileName;
 			pluginDesc.pluginType = ParamDesc::GetPluginTypeFromString(pTree.get_child("Type").data());
+
+			PluginTypeToDescription[pluginDesc.pluginType].push_back(&pluginDesc);
 
 			for (auto &v : pTree.get_child("Parameters")) {
 				const std::string &attrName = v.second.get_child("attr").data();
@@ -255,4 +260,10 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 const VRayForBlender::ParamDesc::PluginDesc& VRayForBlender::GetPluginDescription(const std::string &pluginID)
 {
 	return PluginDescriptions[pluginID];
+}
+
+const PluginDescList & VRayForBlender::GetPluginsOfType(PluginType type)
+{
+	/// if type does not exist, we will just create and return empty list
+	return PluginTypeToDescription[type];
 }

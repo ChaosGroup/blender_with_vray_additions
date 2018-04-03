@@ -19,11 +19,14 @@
 #ifndef VRAY_FOR_BLENDER_EXPORT_SETTINGS_H
 #define VRAY_FOR_BLENDER_EXPORT_SETTINGS_H
 
-#include <Python.h>
-
+#include "vfb_typedefs.h"
 #include "vfb_rna.h"
+#include "vfb_params_desc.h"
+
 #include "vfb_plugin_exporter_types.h"
 #include "base_types.h"
+
+#include "Python.h"
 
 namespace VRayForBlender {
 
@@ -141,6 +144,18 @@ struct ExporterSettings {
 		LevelAll
 	};
 
+	enum class DeviceType {
+		DeviceTypeCPU,
+		DeviceTypeGPU,
+	};
+
+	enum class GIEngine {
+		EngineIrradianceMap,
+		EngineBruteForce,
+		EngineLightCache,
+		EngineSphericalharmonics,
+	};
+
 	using ImageType = VRayBaseTypes::AttrImage::ImageType;
 	using RenderMode = VRayBaseTypes::RenderMode;
 
@@ -177,10 +192,13 @@ struct ExporterSettings {
 	bool              use_select_preview;
 	bool              use_subsurf_to_osd;
 
+	bool              auto_save_render;
+
 	bool              show_vfb;
 	bool              use_bake_view;
 	bool              is_viewport;
 	bool              is_preview;
+	bool              is_gpu;
 	bool              close_on_stop;
 
 	bool              calculate_instancer_velocity;
@@ -216,6 +234,64 @@ private:
 	float                      m_viewportResolution;
 
 };
+
+class DataExporter;
+class PluginExporter;
+struct PluginDesc;
+struct ViewParams;
+class FrameExportManager;
+
+/// Class that will handle all Settings* plugins
+/// If any override must be applied to any Settings* plugin it should be done in the class
+struct VRaySettingsExporter {
+	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter)
+		: scene(PointerRNA_NULL)
+		, context(PointerRNA_NULL)
+		, dataExporter(dataExporter)
+		, settings(settings)
+		, viewParams(viewParams)
+		, frameExporter(frameExporter)
+	{}
+
+	/// Export all plugins
+	/// @param pluginExporter - pointer to the plugin exporter
+	/// @param scene - blender scene object to read settings data from
+	/// @param context - the current context
+	void exportPlugins(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context);
+
+private:
+	/// Get overrides for specific plugin description
+	/// @param pluginId - the id of the plugin
+	/// @param propertyGroup [out] - RNA pointer to the blender property group
+	/// @param pluginDesc [out] - plugin desc to fill in overrides
+	/// @return - true if we want to export the plugin, false if we want to skip it
+	bool checkPluginOverrides(const std::string &pluginId, PointerRNA &propertyGroup, PluginDesc &pluginDesc);
+
+	/// Export single plugin
+	/// @param desc - the description of the plugin params
+	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc);
+
+	/// Export SettingsGI and SettingsLightCache
+	void exportLCGISettings();
+
+	BL::Scene scene; ///< The current scene
+	BL::Context context; ///< The context passed to the exporter
+	PluginExporterPtr pluginExporter; ///< Pointer to plugin exporter
+	DataExporter &dataExporter; ///< Ref to the data exporter (used to fill from prop group)
+	const ExporterSettings &settings; ///< Export settings
+	const ViewParams &viewParams; ///< Viewparams we use to get img width and height
+	const FrameExportManager &frameExporter; ///< Frame exporter used to get anim stand and end
+
+	PointerRNA vrayScene; ///< The scene.vray object
+	PointerRNA vrayExporter; ///< The scene.vray.Exporter object
+
+	/// Set of plugins we want to skip for various reasons
+	static const HashSet<std::string> IgnoredPlugins;
+
+	/// Settings plugins exported after SettingsOutput
+	static const HashSet<std::string> DelayPlugins;
+};
+
 
 } // namespace VRayForBlender
 

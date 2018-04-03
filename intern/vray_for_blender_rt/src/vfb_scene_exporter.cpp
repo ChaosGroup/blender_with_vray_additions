@@ -41,7 +41,6 @@ extern "C" {
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/format.hpp>
 
 #include <ctime>
 #include <chrono>
@@ -178,6 +177,22 @@ void FrameExportManager::updateFromSettings()
 
 	// if we won't use FrameExportManager::forEachExportFrame(), but only export current frame we need to set the current frame
 	m_currentFrame = m_frameToRender;
+}
+
+int FrameExportManager::getFirstFrame() const {
+	if (m_loopCameras.empty()) {
+		return m_sceneFirstFrame;
+	} else {
+		return 1;
+	}
+}
+
+int FrameExportManager::getLastFrame() const {
+	if (m_loopCameras.empty()) {
+		return m_lastFrameToRender;
+	} else {
+		return m_loopCameras.size();
+	}
 }
 
 int FrameExportManager::getRenderFrameCount() const {
@@ -488,8 +503,6 @@ void SceneExporter::sync(const bool check_updated)
 	sync_effects(false);
 	m_exporter->set_prepass(false);
 
-
-	sync_render_settings();
 	// Export once per viewport session
 	if (!check_updated && !is_viewport()) {
 		sync_render_channels();
@@ -508,6 +521,7 @@ void SceneExporter::sync(const bool check_updated)
 	sync_view(check_updated);
 
 	sync_effects(check_updated);
+	sync_render_settings();
 
 	if (!m_frameExporter.isCurrentSubframe()) {
 		// Sync data (will remove deleted objects)
@@ -699,12 +713,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			overrideAttr.visible = m_data_exporter.isObjectVisible(ob);
 			overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 		}
-#if 0
-		const int data_updated = RNA_int_get(&vrayObject, "data_updated");
-		PRINT_INFO_EX("[is_updated = %i | is_updated_data = %i | data_updated = %i | check_updated = %i]: Syncing [%s]\"%s\"...",
-						ob.is_updated(), ob.is_updated_data(), data_updated, check_updated,
-						override.namePrefix.c_str(), ob.name().c_str());
-#endif
+
 		if (DataExporter::isObVrscene(ob)) {
 			m_data_exporter.exportAsset(ob, check_updated, override);
 		} else if (ob.data() && DataExporter::isObMesh(ob)) {
@@ -1313,116 +1322,7 @@ void SceneExporter::sync_materials()
 
 void SceneExporter::sync_render_settings()
 {
-	if (m_settings.exporter_type == ExporterType::ExpoterTypeFile && !m_settings.is_viewport) {
-		return;
-	}
-
-	const float sceneFps = m_scene.render().fps() / m_scene.render().fps_base();
-	typedef HashMap<std::string, AttrValue> ProperyList;
-	typedef HashMap<std::string, ProperyList> PluginOverrideList;
-	const PluginOverrideList pluginOverrides = {
-		std::make_pair("SettingsUnitsInfo", ProperyList{
-			std::make_pair("frames_scale", AttrValue(sceneFps)),
-			std::make_pair("seconds_scale", AttrValue(1.f / sceneFps)),
-		}),
-	};
-
-	const bool lcFromFileOnly = m_settings.is_viewport;
-	PluginDesc settingsGI("SettingsGI", "SettingsGI"), settingsLC("SettingsLightCache", "SettingsLightCache");
-
-	PointerRNA vrayObject = RNA_pointer_get(&m_scene.ptr, "vray");
-	PointerRNA vrayExporter = RNA_pointer_get(&vrayObject, "Exporter");
-	for (const auto &pluginID : RenderSettingsPlugins) {
-		if (!RNA_struct_find_property(&vrayObject, pluginID.c_str())) {
-			continue;
-		}
-		PointerRNA propGroup = RNA_pointer_get(&vrayObject, pluginID.c_str());
-
-		PluginDesc pluginDesc(pluginID, pluginID);
-
-		auto plgOverride = pluginOverrides.find(pluginID);
-		if (plgOverride != pluginOverrides.end()) {
-			for (const auto & propOverride : plgOverride->second) {
-				pluginDesc.add(propOverride.first, propOverride.second);
-			}
-		}
-
-		m_data_exporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);
-
-		// TODO: rework this to use blender data and not the plugin attrs
-		if (pluginID == "SettingsOutput") {
-			if (!RNA_boolean_get(&vrayExporter, "auto_save_render")) {
-				continue;
-			}
-
-			int format = RNA_enum_get(&propGroup, "img_format");
-			const char * formatNames[] = {"png", "jpg", "tiff", "tga", "sgi", "exr", "vrimg"};
-			const char * imgFormat = format >= 0 && format < ArraySize(formatNames) ? formatNames[format] : "";
-
-			auto * imgFile = pluginDesc.get("img_file");
-			auto * imgDir = pluginDesc.get("img_dir");
-			if (imgFile || imgDir) {
-				// this will call python to try to parse any time expressions so we need to restore the state
-				std::lock_guard<PythonGIL> lck(m_pyGIL);
-
-				if (imgFile) {
-					imgFile->attrValue.as<AttrSimpleType<std::string>>() = String::ExpandFilenameVariables(
-						imgFile->attrValue.as<AttrSimpleType<std::string>>(),
-						m_active_camera ? m_active_camera.name() : "Untitled",
-						m_scene.name(),
-						m_data.filepath(),
-						imgFormat);
-				}
-
-				if (imgDir) {
-					imgDir->attrValue.as<AttrSimpleType<std::string>>() = String::ExpandFilenameVariables(
-						imgDir->attrValue.as<AttrSimpleType<std::string>>(),
-						m_active_camera ? m_active_camera.name() : "Untitled",
-						m_scene.name(),
-						m_data.filepath());
-
-					imgDir->attrValue.as<AttrSimpleType<std::string>>() = String::AbsFilePath(imgDir->attrValue.as<AttrSimpleType<std::string>>(), m_data.filepath());
-				}
-			}
-		}
-
-		if (lcFromFileOnly) {
-			// if we are in viewport we must get both settingsGi and settingsLC and check
-			// that LC is from file or disable it
-			if (pluginID == settingsGI.pluginID) {
-				settingsGI = pluginDesc;
-			} else if (pluginID == settingsLC.pluginID) {
-				settingsLC = pluginDesc;
-			} else {
-				m_exporter->export_plugin(pluginDesc);
-			}
-		} else {
-			m_exporter->export_plugin(pluginDesc);
-		}
-	}
-
-	if (lcFromFileOnly) {
-		bool isLC = false;
-		bool isFile = true;
-
-		auto * engineAttr = settingsGI.get("secondary_engine");
-		auto * modeAttr = settingsLC.get("mode");
-		if (engineAttr) {
-			isLC = engineAttr->attrValue.as<AttrSimpleType<int>>() == 3;
-		}
-		if (modeAttr) {
-			// 2 == from file
-			isFile = modeAttr->attrValue.as<AttrSimpleType<int>>() == 2;
-		}
-
-		if (isLC && !isFile && engineAttr) {
-			// disable secondary engine;
-			engineAttr->attrValue.as<AttrSimpleType<int>>() = 0;
-		}
-		m_exporter->export_plugin(settingsGI);
-		m_exporter->export_plugin(settingsLC);
-	}
-
+	m_settingsExporter.exportPlugins(m_exporter, m_scene, m_context);
 }
 
 

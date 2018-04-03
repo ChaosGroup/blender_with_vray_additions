@@ -19,13 +19,15 @@
 #include "vfb_utils_string.h"
 #include "cgr_config.h"
 #include "vfb_utils_blender.h"
-#include <boost/filesystem.hpp>
 
 #include "BLI_string.h"
 #include "BLI_path_util.h"
 #include "DNA_ID.h"
 #include "BKE_main.h"
 #include "BKE_global.h"
+
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <Python.h>
 
@@ -113,57 +115,32 @@ std::string doPythonTimeReplace(const std::string & expr)
 }
 
 
-std::string VRayForBlender::String::ExpandFilenameVariables(
-	const std::string & expr,
-	const std::string & camera,
-	const std::string & scene,
-	const std::string & blendPath,
-	const std::string & ext)
+std::string VRayForBlender::String::ExpandFilenameVariables(const std::string & expr, BL::Context & context)
 {
-	std::string timeReplace = doPythonTimeReplace(expr);
-	std::string result = "";
+	namespace fs = boost::filesystem;
+	namespace alg = boost::algorithm;
 
-	for (int c = 0; c < timeReplace.length(); ++c) {
-		if (timeReplace[c] == '$' && c + 1 < timeReplace.length()) {
-			char type = timeReplace[++c];
-			switch (type) {
-			case 'C':
-				result.append(camera);
-				break;
-			case 'S':
-				result.append(scene);
-				break;
-			case 'F':
-				if (blendPath == "") {
-					result.append("default");
-				} else {
-					// basename(blendPath) + remove extension
-					const auto nameStart = blendPath.find_last_of("/\\");
-					const auto lastDot = blendPath.find_last_of(".");
-					std::string name;
-					if (nameStart != std::string::npos) {
-						name = blendPath.substr(nameStart + 1, lastDot - nameStart - 1);
-					} else {
-						name = blendPath.substr(0, lastDot);
-					}
-					result.append(name);
-				}
-				break;
-			default:
-				result.push_back('_');
-				result.push_back(type);
-				PRINT_WARN("Unknown format variable \"$%c\" in img_file", type);
-			}
+	const std::string & blendPath = context.blend_data().filepath();
+
+	std::string expandedPath;
+	if (expr.find("//") == 0) {
+		fs::path prefixPath;
+		if (blendPath.empty()) {
+			prefixPath = fs::temp_directory_path();
 		} else {
-			result.push_back(timeReplace[c]);
+			prefixPath = fs::path(blendPath).parent_path();
 		}
-	}
-	if (ext != "") {
-		result.push_back('.');
-		return result + ext;
+
+		expandedPath = (prefixPath / fs::path(expr.substr(2))).string();
 	} else {
-		return result;
+		expandedPath = expr;
 	}
+
+	alg::replace_all(expandedPath, "$F", fs::path(blendPath).filename().string());
+	alg::replace_all(expandedPath, "$C", context.scene().camera().name());
+	alg::replace_all(expandedPath, "$S", context.scene().name());
+
+	return expandedPath;
 }
 
 

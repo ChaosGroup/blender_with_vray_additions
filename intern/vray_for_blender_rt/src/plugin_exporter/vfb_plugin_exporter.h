@@ -37,6 +37,7 @@
 #include <mutex>
 
 #include <boost/function.hpp>
+#include <Python.h>
 
 namespace VRayForBlender {
 
@@ -60,7 +61,6 @@ struct ExpoterCallback {
 class PluginExporter
 {
 public:
-	typedef std::shared_ptr<PluginExporter> Ptr;
 	typedef boost::function<void(const char *, const char *)> UpdateMessageCb;
 	typedef boost::function<void(const VRayBaseTypes::AttrImage &)> BucketReadyCb;
 	typedef VRayBaseTypes::CommitAction CommitState;
@@ -158,7 +158,7 @@ protected:
 
 };
 
-PluginExporter::Ptr ExporterCreate(ExporterType type, const ExporterSettings & settings);
+PluginExporterPtr ExporterCreate(ExporterType type, const ExporterSettings & settings);
 
 } // namespace VRayForBlender
 

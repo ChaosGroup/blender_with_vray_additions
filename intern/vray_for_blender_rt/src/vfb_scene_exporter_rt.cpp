@@ -26,6 +26,7 @@
 #  define mxMakeCurrentContext(x) (x)
 #endif
 
+using namespace VRayForBlender;
 
 void InteractiveExporter::create_exporter()
 {

@@ -29,6 +29,8 @@
 
 #include <fstream>
 
+using namespace VRayForBlender;
+
 namespace {
 AttrValue convertToOSLArgument(const AttrValue & val) {
 	if (val.type == ValueTypeColor) {

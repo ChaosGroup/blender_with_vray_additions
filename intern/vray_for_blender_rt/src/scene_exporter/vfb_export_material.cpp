@@ -22,6 +22,7 @@
 #include "vfb_params_json.h"
 #include "utils/cgr_string.h"
 
+using namespace VRayForBlender;
 
 void DataExporter::clearMaterialCache()
 {

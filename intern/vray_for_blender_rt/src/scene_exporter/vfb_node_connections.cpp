@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#include <boost/format.hpp>
-
 #include "vfb_params_json.h"
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
@@ -25,6 +23,8 @@
 #include "vfb_utils_nodes.h"
 
 #include "DNA_node_types.h"
+
+using namespace VRayForBlender;
 
 void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context,
                                          ExpMode expMode, BL::Node &outNode, AttrValue &outPlugin, BL::Node toNode)

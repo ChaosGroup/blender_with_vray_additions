@@ -35,9 +35,10 @@ std::string StripString(std::string &str);
 
 /// Expand some variables from the provided string
 /// $C is camera name, $S is scene name, $F is blend file name
-/// also supports python's datetime placeholders like %H %M %S, etc.1
-/// Calling with empty ext will not append it or the dot
-std::string ExpandFilenameVariables(const std::string & expr, const std::string & camera, const std::string & scene, const std::string & blendPath, const std::string & ext = "");
+/// @param expr - path containing variables and/or starting with //
+/// @param context - the current blender context
+/// @return - full path string with variables expanded
+std::string ExpandFilenameVariables(const std::string & expr, BL::Context & context);
 
 /// If path starts with // then prepend it with current blend file name
 std::string AbsFilePath(const std::string & path, const std::string & blendPath);
@@ -47,6 +48,24 @@ std::string GetFullFilepath(const std::string &filepath, ID *holder=nullptr);
 
 /// Split a string by a list of delimiters
 std::vector<std::string> SplitString(const std::string & input, const std::string & delimiters, bool preserveEmpty = false);
+
+/// Check if str starts with some prefix
+/// @param str - the search string
+/// @param prefix - the prefix we want to check
+/// @return - true if str starts with prefix
+inline bool StartsWith(const std::string &str, const char *prefix)
+{
+	return str.find(prefix) == 0;
+}
+
+/// Check if str starts with some prefix
+/// @param str - the search string
+/// @param prefix - the prefix we want to check
+/// @return - true if str starts with prefix
+inline bool StartsWith(const std::string &str, const std::string &prefix)
+{
+	return StartsWith(str, prefix.c_str());
+}
 
 } // namespace String
 } // namespace VRayForBlender

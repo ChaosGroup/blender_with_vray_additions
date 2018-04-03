@@ -146,9 +146,9 @@ RenderImage PluginExporter::get_pass(const std::string & name)
 }
 
 
-VRayForBlender::PluginExporter::Ptr VRayForBlender::ExporterCreate(VRayForBlender::ExporterType type, const ExporterSettings & settings)
+PluginExporterPtr VRayForBlender::ExporterCreate(VRayForBlender::ExporterType type, const ExporterSettings & settings)
 {
-	PluginExporter::Ptr exporter{nullptr};
+	PluginExporterPtr exporter{nullptr};
 
 	switch (type) {
 		case ExpoterTypeFile:
