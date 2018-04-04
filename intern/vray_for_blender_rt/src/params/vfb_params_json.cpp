@@ -74,7 +74,7 @@ using namespace VRayForBlender::ParamDesc;
 
 
 typedef TreeMap<std::string, PluginDesc> MapPluginDesc;
-typedef HashMap<PluginType, PluginDescList> MapPluginType;
+typedef HashMap<PluginType, PluginDescList, std::hash<int>> MapPluginType;
 
 /// Used to map type to vector of plugin descriptions
 static MapPluginType PluginTypeToDescription;
