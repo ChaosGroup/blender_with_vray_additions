@@ -420,7 +420,7 @@ struct PropNotFound
 template <typename T>
 T get(PointerRNA &ptr, const char *name)
 {
-	static_assert(false, "Not implemented type for get<T>(PointerRNA&, const char *)");
+	// static_assert(false, "Not implemented type for get<T>(PointerRNA&, const char *)");
 	return T();
 }
 
