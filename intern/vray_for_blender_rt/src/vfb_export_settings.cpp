@@ -407,10 +407,10 @@ void VRaySettingsExporter::exportPlugins(PluginExporterPtr pluginExporter, BL::S
 
 
 struct PropNotFound
-	: std::exception
+	: std::runtime_error
 {
 	PropNotFound(const char * const prop)
-		: std::exception(prop)
+		: std::runtime_error(prop)
 	{}
 };
 
