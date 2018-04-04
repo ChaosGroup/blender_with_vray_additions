@@ -35,6 +35,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
 
+#include <exception>
 
 namespace fs = boost::filesystem;
 using namespace VRayForBlender;
