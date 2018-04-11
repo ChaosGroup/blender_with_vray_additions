@@ -150,9 +150,6 @@ AttrTransform calculateStereoCameraMatrix(BL::Object camera, float shift, bool a
 
 	m4_t mat_loc;
 	unit_m4(mat_loc);
-	for (int c = 0; c < 3; c++) {
-		world_pos[c] *= 0.5;
-	}
 	copy_v3_v3(mat_loc[3], world_pos);
 
 	m4_t mat_scale;
