@@ -475,7 +475,6 @@ function(setup_liblinks
 				unset(EXPAT_LIB_DEBUG)
 			endif()
 		else()
-			message(STATUS "PCRE LINK [${PCRE_LIBRARIES}]")
 			target_link_libraries(
 				${target}
 				${OPENCOLLADA_LIBRARIES}
