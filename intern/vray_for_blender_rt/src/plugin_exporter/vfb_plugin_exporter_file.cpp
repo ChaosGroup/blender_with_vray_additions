@@ -147,6 +147,7 @@ void VrsceneExporter::free()
 
 void VrsceneExporter::sync()
 {
+	PluginExporter::sync();
 	PRINT_INFO_EX("Flushing all data to files");
 	for (auto & writer : m_fileWritersMap) {
 		writer.second->blockFlushAll();

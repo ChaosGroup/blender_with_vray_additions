@@ -362,9 +362,11 @@ const HashSet<std::string> VRaySettingsExporter::DelayPlugins = {
 	"SettingsSGI",
 	"SettingsEXR",
 	"SettingsVRST",
+	"SettingsOutput",
 };
 
-void VRaySettingsExporter::exportPlugins(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context)
+
+void VRaySettingsExporter::init(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context)
 {
 	this->pluginExporter = pluginExporter;
 	this->scene = scene;
@@ -373,9 +375,12 @@ void VRaySettingsExporter::exportPlugins(PluginExporterPtr pluginExporter, BL::S
 	vrayScene = RNA_pointer_get(&scene.ptr, "vray");
 	vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
 
-	PluginDescList delayPlugins;
+	delayPlugins.clear();
 	delayPlugins.reserve(DelayPlugins.size());
+}
 
+void VRaySettingsExporter::exportPlugins()
+{
 	const PluginDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
 	for (const ParamDesc::PluginDesc * const desc : settingsPlugins) {
 		if (IgnoredPlugins.find(desc->pluginID) != IgnoredPlugins.end()) {
@@ -397,7 +402,9 @@ void VRaySettingsExporter::exportPlugins(PluginExporterPtr pluginExporter, BL::S
 
 		exportSettingsPlugin(*desc);
 	}
+}
 
+void VRaySettingsExporter::exportDelayedPlugins() {
 	for (const ParamDesc::PluginDesc * const desc : delayPlugins) {
 		exportSettingsPlugin(*desc);
 	}

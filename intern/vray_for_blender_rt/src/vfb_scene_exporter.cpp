@@ -420,6 +420,7 @@ void SceneExporter::render_start()
 
 bool SceneExporter::export_scene(const bool check_updated)
 {
+	m_settingsExporter.init(m_exporter, m_scene, m_context);
 	return true;
 }
 
@@ -468,6 +469,7 @@ void SceneExporter::sync(const bool check_updated)
 		m_data_exporter.syncStart(m_isUndoSync);
 	}
 
+	m_settingsExporter.exportPlugins();
 	sync_prepass();
 
 	calculate_scene_layers();
@@ -496,7 +498,7 @@ void SceneExporter::sync(const bool check_updated)
 	sync_view(check_updated);
 
 	sync_effects(check_updated);
-	sync_render_settings();
+	m_settingsExporter.exportDelayedPlugins();
 
 	if (!m_frameExporter.isCurrentSubframe()) {
 		// Sync data (will remove deleted objects)
@@ -1297,12 +1299,6 @@ void SceneExporter::sync_materials()
 			}
 		}
 	}
-}
-
-
-void SceneExporter::sync_render_settings()
-{
-	m_settingsExporter.exportPlugins(m_exporter, m_scene, m_context);
 }
 
 

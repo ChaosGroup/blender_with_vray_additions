@@ -54,6 +54,12 @@ int PluginExporter::remove_plugin(const std::string &name) {
 	return result;
 }
 
+void PluginExporter::sync() {
+	for (const PluginDesc &desc: delayedPlugins) {
+		export_plugin(desc);
+	}
+}
+
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool replace, bool dontExport)
 {
 	if (is_prepass || dontExport) {

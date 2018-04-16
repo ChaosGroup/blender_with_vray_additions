@@ -81,13 +81,21 @@ public:
 	virtual void         free()=0;
 
 	virtual void         clear_frame_data(float) {};
-	virtual void         sync()  {}
+	virtual void         sync();
 	virtual void         start() {}
 	virtual void         stop()  {}
 	virtual void         reset() {}
 	virtual bool         is_running() const { return true; }
 
 	virtual void         export_vrscene(const std::string&) {}
+
+	/// Delay plugin to be exported after the scene
+	/// @param pluginDesc - the description of the plugin
+	AttrPlugin           delay_plugin(const PluginDesc &pluginDesc) {
+		AttrPlugin attr(pluginDesc.pluginName);
+		delayedPlugins.push_back(pluginDesc);
+		return attr;
+	}
 
 	virtual AttrPlugin   export_plugin_impl(const PluginDesc &pluginDesc)=0;
 	AttrPlugin           export_plugin(const PluginDesc &pluginDesc, bool replace = false, bool dontExport = false);
@@ -152,6 +160,7 @@ protected:
 	bool                 is_viewport;
 	bool                 is_prepass;
 	CommitState          commit_state;
+	std::vector<PluginDesc> delayedPlugins; ///< Plugins delayed until last to be exported (exported on sync())
 
 	PluginManager        m_pluginManager;
 	std::recursive_mutex m_exportMtx;

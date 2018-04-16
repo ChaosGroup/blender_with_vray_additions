@@ -22,6 +22,7 @@
 #include "vfb_typedefs.h"
 #include "vfb_rna.h"
 #include "vfb_params_desc.h"
+#include "vfb_params_json.h"
 
 #include "vfb_plugin_exporter_types.h"
 #include "base_types.h"
@@ -256,11 +257,17 @@ struct VRaySettingsExporter {
 		, vrayExporter(PointerRNA_NULL)
 	{}
 
-	/// Export all plugins
+	/// Init scene dependent data
 	/// @param pluginExporter - pointer to the plugin exporter
 	/// @param scene - blender scene object to read settings data from
 	/// @param context - the current context
-	void exportPlugins(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context);
+	void init(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context);
+
+	/// Export early settings plugins
+	void exportPlugins();
+
+	/// Export settings plugins required to be some other plugin in the scene
+	void exportDelayedPlugins();
 
 private:
 	/// Get overrides for specific plugin description
@@ -281,6 +288,7 @@ private:
 	BL::Context context; ///< The context passed to the exporter
 	PluginExporterPtr pluginExporter; ///< Pointer to plugin exporter
 	DataExporter &dataExporter; ///< Ref to the data exporter (used to fill from prop group)
+	PluginDescList delayPlugins; ///< Plugins delayed to be exported after the scene
 	const ExporterSettings &settings; ///< Export settings
 	const ViewParams &viewParams; ///< Viewparams we use to get img width and height
 	const FrameExportManager &frameExporter; ///< Frame exporter used to get anim stand and end

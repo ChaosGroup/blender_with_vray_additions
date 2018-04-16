@@ -405,6 +405,7 @@ void ZmqExporter::wait_for_server()
 
 void ZmqExporter::sync()
 {
+	PluginExporter::sync();
 #define CHECK_UPDATE(name, upd)\
 	if (m_cachedValues.name != exporter_settings.name) {\
 		upd;\

@@ -188,7 +188,7 @@ AttrPlugin DataExporter::exportCameraStereoscopic(ViewParams &viewParams)
 
 	setAttrsFromPropGroupAuto(stereoSettingsDesc, &stereoSettings, "VRayStereoscopicSettings");
 
-	return m_exporter->export_plugin(stereoSettingsDesc);
+	return m_exporter->delay_plugin(stereoSettingsDesc);
 }
 
 

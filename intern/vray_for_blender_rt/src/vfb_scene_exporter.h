@@ -358,7 +358,7 @@ public:
 	void                 sync_objects(const bool check_updated=false);
 	void                 sync_effects(const bool check_updated=false);
 	void                 sync_materials();
-	void                 sync_render_settings();
+
 	void                 sync_render_channels();
 
 	virtual void         setup_callbacks() {}
