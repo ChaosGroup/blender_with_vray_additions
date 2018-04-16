@@ -173,8 +173,6 @@ struct PluginAttr {
 typedef HashMap<std::string, PluginAttr> PluginAttrs;
 
 struct PluginDesc {
-	typedef HashMap<std::string, PluginDesc> PluginAttrsCache;
-	static PluginAttrsCache cache;
 
 	std::string  pluginName;
 	std::string  pluginID;

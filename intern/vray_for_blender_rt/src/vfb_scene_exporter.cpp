@@ -272,30 +272,6 @@ BL::Object FrameExportManager::getActiveCamera()
 	return m_loopCameras[m_frameToRender];
 }
 
-
-static HashSet<std::string> RenderSettingsPlugins = {
-	"SettingsOptions",
-	"SettingsColorMapping",
-	"SettingsDMCSampler",
-	"SettingsImageSampler",
-	"SettingsGI",
-	"SettingsIrradianceMap",
-	"SettingsLightCache",
-	"SettingsDMCGI",
-	"SettingsRaycaster",
-	"SettingsRegionsGenerator",
-	"SettingsOutput",
-	"SettingsRTEngine",
-	"SettingsUnitsInfo",
-};
-
-static HashSet<std::string> RenderGIPlugins = {
-	"SettingsGI",
-	"SettingsLightCache",
-	"SettingsIrradianceMap",
-	"SettingsDMCGI",
-};
-
 namespace {
 MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)
 {
@@ -429,7 +405,6 @@ void SceneExporter::free()
 	if (m_threadManager) {
 		m_threadManager->stop();
 	}
-	PluginDesc::cache.clear();
 }
 
 
