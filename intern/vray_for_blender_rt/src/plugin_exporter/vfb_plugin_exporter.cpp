@@ -72,9 +72,9 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 	// force replace off for animation, because repalce will wipe all animation data up until current frame
 	replace = hasFrames ? false : replace;
 
-	bool inCache = m_pluginManager.inCache(pluginDesc);
-	bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;
-	bool isDifferentId = inCache ? m_pluginManager.differsId(pluginDesc) : false;
+	const bool inCache = m_pluginManager.inCache(pluginDesc);
+	const bool isDifferent = inCache ? m_pluginManager.differs(pluginDesc) : true;
+	const bool isDifferentId = inCache ? m_pluginManager.differsId(pluginDesc) : false;
 	AttrPlugin plg(pluginDesc.pluginName);
 
 	if (is_viewport || hasFrames) {
@@ -84,8 +84,6 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 		} else if (replace || (inCache && isDifferent)) {
 
 			if (isDifferentId) {
-				// copy the name, since cachedPlugin is reference from inside the manager
-				// and when we remove it, it will reference invalid memory!
 				this->remove_plugin(pluginDesc.pluginName);
 				plg = this->export_plugin_impl(pluginDesc);
 			} else {

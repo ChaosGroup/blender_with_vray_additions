@@ -118,7 +118,7 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 
 void DataExporter::setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID)
 {
-	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
+	const ParamDesc::PluginParamDesc &pluginParamDesc = GetPluginDescription(pluginID);
 
 	for (const auto &descIt : pluginParamDesc.attributes) {
 		const std::string         &attrName = descIt.second.name;
@@ -266,8 +266,8 @@ static float getSocketMult(BL::NodeSocket socket)
 
 void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc, const std::string &pluginID, const ParamDesc::PluginType &pluginType)
 {
-	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
-	PointerRNA                   propGroup       = RNA_pointer_get(&node.ptr, pluginID.c_str());
+	const ParamDesc::PluginParamDesc &pluginParamDesc = GetPluginDescription(pluginID);
+	PointerRNA                        propGroup       = RNA_pointer_get(&node.ptr, pluginID.c_str());
 
 	// Set non-mapped attributes
 	setAttrsFromPropGroupAuto(pluginDesc, &propGroup, pluginID);

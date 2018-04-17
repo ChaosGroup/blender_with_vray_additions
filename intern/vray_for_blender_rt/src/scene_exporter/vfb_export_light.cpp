@@ -141,7 +141,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 					ob.name().c_str());
 	}
 
-	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription(pluginID);
+	const ParamDesc::PluginParamDesc &pluginParamDesc = GetPluginDescription(pluginID);
 	for (const auto &descIt : pluginParamDesc.attributes) {
 		const std::string         &attrName = descIt.second.name;
 		const ParamDesc::AttrType &attrType = descIt.second.type;

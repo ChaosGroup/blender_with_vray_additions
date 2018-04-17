@@ -381,8 +381,8 @@ void VRaySettingsExporter::init(PluginExporterPtr pluginExporter, BL::Scene &sce
 
 void VRaySettingsExporter::exportPlugins()
 {
-	const PluginDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
-	for (const ParamDesc::PluginDesc * const desc : settingsPlugins) {
+	const PluginParamDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
+	for (const ParamDesc::PluginParamDesc * const desc : settingsPlugins) {
 		if (IgnoredPlugins.find(desc->pluginID) != IgnoredPlugins.end()) {
 			continue;
 		}
@@ -405,7 +405,7 @@ void VRaySettingsExporter::exportPlugins()
 }
 
 void VRaySettingsExporter::exportDelayedPlugins() {
-	for (const ParamDesc::PluginDesc * const desc : delayPlugins) {
+	for (const ParamDesc::PluginParamDesc * const desc : delayPlugins) {
 		exportSettingsPlugin(*desc);
 	}
 
@@ -808,7 +808,7 @@ void VRaySettingsExporter::exportLCGISettings()
 	pluginExporter->export_plugin(settingsLC);
 }
 
-void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginDesc &desc)
+void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginParamDesc &desc)
 {
 	PointerRNA propGroup;
 	PluginDesc pluginDesc(desc.pluginID, desc.pluginID);

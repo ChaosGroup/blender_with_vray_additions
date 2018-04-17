@@ -279,7 +279,7 @@ private:
 
 	/// Export single plugin
 	/// @param desc - the description of the plugin params
-	void exportSettingsPlugin(const ParamDesc::PluginDesc &desc);
+	void exportSettingsPlugin(const ParamDesc::PluginParamDesc &desc);
 
 	/// Export SettingsGI and SettingsLightCache
 	void exportLCGISettings();
@@ -288,7 +288,7 @@ private:
 	BL::Context context; ///< The context passed to the exporter
 	PluginExporterPtr pluginExporter; ///< Pointer to plugin exporter
 	DataExporter &dataExporter; ///< Ref to the data exporter (used to fill from prop group)
-	PluginDescList delayPlugins; ///< Plugins delayed to be exported after the scene
+	PluginParamDescList delayPlugins; ///< Plugins delayed to be exported after the scene
 	const ExporterSettings &settings; ///< Export settings
 	const ViewParams &viewParams; ///< Viewparams we use to get img width and height
 	const FrameExportManager &frameExporter; ///< Frame exporter used to get anim stand and end

@@ -117,6 +117,7 @@ enum AttrOptions {
 	AttrOptionExportAsColor = 1 << 0,
 };
 
+/// Descriptor of a plugin's attribute
 struct AttrDesc {
 	struct Options {
 		AttrOptions optionData;
@@ -147,25 +148,27 @@ struct AttrDesc {
 		std::string  interpolations;
 	} descCurve;
 
-	std::string  name;
-	AttrType     type;
-	Options      options;
+	std::string  name; ///< The name of the attribute
+	AttrType     type; ///< The type of the attribute
+	Options      options; ///< Options for exporter
 };
 
 typedef HashMap<std::string, AttrDesc> MapAttrDesc;
 
-
-struct PluginDesc {
-	PluginDesc():
+/// Descriptor of a vray plugin, and all of it's attributes
+struct PluginParamDesc {
+	PluginParamDesc():
 		pluginType(PluginUnknown)
 	{}
 
-	PluginType   pluginType;
-	std::string  pluginID;
-	MapAttrDesc  attributes;
+	PluginType   pluginType; ///< The type of the plugin
+	std::string  pluginID; ///< The plugin ID (not to be confused with instance ID)
+	MapAttrDesc  attributes; ///< The plugin attributes (parameters)
 };
 
-
+/// Convert string upper case plugin type to PluginType
+/// @param typeString - the type as string
+/// @return - the plugin type or PluginUnknown
 PluginType GetPluginTypeFromString(const std::string &typeString);
 
 } // namespace ParamDesc

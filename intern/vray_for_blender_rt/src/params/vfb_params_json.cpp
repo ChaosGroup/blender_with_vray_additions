@@ -73,8 +73,8 @@ using namespace VRayForBlender;
 using namespace VRayForBlender::ParamDesc;
 
 
-typedef TreeMap<std::string, PluginDesc> MapPluginDesc;
-typedef HashMap<PluginType, PluginDescList, std::hash<int>> MapPluginType;
+typedef TreeMap<std::string, PluginParamDesc> MapPluginDesc;
+typedef HashMap<PluginType, PluginParamDescList, std::hash<int>> MapPluginType;
 
 /// Used to map type to vector of plugin descriptions
 static MapPluginType PluginTypeToDescription;
@@ -100,7 +100,7 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 			boost::property_tree::ptree pTree;
 			boost::property_tree::json_parser::read_json(fileStream, pTree);
 
-			PluginDesc &pluginDesc = PluginDescriptions[fileName];
+			PluginParamDesc &pluginDesc = PluginDescriptions[fileName];
 			pluginDesc.pluginID   = fileName;
 			pluginDesc.pluginType = ParamDesc::GetPluginTypeFromString(pTree.get_child("Type").data());
 
@@ -257,12 +257,12 @@ void VRayForBlender::InitPluginDescriptions(const std::string &dirPath)
 }
 
 
-const VRayForBlender::ParamDesc::PluginDesc& VRayForBlender::GetPluginDescription(const std::string &pluginID)
+const VRayForBlender::ParamDesc::PluginParamDesc& VRayForBlender::GetPluginDescription(const std::string &pluginID)
 {
 	return PluginDescriptions[pluginID];
 }
 
-const PluginDescList & VRayForBlender::GetPluginsOfType(PluginType type)
+const PluginParamDescList & VRayForBlender::GetPluginsOfType(PluginType type)
 {
 	/// if type does not exist, we will just create and return empty list
 	return PluginTypeToDescription[type];

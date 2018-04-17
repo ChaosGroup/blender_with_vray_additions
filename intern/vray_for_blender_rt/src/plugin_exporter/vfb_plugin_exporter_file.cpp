@@ -189,7 +189,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	AttrPlugin plugin;
 	plugin.plugin = name;
 
-	const ParamDesc::PluginDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
+	const ParamDesc::PluginParamDesc & pluginParamDesc = GetPluginDescription(pluginDesc.pluginID);
 
 	auto writerType = pluginParamDesc.pluginType;
 
@@ -235,7 +235,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	}
 
 	const float writerFrame = writer.getAnimationFrame();
-	const ParamDesc::PluginDesc &desc = GetPluginDescription(pluginDesc.pluginID);
+	const ParamDesc::PluginParamDesc &desc = GetPluginDescription(pluginDesc.pluginID);
 
 	for (auto & attributePairs : pluginDesc.pluginAttrs) {
 		const PluginAttr & attr = attributePairs.second;

@@ -375,7 +375,7 @@ AttrValue DataExporter::exportVRayNodeTexLayered(BL::NodeTree &ntree, BL::Node &
 	pluginDesc.add("blend_modes", blend_modes);
 
 
-	const ParamDesc::PluginDesc &pluginParamDesc = GetPluginDescription("TexLayered");
+	const ParamDesc::PluginParamDesc &pluginParamDesc = GetPluginDescription("TexLayered");
 	HashSet<std::string> mappableValues = {"alpha", "alpha_mult", "alpha_offset", "nouvw_color", "color_mult", "color_offset"};
 
 	for (const auto &descIt : pluginParamDesc.attributes) {

@@ -23,7 +23,7 @@
 
 namespace VRayForBlender {
 
-typedef std::vector<const ParamDesc::PluginDesc *> PluginDescList;
+typedef std::vector<const ParamDesc::PluginParamDesc *> PluginParamDescList;
 
 /// Load all plugin descriptions from json files from the given path
 /// @param dirPath - path to the root of json descriptions
@@ -32,12 +32,12 @@ void InitPluginDescriptions(const std::string &dirPath);
 /// Get plugin description by it's plugin id
 /// @param pluginID - the string ID of the plugin
 /// @return - const ref to the plugin description for that plugin
-const ParamDesc::PluginDesc& GetPluginDescription(const std::string &pluginID);
+const ParamDesc::PluginParamDesc& GetPluginDescription(const std::string &pluginID);
 
 /// Get list of all loaded plugins of certain type
 /// @param type - the plugin type we want
 /// @return - ref to const vector of const pointers to plugin descriptions
-const PluginDescList & GetPluginsOfType(ParamDesc::PluginType type);
+const PluginParamDescList & GetPluginsOfType(ParamDesc::PluginType type);
 
 } // namespace VRayForBlender
 
