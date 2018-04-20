@@ -322,7 +322,7 @@ void ZmqExporter::init()
 		if (!m_client->connected()) {
 			char portStr[32];
 			snprintf(portStr, 32, ":%d", exporter_settings.zmq_server_port);
-			std::string addr = exporter_settings.zmq_server_address.empty() ? "127.0.0.1" : exporter_settings.zmq_server_address;
+			const std::string addr = exporter_settings.zmq_server_address.empty() ? "127.0.0.1" : exporter_settings.zmq_server_address;
 			m_client->connect(("tcp://" + addr + portStr).c_str());
 		}
 
@@ -340,8 +340,15 @@ void ZmqExporter::init()
 				}
 			}
 
-			m_client->send(VRayMessage::msgRendererType(type));
-			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::Init));
+			VRayMessage::DRFlags drflags = VRayMessage::DRFlags::None;
+			if (exporter_settings.settings_dr.use) {
+				drflags = VRayMessage::DRFlags::EnableDr;
+				if (exporter_settings.settings_dr.renderOnlyOnHodes) {
+					drflags = static_cast<VRayMessage::DRFlags>(static_cast<int>(VRayMessage::DRFlags::RenderOnlyOnHosts) | static_cast<int>(drflags));
+				}
+			}
+
+			m_client->send(VRayMessage::msgRendererActionInit(type, drflags));
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetRenderMode, static_cast<int>(exporter_settings.render_mode)));
 
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::GetImage, static_cast<int>(RenderChannelType::RenderChannelTypeNone)));
@@ -352,6 +359,18 @@ void ZmqExporter::init()
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetVfbShow, exporter_settings.show_vfb));
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetQuality, exporter_settings.viewport_image_quality));
 			m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::SetViewportImageFormat, static_cast<int>(exporter_settings.viewport_image_type)));
+
+			if (exporter_settings.settings_dr.use) { 
+				const std::vector<std::string> & hostItems = exporter_settings.settings_dr.hosts;
+				std::string hostsStr;
+				hostsStr.reserve(hostItems.size() * 24); // 24 chars per host is enough - e.g 123.123.123.123:12345;
+				for (const std::string & host : hostItems) {
+					hostsStr += host;
+					hostsStr.push_back(';');
+				}
+				hostsStr.pop_back(); // remove last delimiter - ;
+				m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ResetsHosts, hostsStr));
+			}
 
 			m_cachedValues.show_vfb = exporter_settings.show_vfb;
 			m_cachedValues.viewport_image_quality = exporter_settings.viewport_image_quality;

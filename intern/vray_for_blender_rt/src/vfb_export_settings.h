@@ -47,11 +47,13 @@ struct SettingsDR {
 	void         init(BL::Scene scene);
 
 	bool         use;
+	bool         renderOnlyOnHodes;
 	NetworkType  network_type;
 	SharingType  sharing_type;
 	std::string  share_path;
 	std::string  share_name;
 	std::string  hostname;
+	std::vector<std::string> hosts;
 };
 
 

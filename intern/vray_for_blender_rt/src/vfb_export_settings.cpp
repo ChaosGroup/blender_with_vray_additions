@@ -325,6 +325,38 @@ void SettingsDR::init(BL::Scene scene)
 
 	network_type = (NetworkType)RNA_enum_get(&vrayDR, "networkType");
 	sharing_type = (SharingType)RNA_enum_get(&vrayDR, "assetSharing");
+
+	renderOnlyOnHodes = RNA_boolean_get(&vrayDR, "renderOnlyOnNodes");
+
+	if (use) {
+		const int nodesCount = RNA_collection_length(&vrayDR, "nodes");
+		PropertyRNA *nodesCollection = RNA_struct_find_property(&vrayDR, "nodes");
+		if (nodesCollection && nodesCount) {
+			CollectionPropertyIterator nodesIter;
+			RNA_property_collection_begin(&vrayDR, nodesCollection, &nodesIter);
+			while (nodesIter.valid) {
+				if (RNA_boolean_get(&nodesIter.ptr, "use")) {
+					std::string addr = RNA_std_string_get(&nodesIter.ptr, "address");
+					addr.push_back(':');
+
+					if (!addr.empty()) {
+						const bool overridePort = RNA_boolean_get(&nodesIter.ptr, "port_override");
+						if (overridePort) {
+							const int portNum = RNA_int_get(&nodesIter.ptr, "port");
+							char portNumBuff[32] = {0};
+							snprintf(portNumBuff, sizeof(portNumBuff), "%d", portNum);
+							addr += portNumBuff;
+						} else {
+							addr += "20207";
+						}
+						hosts.push_back(addr);
+					}
+				}
+				RNA_property_collection_next(&nodesIter);
+			}
+			RNA_property_collection_end(&nodesIter);
+		}
+	}
 }
 
 const HashSet<std::string> VRaySettingsExporter::IgnoredPlugins = {
