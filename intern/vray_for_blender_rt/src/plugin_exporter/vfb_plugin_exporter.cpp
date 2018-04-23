@@ -77,53 +77,57 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 	const bool isDifferentId = inCache ? m_pluginManager.differsId(pluginDesc) : false;
 	AttrPlugin plg(pluginDesc.pluginName);
 
-	if (is_viewport || hasFrames) {
-		if (!inCache) {
-			plg = this->export_plugin_impl(pluginDesc);
-			m_pluginManager.updateCache(pluginDesc);
-		} else if (replace || (inCache && isDifferent)) {
+	if (!inCache) {
+		plg = this->export_plugin_impl(pluginDesc);
+		m_pluginManager.updateCache(pluginDesc, current_scene_frame);
+	} else if (replace || (inCache && isDifferent)) {
 
-			if (isDifferentId) {
-				this->remove_plugin(pluginDesc.pluginName);
-				plg = this->export_plugin_impl(pluginDesc);
-			} else {
-				if (!replace) {
-					plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
-				} else {
-					auto state = this->get_commit_state();
-					if (state != CommitState::CommitAutoOff) {
-						this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOff);
-					}
-					auto pluginCopy = pluginDesc;
-					pluginCopy.pluginName += "_internalDest";
-
-					this->export_plugin_impl(pluginCopy);
-					this->replace_plugin(pluginDesc.pluginName, pluginCopy.pluginName);
-					this->remove_plugin_impl(pluginDesc.pluginName);
-					plg = this->export_plugin_impl(pluginDesc);
-					this->replace_plugin(pluginCopy.pluginName, pluginDesc.pluginName);
-					this->remove_plugin_impl(pluginCopy.pluginName);
-
-					this->commit_changes();
-
-					if (state != CommitState::CommitAutoOff) {
-						this->set_commit_state(state);
+		if (isDifferentId) {
+			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+		} else {
+			if (!replace) {
+				// We need to export last exported data for the previous frame
+				// This is required when an attribute is not animated for several frames and then is
+				// If previous frame is not exported then vray will interpolate the animated parameter between
+				//    - the last frame data was exported (cached one)
+				//    - the current data we export
+				// But actually it needs to interpolate between previous frame and current frame
+				if (m_pluginManager.storeData()) {
+					const auto cachedItem = m_pluginManager.fromCache(pluginDesc.pluginName);
+					// if the cached item is from previous frame - we don't need to write extra key frame now
+					if (current_scene_frame - cachedItem.frame > 1) {
+						// TODO: could this brake for subframes?
+						--current_scene_frame;
+						this->export_plugin_impl(PluginManager::diffWithPlugin(cachedItem.desc, pluginDesc));
+						++current_scene_frame;
 					}
 				}
-			}
+				plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+			} else {
+				// we need replace when exporting to AppSDK
+				const auto state = this->get_commit_state();
+				if (state != CommitState::CommitAutoOff) {
+					this->set_commit_state(VRayBaseTypes::CommitAction::CommitAutoOff);
+				}
+				auto pluginCopy = pluginDesc;
+				pluginCopy.pluginName += "_internalDest";
 
-			m_pluginManager.updateCache(pluginDesc);
+				this->export_plugin_impl(pluginCopy);
+				this->replace_plugin(pluginDesc.pluginName, pluginCopy.pluginName);
+				this->remove_plugin_impl(pluginDesc.pluginName);
+				plg = this->export_plugin_impl(pluginDesc);
+				this->replace_plugin(pluginCopy.pluginName, pluginDesc.pluginName);
+				this->remove_plugin_impl(pluginCopy.pluginName);
+
+				this->commit_changes();
+
+				if (state != CommitState::CommitAutoOff) {
+					this->set_commit_state(state);
+				}
+			}
 		}
-	} else {
-		if (inCache && isDifferent) {
-			// TODO: do we really need to export previous state first?
-			// this->export_plugin_impl(m_pluginManager.fromCache(pluginDesc));
-			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
-			m_pluginManager.updateCache(pluginDesc);
-		} else if (!inCache) {
-			plg = this->export_plugin_impl(pluginDesc);
-			m_pluginManager.updateCache(pluginDesc);
-		}
+
+		m_pluginManager.updateCache(pluginDesc, current_scene_frame);
 	}
 
 	return plg;

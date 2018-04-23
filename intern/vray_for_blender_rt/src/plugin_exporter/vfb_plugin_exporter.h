@@ -73,6 +73,7 @@ public:
 	    , is_viewport(false)
 	    , is_prepass(false)
 	    , commit_state(CommitState::CommitNone)
+	    , m_pluginManager(settings.exporter_type == ExporterType::ExpoterTypeFile)
 	{}
 
 	virtual             ~PluginExporter()=0;

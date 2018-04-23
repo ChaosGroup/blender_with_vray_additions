@@ -19,6 +19,7 @@
 #include "vfb_plugin_manager.h"
 #include "vfb_plugin_exporter.h"
 #include "utils/cgr_hash.h"
+#include <iterator>
 
 using namespace VRayForBlender;
 using namespace std;
@@ -119,15 +120,6 @@ MHash getAttrHash(const AttrValue & value, const MHash seed = 42) {
 }
 }
 
-
-PluginManager::PluginManager()
-{}
-
-std::string PluginManager::getKey(const PluginDesc &pluginDesc) const
-{
-	return pluginDesc.pluginName;
-}
-
 bool PluginManager::inCache(const std::string &name) const
 {
 	lock_guard<mutex> l(m_cacheLock);
@@ -137,7 +129,7 @@ bool PluginManager::inCache(const std::string &name) const
 bool PluginManager::inCache(const PluginDesc &pluginDesc) const
 {
 	lock_guard<mutex> l(m_cacheLock);
-	return m_cache.find(getKey(pluginDesc)) != m_cache.end();
+	return m_cache.find(pluginDesc.pluginName) != m_cache.end();
 }
 
 void PluginManager::remove(const std::string &pluginName)
@@ -149,13 +141,13 @@ void PluginManager::remove(const std::string &pluginName)
 void PluginManager::remove(const PluginDesc &pluginDesc)
 {
 	lock_guard<mutex> l(m_cacheLock);
-	m_cache.erase(getKey(pluginDesc));
+	m_cache.erase(pluginDesc.pluginName);
 }
 
 std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &pluginDesc, bool buildDiff) const 
 {
 	lock_guard<mutex> l(m_cacheLock);
-	const auto key = getKey(pluginDesc);
+	const std::string & key = pluginDesc.pluginName;
 	auto cacheEntry = m_cache.find(key);
 
 	PluginDesc res(pluginDesc.pluginName, pluginDesc.pluginID);
@@ -164,11 +156,11 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 		return std::make_pair(true, res);
 	}
 
-	if (cacheEntry->second.m_values.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
+	if (cacheEntry->second.m_desc.pluginAttrs.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
 		return std::make_pair(true, res);
 	}
 
-	const auto descHash = makeHash(pluginDesc);
+	const auto & descHash = makeHash(pluginDesc);
 
 	if (descHash.m_allHash != cacheEntry->second.m_allHash) {
 		if (!buildDiff) {
@@ -178,13 +170,13 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 		return std::make_pair(false, res);
 	}
 
-	BLI_assert(descHash.m_name == pluginDesc.pluginName && "PluginManager::diffWithCache called with desc to different plugin!");
+	assert(cacheEntry->second.m_desc.pluginID == pluginDesc.pluginID && "PluginManager::diffWithCache called with desc to different plugin!");
 
-	const auto & cacheAttrMap = cacheEntry->second.m_values;
-	const auto & descAttrMap = descHash.m_values;
+	const auto & cacheAttrMap = cacheEntry->second.m_attrHashes;
+	const auto & descAttrMap = descHash.m_attrHashes;
 
 	for (const auto &attrHash : descAttrMap) {
-		auto cacheHash = cacheAttrMap.find(attrHash.first);
+		const auto cacheHash = cacheAttrMap.find(attrHash.first);
 
 		// attribute is not in cache at all
 		if (cacheHash == cacheAttrMap.end()) {
@@ -192,13 +184,10 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 				// we are sure it is here, since descAttrMap was build from pluginDesc
 				const auto & attr = pluginDesc.pluginAttrs.find(attrHash.first)->second;
 				res.add(attr.attrName, attr.attrValue);
-				continue;
 			} else {
 				return std::make_pair(true, res);
 			}
-		}
-
-		if (attrHash.second != cacheHash->second) {
+		} else if (attrHash.second != cacheHash->second) {
 			if (buildDiff) {
 				// we are sure it is here, since descAttrMap was build from pluginDesc
 				const auto & attr = pluginDesc.pluginAttrs.find(attrHash.first)->second;
@@ -214,12 +203,12 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 
 bool PluginManager::differsId(const PluginDesc &pluginDesc) const
 {
-	auto iter = m_cache.find(getKey(pluginDesc));
+	const auto iter = m_cache.find(pluginDesc.pluginName);
 	if (iter == m_cache.end()) {
 		return false;
 	}
 
-	return iter->second.m_id != pluginDesc.pluginID;
+	return iter->second.m_desc.pluginID != pluginDesc.pluginID;
 }
 
 bool PluginManager::differs(const PluginDesc &pluginDesc) const
@@ -232,34 +221,51 @@ PluginDesc PluginManager::differences(const PluginDesc &pluginDesc) const
 	return diffWithCache(pluginDesc, true).second;
 }
 
-
 PluginManager::PluginDescHash PluginManager::makeHash(const PluginDesc &pluginDesc) const
 {
 	PluginDescHash hash;
-	hash.m_id = pluginDesc.pluginID;
-	hash.m_name = pluginDesc.pluginName;
 	hash.m_allHash = 42;
+	hash.m_desc.pluginName = pluginDesc.pluginName;
+	hash.m_desc.pluginID = pluginDesc.pluginID;
 
 	for (const auto & attr : pluginDesc.pluginAttrs) {
 		const auto aHash = getAttrHash(attr.second.attrValue);
 		hash.m_allHash = getValueHash(aHash, hash.m_allHash);
-		hash.m_values[attr.second.attrName] = aHash;
+		hash.m_attrHashes[attr.second.attrName] = aHash;
 	}
 
 	return hash;
 }
 
-void PluginManager::updateCache(const PluginDesc &update)
+void PluginManager::updateCache(const PluginDesc &desc, float frame)
 {
 	lock_guard<mutex> l(m_cacheLock);
-	const auto key = getKey(update);
-	auto hash = makeHash(update);
-
-	m_cache[key] = hash;
+	auto hashedDesc = makeHash(desc);
+	if (m_storeData) {
+		hashedDesc.m_desc = desc;
+		hashedDesc.m_frame = frame;
+	}
+	m_cache[desc.pluginName] = hashedDesc;
 }
 
 void PluginManager::clear()
 {
 	lock_guard<mutex> l(m_cacheLock);
 	m_cache.clear();
+}
+
+PluginDesc PluginManager::diffWithPlugin(const PluginDesc &source, const PluginDesc &filter)
+{
+	PluginDesc result(source.pluginName, source.pluginID);
+	using AttrPair = std::pair<std::string, PluginAttr>;
+
+	std::copy_if(source.pluginAttrs.begin(), source.pluginAttrs.end(), std::inserter(result.pluginAttrs, result.pluginAttrs.end()), [&filter](const AttrPair & pair) {
+		const PluginAttr * filterAttr = filter.get(pair.first);
+		if (!filterAttr) {
+			return false;
+		}
+		return getAttrHash(pair.second.attrValue) != getAttrHash(filterAttr->attrValue);
+	});
+
+	return result;
 }

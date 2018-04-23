@@ -172,11 +172,11 @@ struct PluginAttr {
 };
 typedef HashMap<std::string, PluginAttr> PluginAttrs;
 
+/// Describes an instance of a plugin with some/all params stored as generic values
 struct PluginDesc {
-
-	std::string  pluginName;
-	std::string  pluginID;
-	PluginAttrs  pluginAttrs;
+	std::string  pluginName; ///< The name of the instance of this plugin
+	std::string  pluginID; ///< The name of the plugin (it's type)
+	PluginAttrs  pluginAttrs; ///< Map of all attribute for this plugin instance
 
 	//PluginDesc() {}
 	PluginDesc(const std::string &plugin_name, const std::string &plugin_id, const std::string &prefix = ""):
