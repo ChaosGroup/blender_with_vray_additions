@@ -394,6 +394,7 @@ const HashSet<std::string> VRaySettingsExporter::DelayPlugins = {
 	"SettingsSGI",
 	"SettingsEXR",
 	"SettingsVRST",
+	"SettingsImageSampler",
 	"SettingsOutput",
 };
 
@@ -533,7 +534,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		}
 	} else if (pluginId.find("Filter") == 0) {
 		const char * imageSampler = "SettingsImageSampler";
-			PointerRNA sampler = get<PointerRNA>(vrayScene, imageSampler);
+		PointerRNA sampler = get<PointerRNA>(vrayScene, imageSampler);
 		if (RNA_enum_name_get(&sampler, "filter_type") != pluginId) {
 			return false;
 		}
