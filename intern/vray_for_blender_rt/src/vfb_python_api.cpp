@@ -21,14 +21,15 @@
 #include <queue>
 
 #include "cgr_vray_for_blender_rt.h"
-#include "utils/cgr_hash.h"
 #include "vfb_scene_exporter_rt.h"
 #include "vfb_scene_exporter_pro.h"
 #include "vfb_params_json.h"
 
 #include "vfb_utils_blender.h"
-#include "zmq_wrapper.hpp"
 #include "vfb_plugin_exporter_zmq.h"
+#include "vfb_export_settings.h"
+
+#include "zmq_wrapper.hpp"
 
 #include <Python.h>
 
@@ -619,6 +620,26 @@ static PyObject* vfb_osl_setstdosl_path(PyObject * /*self*/, PyObject *args) {
 }
 
 
+static PyObject* set_preview_dir(PyObject*, PyObject *args)
+{
+	PRINT_INFO_EX("vfb_load()");
+
+	char *previewDir = NULL;
+	if (!PyArg_ParseTuple(args, "s", &previewDir)) {
+		PRINT_ERROR("PyArg_ParseTuple");
+	}
+	else {
+		if (previewDir) {
+			VRaySettingsExporter::pythonPreviewDir = previewDir;
+		} else {
+			PRINT_ERROR("Failed to set preview directory");
+		}
+	}
+
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
     { "load",                vfb_load,   METH_VARARGS, ""},
     { "unload", (PyCFunction)vfb_unload, METH_NOARGS,  ""},
@@ -640,6 +661,8 @@ static PyMethodDef methods[] = {
 
     { "osl_update_node", vfb_osl_update_node_func, METH_VARARGS, ""},
     { "osl_set_stdosl_path", vfb_osl_setstdosl_path, METH_VARARGS, ""},
+
+    { "set_preview_dir", set_preview_dir, METH_VARARGS, ""},
 
     {NULL, NULL, 0, NULL},
 };

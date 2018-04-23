@@ -271,6 +271,7 @@ struct VRaySettingsExporter {
 	/// Export settings plugins required to be some other plugin in the scene
 	void exportDelayedPlugins();
 
+	static std::string pythonPreviewDir;
 private:
 	/// Get overrides for specific plugin description
 	/// @param pluginId - the id of the plugin

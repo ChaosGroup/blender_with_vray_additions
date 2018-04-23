@@ -40,6 +40,7 @@
 namespace fs = boost::filesystem;
 using namespace VRayForBlender;
 
+std::string VRaySettingsExporter::pythonPreviewDir;
 
 ExporterSettings::ExporterSettings()
     : export_meshes(true)
@@ -725,37 +726,43 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			pluginDesc.add(heights[c], height);
 		}
 
-		if (!(settings.is_preview || settings.auto_save_render)) {
+		if (!settings.is_preview && !settings.auto_save_render) {
 			pluginDesc.add("img_file", AttrIgnore());
 			pluginDesc.add("img_dir", AttrIgnore());
 		} else {
-			const std::string &imgDir = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_dir"), context);
+			std::string imgDir, imgFile;
+
+			if (settings.is_preview) {
+				imgDir = pythonPreviewDir;
+				imgFile = "preview.exr";
+				pluginDesc.add("img_file_needFrameNumber", false);
+			} else {
+				imgDir = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_dir"), context);
+				imgFile = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_file"), context);
+				enum ImageFormat {PNG, JPG, TIFF, TGA, SGI, EXR, VRIMG};
+				const ImageFormat format = static_cast<ImageFormat>(RNA_enum_ext_get(&propertyGroup, "img_format"));
+				const char *extensions[] = {".png", ".jpg", ".tiff", ".tga", ".sgi", ".exr", ".vrimg"};
+
+				if (format >= PNG && format <= VRIMG) {
+					imgFile += extensions[format];
+				} else {
+					imgFile += extensions[PNG];
+				}
+
+				// EXR == 5
+				if (format == EXR && !get<bool>(propertyGroup, "relements_separateFiles")) {
+					pluginDesc.add("img_rawFile", true);
+				}
+			}
+			if (imgDir.back() != '/' && imgDir.back() != '\\') {
+				imgDir.push_back('/');
+			}
+
 			// make sure the directory exists
 			fs::create_directories(imgDir);
 
-			std::string imgFile = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_file"), context);
-
-			enum ImageFormat {PNG, JPG, TIFF, TGA, SGI, EXR, VRIMG};
-			const ImageFormat format = static_cast<ImageFormat>(RNA_enum_ext_get(&propertyGroup, "img_format"));
-			const char *extensions[] = {".png", ".jpg", ".tiff", ".tga", ".sgi", ".exr", ".vrimg"};
-
-			if (format >= PNG && format <= VRIMG) {
-				imgFile += extensions[format];
-			} else {
-				imgFile += extensions[PNG];
-			}
-
 			pluginDesc.add("img_dir", imgDir);
 			pluginDesc.add("img_file", imgFile);
-
-			if (settings.is_preview) {
-				pluginDesc.add("img_file_needFrameNumber", false);
-			}
-
-			// EXR == 5
-			if (format == EXR && !get<bool>(propertyGroup, "relements_separateFiles")) {
-				pluginDesc.add("img_rawFile", true);
-			}
 		}
 
 		pluginDesc.add("anim_start", frameExporter.getFirstFrame());
