@@ -156,7 +156,7 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 		return std::make_pair(true, res);
 	}
 
-	if (cacheEntry->second.m_desc.pluginAttrs.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
+	if (cacheEntry->second.m_attrHashes.size() != pluginDesc.pluginAttrs.size() && !buildDiff) {
 		return std::make_pair(true, res);
 	}
 
