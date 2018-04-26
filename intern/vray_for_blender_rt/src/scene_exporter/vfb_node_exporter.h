@@ -138,7 +138,7 @@ public:
 // Used to skip already exported objects
 //
 struct IdCache {
-	int contains(BL::ID id) {
+	int contains(const BL::ID & id) {
 		return m_data.find(id.ptr.data) != m_data.end();
 	}
 
@@ -146,7 +146,7 @@ struct IdCache {
 		return m_data.find((void*)(intptr_t)id) != m_data.end();
 	}
 
-	void insert(BL::ID id) {
+	void insert(const BL::ID & id) {
 		m_data.insert(id.ptr.data);
 	}
 
@@ -160,7 +160,6 @@ struct IdCache {
 
 private:
 	HashSet<void*> m_data;
-
 };
 
 // Used to track object deletion / creation
@@ -292,6 +291,7 @@ public:
 		HIDE_VIEWPORT            = 1 << 3,
 		HIDE_RENDER              = 1 << 4,
 		HIDE_LAYER               = 1 << 5,
+		HIDE_CAMERA_ALL          = 1 << 6,
 	};
 
 	enum ExpMode {
@@ -467,7 +467,7 @@ public:
 
 	void              setActiveCamera(BL::Object camera);
 	void              refreshHideLists();
-	bool              isObjectInHideList(BL::Object ob, const std::string listName) const;
+	bool              isObjectInHideList(BL::Object ob, const std::string &listName) const;
 
 private:
 	/// Find the corresponding uvwgen used for the texture that might be attached to @textureSocket

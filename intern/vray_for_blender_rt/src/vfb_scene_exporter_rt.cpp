@@ -112,8 +112,10 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	} else {
 		if (check_updated) {
 			// this means we are not first frame but we need to sync everything, so we should clear frame data
+
+			// TODO: do we need this for motion blur?
 			// m_exporter->clear_frame_data(0);
-			m_exporter->getPluginManager().clear();
+			// m_exporter->getPluginManager().clear();
 		}
 
 		m_frameExporter.forEachExportFrame([this](FrameExportManager & frameExp) {

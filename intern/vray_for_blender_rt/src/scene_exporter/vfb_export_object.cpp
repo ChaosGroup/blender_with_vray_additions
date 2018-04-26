@@ -93,7 +93,7 @@ void DataExporter::refreshHideLists()
 		return;
 	}
 
-	static const std::string typeNames[] = {"camera", "gi", "reflect", "refract", "shadows"};
+	static const std::string typeNames[] = {"camera", "gi", "reflect", "refract", "shadows", "all"};
 	HashSet<BL::Object> autoObjects;
 	bool autoObjectsInit = false;
 
@@ -115,7 +115,7 @@ void DataExporter::refreshHideLists()
 }
 
 
-bool DataExporter::isObjectInHideList(BL::Object ob, const std::string listName) const
+bool DataExporter::isObjectInHideList(BL::Object ob, const std::string &listName) const
 {
 	auto list = m_hide_lists.find(listName);
 	if (list != m_hide_lists.end()) {

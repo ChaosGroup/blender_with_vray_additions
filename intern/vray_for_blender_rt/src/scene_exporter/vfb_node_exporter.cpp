@@ -752,6 +752,10 @@ bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
 		return false;
 	}
 
+	if (has(HIDE_CAMERA_ALL) && isObjectInHideList(ob, "all")) {
+		return false;
+	}
+
 #undef has
 
 	return true;
