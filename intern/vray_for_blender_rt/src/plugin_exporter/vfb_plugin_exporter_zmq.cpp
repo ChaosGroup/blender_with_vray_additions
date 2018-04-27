@@ -39,7 +39,7 @@ bool ZmqServer::start(const char * addr) {
 	std::lock_guard<std::mutex> lock(clientMtx);
 
 	if (!serverCheck) {
-		PRINT_INFO_EX("Starting hearbeat client for %s", addr);
+		PRINT_INFO_EX("Starting heartbeat client for %s", addr);
 		serverCheck.reset(new ZmqClient(true));
 		serverCheck->connect(addr);
 		if (serverCheck->connected()) {
