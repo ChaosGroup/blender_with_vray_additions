@@ -154,28 +154,30 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 			PointerRNA physCamera = RNA_pointer_get(&vrayCamera, "CameraPhysical");
 			use_physical_camera = RNA_boolean_get(&physCamera, "use");
 
-			PointerRNA stereoSettings = RNA_pointer_get(&m_vrayScene, "VRayStereoscopicSettings");
-			PointerRNA cameraStereo = RNA_pointer_get(&vrayCamera, "CameraStereoscopic");
-			use_stereo_camera = (stereoSettings.data && RNA_boolean_get(&stereoSettings, "use")) && (cameraStereo.data && RNA_boolean_get(&cameraStereo, "use"));
-			if (use_stereo_camera) {
-				const auto leftCamName = RNA_std_string_get(&cameraStereo, "LeftCam");
-				const auto rightCamName = RNA_std_string_get(&cameraStereo, "RightCam");
+			if (!is_preview) { // no stereo camera for preview
+				PointerRNA stereoSettings = RNA_pointer_get(&m_vrayScene, "VRayStereoscopicSettings");
+				PointerRNA cameraStereo = RNA_pointer_get(&vrayCamera, "CameraStereoscopic");
+				use_stereo_camera = (stereoSettings.data && RNA_boolean_get(&stereoSettings, "use")) && (cameraStereo.data && RNA_boolean_get(&cameraStereo, "use"));
+				if (use_stereo_camera) {
+					const auto leftCamName = RNA_std_string_get(&cameraStereo, "LeftCam");
+					const auto rightCamName = RNA_std_string_get(&cameraStereo, "RightCam");
 
-				BL::BlendData::objects_iterator obIt;
-				int found = 0;
-				for (data.objects.begin(obIt); found < 2 && obIt != data.objects.end(); ++obIt) {
-					const auto camName = obIt->name();
-					if (camName == leftCamName) {
-						camera_stereo_left = *obIt;
-						found++;
-					} else if (camName == rightCamName) {
-						camera_stereo_right = *obIt;
-						found++;
+					BL::BlendData::objects_iterator obIt;
+					int found = 0;
+					for (data.objects.begin(obIt); found < 2 && obIt != data.objects.end(); ++obIt) {
+						const auto camName = obIt->name();
+						if (camName == leftCamName) {
+							camera_stereo_left = *obIt;
+							found++;
+						} else if (camName == rightCamName) {
+							camera_stereo_right = *obIt;
+							found++;
+						}
 					}
-				}
-				if (found != 2) {
-					use_stereo_camera = false;
-					PRINT_ERROR("Failed to find cameras for stereo camera!");
+					if (found != 2) {
+						use_stereo_camera = false;
+						PRINT_ERROR("Failed to find cameras for stereo camera!");
+					}
 				}
 			}
 
@@ -704,9 +706,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 				}
 			} else {
 				PointerRNA stereoSettings = get<PointerRNA>(vrayScene, "VRayStereoscopicSettings");
-				PointerRNA stereoCamera = get<PointerRNA>(vrayCamera, "CameraStereoscopic");
 
-				if (get<bool>(stereoSettings, "use") && !get<bool>(stereoCamera, "use")) {
+				if (settings.use_stereo_camera && get<bool>(stereoSettings, "adjust_resolution")) {
 					if (get<bool>(stereoSettings, "adjust_resolution")) {
 						width *= 2;
 					}
