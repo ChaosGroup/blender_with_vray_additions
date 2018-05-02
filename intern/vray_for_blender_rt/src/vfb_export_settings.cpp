@@ -410,13 +410,13 @@ void VRaySettingsExporter::init(PluginExporterPtr pluginExporter, BL::Scene &sce
 
 	vrayScene = RNA_pointer_get(&scene.ptr, "vray");
 	vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
-
-	delayPlugins.clear();
-	delayPlugins.reserve(DelayPlugins.size());
 }
 
 void VRaySettingsExporter::exportPlugins()
 {
+	delayPlugins.clear();
+	delayPlugins.reserve(DelayPlugins.size());
+
 	const PluginParamDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
 	for (const ParamDesc::PluginParamDesc * const desc : settingsPlugins) {
 		if (IgnoredPlugins.find(desc->pluginID) != IgnoredPlugins.end()) {
