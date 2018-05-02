@@ -903,7 +903,6 @@ void DataExporter::tag_ntree(BL::NodeTree ntree, bool updated)
 
 bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 {
-	auto lock = raiiLock();
 	// we are no undo-ing
 	if (!m_is_undo_sync) {
 		return false;
@@ -914,6 +913,7 @@ bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 		return false;
 	}
 
+	auto lock = raiiLock();
 	// check if object is the state we are currently undoing
 	const auto & checkState = m_undo_stack[1];
 	return checkState.find(getIdUniqueName(ob)) != checkState.end();

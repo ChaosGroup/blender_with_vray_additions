@@ -21,6 +21,7 @@
 #include "vfb_utils_math.h"
 
 #include "DNA_ID.h"
+#include "DNA_object_types.h"
 #include "BKE_global.h"
 #include "BKE_main.h"
 #include "BLI_string.h"
@@ -40,6 +41,8 @@ using namespace VRayForBlender;
 // OIIO
 #include <errorhandler.h>
 #include <string_view.h>
+
+using namespace Blender;
 
 bool Blender::OSLManager::compile(const std::string & inputFile, const std::string & outputFile)
 {
@@ -325,4 +328,51 @@ int Blender::IsLight(BL::Object ob)
 		is_light = true;
 	}
 	return is_light;
+}
+
+
+ObjectUpdateFlag Blender::getObjectUpdateState(BL::Object ob)
+{
+	using OF = ObjectUpdateFlag;
+	OF flags = OF::None;
+
+	if (ob.is_updated()) {
+		flags = flags | OF::Object;
+	}
+
+	if (ob.is_updated_data()) {
+		flags = flags | OF::Data;
+	}
+
+	if (flags != OF::None) {
+		return flags;
+	}
+
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+
+	const int data_updated = RNA_int_get(&vrayObject, "data_updated");
+	if (data_updated & CGR_UPDATED_OBJECT) {
+		flags = flags | OF::Object;
+	}
+
+	if (data_updated & CGR_UPDATED_DATA) {
+		flags = flags | OF::Data;
+	}
+
+	if(ob.is_duplicator()) {
+		if(ob.particle_systems.length()) {
+			if (RNA_int_get(&vrayObject, "data_updated") & CGR_UPDATED_DATA) {
+				flags = flags | ObjectUpdateFlag::Data;
+			}
+		}
+	}
+
+	if (flags == OF::None) {
+		if (BL::Object parent = ob.parent()) {
+			const ObjectUpdateFlag parentFlags = getObjectUpdateState(parent);
+			flags = flags | parentFlags;
+		}
+	}
+
+	return flags;
 }

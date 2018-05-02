@@ -616,7 +616,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		}
 	}
 
-	bool skip_export = !m_data_exporter.isObjectVisible(ob) || m_data_exporter.isObjectInHideList(ob, "export");
+	const bool skip_export = !m_data_exporter.isObjectVisible(ob) || m_data_exporter.isObjectInHideList(ob, "export");
 
 	auto overrideAttr = override;
 
@@ -694,8 +694,9 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		if (DataExporter::isObVrscene(ob)) {
 			m_data_exporter.exportAsset(ob, check_updated, override);
 		} else if (ob.data() && DataExporter::isObMesh(ob)) {
-			if (RNA_boolean_get(&vrayClipper, "enabled")) {
-
+			if (!RNA_boolean_get(&vrayClipper, "enabled")) {
+				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+			} else {
 				if (!overrideAttr) {
 					overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
 					overrideAttr.override = true;
@@ -707,7 +708,6 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 
 				if (NOT(excludeGroupName.empty())) {
-					AttrListPlugin plList;
 					BL::BlendData::groups_iterator grIt;
 					for (m_data.groups.begin(grIt); grIt != m_data.groups.end(); ++grIt) {
 						BL::Group gr = *grIt;
@@ -723,8 +723,6 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				}
 
 				m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
-			} else {
-				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
 			}
 		} else if(ob.data() && DataExporter::isObLamp(ob)) {
 			m_data_exporter.exportLight(ob, check_updated, overrideAttr);

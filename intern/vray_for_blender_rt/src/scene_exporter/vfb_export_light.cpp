@@ -28,17 +28,11 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 {
 	AttrValue plugin;
 
-	bool is_updated      = check_updated ? ob.is_updated()      : true;
-	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+	using namespace Blender;
+	const ObjectUpdateFlag flags = getObjectUpdateState(ob);
 
-	if (!is_updated && ob.parent()) {
-		BL::Object parent(ob.parent());
-		is_updated = parent.is_updated();
-	}
-	if (!is_data_updated && ob.parent()) {
-		BL::Object parent(ob.parent());
-		is_data_updated = parent.is_updated_data();
-	}
+	bool is_updated      = check_updated ? flags & ObjectUpdateFlag::Object : true;
+	bool is_data_updated = check_updated ? flags & ObjectUpdateFlag::Data   : true;
 
 	BL::Lamp lamp(ob.data());
 

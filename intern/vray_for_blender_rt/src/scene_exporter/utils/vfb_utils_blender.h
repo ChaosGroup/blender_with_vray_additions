@@ -102,6 +102,28 @@ int IsDuplicatorRenderable(BL::Object ob);
 int IsGeometry(BL::Object ob);
 int IsLight(BL::Object ob);
 
+enum class ObjectUpdateFlag
+{
+	None = 0,
+	Object = 1 << 0,
+	Data = 1 << 1,
+};
+
+inline ObjectUpdateFlag operator|(ObjectUpdateFlag a, ObjectUpdateFlag b)
+{
+	return ObjectUpdateFlag(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline bool operator&(ObjectUpdateFlag a, ObjectUpdateFlag b)
+{
+	return ObjectUpdateFlag(static_cast<int>(a) & static_cast<int>(b)) != ObjectUpdateFlag::None;
+}
+
+/// Get object update flags
+/// @param ob - the object to check
+/// @return ObjectUpdateFlag instance idicating if data and/or object is marked as updated
+ObjectUpdateFlag getObjectUpdateState(BL::Object ob);
+
 /// Get the number of subframes selected for the object
 inline int getObjectSubframes(BL::Object ob) {
 	auto vrayOb = RNA_pointer_get(&ob.ptr, "vray");

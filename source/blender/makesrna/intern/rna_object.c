@@ -198,6 +198,18 @@ const EnumPropertyItem rna_enum_object_axis_items[] = {
 #include "ED_curve.h"
 #include "ED_lattice.h"
 
+static void vray_rna_Object_tag_update(PointerRNA *obPtr)
+{
+	PointerRNA obRNA;
+	RNA_pointer_create(obPtr->id.data, &RNA_Object, obPtr->id.data, &obRNA);
+	if (RNA_struct_find_property(&obRNA, "vray")) {
+		PointerRNA vrayPtr = RNA_pointer_get(&obRNA, "vray");
+		int data_updated = RNA_int_get(&vrayPtr, "data_updated");
+		data_updated = data_updated | CGR_UPDATED_OBJECT;
+		RNA_int_set(&vrayPtr, "data_updated", data_updated);
+	}
+}
+
 static void rna_Object_internal_update(Main *UNUSED(bmain), Scene *UNUSED(scene), PointerRNA *ptr)
 {
 	DAG_id_tag_update(ptr->id.data, OB_RECALC_OB);
@@ -216,8 +228,9 @@ static void rna_Object_matrix_world_update(Main *bmain, Scene *scene, PointerRNA
 	rna_Object_internal_update(bmain, scene, ptr);
 }
 
-static void rna_Object_hide_update(Main *bmain, Scene *UNUSED(scene), PointerRNA *UNUSED(ptr))
+static void rna_Object_hide_update(Main *bmain, Scene *UNUSED(scene), PointerRNA *ptr)
 {
+	vray_rna_Object_tag_update(ptr);
 	DAG_id_type_tag(bmain, ID_OB);
 }
 
@@ -353,6 +366,7 @@ static void rna_Object_layer_update(Main *bmain, Scene *scene, PointerRNA *ptr)
 	rna_Object_layer_update__internal(bmain, scene, base, ob);
 	ob->lay = base->lay;
 
+	vray_rna_Object_tag_update(ptr);
 	WM_main_add_notifier(NC_SCENE | ND_LAYER_CONTENT, scene);
 }
 

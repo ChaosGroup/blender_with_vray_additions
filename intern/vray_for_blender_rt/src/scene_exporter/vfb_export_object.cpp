@@ -24,6 +24,7 @@
 #include "DNA_object_types.h"
 #include "vfb_utils_math.h"
 
+
 using namespace VRayForBlender;
 
 uint32_t VRayForBlender::to_int_layer(const BlLayers & layers) {
@@ -176,8 +177,11 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 	AttrPlugin  geom;
 	AttrPlugin  mtl;
 
-	bool is_updated      = check_updated ? ob.is_updated()      : true;
-	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+	using namespace Blender;
+	const ObjectUpdateFlag flags = getObjectUpdateState(ob);
+
+	bool is_updated      = check_updated ? flags & ObjectUpdateFlag::Object : true;
+	bool is_data_updated = check_updated ? flags & ObjectUpdateFlag::Data   : true;
 
 	// we are syncing dupli, without instancer -> we need to export the node
 	if (override && !override.useInstancer) {
@@ -187,15 +191,6 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 	// we are syncing "undo" state so check if this object was changed in the "do" state
 	if (!is_updated && shouldSyncUndoneObject(ob)) {
 		is_updated = true;
-	}
-
-	if (!is_updated && ob.parent()) {
-		BL::Object parent(ob.parent());
-		is_updated = parent.is_updated();
-	}
-	if (!is_data_updated && ob.parent()) {
-		BL::Object parent(ob.parent());
-		is_data_updated = parent.is_updated_data();
 	}
 
 	BL::NodeTree ntree = Nodes::GetNodeTree(ob);
@@ -424,7 +419,7 @@ AttrValue DataExporter::exportAsset(BL::Object ob, bool check_updated, const Obj
 	if (RNA_boolean_get(&vrayAsset, "use_hide_objects")) {
 		std::string objectsString = RNA_std_string_get(&vrayAsset, "hidden_objects");
 		if (!objectsString.empty()) {
-			AttrListString hiddenObjects(std::move(String::SplitString(objectsString, ";")));
+			AttrListString hiddenObjects(String::SplitString(objectsString, ";"));
 
 			if (!hiddenObjects.empty()) {
 				sceneDesc.add("hidden_objects", hiddenObjects);
@@ -447,8 +442,12 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 		m_id_track.insert(ob, pluginName, IdTrack::CLIPPER);
 	}
 
-	bool is_updated      = check_updated ? ob.is_updated()      : true;
-	bool is_data_updated = check_updated ? ob.is_updated_data() : true;
+	using namespace Blender;
+	// TODO: do we care for parent update?
+	const ObjectUpdateFlag flags = getObjectUpdateState(ob);
+
+	bool is_updated      = check_updated ? flags & ObjectUpdateFlag::Object : true;
+	bool is_data_updated = check_updated ? flags & ObjectUpdateFlag::Data   : true;
 
 	if (!is_updated && shouldSyncUndoneObject(ob)) {
 		is_updated = true;
