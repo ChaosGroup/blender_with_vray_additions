@@ -393,6 +393,18 @@ static int group_select_flag(Group *gr)
 #endif
 }
 
+static void vrayGroupObjectTagUpdate(Object *obPtr)
+{
+	PointerRNA obRNA;
+	RNA_pointer_create(&obPtr->id, &RNA_Object, &obPtr->id, &obRNA);
+	if (RNA_struct_find_property(&obRNA, "vray")) {
+		PointerRNA vrayPtr = RNA_pointer_get(&obRNA, "vray");
+		int data_updated = RNA_int_get(&vrayPtr, "data_updated");
+		data_updated = data_updated | CGR_UPDATED_OBJECT;
+		RNA_int_set(&vrayPtr, "data_updated", data_updated);
+	}
+}
+
 void restrictbutton_gr_restrict_flag(void *poin, void *poin2, int flag)
 {
 	Scene *scene = (Scene *)poin;
@@ -401,6 +413,7 @@ void restrictbutton_gr_restrict_flag(void *poin, void *poin2, int flag)
 
 	if (group_restrict_flag(gr, flag)) {
 		for (gob = gr->gobject.first; gob; gob = gob->next) {
+			vrayGroupObjectTagUpdate(gob->ob);
 			if (ID_IS_LINKED(gob->ob))
 				continue;
 
@@ -413,6 +426,7 @@ void restrictbutton_gr_restrict_flag(void *poin, void *poin2, int flag)
 	}
 	else {
 		for (gob = gr->gobject.first; gob; gob = gob->next) {
+			vrayGroupObjectTagUpdate(gob->ob);
 			if (ID_IS_LINKED(gob->ob))
 				continue;
 

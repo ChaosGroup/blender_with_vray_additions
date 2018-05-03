@@ -338,6 +338,10 @@ public:
 	std::string       getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset);
 	std::string       getLightName(BL::Object ob);
 	std::string       getClipperName(BL::Object ob);
+
+	/// Get plugin name for given object and override attributes
+	std::string       getObjectPluginName(BL::Object ob, const ObjectOverridesAttrs &overrideAttr);
+
 	static std::string       getIdUniqueName(BL::Pointer ob);
 	static std::string       getIdUniqueName(ID * id);
 

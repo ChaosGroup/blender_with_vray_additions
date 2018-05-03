@@ -589,6 +589,7 @@ void SceneExporter::sync_object_modiefiers(BL::Object ob, const int &check_updat
 
 void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const ObjectOverridesAttrs & override)
 {
+	const std::string & pluginName = m_data_exporter.getObjectPluginName(ob, override);
 	{
 		auto lock = m_data_exporter.raiiLock();
 		// this object's ID is already synced - skip
@@ -602,53 +603,41 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 			}
 		}
 
-		auto pluginName = override.namePrefix;
-		if (DataExporter::isObVrscene(ob)) {
-			pluginName += m_data_exporter.getAssetName(ob);
-		} else if (DataExporter::isObMesh(ob) || DataExporter::isObGroupInstance(ob)) {
-			pluginName += m_data_exporter.getNodeName(ob);
-		} else if (DataExporter::isObLamp(ob)) {
-			pluginName += m_data_exporter.getLightName(ob);
-		}
-
 		if (!pluginName.empty() && !override.isDupli) { // not a duplicate
 			m_data_exporter.m_id_track.insert(ob, pluginName);
 		}
 	}
 
 	const bool skip_export = !m_data_exporter.isObjectVisible(ob) || m_data_exporter.isObjectInHideList(ob, "export");
-
+	const bool isExported = m_exporter->getPluginManager().inCache(pluginName);
 	auto overrideAttr = override;
+
+	const bool checkUpdated = isExported && check_updated && !skip_export;
 
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
 
 	// we should skip this object, but maybe it's already exported then we need to hide it
 	if (skip_export && !overrideAttr) {
-		std::string exportName;
 		bool remove = false, isClipper = false;;
 		if (DataExporter::isObMesh(ob)) {
 			if (RNA_boolean_get(&vrayClipper, "enabled")) {
 				remove = true;
 				isClipper = true;
-				exportName = "Clipper@" + overrideAttr.namePrefix + m_data_exporter.getNodeName(ob);
-			} else {
-				exportName = overrideAttr.namePrefix + m_data_exporter.getNodeName(ob);
 			}
 		} else if (DataExporter::isObLamp(ob)) {
 			// we cant hide lamps, so we must remove
 			remove = true;
-			exportName = overrideAttr.namePrefix + m_data_exporter.getLightName(ob);
 		}
 
 		ObjectOverridesAttrs oattrs;
 
-		if (m_exporter->getPluginManager().inCache(exportName)) {
+		if (isExported) {
 			// lamps and clippers should be removed, others should be hidden
 			auto lock = m_data_exporter.raiiLock();
 			m_data_exporter.m_id_cache.insert(ob);
 			if (remove) {
-				m_exporter->remove_plugin(exportName);
+				m_exporter->remove_plugin(pluginName);
 				if (isClipper) {
 					// for clipper we have also node which we need to hide since it will appear when clipper is removed
 					oattrs.override = true;
@@ -692,10 +681,10 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		}
 
 		if (DataExporter::isObVrscene(ob)) {
-			m_data_exporter.exportAsset(ob, check_updated, override);
+			m_data_exporter.exportAsset(ob, checkUpdated, override);
 		} else if (ob.data() && DataExporter::isObMesh(ob)) {
 			if (!RNA_boolean_get(&vrayClipper, "enabled")) {
-				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+				m_data_exporter.exportObject(ob, checkUpdated, overrideAttr);
 			} else {
 				if (!overrideAttr) {
 					overrideAttr.tm = AttrTransformFromBlTransform(ob.matrix_world());
@@ -703,7 +692,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 				}
 				overrideAttr.visible = RNA_boolean_get(&vrayClipper, "use_obj_mesh");
 
-				m_data_exporter.exportObject(ob, check_updated, overrideAttr);
+				m_data_exporter.exportObject(ob, checkUpdated, overrideAttr);
 
 				const std::string &excludeGroupName = RNA_std_string_get(&vrayClipper, "exclusion_nodes");
 
@@ -715,6 +704,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 							BL::Group::objects_iterator grObIt;
 							for (gr.objects.begin(grObIt); grObIt != gr.objects.end(); ++grObIt) {
 								BL::Object ob = *grObIt;
+								// TODO: handle ob duplication and modifiers? consider reworking and re-using pre_sync_object
 								sync_object(ob, check_updated);
 							}
 							break;
@@ -722,7 +712,7 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 					}
 				}
 
-				m_data_exporter.exportVRayClipper(ob, check_updated, overrideAttr);
+				m_data_exporter.exportVRayClipper(ob, checkUpdated, overrideAttr);
 			}
 		} else if(ob.data() && DataExporter::isObLamp(ob)) {
 			m_data_exporter.exportLight(ob, check_updated, overrideAttr);

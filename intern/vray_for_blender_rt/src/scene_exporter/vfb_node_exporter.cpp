@@ -803,6 +803,32 @@ std::string DataExporter::getClipperName(BL::Object ob)
 	return "Clipper@" + getIdUniqueName(ob);
 }
 
+std::string DataExporter::getObjectPluginName(BL::Object ob, const ObjectOverridesAttrs &overrideAttr)
+{
+	std::string pluginName;;
+
+	if (DataExporter::isObVrscene(ob)) {
+		pluginName += getAssetName(ob);
+	} else if (DataExporter::isObMesh(ob) || DataExporter::isObGroupInstance(ob)) {
+		pluginName += getNodeName(ob);
+
+		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+		if (overrideAttr.isDupli) {
+			pluginName = "NodeWrapper@Instancer2@";
+		} else if (RNA_boolean_get(&vrayClipper, "enabled")) {
+			pluginName = "Clipper@" + pluginName;
+		}
+
+	} else if (DataExporter::isObLamp(ob)) {
+		pluginName += overrideAttr.namePrefix + getLightName(ob);
+	}
+
+	// TODO: if object is hair we wont get correct name
+
+	return pluginName;
+}
 
 std::string DataExporter::getIdUniqueName(ID * id) {
 	std::string name(id->name);
