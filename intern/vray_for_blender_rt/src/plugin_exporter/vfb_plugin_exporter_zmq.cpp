@@ -184,6 +184,7 @@ ZmqExporter::ZmqExporter(const ExporterSettings & settings)
     , m_isDirty(true)
     , m_isAborted(false)
     , m_started(false)
+    , m_exportedCount(0)
 {
 	checkZmqClient();
 }
@@ -556,6 +557,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 			pluginDesc.pluginName.c_str());
 		return AttrPlugin();
 	}
+	++m_exportedCount;
 
 	const std::string & name = pluginDesc.pluginName;
 	AttrPlugin plugin(name);
@@ -591,4 +593,14 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	}
 
 	return plugin;
+}
+
+int ZmqExporter::getExportedPluginsCount() const
+{
+	return m_exportedCount;
+}
+
+void ZmqExporter::resetExportedPluginsCount()
+{
+	m_exportedCount = 0;
 }

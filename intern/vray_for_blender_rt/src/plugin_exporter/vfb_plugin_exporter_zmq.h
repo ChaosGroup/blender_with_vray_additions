@@ -74,6 +74,9 @@ public:
 
 	virtual bool        is_running() const { return m_started; }
 
+	virtual int         getExportedPluginsCount() const override;
+	virtual void        resetExportedPluginsCount() override;
+
 	virtual RenderImage get_image();
 	virtual RenderImage get_render_channel(RenderChannelType channelType);
 	virtual void        set_render_size(const int &w, const int &h);
@@ -111,6 +114,7 @@ private:
 	bool                m_isDirty; ///< if true we have some change sent to server after last commit, so next commit will go trough
 	bool                m_isAborted;
 	bool                m_started;
+	std::atomic<int>    m_exportedCount; ///< Number of exported plugins
 
 	// ensures the image is not changed while it is read
 	std::mutex          m_imgMutex;

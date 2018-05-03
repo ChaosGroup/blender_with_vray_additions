@@ -88,6 +88,9 @@ public:
 	virtual void         reset() {}
 	virtual bool         is_running() const { return true; }
 
+	virtual int          getExportedPluginsCount() const { return 0; }
+	virtual void         resetExportedPluginsCount() {};
+
 	virtual void         export_vrscene(const std::string&) {}
 
 	/// Delay plugin to be exported after the scene

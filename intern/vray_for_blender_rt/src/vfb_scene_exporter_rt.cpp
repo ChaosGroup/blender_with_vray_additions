@@ -52,6 +52,7 @@ void InteractiveExporter::setup_callbacks()
 bool InteractiveExporter::export_scene(const bool check_updated)
 {
 	const clock_t begin = clock();
+	m_exporter->resetExportedPluginsCount();
 
 	struct FrameStateCheck {
 		FrameExportManager::BlenderFramePair sceneFrame;
@@ -155,7 +156,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	PRINT_INFO_EX("Synced in %.3f sec.", elapsed_secs);
+	PRINT_INFO_EX("Synced [%d] plugins in %.3f sec.", m_exporter->getExportedPluginsCount(), elapsed_secs);
 
 	return true;
 }
