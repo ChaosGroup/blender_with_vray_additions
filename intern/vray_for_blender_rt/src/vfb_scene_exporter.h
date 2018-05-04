@@ -43,6 +43,9 @@ class PythonGIL {
 public:
 	PythonGIL(PyThreadState * threadState = nullptr): m_threadState(threadState) {}
 
+	PythonGIL(const PythonGIL &) = delete;
+	PythonGIL& operator=(const PythonGIL &) = delete;
+
 	// when returning to python we should lock
 	~PythonGIL() {
 		if (m_threadState) {
@@ -51,9 +54,8 @@ public:
 	}
 
 	bool try_lock() {
-		std::lock_guard<std::mutex> lock(m_mtx);
 		if (m_threadState) {
-			_lock(false);
+			lock();
 			return true;
 		} else {
 			return false;

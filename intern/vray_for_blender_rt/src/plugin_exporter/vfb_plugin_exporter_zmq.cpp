@@ -529,6 +529,7 @@ void ZmqExporter::export_vrscene(const std::string &filepath)
 {
 	checkZmqClient();
 	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ExportScene, filepath));
+	m_client->waitForMessages();
 }
 
 int ZmqExporter::remove_plugin_impl(const std::string &name)

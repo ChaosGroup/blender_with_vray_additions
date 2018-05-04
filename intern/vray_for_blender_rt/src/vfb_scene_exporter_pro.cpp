@@ -171,16 +171,16 @@ bool ProductionExporter::export_scene(const bool)
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
 
 	std::unique_lock<PythonGIL> fileExportLock(m_pyGIL, std::defer_lock);
+	const bool actualRendering = !isFileExport && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly;
 
 	m_isAnimationRunning = m_settings.settings_animation.use;
 	if (isFileExport) {
 		fileExportLock.lock();
-	} else {
-		render_start();
 	}
 
 	std::thread renderThread;
-	if (!isFileExport && m_settings.work_mode != ExporterSettings::WorkMode::WorkModeExportOnly) {
+	if (actualRendering) {
+		render_start();
 		renderThread = std::thread(&ProductionExporter::render_loop, this);
 	}
 
@@ -228,7 +228,7 @@ bool ProductionExporter::export_scene(const bool)
 		totalSyncTime += frameSyncSeconds;
 
 		// wait render for current frame only
-		if (!isFileExport) {
+		if (actualRendering) {
 			PRINT_INFO_EX("Frame sync time %.3f sec.", frameSyncSeconds);
 			if (!wait_for_frame_render()) {
 				break;
@@ -258,7 +258,7 @@ bool ProductionExporter::export_scene(const bool)
 		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		// TODO: handle this per frame for FrameByFrame
 		std::string vrsceneDest;
-		std::string blendPath = m_data.filepath();
+		const std::string & blendPath = m_data.filepath();
 
 		switch (m_settings.settings_files.output_type) {
 		case SettingsFiles::OutputDirType::OutputDirTypeTmp:
@@ -280,7 +280,7 @@ bool ProductionExporter::export_scene(const bool)
 		m_exporter->export_vrscene(vrsceneDest);
 	}
 
-	if (!isFileExport) {
+	if (actualRendering) {
 		VFB_Assert(renderThread.joinable() && "Render thread not joinable");
 		renderThread.join();
 		render_end();
