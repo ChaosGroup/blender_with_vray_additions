@@ -148,7 +148,7 @@ void DataExporter::getSelectorObjectList(BL::Node node, ObList &obList)
 
 HashSet<BL::Object> DataExporter::getObjectList(const std::string &obName, const std::string &groupName)
 {
-	HashSet<BL::Object> objects, additional;
+	HashSet<BL::Object> objects;
 
 	if (!obName.empty()) {
 		for (auto & ob : Blender::collection(m_scene.objects)) {
@@ -169,20 +169,6 @@ HashSet<BL::Object> DataExporter::getObjectList(const std::string &obName, const
 			}
 		}
 	}
-
-	// check an object is a group instance and hide the group members
-	for (auto ob : objects) {
-		if (ob.dupli_type() == BL::Object::dupli_type_GROUP) {
-			BL::Group group = ob.dupli_group();
-
-			for (int c = 0; c < group.objects.length(); ++c) {
-				additional.insert(group.objects[c]);
-			}
-		}
-	}
-
-	// merge objects
-	std::copy(additional.begin(), additional.end(), std::inserter(objects, objects.end()));
 
 	return objects;
 }

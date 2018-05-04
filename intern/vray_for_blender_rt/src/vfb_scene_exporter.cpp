@@ -719,9 +719,6 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 		}
 	}
 
-	// Reset update flag
-	RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
-
 	sync_object_modiefiers(ob, check_updated);
 }
 
@@ -733,7 +730,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 	using OVisibility = DataExporter::ObjectVisibility;
 
-	const int base_visibility = OVisibility::HIDE_VIEWPORT | OVisibility::HIDE_RENDER | OVisibility::HIDE_LAYER;
+	const int base_visibility = OVisibility::HIDE_VIEWPORT | OVisibility::HIDE_RENDER | OVisibility::HIDE_LAYER | OVisibility::HIDE_CAMERA_ALL;
 	const bool skip_export = !m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
 	if (skip_export && noClipper) {
@@ -765,6 +762,8 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			auto flags = instanceFlags.get_flags(c++);
 
 			if (instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render())) {
+				flags.set(IF::HIDDEN);
+			} else if (!m_data_exporter.isObjectVisible(parentOb, OVisibility(~OVisibility::HIDE_LAYER))) {
 				flags.set(IF::HIDDEN);
 			}
 
@@ -1175,7 +1174,11 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 
 		const auto obName = ob.name();
 		SCOPED_TRACE_EX("Export task for object (%s)", obName.c_str());
-		const bool is_updated = (check_updated ? ob.is_updated() : true) || m_data_exporter.hasLayerChanged();
+
+		using namespace Blender;
+		const ObjectUpdateFlag flags = getObjectUpdateState(ob);
+
+		const bool is_updated = m_data_exporter.hasLayerChanged() || (check_updated ? flags & ObjectUpdateFlag::Object : true);
 		const bool visible = m_data_exporter.isObjectVisible(ob);
 
 		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
@@ -1226,8 +1229,6 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 		if (ob.select()) {
 			m_selectedObjects.push_back(ob);
 		}
-
-
 	}, ThreadManager::Priority::LOW);
 }
 
@@ -1250,6 +1251,13 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		if (!is_interrupted() && m_threadManager->workerCount()) {
 			PRINT_INFO_EX("Started export for all objects - waiting for all.");
 			wg.wait();
+		}
+
+		// this needs to happen after all object are already exported
+		for (auto & ob : Blender::collection(m_scene.objects)) {
+			// Reset update flag
+			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+			RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 		}
 	}
 	else{

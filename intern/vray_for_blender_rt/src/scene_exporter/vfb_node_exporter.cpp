@@ -724,16 +724,16 @@ bool DataExporter::isDupliVisible(BL::Object ob, ObjectVisibility ignore) {
 	return is_renderable;
 }
 
-bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility ignore)
+bool DataExporter::isObjectVisible(BL::Object ob, ObjectVisibility check)
 {
-#define has(flag) ((ignore & flag) != 0)
+#define has(flag) ((check & flag) != 0)
 
 	if (!ob) {
 		return false;
 	}
 
 	// object is duplicator and is hidden from dupli options/psys
-	if (!isDupliVisible(ob, ignore)) {
+	if (!isDupliVisible(ob, check)) {
 		return false;
 	}
 

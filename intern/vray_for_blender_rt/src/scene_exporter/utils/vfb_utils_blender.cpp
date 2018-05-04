@@ -367,10 +367,25 @@ ObjectUpdateFlag Blender::getObjectUpdateState(BL::Object ob)
 		}
 	}
 
+	// check for parent
 	if (flags == OF::None) {
 		if (BL::Object parent = ob.parent()) {
 			const ObjectUpdateFlag parentFlags = getObjectUpdateState(parent);
 			flags = flags | parentFlags;
+		}
+	}
+
+	// check for group instance
+	if (flags == OF::None) {
+		if (BL::Group group = ob.dupli_group()) {
+			for (auto & groupOb : collection(group.objects)) {
+				flags = flags | getObjectUpdateState(groupOb);
+
+				// if we find 1 updated we can stop checking others
+				if (flags != OF::None) {
+					break;
+				}
+			}
 		}
 	}
 

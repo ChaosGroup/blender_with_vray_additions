@@ -454,9 +454,9 @@ public:
 	bool              hasLayerChanged() const { return m_layer_changed; }
 	bool              hasDupli(BL::Object ob);
 	// bits set in ObjectVisibility are used to check only some of the criteria
-	bool              isDupliVisible(BL::Object ob, ObjectVisibility ignore = HIDE_ALL);
+	bool              isDupliVisible(BL::Object ob, ObjectVisibility check = HIDE_ALL);
 	// bits set in ObjectVisibility are used to check only some of the criteria
-	bool              isObjectVisible(BL::Object ob, ObjectVisibility ignore = HIDE_ALL);
+	bool              isObjectVisible(BL::Object ob, ObjectVisibility check = HIDE_ALL);
 
 	/// Check if ob is a mesh
 	static bool       isObMesh(BL::Object ob);
