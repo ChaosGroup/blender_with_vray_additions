@@ -42,8 +42,10 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 #define MemberNotEq(member) (!(member == other.member))
 
 #ifdef DEBUG
+	/// Assert will **ALWAYS** test its condition but will only call assert in debug mode
 	#define VFB_Assert(test) assert(test);
 #else
+	/// Assert will **ALWAYS** test its condition but will only call assert in debug mode
 	#define VFB_Assert(test) (void)((!!(test)) ? (BLI_system_backtrace(stderr), _VFB_Assert_PRINT_POS(test), 0) : 0);
 #endif
 
