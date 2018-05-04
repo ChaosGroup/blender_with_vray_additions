@@ -305,7 +305,7 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 				this->last_rendered_frame = *message.getValue<VRayBaseTypes::AttrSimpleType<float>>();
 				break;
 			default:
-				BLI_assert(!"Receieved unexpected RendererState message from renderer.");
+				VFB_Assert(!"Receieved unexpected RendererState message from renderer.");
 			}
 		}
 	}
@@ -400,7 +400,7 @@ void ZmqExporter::checkZmqClient()
 
 		if (!m_client->good()) {
 			m_isAborted = true;
-			BLI_assert(!"ZMQ client disconnected from server!");
+			VFB_Assert(!"ZMQ client disconnected from server!");
 		}
 	}
 }

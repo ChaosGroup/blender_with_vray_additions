@@ -66,9 +66,9 @@ public:
 
 	void unlock() {
 		std::lock_guard<std::mutex> lock(m_mtx);
-		BLI_assert(!m_threadState && "Will overrite python thread state, recursive saves are not permitted.");
+		VFB_Assert(!m_threadState && "Will overrite python thread state, recursive saves are not permitted.");
 		m_threadState = PyEval_SaveThread();
-		BLI_assert(m_threadState && "PyEval_SaveThread returned NULL.");
+		VFB_Assert(m_threadState && "PyEval_SaveThread returned NULL.");
 	}
 private:
 
@@ -76,7 +76,7 @@ private:
 		if (protect) {
 			m_mtx.lock();
 		}
-		BLI_assert(m_threadState && "Restoring null python state!");
+		VFB_Assert(m_threadState && "Restoring null python state!");
 		PyEval_RestoreThread(m_threadState);
 		m_threadState = nullptr;
 		if (protect) {

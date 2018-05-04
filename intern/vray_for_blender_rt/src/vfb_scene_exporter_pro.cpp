@@ -281,7 +281,7 @@ bool ProductionExporter::export_scene(const bool)
 	}
 
 	if (!isFileExport) {
-		BLI_assert(renderThread.joinable() && "Render thread not joinable");
+		VFB_Assert(renderThread.joinable() && "Render thread not joinable");
 		renderThread.join();
 		render_end();
 	}
@@ -440,7 +440,7 @@ void ProductionExporter::cb_on_image_ready()
 
 void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img)
 {
-	BLI_assert(img.isBucket() && "Image for cb_on_bucket_ready is not bucket image");
+	VFB_Assert(img.isBucket() && "Image for cb_on_bucket_ready is not bucket image");
 	if (!img.isBucket()) {
 		return;
 	}

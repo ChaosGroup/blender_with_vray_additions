@@ -935,7 +935,7 @@ bool DataExporter::shouldSyncUndoneObject(BL::Object ob)
 	}
 
 	if (m_undo_stack.size() < 2) {
-		BLI_assert(!"Trying to do undo/redo but stack did not have enought states");
+		VFB_Assert(!"Trying to do undo/redo but stack did not have enought states");
 		return false;
 	}
 
@@ -970,7 +970,7 @@ void DataExporter::syncEnd()
 	auto lock = raiiLock();
 	if (m_is_undo_sync) {
 		if (m_undo_stack.size() < 2) {
-			BLI_assert(!"Trying to do undo/redo but stack did not have enought states");
+			VFB_Assert(!"Trying to do undo/redo but stack did not have enought states");
 			m_undo_stack.clear();
 		} else {
 			m_undo_stack.pop_back(); // pop the state then we were undo-ing stuff

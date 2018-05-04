@@ -680,7 +680,7 @@ AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & inst
 		{
 			std::lock_guard<std::mutex> lock(m_instMtx);
 			auto iter = m_prevFrameInstancer.find(exportName);
-			BLI_assert(iter != m_prevFrameInstancer.end() && "Plugin is in m_prevFrameInstancer but not found");
+			VFB_Assert(iter != m_prevFrameInstancer.end() && "Plugin is in m_prevFrameInstancer but not found");
 			iter->second.instancer = instancer;
 		}
 	} else {

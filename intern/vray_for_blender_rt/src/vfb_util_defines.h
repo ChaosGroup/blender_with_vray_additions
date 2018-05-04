@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+#include "BLI_assert.h"
+#include <cassert>
+
 #ifndef CGR_UTIL_DEFINES_H
 #define CGR_UTIL_DEFINES_H
 
@@ -37,5 +40,11 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 
 #define MemberEq(member) (member == other.member)
 #define MemberNotEq(member) (!(member == other.member))
+
+#ifdef DEBUG
+	#define VFB_Assert(test) assert(test);
+#else
+	#define VFB_Assert(test) (void)((!!(test)) ? (BLI_system_backtrace(stderr), _VFB_Assert_PRINT_POS(test), 0) : 0);
+#endif
 
 #endif // CGR_UTIL_DEFINES_H

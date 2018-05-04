@@ -1,7 +1,7 @@
 #include "vfb_thread_manager.h"
 #include "cgr_config.h" // PRINT_INFO_EX
 
-#include "BLI_utildefines.h" // BLI_Assert
+#include "vfb_util_defines.h"
 
 using namespace VRayForBlender;
 using namespace std;
@@ -23,8 +23,8 @@ ThreadManager::Ptr ThreadManager::make(int thCount) {
 ThreadManager::~ThreadManager() {
 	// m_workers is not protected because there is no sane way to do this from inside the ThreadManager
 	// it can't handle calling some methond and dtor concurrently
-	if (m_workers.size() > 0) {
-		BLI_assert(!"VFB ThreadManager exiting while threads are running!");
+	if (!m_workers.empty()) {
+		VFB_Assert(!"VFB ThreadManager exiting while threads are running!");
 		stop();
 	}
 }
@@ -39,7 +39,7 @@ void ThreadManager::stop() {
 			if (m_workers[c].joinable()) {
 				m_workers[c].join();
 			} else {
-				BLI_assert(!"VFB ThreadManager's thread is not joinable during stop!");
+				VFB_Assert(!"VFB ThreadManager's thread is not joinable during stop!");
 			}
 		}
 

@@ -88,7 +88,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 			// ensure only one PluginWriter is instantiated for a file
 			writer.reset(new PluginWriter(m_threadManager, getFile(type, fileName.c_str()), exporter_settings.export_file_format));
 			if (!writer) {
-				BLI_assert(!"Failed to create PluginWriter for python file!");
+				VFB_Assert(!"Failed to create PluginWriter for python file!");
 				return;
 			}
 			m_fileWritersMap[fileName] = writer;

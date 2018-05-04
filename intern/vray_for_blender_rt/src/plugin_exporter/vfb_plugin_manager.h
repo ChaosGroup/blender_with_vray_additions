@@ -67,8 +67,8 @@ public:
 
 	/// Get PluginDesc for a given name, it must exist in the cache
 	FramePluginDesc fromCache(const std::string &name) {
-		assert(m_cache.find(name) != m_cache.end() && "PluginManager::fromCache() called with NON cache plugin name!");
-		assert(m_storeData && "PluginManager::fromCache called when m_storeData == false");
+		VFB_Assert(m_cache.find(name) != m_cache.end() && "PluginManager::fromCache() called with NON cache plugin name!");
+		VFB_Assert(m_storeData && "PluginManager::fromCache called when m_storeData == false");
 		auto & item = m_cache[name];
 		return { item.m_desc, item.m_frame };
 	}

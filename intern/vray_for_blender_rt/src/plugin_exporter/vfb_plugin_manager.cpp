@@ -170,7 +170,7 @@ std::pair<bool, PluginDesc> PluginManager::diffWithCache(const PluginDesc &plugi
 		return std::make_pair(false, res);
 	}
 
-	assert(cacheEntry->second.m_desc.pluginID == pluginDesc.pluginID && "PluginManager::diffWithCache called with desc to different plugin!");
+	VFB_Assert(cacheEntry->second.m_desc.pluginID == pluginDesc.pluginID && "PluginManager::diffWithCache called with desc to different plugin!");
 
 	const auto & cacheAttrMap = cacheEntry->second.m_attrHashes;
 	const auto & descAttrMap = descHash.m_attrHashes;

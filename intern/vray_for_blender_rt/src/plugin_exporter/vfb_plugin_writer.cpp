@@ -66,7 +66,7 @@ const char * PluginWriter::WriteItem::getData(int &len) const {
 }
 
 void PluginWriter::WriteItem::asyncDone(const char * data) {
-	BLI_assert(m_isAsync && "Called asyncDone on sync WriteItem");
+	VFB_Assert(m_isAsync && "Called asyncDone on sync WriteItem");
 	// first copy data into task
 	if (data) {
 		m_asyncData = data;
@@ -341,7 +341,7 @@ PluginWriter &operator<<(PluginWriter &pp, const VRayBaseTypes::AttrValue &val)
 	case ValueTypeInstancer: return pp << val.as<AttrInstancer>();
 	case ValueTypeListValue: return pp << val.as<AttrListValue>();
 	default:
-		BLI_assert(!"Unsupported attribute type");
+		VFB_Assert(!"Unsupported attribute type");
 		break;
 	}
 	return pp;

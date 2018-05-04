@@ -364,7 +364,7 @@ void SceneExporter::init() {
 	m_frameExporter.updateFromSettings();
 
 	create_exporter();
-	BLI_assert(m_exporter && "Failed to create exporter!");
+	VFB_Assert(m_exporter && "Failed to create exporter!");
 	m_exporter->init();
 
 	// directly bind to the engine
@@ -1029,7 +1029,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	MHash maxInstanceId = 0;
 	for (int c = 0; c < instancesCount; ++c) {
 		auto tmIndecies = unravel_index(c, arrModSizes);
-		BLI_assert(tmIndecies.size() == arrModIndecies.size());
+		VFB_Assert(tmIndecies.size() == arrModIndecies.size());
 		// tmIndecies maps index to TM in n'th modifier
 
 		float dupliLocalTm[4][4];
