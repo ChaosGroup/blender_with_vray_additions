@@ -123,7 +123,7 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 		const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
 
 		if (sceneFramePair != setFramePair) {
-			frameExp.changeSceneFrame(setFramePair);
+			FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
 		}
 
 		if (aMode == AnimMode::AnimationModeCameraLoop) {
@@ -165,7 +165,7 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 
 bool ProductionExporter::export_scene(const bool)
 {
-	m_frameExporter.updateFromSettings();
+	m_frameExporter.updateFromSettings(m_scene);
 	SceneExporter::export_scene(false);
 
 	const bool isFileExport = m_settings.exporter_type == ExporterType::ExpoterTypeFile;
@@ -245,9 +245,9 @@ bool ProductionExporter::export_scene(const bool)
 		std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
 		std::unique_lock<PythonGIL> lock(m_pyGIL, std::defer_lock);
 		std::lock(uLock, lock);
-		m_frameExporter.reset();
+		m_frameExporter.reset(m_scene, m_data);
 	} else {
-		m_frameExporter.reset();
+		m_frameExporter.reset(m_scene, m_data);
 	}
 
 	m_isAnimationRunning = false;

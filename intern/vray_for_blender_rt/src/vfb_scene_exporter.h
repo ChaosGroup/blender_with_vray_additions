@@ -61,45 +61,35 @@ public:
 	}
 
 	void lock() {
-		_lock(true);
+		VFB_Assert(m_threadState && "Restoring null python state!");
+		PyEval_RestoreThread(m_threadState);
+		m_threadState = nullptr;
 	}
 
 	void unlock() {
-		std::lock_guard<std::mutex> lock(m_mtx);
 		VFB_Assert(!m_threadState && "Will overrite python thread state, recursive saves are not permitted.");
 		m_threadState = PyEval_SaveThread();
 		VFB_Assert(m_threadState && "PyEval_SaveThread returned NULL.");
 	}
 private:
-
-	void _lock(bool protect = true) {
-		if (protect) {
-			m_mtx.lock();
-		}
-		VFB_Assert(m_threadState && "Restoring null python state!");
-		PyEval_RestoreThread(m_threadState);
-		m_threadState = nullptr;
-		if (protect) {
-			m_mtx.unlock();
-		}
-	}
-
-
-	std::mutex      m_mtx; ///< lock and unlock are not atomic - lock while doing it
 	PyThreadState * m_threadState; ///< pointer to the state of the thread that called the c++
 };
 
 /// Class that handles objects with subframes
 class SubframesHandler {
 public:
-	typedef std::multimap<int, BL::Object, std::greater<int>> ObjectCollection;
+	typedef std::multimap<int, BL::Object, std::greater<>>    ObjectCollection;
 	typedef ObjectCollection::iterator                        ObjectCollectionIt;
 
 	SubframesHandler() = delete;
-	SubframesHandler(BL::Scene scene, ExporterSettings & settings);
+	SubframesHandler(ExporterSettings & settings)
+		: m_currentSubframeDivision(0)
+		, m_settings(settings)
+		, m_isUpdated(false)
+	{}
 
 	/// Collects all the objects from the scene that have subframes
-	void update();
+	void update(BL::Scene & scene);
 
 	/// Get all the objects from the scene that have subframes
 	ObjectCollection &getObjectsWithSubframes();
@@ -140,7 +130,6 @@ public:
 private:
 	int               m_currentSubframeDivision; /// current subframe division that is exported
 	ExporterSettings &m_settings; /// reference to the settings
-	BL::Scene         m_scene; /// current scene that is exported
 	ObjectCollection  m_objectsWithSubframes; /// all objects in the scene with subframes
 	std::vector<int>  m_subframeValues; /// all different subframe values
 	bool              m_isUpdated; /// is data for subframes updated
@@ -150,14 +139,17 @@ private:
 /// Simplifies motion blur and animation export (both requre multi frame export)
 class FrameExportManager {
 public:
-	FrameExportManager(BL::Scene & scene, ExporterSettings & settings, BL::BlendData & data, BL::RenderEngine & engine);
+	FrameExportManager(ExporterSettings & settings)
+		: m_settings(settings)
+		, m_subframes(m_settings)
+	{}
 
 	/// Update internal data from the passes ExporterSettings
 	/// needed because settings change
-	void updateFromSettings();
+	void updateFromSettings(BL::Scene & scene);
 
 	/// Reset scene state as it was before exporting
-	void reset();
+	void reset(BL::Scene & scene, BL::BlendData & data);
 
 	/// Moves current frame 1 render frame backwards
 	/// Used in RT because we only need to render one frame so we rewind after each export
@@ -184,7 +176,7 @@ public:
 	BL::Object getActiveCamera();
 
 	/// Call function for each frame that needs to be exported so next frame can be rendered
-	void forEachExportFrame(std::function<bool(FrameExportManager &)> callback);
+	void forEachExportFrame(const std::function<bool(FrameExportManager &)> & callback);
 
 	/// Get the frame we need to set to scene for the current export
 	float getCurrentFrame() const {
@@ -249,21 +241,18 @@ public:
 	/// Change current frame
 	/// @param frame - the whole part of the frame
 	/// @param subframe - the fractional part of the frame
-	void changeSceneFrame(int frame, float subframe) {
-		m_scene.frame_set(m_data.ptr.data, frame, subframe);
+	static void changeSceneFrame(BL::Scene & scene, BL::BlendData & data, int frame, float subframe) {
+		scene.frame_set(data.ptr.data, frame, subframe);
 	}
 
 	/// Change current frame
 	/// @param pair - pair containing whole and fractional part of frame pair
-	void changeSceneFrame(const BlenderFramePair & pair) {
-		changeSceneFrame(pair.frame, pair.subframe);
+	static void changeSceneFrame(BL::Scene & scene, BL::BlendData & data, const BlenderFramePair & pair) {
+		changeSceneFrame(scene, data, pair.frame, pair.subframe);
 	}
 
 private:
 	ExporterSettings &m_settings; ///< The global settings for the exporter
-	BL::Scene m_scene; ///< Current scene
-	BL::RenderEngine m_engine;
-	BL::BlendData m_data; ///< The blender data conext
 	std::vector<BL::Object> m_loopCameras; ///< All cameras with 'camera_loop' enabled if anim is Camera Loop
 
 	float m_sceneSavedSubframe; ///< m_scene.frame_subframe() on init, used to restore scene to correct frame
@@ -319,7 +308,7 @@ public:
 		, m_active_camera(view3d ? view3d.camera() : scene.camera())
 		, m_python_thread_state(nullptr)
 		, m_exporter(nullptr)
-		, m_frameExporter(m_scene, m_settings, m_data, m_engine)
+		, m_frameExporter(m_settings)
 		, m_data_exporter(m_settings)
 		, m_settingsExporter(m_data_exporter, m_settings, m_viewParams, m_frameExporter, m_selectedObjects)
 		, m_sceneComputedLayers(0)

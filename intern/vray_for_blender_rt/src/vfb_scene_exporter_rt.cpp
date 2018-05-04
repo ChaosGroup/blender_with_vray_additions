@@ -57,7 +57,6 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	struct FrameStateCheck {
 		FrameExportManager::BlenderFramePair sceneFrame;
 		DataExporter::ObjectHideMap cameraObjects;
-		bool useHideObjects;
 		bool useMotionBlur;
 		float mbDuration;
 		float mbInterval;
@@ -81,7 +80,6 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			} else if (mbDuration != o.mbDuration || mbInterval != o.mbInterval || mbGeomSamples != o.mbGeomSamples) {
 				return true;
 			} else if (cameraObjects != o.cameraObjects) {
-				// if useHideObjects is true for previous or current sync, then change in camera hide list could indirectly need full re-export
 				return true;
 			}
 
@@ -98,7 +96,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 		m_exporter->set_render_mode(m_settings.render_mode);
 	}
 
-	m_frameExporter.updateFromSettings();
+	m_frameExporter.updateFromSettings(m_scene);
 
 	m_active_camera = SceneExporter::getActiveCamera(m_view3d, m_scene);
 	m_data_exporter.setActiveCamera(m_active_camera);
@@ -124,7 +122,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 			const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
 
 			if (sceneFramePair != setFramePair) {
-				m_frameExporter.changeSceneFrame(setFramePair);
+				FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
 			}
 
 			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
@@ -135,7 +133,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 		});
 
 		m_frameExporter.rewind();
-		m_frameExporter.reset();
+		m_frameExporter.reset(m_scene, m_data);
 	}
 
 

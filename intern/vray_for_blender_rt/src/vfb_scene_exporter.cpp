@@ -52,15 +52,7 @@ extern "C" {
 
 using namespace VRayForBlender;
 
-SubframesHandler::SubframesHandler(BL::Scene scene, ExporterSettings & settings)
-	: m_currentSubframeDivision(0)
-	, m_settings(settings)
-	, m_scene(scene)
-	, m_isUpdated(false)
-{
-}
-
-void SubframesHandler::update() {
+void SubframesHandler::update(BL::Scene & scene) {
 	if (m_isUpdated) {
 		return;
 	}
@@ -73,7 +65,7 @@ void SubframesHandler::update() {
 		return;
 	}
 
-	for (auto & ob : Blender::collection(m_scene.objects)) {
+	for (auto & ob : Blender::collection(scene.objects)) {
 		int subframesCount = Blender::getObjectKeyframes(ob);
 		if (subframesCount > 2) {
 			m_objectsWithSubframes.insert(std::pair<int, BL::Object>(subframesCount, ob));
@@ -89,35 +81,23 @@ void SubframesHandler::update() {
 }
 
 SubframesHandler::ObjectCollection &SubframesHandler::getObjectsWithSubframes() {
-	update();
 	return m_objectsWithSubframes;
 }
 
 std::vector<int> &SubframesHandler::getSubframeValues() {
-	update();
 	return m_subframeValues;
 }
 
-FrameExportManager::FrameExportManager(BL::Scene & scene, ExporterSettings & settings, BL::BlendData & data, BL::RenderEngine & engine)
-	: m_settings(settings)
-	, m_scene(scene)
-	, m_engine(engine)
-	, m_data(data)
-	, m_subframes(scene, m_settings)
+void FrameExportManager::updateFromSettings(BL::Scene & scene)
 {
-
-}
-
-void FrameExportManager::updateFromSettings()
-{
-	m_subframes.update();
+	m_subframes.update(scene);
 	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
-	m_animationFrameStep = m_scene.frame_step();
-	m_lastFrameToRender = m_scene.frame_end();
+	m_animationFrameStep = scene.frame_step();
+	m_lastFrameToRender = scene.frame_end();
 
-	m_sceneSavedSubframe = m_scene.frame_subframe();
-	m_sceneSavedFrame = m_scene.frame_current();
-	m_sceneFirstFrame = m_scene.frame_start();
+	m_sceneSavedSubframe = scene.frame_subframe();
+	m_sceneSavedFrame = scene.frame_current();
+	m_sceneFirstFrame = scene.frame_start();
 	m_mbGeomSamples = m_settings.mb_samples;
 
 	if (m_settings.use_motion_blur) {
@@ -138,7 +118,7 @@ void FrameExportManager::updateFromSettings()
 	if (m_settings.settings_animation.use) {
 		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 			if (m_loopCameras.empty()) {
-				for (auto & ob : Blender::collection(m_scene.objects)) {
+				for (auto & ob : Blender::collection(scene.objects)) {
 					if (ob.type() == BL::Object::type_CAMERA) {
 						auto dataPtr = ob.data().ptr;
 						PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
@@ -168,7 +148,7 @@ void FrameExportManager::updateFromSettings()
 			m_frameToRender = m_sceneSavedFrame + m_sceneSavedSubframe; // only current frame
 			m_animationFrameStep = 0; // no animation
 		} else {
-			m_frameToRender = m_scene.frame_start() - m_animationFrameStep;
+			m_frameToRender = scene.frame_start() - m_animationFrameStep;
 		}
 	} else {
 		m_animationFrameStep = 0; // we have no animation so dont move
@@ -212,16 +192,16 @@ void FrameExportManager::rewind()
 	m_lastExportedFrame = std::numeric_limits<float>::lowest(); // remove exported cache
 }
 
-void FrameExportManager::reset()
+void FrameExportManager::reset(BL::Scene & scene, BL::BlendData & data)
 {
 	// NOTE: if frame is changed while in preview, the preview will be restarted because of the change in the scene
 	if (!m_settings.is_preview) {
-		changeSceneFrame(m_sceneSavedFrame, 0.f);
-		updateFromSettings();
+		changeSceneFrame(scene, data, m_sceneSavedFrame, 0.f);
+		updateFromSettings(scene);
 	}
 }
 
-void FrameExportManager::forEachExportFrame(std::function<bool(FrameExportManager &)> callback)
+void FrameExportManager::forEachExportFrame(const std::function<bool(FrameExportManager &)> & callback)
 {
 	if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		// for camera loop we ignore motion blur
@@ -339,7 +319,7 @@ void SceneExporter::resume_from_undo(BL::Context         context,
 	m_active_camera = SceneExporter::getActiveCamera(m_view3d, m_scene);
 
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-	m_frameExporter.updateFromSettings();
+	m_frameExporter.updateFromSettings(m_scene);
 
 	m_exporter->set_callback_on_message_updated(boost::bind(&BL::RenderEngine::update_stats, &m_engine, _1, _2));
 
@@ -361,7 +341,7 @@ void SceneExporter::init() {
 
 	// make sure we update settings before exporter - it will read from settings
 	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-	m_frameExporter.updateFromSettings();
+	m_frameExporter.updateFromSettings(m_scene);
 
 	create_exporter();
 	VFB_Assert(m_exporter && "Failed to create exporter!");
