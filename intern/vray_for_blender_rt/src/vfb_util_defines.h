@@ -54,7 +54,7 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 	#endif
 
 	/// Assert will **ALWAYS** test its condition but will only call assert in debug mode
-	#define VFB_Assert(test) (void)((!!(test)) ? (_VFB_ASSERT_PRINT_POS(test), 0) : 0);
+	#define VFB_Assert(test) (void)((!(test)) ? (_VFB_ASSERT_PRINT_POS(test), 0) : 0);
 #endif
 
 #endif // CGR_UTIL_DEFINES_H
