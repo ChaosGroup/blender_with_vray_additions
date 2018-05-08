@@ -47,7 +47,7 @@ macro(find_package_wrapper)
 	endif()
 endmacro()
 
-if(NOT USE_BLENDER_VRAY_ZMQ)
+if(NOT WITH_VRAY_FOR_BLENDER)
 	find_package_wrapper(JPEG REQUIRED)
 endif()
 find_package_wrapper(PNG REQUIRED)

@@ -128,7 +128,7 @@ if(WITH_FFTW3)
 endif()
 
 set(PNG_LIBRARIES png)
-if(NOT USE_BLENDER_VRAY_ZMQ)
+if(NOT WITH_VRAY_FOR_BLENDER)
 	set(JPEG_LIBRARIES jpeg)
 endif()
 
@@ -247,7 +247,7 @@ set(PNG "${LIBDIR}/png")
 set(PNG_INCLUDE_DIRS "${PNG}/include")
 set(PNG_LIBPATH ${PNG}/lib)
 
-if(NOT USE_BLENDER_VRAY_ZMQ)
+if(NOT WITH_VRAY_FOR_BLENDER)
 	set(JPEG "${LIBDIR}/jpeg")
 	set(JPEG_INCLUDE_DIR "${JPEG}/include")
 	set(JPEG_LIBPATH ${JPEG}/lib)

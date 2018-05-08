@@ -522,23 +522,23 @@ function(setup_liblinks
 	endif()
 
 	if(WITH_VRAY_FOR_BLENDER)
-		if(USE_BLENDER_VRAY_ZMQ)
-			target_link_libraries(${target} ${JPEG_TURBO_LIB})
-			if(UNIX)
-				target_link_libraries(${target}
-					${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a
-					${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/Release/libsodium.a
-					)
-			elseif(WIN32)
-				if (MSVC_VERSION EQUAL 1800)
-					set(MSVC_DIR_NAME "v120")
-				elseif(MSVC_VERSION EQUAL 1900)
-					set(MSVC_DIR_NAME "v140")
-				endif()
-				target_link_libraries(${target} debug ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Debug/${MSVC_DIR_NAME}/static/libzmq.lib)
-				target_link_libraries(${target} optimized ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/${MSVC_DIR_NAME}/static/libzmq.lib)
-				target_link_libraries(${target} wsock32 ws2_32 Iphlpapi)
+		target_link_libraries(${target} ${JPEG_TURBO_LIB})
+		if(UNIX)
+			target_link_libraries(${target}
+				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a
+				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/Release/libsodium.a
+				)
+		elseif(WIN32)
+			if (MSVC_VERSION EQUAL 1800)
+				set(MSVC_DIR_NAME "v120")
+			elseif(MSVC_VERSION EQUAL 1900)
+				set(MSVC_DIR_NAME "v140")
+			elseif(MSVC_VERSION GREATER_EQUAL 1910)
+				set(MSVC_DIR_NAME "v140")
 			endif()
+			target_link_libraries(${target} debug ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Debug/${MSVC_DIR_NAME}/static/libzmq.lib)
+			target_link_libraries(${target} optimized ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/${MSVC_DIR_NAME}/static/libzmq.lib)
+			target_link_libraries(${target} wsock32 ws2_32 Iphlpapi)
 		endif()
 
 		if(USE_BLENDER_VRAY_APPSDK)
@@ -776,9 +776,7 @@ function(SETUP_BLENDER_SORTED_LIBS)
 
 	if(WITH_VRAY_FOR_BLENDER)
 		list_insert_after(BLENDER_SORTED_LIBS "bf_python_bmesh" "vray_for_blender")
-		if (USE_BLENDER_VRAY_ZMQ)
-			list_insert_after(BLENDER_SORTED_LIBS "vray_for_blender" "vray_for_blender_rt")
-		endif()
+		list_insert_after(BLENDER_SORTED_LIBS "vray_for_blender" "vray_for_blender_rt")
 	endif()
 
 	if(WITH_GAMEENGINE_DECKLINK)
