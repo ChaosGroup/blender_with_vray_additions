@@ -102,4 +102,4 @@ endif()
 list(REMOVE_DUPLICATES INC)
 blender_add_lib(vray_for_blender_rt "${HEADERS};${SOURCES}" "${INC}" "${INC_SYS}")
 
-add_dependencies(vray_for_blender_rt bf_rna)
+add_dependencies(vray_for_blender_rt bf_rna bf_blenlib)
