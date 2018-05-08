@@ -46,8 +46,16 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 	/// Assert will **ALWAYS** test its condition but will only call assert in debug mode
 	#define VFB_Assert(test) assert(test);
 #else
+	#if defined(__GNUC__)
+		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "BLI_assert failed: %s:%d, %s(), at \'%s\'\n", __FILE__, __LINE__, __func__, #a)
+	#elif defined(_MSC_VER)
+		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "BLI_assert failed: %s:%d, %s(), at \'%s\'\n", __FILE__, __LINE__, __FUNCTION__, #a)
+	#else
+		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "BLI_assert failed: %s:%d, at \'%s\'\n", __FILE__, __LINE__, #a)
+	#endif
+
 	/// Assert will **ALWAYS** test its condition but will only call assert in debug mode
-	#define VFB_Assert(test) (void)((!!(test)) ? (BLI_system_backtrace(stderr), _BLI_ASSERT_PRINT_POS(test), 0) : 0);
+	#define VFB_Assert(test) (void)((!!(test)) ? (BLI_system_backtrace(stderr), _VFB_ASSERT_PRINT_POS(test), 0) : 0);
 #endif
 
 #endif // CGR_UTIL_DEFINES_H
