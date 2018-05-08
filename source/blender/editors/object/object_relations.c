@@ -114,6 +114,18 @@
 
 /*********************** Make Vertex Parent Operator ************************/
 
+static void vray_rna_Object_tag_update(Object *obPtr)
+{
+	PointerRNA obRNA;
+	RNA_pointer_create(&obPtr->id, &RNA_Object, &obPtr->id, &obRNA);
+	if (RNA_struct_find_property(&obRNA, "vray")) {
+		PointerRNA vrayPtr = RNA_pointer_get(&obRNA, "vray");
+		int data_updated = RNA_int_get(&vrayPtr, "data_updated");
+		data_updated = data_updated | CGR_UPDATED_OBJECT;
+		RNA_int_set(&vrayPtr, "data_updated", data_updated);
+	}
+}
+
 static int vertex_parent_set_poll(bContext *C)
 {
 	return ED_operator_editmesh(C) || ED_operator_editsurfcurve(C) || ED_operator_editlattice(C);
@@ -1370,6 +1382,7 @@ static int move_to_layer_exec(bContext *C, wmOperator *op)
 		/* note: layers are set in bases, library objects work for this */
 		CTX_DATA_BEGIN (C, Base *, base, selected_bases)
 		{
+			vray_rna_Object_tag_update(base->object);
 			lay = base->lay & ~v3d->lay;
 			base->lay = lay;
 			base->object->lay = lay;
@@ -1384,6 +1397,7 @@ static int move_to_layer_exec(bContext *C, wmOperator *op)
 		/* note: layers are set in bases, library objects work for this */
 		CTX_DATA_BEGIN (C, Base *, base, selected_bases)
 		{
+			vray_rna_Object_tag_update(base->object);
 			/* upper byte is used for local view */
 			local = base->lay & 0xFF000000;
 			base->lay = lay + local;
