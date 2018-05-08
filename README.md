@@ -49,7 +49,6 @@ Building from source
     ```
     cmake -G "Visual Studio 2012 Win64"            \
         -DWITH_VRAY_FOR_BLENDER=ON                 \
-        -DUSE_BLENDER_VRAY_ZMQ=ON                  \
         -DLIBS_ROOT=C:/dev/blender-for-vray-libs   \
         -DLIBDIR=C:/dev/win64_vc12                 \
         C:/dev/blender-for-vray                    \
