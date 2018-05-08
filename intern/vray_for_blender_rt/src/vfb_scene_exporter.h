@@ -80,8 +80,8 @@ private:
 /// Class that handles objects with subframes
 class SubframesHandler {
 public:
-	typedef std::multimap<int, BL::Object, std::greater<>>    ObjectCollection;
-	typedef ObjectCollection::iterator                        ObjectCollectionIt;
+	typedef std::multimap<int, BL::Object, std::greater<int>>    ObjectCollection;
+	typedef ObjectCollection::iterator                           ObjectCollectionIt;
 
 	SubframesHandler() = delete;
 	SubframesHandler(ExporterSettings & settings)
