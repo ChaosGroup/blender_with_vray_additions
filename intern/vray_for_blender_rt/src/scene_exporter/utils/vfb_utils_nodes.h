@@ -63,6 +63,8 @@ BL::NodeSocket  GetConnectedSocket(BL::NodeSocket socket);
 
 BL::Node  GetNodeByType(BL::NodeTree nodeTree, const std::string &nodeType);
 
+BL::NodeSocket SkipLayoutNodes(BL::NodeSocket socket);
+
 } // namespace Nodes
 } // namespace VRayForBlender
 

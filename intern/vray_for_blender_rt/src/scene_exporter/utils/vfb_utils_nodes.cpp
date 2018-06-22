@@ -18,6 +18,7 @@
 
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
+#include "vfb_util_defines.h"
 
 extern "C" {
 #include "BKE_node.h" // For bNodeSocket->link access
@@ -103,28 +104,66 @@ BL::NodeSocket VRayForBlender::Nodes::GetSocketByAttr(BL::Node node, const std::
 	return BL::NodeSocket(PointerRNA_NULL);
 }
 
-
-BL::NodeSocket VRayForBlender::Nodes::GetConnectedSocket(BL::NodeSocket socket)
+namespace
 {
+
+BL::NodeSocket getConnectedSocketImpl(BL::NodeSocket socket)
+{
+	// if socket is output, this is the connected socket
+	if (!socket || socket.is_output()) {
+		return socket;
+	}
 	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
 	bNodeLink   *link = bSocket->link;
 	if (link) {
 		PointerRNA socketPtr;
-		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_NodeSocket, link->fromsock, &socketPtr);
+		RNA_pointer_create(reinterpret_cast<ID*>(socket.ptr.id.data), &RNA_NodeSocket, link->fromsock, &socketPtr);
 		return BL::NodeSocket(socketPtr);
 	}
 	return BL::NodeSocket(PointerRNA_NULL);
 }
 
+}
+
+BL::NodeSocket VRayForBlender::Nodes::SkipLayoutNodes(BL::NodeSocket socket)
+{
+	// if this is input socket, do nothing
+	if (!socket || !socket.is_output()) {
+		return socket;
+	}
+
+	BL::Node node = socket.node();
+	if (!node) {
+		return socket;
+	}
+
+	if (node.bl_idname() == "VRayNodeDebugSwitch") {
+		const int inputIndex = RNA_enum_get(&node.ptr, "input_index");
+		char inputSocketName[64] = {0, };
+		snprintf(inputSocketName, sizeof(inputSocketName), "Input %i", inputIndex);
+
+		// we must return the connected socket (the output one) since we got output socket
+		// also call SkipLayoutNodes recursivly if there are more than 1 layout nodes
+		return GetConnectedSocket(SkipLayoutNodes(GetInputSocketByName(node, inputSocketName)));
+	} else if (node.is_a(&RNA_NodeReroute)) {
+		// rerout nodes have one internal link which points to the input socket
+		return GetConnectedSocket(SkipLayoutNodes(node.internal_links[0].from_socket()));
+	}
+
+	// return the original input socket if the connected node is not switch
+	return socket;
+}
+
+BL::NodeSocket VRayForBlender::Nodes::GetConnectedSocket(BL::NodeSocket socket)
+{
+	return SkipLayoutNodes(getConnectedSocketImpl(socket));
+}
 
 BL::Node VRayForBlender::Nodes::GetConnectedNode(BL::NodeSocket socket)
 {
-	bNodeSocket *bSocket = (bNodeSocket*)socket.ptr.data;
-	bNodeLink   *link = bSocket->link;
-	if (link) {
-		PointerRNA nodePtr;
-		RNA_pointer_create((ID*)socket.ptr.id.data, &RNA_Node, link->fromnode, &nodePtr);
-		return BL::Node(nodePtr);
+	BL::NodeSocket skipSocket = SkipLayoutNodes(getConnectedSocketImpl(socket));
+	if (skipSocket) {
+		return skipSocket.node();
 	}
 	return BL::Node(PointerRNA_NULL);
 }
