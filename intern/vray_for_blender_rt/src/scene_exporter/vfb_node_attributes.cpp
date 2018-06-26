@@ -308,8 +308,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 							BL::NodeSocket conSock = Nodes::GetConnectedSocket(curSock);
 							const VRayNodeSocketType conSockType = getVRayNodeSocketType(conSock);
 
-							const ParamDesc::PluginType conPluginType = GetNodePluginType(conSock.node());
-							const bool needMult = texMult >= 0.0f && conPluginType == ParamDesc::PluginTexture;
+							const bool needMult = texMult >= 0.0f && ELEM(conSockType, vrayNodeSocketColor, vrayNodeSocketFloat, vrayNodeSocketFloatColor);
 
 							if (needConvertColorToFloat(curSockType, conSockType)) {
 								if (needMult) {
