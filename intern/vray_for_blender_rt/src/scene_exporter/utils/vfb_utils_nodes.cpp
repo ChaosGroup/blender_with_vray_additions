@@ -145,7 +145,7 @@ BL::NodeSocket VRayForBlender::Nodes::SkipLayoutNodes(BL::NodeSocket socket)
 		// we must return the connected socket (the output one) since we got output socket
 		// also call SkipLayoutNodes recursivly if there are more than 1 layout nodes
 		return GetConnectedSocket(SkipLayoutNodes(GetInputSocketByName(node, inputSocketName)));
-	} else if (node.is_a(&RNA_NodeReroute)) {
+	} else if (node.is_a(&RNA_NodeReroute) && node.internal_links.length()) {
 		// rerout nodes have one internal link which points to the input socket
 		return GetConnectedSocket(SkipLayoutNodes(node.internal_links[0].from_socket()));
 	}
