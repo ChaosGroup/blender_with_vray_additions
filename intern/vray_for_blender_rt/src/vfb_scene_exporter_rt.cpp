@@ -17,6 +17,7 @@
  */
 
 #include "vfb_scene_exporter_rt.h"
+#include "BKE_global.h"
 
 #ifdef WITH_GLEW_MX
 #  include "glew-mx.h"
@@ -162,7 +163,7 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 
 void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
-	ob.dupli_list_create(m_scene, EvalMode::EvalModePreview);
+	ob.dupli_list_create(G_MAIN, m_scene, EvalMode::EvalModePreview);
 
 	SceneExporter::sync_dupli(ob, check_updated);
 

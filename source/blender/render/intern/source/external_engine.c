@@ -121,11 +121,11 @@ void RE_engines_exit(void)
 RenderEngineType *RE_engines_find(const char *idname)
 {
 	RenderEngineType *type;
-	
+
 	type = BLI_findstring(&R_engines, idname, offsetof(RenderEngineType, idname));
 	if (!type)
 		type = &internal_render_type;
-	
+
 	return type;
 }
 
@@ -322,7 +322,7 @@ int RE_engine_test_break(RenderEngine *engine)
 
 	if (re)
 		return re->test_break(re->tbh);
-	
+
 	return 0;
 }
 
@@ -776,7 +776,7 @@ int RE_engine_render(Render *re, int do_all)
 
 	if (BKE_reports_contain(re->reports, RPT_ERROR))
 		G.is_break = true;
-	
+
 #ifdef WITH_FREESTYLE
 	if (re->r.mode & R_EDGE_FRS)
 		RE_RenderFreestyleExternal(re);
@@ -797,8 +797,9 @@ void RE_engine_register_pass(struct RenderEngine *engine, struct Scene *scene, s
 	/* Register the pass in all scenes that have a render layer node for this layer.
 	 * Since multiple scenes can be used in the compositor, the code must loop over all scenes
 	 * and check whether their nodetree has a node that needs to be updated. */
-	Scene *sce;
-	for (sce = G.main->scene.first; sce; sce = sce->id.next) {
+	/* NOTE: using G_MAIN seems valid here,
+	 * unless we want to register that for every other temp Main we could generate??? */
+	for (Scene *sce = G_MAIN->scene.first; sce; sce = sce->id.next) {
 		if (sce->nodetree) {
 			ntreeCompositRegisterPass(sce->nodetree, scene, srl, name, type);
 		}

@@ -32,6 +32,7 @@
 #include "BLI_math.h"
 #include "BLI_utildefines.h"
 #include "../generic/python_utildefines.h"
+#include "../generic/py_capi_utils.h"
 
 #ifndef MATH_STANDALONE
 #  include "BLI_dynstr.h"
@@ -312,8 +313,9 @@ static PyObject *Euler_copy(EulerObject *self)
 }
 static PyObject *Euler_deepcopy(EulerObject *self, PyObject *args)
 {
-	if (!mathutils_deepcopy_args_check(args))
+	if (!PyC_CheckArgs_DeepCopy(args)) {
 		return NULL;
+	}
 	return Euler_copy(self);
 }
 
@@ -688,6 +690,8 @@ PyDoc_STRVAR(euler_doc,
 ".. class:: Euler(angles, order='XYZ')\n"
 "\n"
 "   This object gives access to Eulers in Blender.\n"
+"\n"
+"   .. seealso:: `Euler angles <https://en.wikipedia.org/wiki/Euler_angles>`__ on Wikipedia.\n"
 "\n"
 "   :param angles: Three angles, in radians.\n"
 "   :type angles: 3d vector\n"

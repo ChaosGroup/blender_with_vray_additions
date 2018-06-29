@@ -252,7 +252,7 @@ void GeomMayaHair::initData()
 	BL::ParticleSystem   b_psys(b_psmd.particle_system().ptr);
 	BL::ParticleSettings b_part(b_psys.settings().ptr);
 
-	b_psys.set_resolution(b_sce, b_ob, 2);
+	b_psys.set_resolution(G_MAIN, b_sce, b_ob, 2);
 
 	child_cache = psys->childcache;
 	child_total = psys->totchildcache;

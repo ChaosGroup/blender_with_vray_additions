@@ -555,7 +555,7 @@ void VRsceneExporter::exportObjectBase(BL::Object ob)
 			}
 
 			if (process_dupli) {
-				ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
+				ob.dupli_list_create(G_MAIN, ExporterSettings::gSet.b_scene, 2);
 
 				// If need to override object ID.
 				const int dupliGroupIDOverride = RNA_int_get(&vrayObject, "dupliGroupIDOverride");

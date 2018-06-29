@@ -82,6 +82,7 @@ set(SRC_HEADERS
 	kernel_accumulate.h
 	kernel_bake.h
 	kernel_camera.h
+	kernel_color.h
 	kernel_compat_cpu.h
 	kernel_compat_cuda.h
 	kernel_compat_opencl.h
@@ -159,6 +160,7 @@ set(SRC_CLOSURE_HEADERS
 
 set(SRC_SVM_HEADERS
 	svm/svm.h
+	svm/svm_ao.h
 	svm/svm_attribute.h
 	svm/svm_bevel.h
 	svm/svm_blackbody.h
@@ -178,6 +180,7 @@ set(SRC_SVM_HEADERS
 	svm/svm_geometry.h
 	svm/svm_gradient.h
 	svm/svm_hsv.h
+	svm/svm_ies.h
 	svm/svm_image.h
 	svm/svm_invert.h
 	svm/svm_light_path.h
@@ -517,4 +520,3 @@ delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_SVM_HEADERS}" ${CYCLES_INSTAL
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_GEOM_HEADERS}" ${CYCLES_INSTALL_PATH}/source/kernel/geom)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_UTIL_HEADERS}" ${CYCLES_INSTALL_PATH}/source/util)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_SPLIT_HEADERS}" ${CYCLES_INSTALL_PATH}/source/kernel/split)
-

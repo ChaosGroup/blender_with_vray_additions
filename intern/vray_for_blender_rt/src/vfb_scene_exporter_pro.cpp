@@ -32,6 +32,7 @@
 #include <boost/filesystem.hpp>
 
 #include <Python.h>
+#include "BKE_global.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -294,7 +295,7 @@ bool ProductionExporter::export_scene(const bool)
 
 void ProductionExporter::sync_dupli(BL::Object ob, const int &check_updated)
 {
-	ob.dupli_list_create(m_scene, EvalMode::EvalModeRender);
+	ob.dupli_list_create(G_MAIN, m_scene, EvalMode::EvalModeRender);
 
 	SceneExporter::sync_dupli(ob, check_updated);
 
@@ -310,9 +311,9 @@ void ProductionExporter::sync_object_modiefiers(BL::Object ob, const int &check_
 			BL::ParticleSystemModifier psm(mod);
 			BL::ParticleSystem psys = psm.particle_system();
 			if (psys) {
-				psys.set_resolution(m_scene, ob, EvalModeRender);
+				psys.set_resolution(G_MAIN, m_scene, ob, EvalModeRender);
 				m_data_exporter.exportHair(ob, psm, psys, check_updated);
-				psys.set_resolution(m_scene, ob, EvalModePreview);
+				psys.set_resolution(G_MAIN, m_scene, ob, EvalModePreview);
 			}
 		}
 	}

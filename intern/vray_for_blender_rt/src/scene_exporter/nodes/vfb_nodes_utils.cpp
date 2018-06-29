@@ -17,6 +17,7 @@
  */
 #include "vfb_node_exporter.h"
 #include "vfb_utils_blender.h"
+#include "BKE_global.h"
 
 
 using namespace VRayForBlender;
@@ -67,6 +68,7 @@ AttrValue DataExporter::getObjectNameList(BL::Group group)
 	return pluginList;
 }
 
+
 void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugins)
 {
 	BL::NodeTree   ntree(PointerRNA_NULL);
@@ -89,7 +91,7 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 				if (ob) {
 					if (ob.is_duplicator()) {
 						// TODO: get this from m_id_track
-						ob.dupli_list_create(m_scene, EvalMode::EvalModeRender);
+						ob.dupli_list_create(G_MAIN, m_scene, EvalMode::EvalModeRender);
 
 						BL::Object::dupli_list_iterator dupIt;
 						for (ob.dupli_list.begin(dupIt); dupIt != ob.dupli_list.end(); ++dupIt) {

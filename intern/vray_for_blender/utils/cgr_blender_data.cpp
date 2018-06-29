@@ -83,7 +83,7 @@ std::string GetIDName(ID *id)
 		char libFilename[FILE_MAX] = "";
 
 		BLI_split_file_part(fromLibrary->name+2, libFilename, FILE_MAX);
-		BLI_replace_extension(libFilename, FILE_MAX, "");
+		BLI_path_extension_replace(libFilename, FILE_MAX, "");
 
 		idName.append("LI");
 		idName.append(libFilename);

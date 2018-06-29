@@ -116,7 +116,7 @@ static void getDuplicatorNames(BL::Object & ob, StrSet & obNames)
 	const int useInstancer     = RNA_boolean_get(&vrayObject, "use_instancer");
 
 
-	ob.dupli_list_create(ExporterSettings::gSet.b_scene, 2);
+	ob.dupli_list_create(G_MAIN, ExporterSettings::gSet.b_scene, 2);
 	BL::Object::dupli_list_iterator b_dup;
 	for (ob.dupli_list.begin(b_dup); b_dup != ob.dupli_list.end(); ++b_dup) {
 		BL::DupliObject dup(*b_dup);

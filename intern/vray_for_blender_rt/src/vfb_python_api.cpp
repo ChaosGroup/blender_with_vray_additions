@@ -32,6 +32,7 @@
 #include "zmq_wrapper.hpp"
 
 #include <Python.h>
+#include "BKE_global.h"
 
 using namespace VRayForBlender;
 
@@ -534,14 +535,14 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 			b_sock = b_node.outputs[param->name.string()];
 			/* remove if type no longer matches */
 			if (b_sock && b_sock.bl_idname() != socket_type) {
-				b_node.outputs.remove(b_sock);
+				b_node.outputs.remove(G_MAIN, b_sock);
 				b_sock = BL::NodeSocket(PointerRNA_NULL);
 			}
 		} else {
 			b_sock = b_node.inputs[param->name.string()];
 			/* remove if type no longer matches */
 			if (b_sock && b_sock.bl_idname() != socket_type) {
-				b_node.inputs.remove(b_sock);
+				b_node.inputs.remove(G_MAIN, b_sock);
 				b_sock = BL::NodeSocket(PointerRNA_NULL);
 			}
 		}
@@ -549,9 +550,9 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		if (!b_sock) {
 			/* create new socket */
 			if (param->isoutput) {
-				b_sock = b_node.outputs.create(socket_type.c_str(), param->name.c_str(), param->name.c_str());
+				b_sock = b_node.outputs.create(G_MAIN, socket_type.c_str(), param->name.c_str(), param->name.c_str());
 			} else {
-				b_sock = b_node.inputs.create(socket_type.c_str(), param->name.c_str(), param->name.c_str());
+				b_sock = b_node.inputs.create(G_MAIN, socket_type.c_str(), param->name.c_str(), param->name.c_str());
 			}
 		}
 
@@ -583,7 +584,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 
 		for (b_node.inputs.begin(b_input); b_input != b_node.inputs.end(); ++b_input) {
 			if (used_sockets.find(b_input->ptr.data) == used_sockets.end()) {
-				b_node.inputs.remove(*b_input);
+				b_node.inputs.remove(G_MAIN, *b_input);
 				removed = true;
 				break;
 			}
@@ -591,7 +592,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 
 		for (b_node.outputs.begin(b_output); b_output != b_node.outputs.end(); ++b_output) {
 			if (used_sockets.find(b_output->ptr.data) == used_sockets.end()) {
-				b_node.outputs.remove(*b_output);
+				b_node.outputs.remove(G_MAIN, *b_output);
 				removed = true;
 				break;
 			}

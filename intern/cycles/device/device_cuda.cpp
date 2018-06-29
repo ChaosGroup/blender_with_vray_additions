@@ -385,7 +385,7 @@ public:
 		VLOG(1) << "Found nvcc " << nvcc
 		        << ", CUDA version " << cuda_version
 		        << ".";
-		const int major = cuda_version / 10, minor = cuda_version & 10;
+		const int major = cuda_version / 10, minor = cuda_version % 10;
 		if(cuda_version == 0) {
 			cuda_error_message("CUDA nvcc compiler version could not be parsed.");
 			return false;
@@ -1684,7 +1684,7 @@ public:
 			min_blocks *= 8;
 		}
 
-		uint step_samples = divide_up(min_blocks * num_threads_per_block, wtile->w * wtile->h);;
+		uint step_samples = divide_up(min_blocks * num_threads_per_block, wtile->w * wtile->h);
 
 		/* Render all samples. */
 		int start_sample = rtile.start_sample;
@@ -2407,7 +2407,7 @@ bool device_cuda_init(void)
 			result = true;
 		}
 		else {
-			VLOG(1) << "Neither precompiled kernels nor CUDA compiler wad found,"
+			VLOG(1) << "Neither precompiled kernels nor CUDA compiler was found,"
 			        << " unable to use CUDA";
 		}
 #endif

@@ -465,7 +465,7 @@ static void sk_drawNormal(GLUquadric *quad, SK_Point *pt, float size, float heig
 {
 	float vec2[3] = {0, 0, 1}, axis[3];
 	float angle;
-	
+
 	glPushMatrix();
 
 	cross_v3_v3v3(axis, vec2, pt->no);
@@ -1334,7 +1334,7 @@ static void sk_convertStroke(bContext *C, SK_Stroke *stk)
 				}
 
 				if (bone == NULL) {
-					bone = ED_armature_edit_bone_add(arm, "Bone");
+					bone = ED_armature_ebone_add(arm, "Bone");
 
 					copy_v3_v3(bone->head, head->p);
 					copy_v3_v3(bone->tail, pt->p);
@@ -2126,7 +2126,7 @@ static int sk_draw_stroke(bContext *C, SK_Sketch *sketch, SK_Stroke *stk, SK_Dra
 		sk_addStrokePoint(C, sketch, stk, dd, snap);
 		sk_updateDrawData(dd);
 		sk_updateNextPoint(sketch, stk);
-		
+
 		return 1;
 	}
 
@@ -2246,7 +2246,7 @@ SK_Sketch *contextSketch(const bContext *C, int create)
 
 	if (obedit && obedit->type == OB_ARMATURE) {
 		bArmature *arm = obedit->data;
-	
+
 		if (arm->sketch == NULL && create) {
 			arm->sketch = createSketch();
 		}
@@ -2263,7 +2263,7 @@ SK_Sketch *viewcontextSketch(ViewContext *vc, int create)
 
 	if (obedit && obedit->type == OB_ARMATURE) {
 		bArmature *arm = obedit->data;
-	
+
 		if (arm->sketch == NULL && create) {
 			arm->sketch = createSketch();
 		}
@@ -2661,4 +2661,3 @@ void SKETCH_OT_gesture(wmOperatorType *ot)
 	/* flags */
 	ot->flag = OPTYPE_BLOCKING; // OPTYPE_UNDO
 }
-

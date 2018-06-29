@@ -366,7 +366,7 @@ static void bpy_prop_boolean_set_cb(struct PointerRNA *ptr, struct PropertyRNA *
 
 		Py_DECREF(ret);
 	}
-	
+
 	if (use_gil)
 		PyGILState_Release(gilstate);
 
@@ -1389,7 +1389,7 @@ static int icon_id_from_name(const char *name)
 			}
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -1698,7 +1698,7 @@ static void bpy_prop_callback_assign_boolean(struct PropertyRNA *prop, PyObject 
 {
 	BooleanPropertyGetFunc rna_get_cb = NULL;
 	BooleanPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1720,7 +1720,7 @@ static void bpy_prop_callback_assign_boolean_array(struct PropertyRNA *prop, PyO
 {
 	BooleanArrayPropertyGetFunc rna_get_cb = NULL;
 	BooleanArrayPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1742,7 +1742,7 @@ static void bpy_prop_callback_assign_int(struct PropertyRNA *prop, PyObject *get
 {
 	IntPropertyGetFunc rna_get_cb = NULL;
 	IntPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1764,7 +1764,7 @@ static void bpy_prop_callback_assign_int_array(struct PropertyRNA *prop, PyObjec
 {
 	IntArrayPropertyGetFunc rna_get_cb = NULL;
 	IntArrayPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1786,7 +1786,7 @@ static void bpy_prop_callback_assign_float(struct PropertyRNA *prop, PyObject *g
 {
 	FloatPropertyGetFunc rna_get_cb = NULL;
 	FloatPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1808,7 +1808,7 @@ static void bpy_prop_callback_assign_float_array(struct PropertyRNA *prop, PyObj
 {
 	FloatArrayPropertyGetFunc rna_get_cb = NULL;
 	FloatArrayPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1831,7 +1831,7 @@ static void bpy_prop_callback_assign_string(struct PropertyRNA *prop, PyObject *
 	StringPropertyGetFunc rna_get_cb = NULL;
 	StringPropertyLengthFunc rna_length_cb = NULL;
 	StringPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1855,7 +1855,7 @@ static void bpy_prop_callback_assign_enum(struct PropertyRNA *prop, PyObject *ge
 	EnumPropertyGetFunc rna_get_cb = NULL;
 	EnumPropertyItemFunc rna_itemf_cb = NULL;
 	EnumPropertySetFunc rna_set_cb = NULL;
-	
+
 	if (get_cb && get_cb != Py_None) {
 		PyObject **py_data = bpy_prop_py_data_get(prop);
 
@@ -1882,7 +1882,7 @@ static void bpy_prop_callback_assign_enum(struct PropertyRNA *prop, PyObject *ge
 	RNA_def_property_enum_funcs_runtime(prop, rna_get_cb, rna_set_cb, rna_itemf_cb);
 }
 
-/* this define runs at the start of each function and deals with 
+/* this define runs at the start of each function and deals with
  * returning a deferred property (to be registered later) */
 #define BPY_PROPDEF_HEAD(_func)                                               \
 	if (PyTuple_GET_SIZE(args) == 1) {                                        \
@@ -2233,7 +2233,7 @@ static PyObject *BPy_BoolVectorProperty(PyObject *self, PyObject *args, PyObject
 		bpy_prop_callback_assign_boolean_array(prop, get_cb, set_cb);
 		RNA_def_property_duplicate_pointers(srna, prop);
 	}
-	
+
 	Py_RETURN_NONE;
 }
 
@@ -2868,7 +2868,7 @@ static PyObject *BPy_EnumProperty(PyObject *self, PyObject *args, PyObject *kw)
 	StructRNA *srna;
 
 	BPY_PROPDEF_HEAD(EnumProperty);
-	
+
 	if (srna) {
 		const char *id = NULL, *name = NULL, *description = "";
 		PyObject *def = NULL;
@@ -3273,7 +3273,7 @@ PyObject *BPY_rna_props(void)
 {
 	PyObject *submodule;
 	PyObject *submodule_dict;
-	
+
 	submodule = PyModule_Create(&props_module);
 	PyDict_SetItemString(PyImport_GetModuleDict(), props_module.m_name, submodule);
 
@@ -3281,7 +3281,7 @@ PyObject *BPY_rna_props(void)
 	 * module with a new ref like PyDict_New, since they are passed to
 	 * PyModule_AddObject which steals a ref */
 	Py_INCREF(submodule);
-	
+
 	/* api needs the PyObjects internally */
 	submodule_dict = PyModule_GetDict(submodule);
 
@@ -3298,6 +3298,6 @@ PyObject *BPY_rna_props(void)
 	ASSIGN_STATIC(PointerProperty);
 	ASSIGN_STATIC(CollectionProperty);
 	ASSIGN_STATIC(RemoveProperty);
-	
+
 	return submodule;
 }
