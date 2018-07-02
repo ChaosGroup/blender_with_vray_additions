@@ -27,19 +27,14 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 
 	PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
 
-	// Add real work mode check
-	VRayBaseTypes::RenderMode renderMode = m_settings.render_mode;
-
 	VRayForBlender::Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;
 	options.mode = m_evalMode;
 	options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
-	options.force_dynamic_geometry = (renderMode == RenderModeRtGpuOpenCL) ||
-	                                 (renderMode == RenderModeRtGpuCUDA) ||
-	                                 (renderMode == RenderModeRtGpu) ||
-	                                 (oattrs && oattrs.useInstancer);
+	options.force_dynamic_geometry = m_settings.is_gpu && m_settings.is_viewport ||
+	                                 oattrs && oattrs.useInstancer;
 
-	int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
+	const int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
 	if (!err) {
 		geom = m_exporter->export_plugin(geomDesc);
 	}
