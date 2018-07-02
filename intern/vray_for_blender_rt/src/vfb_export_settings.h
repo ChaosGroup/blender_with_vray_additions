@@ -230,6 +230,8 @@ struct ExporterSettings {
 	int                        getViewportShowAlpha();
 
 private:
+	RenderMode getRenderMode();
+
 	PointerRNA                 m_vrayScene;
 	PointerRNA                 m_vrayExporter;
 

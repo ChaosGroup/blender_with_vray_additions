@@ -51,6 +51,51 @@ ExporterSettings::ExporterSettings()
     , background_scene(PointerRNA_NULL)
 {}
 
+RenderMode ExporterSettings::getRenderMode()
+{
+	enum DeviceType {
+		deviceTypeCPU = 0,
+		deviceTypeGPU,
+	};
+
+	/// Matches "VRayExporter.device_type" menu items.
+	const DeviceType deviceType =
+		static_cast<DeviceType>(RNA_enum_ext_get(&m_vrayExporter, "device_type"));
+
+	RenderMode renderMode = RENDER_MODE_PRODUCTION;
+
+	switch (deviceType) {
+		case deviceTypeCPU: {
+			renderMode = is_viewport ? RENDER_MODE_RT_CPU : RENDER_MODE_PRODUCTION;
+			break;
+		}
+		case deviceTypeGPU: {
+			/// Matches "VRayExporter.device_gpu_type" menu items.
+			enum DeviceTypeGPU {
+				DeviceTypeGpuCUDA = 0,
+				DeviceTypeGpuOpenCL,
+			};
+
+			const DeviceTypeGPU deviceGpuType =
+				static_cast<DeviceTypeGPU>(RNA_enum_ext_get(&m_vrayExporter, "device_gpu_type"));
+
+			switch (deviceGpuType) {
+				case DeviceTypeGpuCUDA: {
+					renderMode = is_viewport ? RENDER_MODE_RT_GPU_CUDA : RENDER_MODE_PRODUCTION_CUDA;
+					break;
+				}
+				case DeviceTypeGpuOpenCL: {
+					renderMode = is_viewport ? RENDER_MODE_RT_GPU_OPENCL : RENDER_MODE_PRODUCTION_OPENCL;
+					break;
+				}
+			}
+
+			break;
+		}
+	}
+
+	return renderMode;
+}
 
 void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene, BL::SpaceView3D view3d)
 {
@@ -252,14 +297,10 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		zmq_server_address = "127.0.0.1";
 	}
 
-	if (is_viewport) {
-		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "viewport_rendering_mode"));
-	} else {
-		render_mode = static_cast<RenderMode>(RNA_enum_ext_get(&m_vrayExporter, "rendering_mode"));
-		if (is_preview || settings_animation.use) {
-			render_mode = RenderMode::RenderModeProduction;
-		}
-	}
+	render_mode = getRenderMode();
+
+	is_gpu = render_mode != RENDER_MODE_PRODUCTION &&
+	         render_mode != RENDER_MODE_RT_CPU;
 
 	m_viewportResolution = RNA_int_get(&m_vrayExporter, "viewport_resolution") / 100.0f;
 	viewport_image_quality = RNA_int_get(&m_vrayExporter, "viewport_jpeg_quality");
@@ -272,13 +313,6 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	close_on_stop = RNA_boolean_get(&m_vrayExporter, "autoclose");
 
 	verbose_level = static_cast<VRayVerboseLevel>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
-
-	is_gpu = false;
-	if (exporter_type == ExpoterTypeFile) {
-		is_gpu = DeviceType::DeviceTypeGPU == static_cast<DeviceType>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
-	} else if (exporter_type == ExpoterTypeZMQ) {
-		is_gpu = render_mode == RenderMode::RenderModeRtGpu || render_mode == RenderMode::RenderModeRtGpuOpenCL;
-	}
 }
 
 
@@ -420,10 +454,6 @@ void VRaySettingsExporter::exportPlugins()
 	const PluginParamDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
 	for (const ParamDesc::PluginParamDesc * const desc : settingsPlugins) {
 		if (IgnoredPlugins.find(desc->pluginID) != IgnoredPlugins.end()) {
-			continue;
-		}
-
-		if (!settings.is_gpu && (desc->pluginID == "RTEngine" || desc->pluginID == "SettingsRTEngine")) {
 			continue;
 		}
 
@@ -777,8 +807,20 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		pluginDesc.add("enabled", true);
 
 		if (settings.is_viewport) {
+			pluginDesc.add("cpu_samples_per_pixel", 1);
+			pluginDesc.add("cpu_bundle_size", 64);
+			pluginDesc.add("gpu_samples_per_pixel", 1);
+			pluginDesc.add("gpu_bundle_size ", 128);
+			pluginDesc.add("undersampling",  4);
+			pluginDesc.add("progressive_samples_per_pixel", 0);
+
 			pluginDesc.add("noise_threshold", 0.f);
 		} else {
+			pluginDesc.add("gpu_samples_per_pixel", 16);
+			pluginDesc.add("gpu_bundle_size", 256);
+			pluginDesc.add("undersampling", 0);
+			pluginDesc.add("progressive_samples_per_pixel", 0);
+
 			pluginDesc.add("noise_threshold", get<float>(propertyGroup, "noise_threshold"));
 		}
 	} else if (pluginId == "SettingsVFB") {
