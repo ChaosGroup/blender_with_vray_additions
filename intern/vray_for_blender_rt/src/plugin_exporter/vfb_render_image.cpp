@@ -132,7 +132,6 @@ void RenderImage::updateRegion(const float *source, ImageRegion destRegion)
 	updated += (float)(destRegion.w * destRegion.h) / std::max((float)(this->w * this->h), 1.f);
 
 	ImageSize updateSize = {destRegion.w, destRegion.h, channels};
-	using O = ImageRegion::Options;
 	updateImageRegion(pixels, ImageSize{w, h, channels}, destRegion, source, updateSize, updateSize);
 }
 

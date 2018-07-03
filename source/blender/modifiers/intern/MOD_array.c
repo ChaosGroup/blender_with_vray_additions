@@ -868,7 +868,7 @@ ModifierTypeInfo modifierType_Array = {
 	                        eModifierTypeFlag_EnableInEditmode |
 	                        eModifierTypeFlag_AcceptsCVs,
 
-	/* copyData */          modifier_copyData_generic,
+	/* copyData */          copyData,
 	/* deformVerts */       NULL,
 	/* deformMatrices */    NULL,
 	/* deformVertsEM */     NULL,
