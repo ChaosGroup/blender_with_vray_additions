@@ -460,6 +460,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	auto material = exportMtlMulti(ob);
 
 	PluginDesc nodeDesc(pluginName, "VRayClipper");
+	setAttrsFromPropGroupAuto(nodeDesc, &vrayClipper, "VRayClipper");
 
 	if (material) {
 		nodeDesc.add("material", material);
@@ -470,13 +471,7 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	} else {
 		nodeDesc.add("clip_mesh", AttrPlugin("NULL"));
 	}
-	nodeDesc.add("enabled", 1);
-	nodeDesc.add("affect_light", RNA_boolean_get(&vrayClipper, "affect_light"));
-	nodeDesc.add("only_camera_rays", RNA_boolean_get(&vrayClipper, "only_camera_rays"));
-	nodeDesc.add("clip_lights", RNA_boolean_get(&vrayClipper, "clip_lights"));
-	nodeDesc.add("use_obj_mtl", RNA_boolean_get(&vrayClipper, "use_obj_mtl"));
-	nodeDesc.add("set_material_id", RNA_boolean_get(&vrayClipper, "set_material_id"));
-	nodeDesc.add("material_id", RNA_int_get(&vrayClipper, "material_id"));
+
 	nodeDesc.add("object_id", ob.pass_index());
 	if (overrideAttrs) {
 		nodeDesc.add("transform", overrideAttrs.tm);
