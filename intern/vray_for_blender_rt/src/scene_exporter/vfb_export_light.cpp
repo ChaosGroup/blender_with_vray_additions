@@ -74,7 +74,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 		const auto grName = RNA_std_string_get(&vrayLamp, "exclude_groups");
 
 		link.objectList = getObjectList(obName, grName);
-		m_light_linker.addLightLink(lightPluginName, std::move(link));
+		m_light_linker.replaceLightLink(lightPluginName, std::move(link));
 	}
 
 	// Find plugin ID

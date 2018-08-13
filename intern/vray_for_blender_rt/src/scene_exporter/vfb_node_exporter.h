@@ -216,7 +216,8 @@ struct SettingsLightLinker {
 	};
 
 	/// Set the LightLink for a given light plugin, steals the link object
-	void addLightLink(const std::string & lightPlugin, LightLink && link) {
+	void replaceLightLink(const std::string & lightPlugin, LightLink && link) {
+		lightsMap.erase(lightPlugin);
 		lightsMap.insert(std::make_pair(lightPlugin, std::move(link)));
 	}
 
