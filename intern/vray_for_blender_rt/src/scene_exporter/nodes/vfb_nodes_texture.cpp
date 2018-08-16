@@ -254,7 +254,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 			}
 
 			mappingDesc.pluginID   = mappingPluginID;
-			mappingDesc.pluginName = "Mapping@" + pluginName;
+			mappingDesc.pluginName = "Mapping@" + pluginName + "|" + mappingPluginID;
 
 			setAttrsFromNode(ntree, node, fromSocket, context, mappingDesc, mappingPluginID, ParamDesc::PluginUvwgen);
 
