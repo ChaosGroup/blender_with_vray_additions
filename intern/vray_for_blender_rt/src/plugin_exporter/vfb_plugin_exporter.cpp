@@ -83,7 +83,8 @@ AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool repl
 	} else if (replace || (inCache && isDifferent)) {
 
 		if (isDifferentId) {
-			plg = this->export_plugin_impl(m_pluginManager.differences(pluginDesc));
+			this->remove_plugin(pluginDesc.pluginName);
+			plg = this->export_plugin_impl(pluginDesc);
 		} else {
 			if (!replace) {
 				// We need to export last exported data for the previous frame
