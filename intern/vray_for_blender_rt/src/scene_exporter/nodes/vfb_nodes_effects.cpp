@@ -126,12 +126,27 @@ AttrValue DataExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node
 	return voxel;
 }
 
+AttrValue DataExporter::exportDomainGeomStaticMesh(const std::string &geomPluginName, BL::Object domainOb)
+{
+	PluginDesc geomDesc(geomPluginName, "GeomStaticMesh");
+
+	VRayForBlender::Mesh::ExportOptions options;
+	options.merge_channel_vertices = false;
+	options.mode = m_evalMode;
+	options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
+
+	if (VRayForBlender::Mesh::FillMeshData(m_data, m_scene, domainOb, options, geomDesc)) {
+		return AttrValue();
+	}
+
+	return m_exporter->export_plugin(geomDesc);
+}
 
 AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context)
 {
 	BL::SmokeModifier smokeMod = GetSmokeModifier(domainOb);
 
-	std::string pluginName = GenPluginName(node, ntree, context);
+	const std::string &pluginName = GenPluginName(node, ntree, context);
 	AttrValue smoke;
 
 	AttrValue lightsList;
@@ -187,20 +202,8 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 	// This is just a container - export as mesh
 	else {
 		std::string geomPluginName = pluginName + "@Domain";
-
-		PluginDesc geomDesc(geomPluginName, "GeomStaticMesh");
-
-		VRayForBlender::Mesh::ExportOptions options;
-		options.merge_channel_vertices = false;
-		options.mode = m_evalMode;
-		options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
-
-		int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, domainOb, options, geomDesc);
-		if (err) {
-			return smoke;
-		}
 		fogMesh.add("transform", AttrTransformFromBlTransform(((Object*)domainOb.ptr.data)->obmat));
-		fogMesh.add("geometry", m_exporter->export_plugin(geomDesc));
+		fogMesh.add("geometry", exportDomainGeomStaticMesh(geomPluginName, domainOb));
 		PointerRNA EnvFogMeshGizmo = RNA_pointer_get(&node.ptr, "EnvFogMeshGizmo");
 		fogMesh.add("fade_out_radius", RNA_float_get(&EnvFogMeshGizmo, "fade_out_radius"));
 	}
@@ -215,8 +218,6 @@ AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node n
 
 	return smoke;
 }
-
-
 
 AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket&, NodeContext &context)
 {
@@ -247,41 +248,71 @@ AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::No
 {
 	AttrValue plugin;
 
-	if (m_settings.export_fluids) {
-		PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
+	if (!m_settings.export_fluids) {
+		return plugin;
+	}
+
+	PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 		                      "EnvironmentFog");
 
-		bool valid_gizmos = true;
+	BL::NodeSocket gizmosSock = Nodes::GetSocketByAttr(node, "gizmos");
+	if (!gizmosSock || !gizmosSock.is_linked()) {
+		return plugin;
+	}
 
-		BL::NodeSocket gizmosSock = Nodes::GetSocketByAttr(node, "gizmos");
-		if (gizmosSock && gizmosSock.is_linked()) {
-			AttrValue gizmos;
+	AttrValue gizmos;
 
-			BL::Node conNode = getConnectedNode(ntree, gizmosSock, context);
-			if (conNode) {
-				if (conNode.bl_idname() != "VRayNodeEnvFogMeshGizmo") {
-					PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node!");
-				}
-				else {
-					gizmos = exportSocket(ntree, gizmosSock, context);
-					if (!gizmos || (gizmos.type == ValueTypeListPlugin && gizmos.as<AttrListPlugin>().empty())) {
-						// If socket is linked it means user have attached the gizmo node,
-						// but if gizmos list is empty it means gizmo object is invisible.
-						// We don't need to export the whole effect at all because it will cover the whole
-						// scene without gizmo.
-						valid_gizmos = false;
-					}
-					else {
-						pluginDesc.add("gizmos", gizmos);
-					}
-				}
-			}
+	BL::Node conNode = getConnectedNode(ntree, gizmosSock, context);
+	if (!conNode) {
+		return plugin;
+	}
+
+	const std::string &conNodeIdName = conNode.bl_idname();
+	if (conNodeIdName != "VRayNodeEnvFogMeshGizmo") {
+		if (conNodeIdName != "VRayNodeSelectObject" && conNodeIdName != "VRayNodeSelectGroup") {
+			PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node!");
+			return plugin;
 		}
 
-		if (valid_gizmos) {
-			plugin = exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
+		ObList domainObList;
+		getSelectorObjectList(conNode, domainObList);
+		if (domainObList.empty()) {
+			PRINT_WARN("No objects selected for Gizmos!");
+			return plugin;
+		}
+
+		PRINT_WARN("Missing \"Fog Gizmo\" node connected to \"Gizmos\" socket. Fog Gizmos will be auto-generated.");
+		const std::string &pluginName = GenPluginName(node, ntree, context);
+		AttrListPlugin domains;
+		for(const auto &domainOb : domainObList) {
+			if (!isObjectVisible(domainOb)) {
+				continue;
+			}
+			PluginDesc fogMesh("AUTO_" + pluginName + "@" + getNodeName(domainOb), "EnvFogMeshGizmo");
+
+			const std::string &geomPluginName = pluginName + "@Domain";
+			fogMesh.add("transform", AttrTransformFromBlTransform(((Object*)domainOb.ptr.data)->obmat));
+			fogMesh.add("geometry", exportDomainGeomStaticMesh(geomPluginName, domainOb));
+
+			domains.append(m_exporter->export_plugin(fogMesh));
+
+			// Exclude object from Node creation
+			m_hide_lists["export"].insert(domainOb);
+		}
+		gizmos = domains;
+	} else {
+		gizmos = exportSocket(ntree, gizmosSock, context);
+		if (!gizmos || (gizmos.type == ValueTypeListPlugin && gizmos.as<AttrListPlugin>().empty())) {
+			// If socket is linked it means user have attached the gizmo node,
+			// but if gizmos list is empty it means gizmo object is invisible.
+			// We don't need to export the whole effect at all because it will cover the whole
+			// scene without gizmo.
+			return plugin;
 		}
 	}
+
+	pluginDesc.add("gizmos", gizmos);
+	plugin = exportVRayNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 
 	return plugin;
 }

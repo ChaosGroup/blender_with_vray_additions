@@ -341,7 +341,7 @@ public:
 	std::string       getClipperName(BL::Object ob);
 
 	/// Get plugin name for given object and override attributes
-	std::string       getObjectPluginName(BL::Object ob, const ObjectOverridesAttrs &overrideAttr);
+	std::string       getObjectPluginName(BL::Object ob, const ObjectOverridesAttrs &overrideAttr = ObjectOverridesAttrs());
 
 	static std::string       getIdUniqueName(BL::Pointer ob);
 	static std::string       getIdUniqueName(ID * id);
@@ -508,6 +508,7 @@ private:
 	AttrValue         exportVRayNodeSphereFade(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeSphereFadeGizmo(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context);
+	AttrValue         exportDomainGeomStaticMesh(const std::string &geomPluginName, BL::Object domainOb);
 	AttrValue         exportVRayNodeTexSoftbox(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeTexEdges(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);
 	AttrValue         exportVRayNodeTexFalloff(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context);

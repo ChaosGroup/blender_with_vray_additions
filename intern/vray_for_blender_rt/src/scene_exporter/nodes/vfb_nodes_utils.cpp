@@ -78,7 +78,7 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 		NodeContext ctx;
 		BL::Object ob = exportVRayNodeSelectObject(ntree, node, fromSocket, ctx);
 		if (ob) {
-			plugins.append(getIdUniqueName(ob));
+			plugins.append(getObjectPluginName(ob));
 		}
 	}
 	else if (node.bl_idname() == "VRayNodeSelectGroup") {
@@ -112,7 +112,7 @@ void DataExporter::getSelectorObjectNames(BL::Node node, AttrListPlugin & plugin
 
 						ob.dupli_list_clear();
 					} else {
-						plugins.append(getIdUniqueName(ob));
+						plugins.append(getObjectPluginName(ob));
 					}
 				}
 			}
