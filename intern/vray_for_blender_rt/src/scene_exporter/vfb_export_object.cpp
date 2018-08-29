@@ -696,7 +696,6 @@ AttrValue DataExporter::exportVrayInstancer2(BL::Object ob, AttrInstancer & inst
 	instancerDesc.add("visible", visible);
 	instancerDesc.add("use_time_instancing", false);
 	instancerDesc.add("shading_needs_ids", true);
-	instancerDesc.add("scene_name", sceneNames);
 
 	{
 		auto lock = raiiLock();
