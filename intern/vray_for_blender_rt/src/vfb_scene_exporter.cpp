@@ -769,9 +769,12 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				flags.set(IF::CLIPPER);
 			}
 
+			const bool nodeBasedDupli = flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || (flags.get(IF::CLIPPER) && !flags.get(IF::HIDDEN));
+			const bool instancerBasedDupli = !flags.get(IF::HIDDEN);
+
 			// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
 			// if any of the duplicated objects is clipper or light we cant use instancer
-			if (!(flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || flags.get(IF::CLIPPER))) {
+			if (nodeBasedDupli || instancerBasedDupli) {
 				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, idx_instances));
 				++num_instances;
 			}
