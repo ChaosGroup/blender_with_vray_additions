@@ -1305,7 +1305,7 @@ void BKE_scene_frame_set(struct Scene *scene, double cfra)
  *	- these happen after objects are all done so that we can read in their final transform values,
  *	  though this means that objects can't refer to scene info for guidance...
  */
-static void scene_update_drivers(Main *UNUSED(bmain), Scene *scene)
+static void scene_update_drivers(Main *bmain, Scene *scene)
 {
 	SceneRenderLayer *srl;
 	float ctime = BKE_scene_frame_get(scene);
@@ -1333,6 +1333,9 @@ static void scene_update_drivers(Main *UNUSED(bmain), Scene *scene)
 		if (adt && adt->drivers.first)
 			BKE_animsys_evaluate_animdata(scene, nid, adt, ctime, ADT_RECALC_DRIVERS);
 	}
+
+	/* A hacky way to evaluate drivers for Python nodes */
+	BKE_animsys_evaluate_animdata_pyntree(bmain, scene, ctime, ADT_RECALC_DRIVERS);
 
 	/* world nodes */
 	if (scene->world && scene->world->nodetree) {
@@ -1888,6 +1891,10 @@ void BKE_scene_update_tagged(EvaluationContext *eval_ctx, Main *bmain, Scene *sc
 #endif
 	{
 		DEG_evaluate_on_refresh(eval_ctx, scene->depsgraph, scene);
+
+		/* A hacky way to evaluate drivers for Python nodes */
+		const float ctime = BKE_scene_frame_get(scene);
+		BKE_animsys_evaluate_animdata_pyntree(bmain, scene, ctime, ADT_RECALC_DRIVERS);
 	}
 
 	/* update sound system animation (TODO, move to depsgraph) */

@@ -2947,6 +2947,19 @@ static Base **animdata_filter_ds_sorted_bases(bDopeSheet *ads, Scene *scene, int
 	return sorted_bases;
 }
 
+static size_t animdata_filter_dopesheet_pyntree(bAnimContext *ac, ListBase *anim_data, bDopeSheet *ads, Scene *sce, int filter_mode)
+{
+	Main *main = (Main*)ac->bmain;
+	size_t items = 0;
+
+	for (bNodeTree *ntree = main->nodetree.first; ntree; ntree = ntree->id.next) {
+		if (ntree->type == NTREE_CUSTOM) {
+			items += animdata_filter_ds_nodetree_group(ac, anim_data, ads, &sce->id, ntree, filter_mode);
+		}
+	}
+
+	return items;
+}
 
 // TODO: implement pinning... (if and when pinning is done, what we need to do is to provide freeing mechanisms - to protect against data that was deleted)
 static size_t animdata_filter_dopesheet(bAnimContext *ac, ListBase *anim_data, bDopeSheet *ads, int filter_mode)
@@ -2981,6 +2994,9 @@ static size_t animdata_filter_dopesheet(bAnimContext *ac, ListBase *anim_data, b
 
 	/* scene-linked animation - e.g. world, compositing nodes, scene anim (including sequencer currently) */
 	items += animdata_filter_dopesheet_scene(ac, anim_data, ads, scene, filter_mode);
+
+	/* Python node trees */
+	items += animdata_filter_dopesheet_pyntree(ac, anim_data, ads, scene, filter_mode);
 
 	/* If filtering for channel drawing, we want the objects in alphabetical order,
 	 * to make it easier to predict where items are in the hierarchy

@@ -178,6 +178,9 @@ void BKE_fcurves_main_cb(struct Main *bmain, ID_FCurve_Edit_Callback func, void 
 /* Evaluation loop for evaluating animation data  */
 void BKE_animsys_evaluate_animdata(struct Scene *scene, struct ID *id, struct AnimData *adt, float ctime, short recalc);
 
+/* Evaluation loop for evaluating Python nodes trees animation data  */
+void BKE_animsys_evaluate_animdata_pyntree(struct Main *main, struct Scene *scene, float ctime, short recalc);
+
 /* Evaluation of all ID-blocks with Animation Data blocks - Animation Data Only */
 void BKE_animsys_evaluate_all_animation(struct Main *main, struct Scene *scene, float ctime);
 

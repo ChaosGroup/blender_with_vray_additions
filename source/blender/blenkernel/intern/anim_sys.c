@@ -2789,6 +2789,15 @@ void BKE_animsys_evaluate_animdata(Scene *scene, ID *id, AnimData *adt, float ct
 	adt->recalc = 0;
 }
 
+void BKE_animsys_evaluate_animdata_pyntree(struct Main *main, struct Scene *scene, float ctime, short recalc)
+{
+	for (bNodeTree *ntree = main->nodetree.first; ntree; ntree = ntree->id.next) {
+		if (ntree->type == NTREE_CUSTOM) {
+			BKE_animsys_evaluate_animdata(scene, &ntree->id, ntree->adt, ctime, recalc);
+		}
+	}
+}
+
 /* Evaluation of all ID-blocks with Animation Data blocks - Animation Data Only
  *
  * This will evaluate only the animation info available in the animation data-blocks
