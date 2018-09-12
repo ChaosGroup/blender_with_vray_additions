@@ -1894,7 +1894,7 @@ void BKE_scene_update_tagged(EvaluationContext *eval_ctx, Main *bmain, Scene *sc
 
 		/* A hacky way to evaluate drivers for Python nodes */
 		const float ctime = BKE_scene_frame_get(scene);
-		BKE_animsys_evaluate_animdata_pyntree(bmain, scene, ctime, ADT_RECALC_DRIVERS);
+		BKE_animsys_evaluate_animdata_pyntree(bmain, scene, ctime, ADT_RECALC_ALL);
 	}
 
 	/* update sound system animation (TODO, move to depsgraph) */
