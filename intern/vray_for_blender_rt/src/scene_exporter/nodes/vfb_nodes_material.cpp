@@ -90,11 +90,11 @@ AttrValue DataExporter::exportVRayNodeMtlMulti(BL::NodeTree &ntree, BL::Node &no
 	BL::NodeSocket mtlid_gen_sock  = Nodes::GetSocketByAttr(node, "mtlid_gen");
 	BL::NodeSocket mtlid_gen_float_sock = Nodes::GetSocketByAttr(node, "mtlid_gen_float");
 
-	if (mtlid_gen_sock.is_linked()) {
+	if (mtlid_gen_sock && mtlid_gen_sock.is_linked()) {
 		mtlMultiDesc.add("mtlid_gen", exportLinkedSocket(ntree, mtlid_gen_sock, context));
 		mtlMultiDesc.del("ids_list");
 	}
-	else if (mtlid_gen_float_sock.is_linked()) {
+	else if (mtlid_gen_float_sock && mtlid_gen_float_sock.is_linked()) {
 		mtlMultiDesc.add("mtlid_gen_float", exportLinkedSocket(ntree, mtlid_gen_float_sock, context));
 		mtlMultiDesc.del("ids_list");
 	}
