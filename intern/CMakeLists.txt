@@ -95,6 +95,5 @@ if(WITH_OPENVDB)
 endif()
 
 if(WITH_VRAY_FOR_BLENDER)
-	#dd_subdirectory(vray_for_blender)
 	add_subdirectory(vray_for_blender_rt)
 endif()
