@@ -21,7 +21,7 @@
 #include "vfb_utils_math.h"
 #include "vfb_typedefs.h"
 
-#include "utils/cgr_hash.h"
+#include "utils/vfb_utils_hash.h"
 
 using namespace VRayForBlender;
 

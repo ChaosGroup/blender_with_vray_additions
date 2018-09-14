@@ -18,7 +18,7 @@
 
 #include "vfb_plugin_manager.h"
 #include "vfb_plugin_exporter.h"
-#include "utils/cgr_hash.h"
+#include "utils/vfb_utils_hash.h"
 #include <iterator>
 
 using namespace VRayForBlender;

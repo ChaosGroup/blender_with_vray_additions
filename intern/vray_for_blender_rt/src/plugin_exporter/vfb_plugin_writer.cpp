@@ -21,7 +21,7 @@
 #include "vfb_plugin_writer.h"
 #include "BLI_fileops.h"
 
-#include "utils/cgr_vrscene.h"
+#include "utils/vfb_utils_vrscene.h"
 
 #include "Python.h"
 

@@ -25,7 +25,7 @@
 #include "BLI_math.h"
 #include "MEM_guardedalloc.h"
 
-#include "cgr_vrscene.h"
+#include "vfb_utils_vrscene.h"
 
 #include <zlib.h>
 

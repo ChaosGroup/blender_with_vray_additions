@@ -26,7 +26,7 @@
 #include "vfb_typedefs.h"
 #include "vfb_rna.h"
 
-#include "utils/cgr_hash.h"
+#include "utils/vfb_utils_hash.h"
 
 #include "BLI_math.h"
 

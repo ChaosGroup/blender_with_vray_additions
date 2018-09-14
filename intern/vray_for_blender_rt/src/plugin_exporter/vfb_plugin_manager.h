@@ -22,7 +22,7 @@
 #include "vfb_plugin_attrs.h"
 #include "base_types.h"
 
-#include "utils/cgr_hash.h"
+#include "utils/vfb_utils_hash.h"
 
 #include <mutex>
 
