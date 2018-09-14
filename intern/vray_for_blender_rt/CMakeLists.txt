@@ -30,8 +30,6 @@ set(INC
 	${CMAKE_SOURCE_DIR}/source/blender/windowmanager
 	${CMAKE_BINARY_DIR}/source/blender/makesrna/intern
 
-	../vray_for_blender
-
 	.
 	src
 	src/params

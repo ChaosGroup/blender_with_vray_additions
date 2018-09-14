@@ -20,6 +20,9 @@
 #include "vfb_plugin_writer.h"
 #include "BLI_fileops.h"
 
+#include "utils/cgr_string.h"
+#include "utils/cgr_vrscene.h"
+
 #include "Python.h"
 
 #include <algorithm>

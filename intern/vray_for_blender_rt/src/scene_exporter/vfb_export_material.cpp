@@ -20,6 +20,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
 #include "vfb_params_json.h"
+
 #include "utils/cgr_string.h"
 
 using namespace VRayForBlender;

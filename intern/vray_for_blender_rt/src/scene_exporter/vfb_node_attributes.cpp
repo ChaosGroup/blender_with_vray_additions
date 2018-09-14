@@ -23,11 +23,12 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_math.h"
 
-#include "utils/cgr_paths.h"
 #include "BLI_path_util.h"
 #include "BLI_fileops.h"
 #include "BKE_main.h"
 #include "BKE_global.h"
+
+#include "utils/cgr_paths.h"
 
 #include <boost/filesystem.hpp>
 
@@ -58,7 +59,7 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 
 					if (propSubType == PROP_FILEPATH) {
 						absFilePath = BlenderUtils::GetFullFilepath(absFilePath, holder);
-						absFilePath = BlenderUtils::CopyDRAsset(absFilePath);
+						absFilePath = BlenderUtils::CopyDRAsset(m_settings, absFilePath);
 					}
 				}
 

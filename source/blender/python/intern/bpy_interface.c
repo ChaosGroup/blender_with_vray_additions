@@ -80,7 +80,6 @@
 #include "../mathutils/mathutils.h"
 
 #ifdef WITH_VRAY_FOR_BLENDER
-#  include "cgr_vray_for_blender.h"
 #  include "cgr_vray_for_blender_rt.h"
 #endif
 
@@ -216,17 +215,11 @@ static PyObject *CCL_initPython(void)
 }
 #endif
 
-#ifdef WITH_VRAY_FOR_BLENDER
-static PyObject *CGR_initPython(void)
-{
-	return (PyObject*)VRayForBlender_initPython();
-}
 #ifdef WITH_VRAY_FOR_BLENDER_ZMQ
 static PyObject *CGR_initPythonRT(void)
 {
 	return (PyObject*)VRayForBlenderRT_initPython();
 }
-#endif
 #endif
 
 static struct _inittab bpy_internal_modules[] = {
@@ -252,11 +245,8 @@ static struct _inittab bpy_internal_modules[] = {
 #ifdef WITH_CYCLES
 	{"_cycles", CCL_initPython},
 #endif
-#ifdef WITH_VRAY_FOR_BLENDER
-	{"_vray_for_blender", CGR_initPython},
 #ifdef WITH_VRAY_FOR_BLENDER_ZMQ
 	{"_vray_for_blender_rt", CGR_initPythonRT},
-#endif
 #endif
 	{"gpu", GPU_initPython},
 	{"idprop", BPyInit_idprop},

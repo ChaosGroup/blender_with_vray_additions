@@ -30,8 +30,6 @@
 #include "vfb_export_settings.h"
 #include "vfb_thread_manager.h"
 
-#include "utils/cgr_vrscene.h"
-#include "utils/cgr_string.h"
 
 namespace VRayForBlender {
 

@@ -31,8 +31,11 @@
 
 #include "zmq_wrapper.hpp"
 
-#include <Python.h>
 #include "BKE_global.h"
+#include "WM_types.h"
+#include "WM_api.h"
+
+#include <Python.h>
 
 using namespace VRayForBlender;
 
@@ -640,6 +643,30 @@ static PyObject* set_preview_dir(PyObject*, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject* updatePreview(PyObject *self, PyObject *args)
+{
+	PyObject *py_context  = NULL;
+	int       update_flag = 0;
+
+	if(NOT(PyArg_ParseTuple(args, "Oi", &py_context, &update_flag))) {
+		return NULL;
+	}
+
+	bContext *C = (bContext*)PyLong_AsVoidPtr(py_context);
+
+	int update_type = 0;
+	switch(update_flag) {
+		case 0:	update_type |= NC_WORLD; break;
+		case 1:	update_type |= NC_MATERIAL; break;
+		case 2:	update_type |= NC_LAMP; break;
+		default: break;
+	}
+
+	WM_event_add_notifier(C, update_type | ND_SHADING_PREVIEW, NULL);
+
+	Py_RETURN_NONE;
+}
+
 
 static PyMethodDef methods[] = {
     { "load",                vfb_load,   METH_VARARGS, ""},
@@ -664,6 +691,8 @@ static PyMethodDef methods[] = {
     { "osl_set_stdosl_path", vfb_osl_setstdosl_path, METH_VARARGS, ""},
 
     { "set_preview_dir", set_preview_dir, METH_VARARGS, ""},
+
+	{"updatePreview", updatePreview, METH_VARARGS, "Generate preview update event"},
 
     {NULL, NULL, 0, NULL},
 };

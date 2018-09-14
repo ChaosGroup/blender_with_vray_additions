@@ -28,6 +28,8 @@
 #include "BKE_global.h"
 #include "BKE_main.h"
 
+#include "utils/cgr_string.h"
+
 #include <boost/filesystem.hpp>
 #include <boost/date_time.hpp>
 namespace fs = boost::filesystem;
