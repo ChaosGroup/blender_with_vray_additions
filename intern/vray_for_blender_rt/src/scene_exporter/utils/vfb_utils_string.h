@@ -31,7 +31,28 @@ const int MAX_PLG_LEN = 256;
 
 std::string GetUniqueName(HashSet<std::string> &namesSet, const std::string &name);
 
-std::string StripString(std::string &str);
+/// Replace all invalid chars in @str
+/// @param str - the in/out param
+void StripString(char *str);
+
+/// Replace all invalid chars in @str, but ignores any found in @ignore
+/// @param str - the in/out param
+/// @param ignore - null terminated string containing all characters to skip replacing
+/// NOTE: instead of passing nullptr or empty string - call the overload
+void StripString(char *str, const char * ignore);
+
+
+/// Replace all invalid chars in @str and return copy
+/// @param str - the in/out param
+std::string  StripString(const std::string &str);
+
+/// Replace all invalid chars in @str and return copy, but ignores any found in @ignore
+/// @param str - the in/out param
+/// @param ignore - null terminated string containing all characters to skip replacing
+/// NOTE: instead of passing nullptr or empty string - call the overload
+std::string  StripString(const std::string &str, const char * ignore);
+
+bool IsStdStringDigit(const std::string &str);
 
 /// Expand some variables from the provided string
 /// $C is camera name, $S is scene name, $F is blend file name
