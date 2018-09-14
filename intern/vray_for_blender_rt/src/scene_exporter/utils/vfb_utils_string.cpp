@@ -112,19 +112,19 @@ void replace_in_place(char * string, const ReplaceTable * table)
 } // namespace
 
 
-void StripString(char *str, const char * ignore)
+void VRayForBlender::String::StripString(char *str, const char * ignore)
 {
 	ReplaceTable replace_table = default_replace;
 	replace_table.update(ignore);
 	replace_in_place(str, &replace_table);
 }
 
-void StripString(char *str)
+void VRayForBlender::String::StripString(char *str)
 {
 	replace_in_place(str, &default_replace);
 }
 
-std::string StripString(const std::string &str)
+std::string VRayForBlender::String::StripString(const std::string &str)
 {
 	static char buf[CGR_MAX_PLUGIN_NAME];
 	if (safe_str_ncpy_replace(buf, str.c_str(), CGR_MAX_PLUGIN_NAME, &default_replace) < 0) {
@@ -133,7 +133,7 @@ std::string StripString(const std::string &str)
 	return buf;
 }
 
-std::string StripString(const std::string &str, const char * ignore)
+std::string VRayForBlender::String::StripString(const std::string &str, const char * ignore)
 {
 	ReplaceTable replace_table = default_replace;
 	replace_table.update(ignore);
@@ -146,7 +146,7 @@ std::string StripString(const std::string &str, const char * ignore)
 }
 
 
-bool IsStdStringDigit(const std::string &str)
+bool VRayForBlender::String::IsStdStringDigit(const std::string &str)
 {
 	return std::count_if(str.begin(), str.end(), ::isdigit) == str.size();
 }

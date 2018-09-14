@@ -28,8 +28,6 @@
 #include "BKE_global.h"
 #include "BKE_main.h"
 
-#include "utils/cgr_string.h"
-
 #include <boost/filesystem.hpp>
 #include <boost/date_time.hpp>
 namespace fs = boost::filesystem;
@@ -227,7 +225,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	// dont set frame for settings file when DR is off and seperate files is on and current file is Settings
 	const bool setFrame = writerType != ParamDesc::PluginSettings;
 
-	writer << pluginDesc.pluginID << " " << StripString(pluginDesc.pluginName) << " {\n";
+	writer << pluginDesc.pluginID << " " << String::StripString(pluginDesc.pluginName) << " {\n";
 	if (exporter_settings.settings_animation.use || exporter_settings.use_motion_blur) {
 		if (setFrame) {
 			writer.setAnimationFrame(this->current_scene_frame);

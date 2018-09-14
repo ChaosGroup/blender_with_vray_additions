@@ -20,8 +20,7 @@
 #include "vfb_utils_nodes.h"
 #include "vfb_utils_blender.h"
 #include "vfb_params_json.h"
-
-#include "utils/cgr_string.h"
+#include "vfb_utils_string.h"
 
 using namespace VRayForBlender;
 
@@ -150,7 +149,7 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 	// If connected node is not of 'MATERIAL' type we need to wrap it with it for GPU
 	if (material.type == ValueTypePlugin && pluginType != PT::PluginMaterial) {
 
-		const std::string wrapper_name = "MtlSingleBRDF@" + StripString(material.as<AttrPlugin>().plugin);
+		const std::string wrapper_name = "MtlSingleBRDF@" + String::StripString(material.as<AttrPlugin>().plugin);
 		PluginDesc mtlSingleWrapper(wrapper_name, "MtlSingleBRDF");
 		mtlSingleWrapper.add("brdf", material.as<AttrPlugin>());
 		mtlSingleWrapper.add("scene_name", AttrListString({ma.name()}));

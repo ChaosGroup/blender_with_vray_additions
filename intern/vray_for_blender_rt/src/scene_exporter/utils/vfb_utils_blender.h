@@ -34,6 +34,11 @@
 
 #include <Python.h>
 
+namespace VRayForBlender {
+struct ExporterSettings;
+}
+
+
 // This is global because multiple mt exporters could run at the same time
 static boost::shared_mutex vfbExporterBlenderLock;
 #define WRITE_LOCK_BLENDER_RAII boost::unique_lock<boost::shared_mutex> _raiiWriteLock(vfbExporterBlenderLock);
@@ -41,7 +46,9 @@ static boost::shared_mutex vfbExporterBlenderLock;
 
 namespace VRayForBlender {
 namespace Blender {
+
 #ifdef WITH_OSL
+/// Utilift class to deal with .osl files to query params and compile
 struct OSLManager {
 	std::string stdOSLPath;
 
@@ -73,7 +80,9 @@ inline PyObjectRAII toPyPTR(PyObject * ob) {
 	return PyObjectRAII(ob, freePyObject);
 }
 
-std::string   GetFilepath(const std::string &filepath, ID *holder=nullptr);
+/// Convert Blender relative path to full path depending on scene and ID holder
+std::string GetFilepath(const std::string &filepath, ID *holder=NULL);
+std::string CopyDRAsset(ExporterSettings &settings, const std::string &filepath);
 
 BL::Object    GetObjectByName(BL::BlendData data, const std::string &name);
 BL::Material  GetMaterialByName(BL::BlendData data, const std::string &name);

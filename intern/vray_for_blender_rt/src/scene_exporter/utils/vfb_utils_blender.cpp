@@ -19,6 +19,7 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_math.h"
+#include "vfb_export_settings.h"
 
 #include "DNA_ID.h"
 #include "DNA_object_types.h"
@@ -28,6 +29,10 @@
 #include "BLI_path_util.h"
 
 #include "cgr_config.h"
+
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/format/free_funcs.hpp>
 #include <boost/filesystem.hpp>
 
 using namespace VRayForBlender;
@@ -201,6 +206,92 @@ int Blender::GetMaterialCount(BL::Object ob)
 
 	return material_count;
 }
+
+namespace bfs {
+using namespace boost::filesystem;
+}
+
+typedef bfs::path bpath;
+
+
+
+std::string Blender::CopyDRAsset(VRayForBlender::ExporterSettings &settings, const std::string &filepath)
+{
+	if (settings.settings_dr.share_path.empty()) {
+		return filepath;
+	}
+
+	bpath srcFilepath(filepath);
+	bpath fileName = srcFilepath.filename();
+
+	if(!bfs::exists(srcFilepath)) {
+		PRINT_ERROR("File \"%s\" doesn't exist!", srcFilepath.string().c_str());
+		return filepath;
+	}
+
+	std::string fileExt = srcFilepath.extension().string();
+	boost::algorithm::to_lower(fileExt);
+
+	std::string assetSubdir = "textures";
+	if(fileExt == "ies")
+		assetSubdir = "ies";
+	else if(fileExt == "vrmesh")
+		assetSubdir = "proxy";
+	else if(fileExt == "vrmap" || fileExt == "vrst" || fileExt == "vrsm")
+		assetSubdir = "lightmaps";
+
+	bpath drRoot(settings.settings_dr.share_path);
+
+	bpath dstDirpath = drRoot / assetSubdir;
+
+	if(NOT(bfs::exists(dstDirpath))) {
+		try {
+			bfs::create_directories(dstDirpath);
+		}
+		catch(const bfs::filesystem_error &ex) {
+			PRINT_ERROR("Exception %s: Error creating directory path \"%s\"!",
+						ex.what(), dstDirpath.string().c_str());
+			return filepath;
+		}
+	}
+
+	bpath dstFilepath = dstDirpath / fileName;
+
+	bool needCopy = true;
+#if 0
+	if(bfs::exists(dstFilepath)) {
+		if(bfs::file_size(srcFilepath) == bfs::file_size(dstFilepath)) {
+			needCopy = false;
+		}
+	}
+#endif
+	if(needCopy) {
+		PRINT_INFO_EX("Copying \"%s\" to \"%s\"...",
+					  fileName.string().c_str(), dstDirpath.string().c_str());
+
+		try {
+			bfs::copy_file(srcFilepath, dstFilepath, bfs::copy_option::overwrite_if_exists);
+		}
+		catch(const bfs::filesystem_error &ex) {
+			PRINT_ERROR("Exception %s: Error copying \"%s\" file to \"%s\"!",
+						ex.what(), fileName.string().c_str(), dstDirpath.string().c_str());
+		}
+	}
+
+	std::string finalFilepath = dstFilepath.string();
+
+	if (settings.settings_dr.network_type == VRayForBlender::SettingsDR::NetworkTypeWindows &&
+		settings.settings_dr.sharing_type == VRayForBlender::SettingsDR::SharingTypeShare) {
+		
+		char uncPrefix[2048] = {0,};
+		snprintf(uncPrefix, 2048, "\\\\%s\\%s", settings.settings_dr.hostname.c_str(), settings.settings_dr.share_name.c_str());
+
+		boost::replace_all(finalFilepath, settings.settings_dr.share_path, uncPrefix);
+	}
+
+	return finalFilepath;
+}
+
 
 
 std::string Blender::GetFilepath(const std::string &filepath, ID *holder)

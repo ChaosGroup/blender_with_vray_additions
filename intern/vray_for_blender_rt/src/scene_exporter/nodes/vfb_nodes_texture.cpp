@@ -34,7 +34,7 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 		if (imageTexture) {
 			BL::Image image(imageTexture.image());
 			if (image) {
-				std::string absFilepath = Blender::GetFilepath(image.filepath(), (ID*)ntree.ptr.data);
+				const std::string &absFilepath = Blender::GetFilepath(image.filepath(), (ID*)ntree.ptr.data);
 
 				if(image.source() == BL::Image::source_SEQUENCE) {
 					BL::ImageUser imageUser = imageTexture.image_user();

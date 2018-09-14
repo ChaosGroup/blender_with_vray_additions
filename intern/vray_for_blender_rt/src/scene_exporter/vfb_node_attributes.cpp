@@ -28,8 +28,6 @@
 #include "BKE_main.h"
 #include "BKE_global.h"
 
-#include "utils/cgr_paths.h"
-
 #include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
@@ -58,8 +56,8 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 					absFilePath = String::ExpandFilenameVariables(absFilePath, m_context);
 
 					if (propSubType == PROP_FILEPATH) {
-						absFilePath = BlenderUtils::GetFullFilepath(absFilePath, holder);
-						absFilePath = BlenderUtils::CopyDRAsset(m_settings, absFilePath);
+						absFilePath = Blender::GetFilepath(absFilePath, holder);
+						absFilePath = Blender::CopyDRAsset(m_settings, absFilePath);
 					}
 				}
 

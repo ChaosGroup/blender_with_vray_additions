@@ -17,10 +17,10 @@
  */
 
 #include "vfb_export_settings.h"
+#include "vfb_utils_string.h"
 #include "vfb_plugin_writer.h"
 #include "BLI_fileops.h"
 
-#include "utils/cgr_string.h"
 #include "utils/cgr_vrscene.h"
 
 #include "Python.h"
@@ -273,9 +273,9 @@ PluginWriter &operator<<(PluginWriter &pp, const AttrTransform &val)
 
 PluginWriter &operator<<(PluginWriter &pp, const AttrPlugin &val)
 {
-	pp << StripString(val.plugin);
+	pp << String::StripString(val.plugin);
 	if (!val.output.empty()) {
-		pp << "::" << StripString(val.output);
+		pp << "::" << String::StripString(val.output);
 	}
 	return pp;
 }
@@ -363,7 +363,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 	if (itemsPerLine) {
 		pp << "\n" << pp.indent();
 	}
-	pp << "\"" << StripString((*val)[0], "/") << "\"";
+	pp << "\"" << String::StripString((*val)[0], "/") << "\"";
 	for (int c = 1; c < val.getCount(); c++) {
 		pp << ",";
 		if (itemsPerLine && c % itemsPerLine == 0) {
@@ -371,7 +371,7 @@ PluginWriter &printList(PluginWriter &pp, const VRayBaseTypes::AttrList<std::str
 		} else {
 			pp << " ";
 		}
-		pp <<"\"" << StripString((*val)[c], "/") << "\"";
+		pp <<"\"" << String::StripString((*val)[c], "/") << "\"";
 	}
 	if (itemsPerLine) {
 		pp.unindent();

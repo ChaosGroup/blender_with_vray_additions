@@ -44,7 +44,7 @@ void StripString(char *str, const char * ignore);
 
 /// Replace all invalid chars in @str and return copy
 /// @param str - the in/out param
-std::string  StripString(const std::string &str);
+std::string StripString(const std::string &str);
 
 /// Replace all invalid chars in @str and return copy, but ignores any found in @ignore
 /// @param str - the in/out param
