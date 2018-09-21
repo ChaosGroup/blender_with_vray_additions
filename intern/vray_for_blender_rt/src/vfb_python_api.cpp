@@ -325,7 +325,56 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 	return PyLong_FromVoidPtr(exporter);
 }
 
+static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
+{
+	PRINT_INFO_EX("vfb_init_rt()");
 
+	PyObject *pyExporter = nullptr;
+	const char *pyObjectName= nullptr;
+	const char *pyGroupName = nullptr;
+	const char *pyNtreeName = nullptr;
+	const char *pyScenePath = nullptr;
+	int firstFrame = -1, lastFrame = -1;
+	int useAnimation = false;
+
+	static char *kwlist[] = {
+	    /* 0 */_C("exporter"),
+	    /* 1 */_C("objectName"),
+	    /* 2 */_C("groupName"),
+	    /* 3 */_C("ntreeName"),
+		/* 4 */_C("firstFrame"),
+		/* 5 */_C("lastFrame"),
+	    NULL
+	};
+
+	//                                   012345678911
+	static const char kwlistTypes[] = "|$Ossssiip";
+
+	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
+                                /* 0 */ &pyExporter,
+                                /* 1 */ &pyObjectName,
+                                /* 2 */ &pyGroupName,
+                                /* 3 */ &pyNtreeName,
+								/* 4 */ &pyScenePath,
+								/* 5 */ &firstFrame,
+								/* 6 */ &lastFrame,
+								/* 7 */ &useAnimation)) {
+		Py_RETURN_NONE;
+	}
+
+	SceneExporter *exporter = vfb_cast_exporter(pyExporter);
+	ExporterSettings &settings = exporter->get_export_settings();
+	settings.nonRender.use = true;
+	settings.nonRender.objectName = pyObjectName ? pyObjectName : settings.nonRender.objectName;
+	settings.nonRender.groupName = pyGroupName ? pyGroupName : settings.nonRender.groupName;
+	settings.nonRender.ntreeName = pyNtreeName ? pyNtreeName : settings.nonRender.ntreeName;
+	// if first or last frame are -1, we will read from scene
+	settings.nonRender.firstFrame = firstFrame;
+	settings.nonRender.lastFrame = lastFrame;
+	settings.nonRender.useAnimation = useAnimation;
+
+	Py_RETURN_NONE;
+}
 
 static PyObject* vfb_free(PyObject*, PyObject *value)
 {
@@ -339,23 +388,6 @@ static PyObject* vfb_free(PyObject*, PyObject *value)
 		} else {
 			FreePtr(exporter);
 		}
-	}
-
-	Py_RETURN_NONE;
-}
-
-/// Export data from blender for production rendering
-static PyObject* vfb_update(PyObject*, PyObject *value)
-{
-	PRINT_INFO_EX("vfb_update()");
-
-	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
-	if (exporter) {
-		//ReverseRAIILock<PythonGIL> lck(exporter->m_pyGIL);
-		//bool result = exporter->export_scene();
-		//if (!result) {
-		//	Py_RETURN_FALSE;
-		//}
 	}
 
 	Py_RETURN_NONE;
@@ -676,7 +708,8 @@ static PyMethodDef methods[] = {
     { "init_rt", (PyCFunction)vfb_init_rt, METH_VARARGS|METH_KEYWORDS, ""},
     { "free",                 vfb_free,    METH_O, ""},
 
-    { "update",      vfb_update,      METH_O, "" },
+    { "set_export_options",    (PyCFunction)set_export_options,    METH_VARARGS|METH_KEYWORDS, ""},
+
     { "render",      vfb_render,      METH_O, "" },
     { "view_update", vfb_view_update, METH_O, "" },
     { "view_draw",   vfb_view_draw,   METH_O, "" },

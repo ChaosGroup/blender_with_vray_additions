@@ -226,6 +226,19 @@ struct ExporterSettings {
 
 	RenderMode        render_mode;
 
+	struct NonRenderOverrides {
+		/// Flag which will be true if we want to export but not render, used for example for ExportSets
+		/// This will also force using STD exporter
+		bool use = false;
+		bool useAnimation = false;
+		int firstFrame = -1;
+		int lastFrame = -1;
+		std::string objectName;
+		std::string groupName;
+		std::string ntreeName;
+		std::string scenePath;
+	} nonRender;
+
 	float                      getViewportResolutionPercentage() const { return m_viewportResolution; }
 	int                        getViewportShowAlpha();
 

@@ -341,6 +341,8 @@ public:
 
 	ViewParams           get_current_view_params();
 
+	ExporterSettings    &get_export_settings() { return m_settings; }
+
 	/// Export all scene data for the current frame
 	void                 sync(const bool check_updated=false);
 	void                 sync_view(const bool check_updated=false);
