@@ -695,8 +695,8 @@ void snapGridIncrementAction(TransInfo *t, float *val, GearsType action);
 
 void snapSequenceBounds(TransInfo *t, const int mval[2]);
 
-bool activeSnap(TransInfo *t);
-bool validSnap(TransInfo *t);
+bool activeSnap(const TransInfo *t);
+bool validSnap(const TransInfo *t);
 
 void initSnapping(struct TransInfo *t, struct wmOperator *op);
 void freeSnapping(struct TransInfo *t);
@@ -706,10 +706,10 @@ void applySnapping(TransInfo *t, float *vec);
 void resetSnapping(TransInfo *t);
 eRedrawFlag handleSnapping(TransInfo *t, const struct wmEvent *event);
 void drawSnapping(const struct bContext *C, TransInfo *t);
-bool usingSnappingNormal(TransInfo *t);
-bool validSnappingNormal(TransInfo *t);
+bool usingSnappingNormal(const TransInfo *t);
+bool validSnappingNormal(const TransInfo *t);
 
-void getSnapPoint(TransInfo *t, float vec[3]);
+void getSnapPoint(const TransInfo *t, float vec[3]);
 void addSnapPoint(TransInfo *t);
 eRedrawFlag updateSelectedSnapPoint(TransInfo *t);
 void removeSnapPoint(TransInfo *t);
@@ -796,6 +796,8 @@ bool applyTransformOrientation(const struct bContext *C, float mat[3][3], char r
 #define ORIENTATION_VERT	2
 #define ORIENTATION_EDGE	3
 #define ORIENTATION_FACE	4
+#define ORIENTATION_USE_PLANE(ty) \
+	ELEM(ty, ORIENTATION_NORMAL, ORIENTATION_EDGE, ORIENTATION_FACE)
 
 int getTransformOrientation_ex(const struct bContext *C, float normal[3], float plane[3], const short around);
 int getTransformOrientation(const struct bContext *C, float normal[3], float plane[3]);
@@ -809,7 +811,7 @@ void freeVertSlideVerts(TransInfo *t, TransCustomData *custom_data);
 void projectVertSlideData(TransInfo *t, bool is_final);
 
 
-/* TODO. transform_queries.c */
+/* TODO. transform_query.c */
 bool checkUseAxisMatrix(TransInfo *t);
 
 #define TRANSFORM_DIST_MAX_PX 1000.0f

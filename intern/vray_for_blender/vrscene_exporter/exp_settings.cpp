@@ -70,7 +70,7 @@ void ExporterSettings::init()
 	else {
 		// Custom layers
 		// Load custom render layers
-		int layer_values[20];
+		bool layer_values[20];
 		RNA_boolean_get_array(&vrayExporter, "customRenderLayers", layer_values);
 
 		m_activeLayers = 0;

@@ -64,12 +64,12 @@
  *   - add timer notifier to handle progress
  *
  * Stop job
- *   - signal job to end
- *  on end, job will tag itself as sleeping
+ * - signal job to end
+ * on end, job will tag itself as sleeping
  *
  * Remove job
  * - signal job to end
- *  on end, job will remove itself
+ * on end, job will remove itself
  *
  * When job is done:
  * - it puts timer to sleep (or removes?)
@@ -500,7 +500,7 @@ void WM_jobs_kill_type(struct wmWindowManager *wm, void *owner, int job_type)
 		next_job = wm_job->next;
 
 		if (!owner || wm_job->owner == owner)
-			if (wm_job->job_type == job_type)
+			if (job_type == WM_JOB_TYPE_ANY || wm_job->job_type == job_type)
 				wm_jobs_kill_job(wm, wm_job);
 	}
 }

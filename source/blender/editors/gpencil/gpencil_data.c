@@ -131,7 +131,7 @@ void GPENCIL_OT_data_add(wmOperatorType *ot)
 /* ******************* Unlink Data ************************ */
 
 /* poll callback for adding data/layers - special */
-static int gp_data_unlink_poll(bContext *C)
+static bool gp_data_unlink_poll(bContext *C)
 {
 	bGPdata **gpd_ptr = ED_gpencil_data_get_pointers(C, NULL);
 
@@ -420,7 +420,7 @@ void GPENCIL_OT_hide(wmOperatorType *ot)
 /* ********************** Show All Layers ***************************** */
 
 /* poll callback for showing layers */
-static int gp_reveal_poll(bContext *C)
+static bool gp_reveal_poll(bContext *C)
 {
 	return ED_gpencil_data_get_active(C) != NULL;
 }
@@ -670,13 +670,13 @@ static int gp_merge_layer_exec(bContext *C, wmOperator *op)
 	/* Collect frames of gpl_current in hash table to avoid O(n^2) lookups */
 	GHash *gh_frames_cur = BLI_ghash_int_new_ex(__func__, 64);
 	for (bGPDframe *gpf = gpl_current->frames.first; gpf; gpf = gpf->next) {
-		BLI_ghash_insert(gh_frames_cur, SET_INT_IN_POINTER(gpf->framenum), gpf);
+		BLI_ghash_insert(gh_frames_cur, POINTER_FROM_INT(gpf->framenum), gpf);
 	}
 
 	/* read all frames from next layer */
 	for (bGPDframe *gpf = gpl_next->frames.first; gpf; gpf = gpf->next) {
 		/* try to find frame in active layer */
-		bGPDframe *frame = BLI_ghash_lookup(gh_frames_cur, SET_INT_IN_POINTER(gpf->framenum));
+		bGPDframe *frame = BLI_ghash_lookup(gh_frames_cur, POINTER_FROM_INT(gpf->framenum));
 		if (!frame) {
 			/* nothing found, create new */
 			frame = BKE_gpencil_frame_addnew(gpl_current, gpf->framenum);
@@ -1811,7 +1811,7 @@ void GPENCIL_OT_palettecolor_hide(wmOperatorType *ot)
 /* ********************** Show All Colors ***************************** */
 
 /* poll callback for showing colors */
-static int gp_palettecolor_reveal_poll(bContext *C)
+static bool gp_palettecolor_reveal_poll(bContext *C)
 {
 	return ED_gpencil_data_get_active(C) != NULL;
 }

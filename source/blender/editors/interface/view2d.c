@@ -215,8 +215,8 @@ void UI_view2d_region_reinit(View2D *v2d, short type, int winx, int winy)
 	/* see eView2D_CommonViewTypes in UI_view2d.h for available view presets */
 	switch (type) {
 		/* 'standard view' - optimum setup for 'standard' view behavior,
-		 *  that should be used new views as basis for their
-		 *  own unique View2D settings, which should be used instead of this in most cases...
+		 * that should be used new views as basis for their
+		 * own unique View2D settings, which should be used instead of this in most cases...
 		 */
 		case V2D_COMMONVIEW_STANDARD:
 		{
@@ -226,9 +226,9 @@ void UI_view2d_region_reinit(View2D *v2d, short type, int winx, int winy)
 			v2d->maxzoom = 1000.0f;
 
 			/* tot rect and cur should be same size, and aligned using 'standard' OpenGL coordinates for now
-			 *	- region can resize 'tot' later to fit other data
-			 *	- keeptot is only within bounds, as strict locking is not that critical
-			 *	- view is aligned for (0,0) -> (winx-1, winy-1) setup
+			 * - region can resize 'tot' later to fit other data
+			 * - keeptot is only within bounds, as strict locking is not that critical
+			 * - view is aligned for (0,0) -> (winx-1, winy-1) setup
 			 */
 			v2d->align = (V2D_ALIGN_NO_NEG_X | V2D_ALIGN_NO_NEG_Y);
 			v2d->keeptot = V2D_KEEPTOT_BOUNDS;
@@ -260,7 +260,7 @@ void UI_view2d_region_reinit(View2D *v2d, short type, int winx, int winy)
 			break;
 		}
 		/* 'stack view' - practically the same as list/channel view, except is located in the pos y half instead.
-		 *  zoom, aspect ratio, and alignment restrictions are set here */
+		 * zoom, aspect ratio, and alignment restrictions are set here */
 		case V2D_COMMONVIEW_STACK:
 		{
 			/* zoom + aspect ratio are locked */
@@ -628,7 +628,7 @@ static void ui_view2d_curRect_validate_resize(View2D *v2d, bool resize, bool mas
 			}
 			else if (cur->xmax > tot->xmax) {
 				/* - only offset by difference of cur-xmax and tot-xmax if that would not move
-				 *  cur-xmin to lie past tot-xmin
+				 *   cur-xmin to lie past tot-xmin
 				 * - otherwise, simply shift to tot-xmin???
 				 */
 				temp = cur->xmax - tot->xmax;
@@ -672,7 +672,7 @@ static void ui_view2d_curRect_validate_resize(View2D *v2d, bool resize, bool mas
 			}
 			else if (cur->xmax > tot->xmax) {
 				/* - only offset by difference of cur-xmax and tot-xmax if that would not move
-				 *  cur-xmin to lie past tot-xmin
+				 *   cur-xmin to lie past tot-xmin
 				 * - otherwise, simply shift to tot-xmin???
 				 */
 				temp = cur->xmax - tot->xmax;
@@ -1638,9 +1638,10 @@ View2DScrollers *UI_view2d_scrollers_calc(
 		scrollers->yclamp = yclamp;
 		scrollers->yunits = yunits;
 
-		scrollers->grid = UI_view2d_grid_calc(CTX_data_scene(C), v2d,
-		                                      xunits, xclamp, yunits, yclamp,
-		                                      BLI_rcti_size_x(&hor), BLI_rcti_size_y(&vert));
+		scrollers->grid = UI_view2d_grid_calc(
+		        CTX_data_scene(C), v2d,
+		        xunits, xclamp, yunits, yclamp,
+		        BLI_rcti_size_x(&hor), BLI_rcti_size_y(&vert));
 	}
 
 	/* return scrollers */
@@ -2008,12 +2009,14 @@ void UI_view2d_listview_visible_cells(
 	/* using 'cur' rect coordinates, call the cell-getting function to get the cells for this */
 	if (v2d) {
 		/* min */
-		UI_view2d_listview_view_to_cell(v2d, columnwidth, rowheight, startx, starty,
-		                                v2d->cur.xmin, v2d->cur.ymin, column_min, row_min);
+		UI_view2d_listview_view_to_cell(
+		        v2d, columnwidth, rowheight, startx, starty,
+		        v2d->cur.xmin, v2d->cur.ymin, column_min, row_min);
 
 		/* max*/
-		UI_view2d_listview_view_to_cell(v2d, columnwidth, rowheight, startx, starty,
-		                                v2d->cur.xmax, v2d->cur.ymax, column_max, row_max);
+		UI_view2d_listview_view_to_cell(
+		        v2d, columnwidth, rowheight, startx, starty,
+		        v2d->cur.xmax, v2d->cur.ymax, column_max, row_max);
 	}
 }
 
@@ -2423,13 +2426,15 @@ void UI_view2d_text_cache_draw(ARegion *ar)
 		}
 
 		if (v2s->rect.xmin >= v2s->rect.xmax)
-			BLF_draw_default((float)(v2s->mval[0] + xofs), (float)(v2s->mval[1] + yofs), 0.0,
-			                  v2s->str, BLF_DRAW_STR_DUMMY_MAX);
+			BLF_draw_default(
+			        (float)(v2s->mval[0] + xofs), (float)(v2s->mval[1] + yofs), 0.0,
+			        v2s->str, BLF_DRAW_STR_DUMMY_MAX);
 		else {
 			BLF_clipping_default(v2s->rect.xmin - 4, v2s->rect.ymin - 4, v2s->rect.xmax + 4, v2s->rect.ymax + 4);
 			BLF_enable_default(BLF_CLIPPING);
-			BLF_draw_default(v2s->rect.xmin + xofs, v2s->rect.ymin + yofs, 0.0f,
-			                 v2s->str, BLF_DRAW_STR_DUMMY_MAX);
+			BLF_draw_default(
+			        v2s->rect.xmin + xofs, v2s->rect.ymin + yofs, 0.0f,
+			        v2s->str, BLF_DRAW_STR_DUMMY_MAX);
 			BLF_disable_default(BLF_CLIPPING);
 		}
 	}

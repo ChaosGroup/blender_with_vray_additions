@@ -73,14 +73,14 @@
  */
 
 /* poll callback for adding default KeyingSet */
-static int keyingset_poll_default_add(bContext *C)
+static bool keyingset_poll_default_add(bContext *C)
 {
 	/* as long as there's an active Scene, it's fine */
 	return (CTX_data_scene(C) != NULL);
 }
 
 /* poll callback for editing active KeyingSet */
-static int keyingset_poll_active_edit(bContext *C)
+static bool keyingset_poll_active_edit(bContext *C)
 {
 	Scene *scene = CTX_data_scene(C);
 
@@ -92,7 +92,7 @@ static int keyingset_poll_active_edit(bContext *C)
 }
 
 /* poll callback for editing active KeyingSet Path */
-static int keyingset_poll_activePath_edit(bContext *C)
+static bool keyingset_poll_activePath_edit(bContext *C)
 {
 	Scene *scene = CTX_data_scene(C);
 	KeyingSet *ks;
@@ -709,7 +709,7 @@ int ANIM_scene_get_keyingset_index(Scene *scene, KeyingSet *ks)
 }
 
 /* Get Keying Set to use for Auto-Keyframing some transforms */
-KeyingSet *ANIM_get_keyingset_for_autokeying(Scene *scene, const char *tranformKSName)
+KeyingSet *ANIM_get_keyingset_for_autokeying(Scene *scene, const char *transformKSName)
 {
 	/* get KeyingSet to use
 	 *	- use the active KeyingSet if defined (and user wants to use it for all autokeying),
@@ -720,7 +720,7 @@ KeyingSet *ANIM_get_keyingset_for_autokeying(Scene *scene, const char *tranformK
 	else if (IS_AUTOKEY_FLAG(scene, INSERTAVAIL))
 		return ANIM_builtin_keyingset_get_named(NULL, ANIM_KS_AVAILABLE_ID);
 	else
-		return ANIM_builtin_keyingset_get_named(NULL, tranformKSName);
+		return ANIM_builtin_keyingset_get_named(NULL, transformKSName);
 }
 
 /* Menu of All Keying Sets ----------------------------- */

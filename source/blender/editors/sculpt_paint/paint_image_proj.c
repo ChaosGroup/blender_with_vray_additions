@@ -183,7 +183,7 @@ BLI_INLINE unsigned char f_to_char(const float val)
 #define PROJ_VERT_CULL 1
 
 /* to avoid locking in tile initialization */
-#define TILE_PENDING SET_INT_IN_POINTER(-1)
+#define TILE_PENDING POINTER_FROM_INT(-1)
 
 /* This is mainly a convenience struct used so we can keep an array of images we use -
  * their imbufs, etc, in 1 array, When using threads this array is copied for each thread
@@ -593,7 +593,7 @@ static int project_paint_PickFace(
 	 * that the point its testing is only every originated from an existing face */
 
 	for (node = ps->bucketFaces[bucket_index]; node; node = node->next) {
-		const int tri_index = GET_INT_FROM_POINTER(node->link);
+		const int tri_index = POINTER_AS_INT(node->link);
 		const MLoopTri *lt = &ps->dm_mlooptri[tri_index];
 		const float *vtri_ss[3] = {
 		    ps->screenCoords[ps->dm_mloop[lt->tri[0]].v],
@@ -807,7 +807,7 @@ static bool project_bucket_point_occluded(
 	 * that the point its testing is only every originated from an existing face */
 
 	for (; bucketFace; bucketFace = bucketFace->next) {
-		const int tri_index = GET_INT_FROM_POINTER(bucketFace->link);
+		const int tri_index = POINTER_AS_INT(bucketFace->link);
 
 		if (orig_face != tri_index) {
 			const MLoopTri *lt = &ps->dm_mlooptri[tri_index];
@@ -1028,7 +1028,7 @@ static bool check_seam(
 	int i1_fidx = -1, i2_fidx = -1; /* index in face */
 
 	for (node = ps->vertFaces[i1]; node; node = node->next) {
-		const int tri_index = GET_INT_FROM_POINTER(node->link);
+		const int tri_index = POINTER_AS_INT(node->link);
 
 		if (tri_index != orig_face) {
 			const MLoopTri *lt = &ps->dm_mlooptri[tri_index];
@@ -2611,8 +2611,9 @@ static void project_paint_face_init(
 			}
 
 #if 0
-			project_paint_undo_tiles_init(&bounds_px, ps->projImages + image_index, tmpibuf,
-			                              tile_width, threaded, ps->do_masking);
+			project_paint_undo_tiles_init(
+			        &bounds_px, ps->projImages + image_index, tmpibuf,
+			        tile_width, threaded, ps->do_masking);
 #endif
 			/* clip face and */
 
@@ -2661,10 +2662,10 @@ static void project_paint_face_init(
 							if (mask > 0.0f) {
 								BLI_linklist_prepend_arena(
 								        bucketPixelNodes,
-								        project_paint_uvpixel_init(ps, arena, &tinf, x, y, mask, tri_index,
-								                                   pixelScreenCo, wco, w),
-								        arena
-								        );
+								        project_paint_uvpixel_init(
+								                ps, arena, &tinf, x, y, mask, tri_index,
+								                pixelScreenCo, wco, w),
+								        arena);
 							}
 						}
 
@@ -2936,7 +2937,7 @@ static void project_bucket_init(
 
 		for (node = ps->bucketFaces[bucket_index]; node; node = node->next) {
 			project_paint_face_init(
-			        ps, thread_index, bucket_index, GET_INT_FROM_POINTER(node->link), 0,
+			        ps, thread_index, bucket_index, POINTER_AS_INT(node->link), 0,
 			        clip_rect, bucket_bounds, ibuf, &tmpibuf,
 			        (ima->tpageflag & IMA_CLAMP_U) != 0, (ima->tpageflag & IMA_CLAMP_V) != 0);
 		}
@@ -2945,7 +2946,7 @@ static void project_bucket_init(
 
 		/* More complicated loop, switch between images */
 		for (node = ps->bucketFaces[bucket_index]; node; node = node->next) {
-			tri_index = GET_INT_FROM_POINTER(node->link);
+			tri_index = POINTER_AS_INT(node->link);
 
 			/* Image context switching */
 			tpage = project_paint_face_paint_image(ps, tri_index);
@@ -3056,7 +3057,7 @@ static void project_paint_delayed_face_init(ProjPaintState *ps, const MLoopTri *
 				int bucket_index = bucket_x + (bucket_y * ps->buckets_x);
 				BLI_linklist_prepend_arena(
 				        &ps->bucketFaces[bucket_index],
-				        SET_INT_IN_POINTER(tri_index), /* cast to a pointer to shut up the compiler */
+				        POINTER_FROM_INT(tri_index), /* cast to a pointer to shut up the compiler */
 				        arena
 				        );
 
@@ -3414,7 +3415,7 @@ static void project_paint_bleed_add_face_user(
 	/* annoying but we need to add all faces even ones we never use elsewhere */
 	if (ps->seam_bleed_px > 0.0f) {
 		const int lt_vtri[3] = { PS_LOOPTRI_AS_VERT_INDEX_3(ps, lt) };
-		void *tri_index_p = SET_INT_IN_POINTER(tri_index);
+		void *tri_index_p = POINTER_FROM_INT(tri_index);
 		BLI_linklist_prepend_arena(&ps->vertFaces[lt_vtri[0]], tri_index_p, arena);
 		BLI_linklist_prepend_arena(&ps->vertFaces[lt_vtri[1]], tri_index_p, arena);
 		BLI_linklist_prepend_arena(&ps->vertFaces[lt_vtri[2]], tri_index_p, arena);
@@ -4218,8 +4219,9 @@ static void do_projectpaint_clone_f(ProjPaintState *ps, ProjPixel *projPixel, fl
  * accumulation of color greater than 'projPixel->mask' however in the case of smear its not
  * really that important to be correct as it is with clone and painting
  */
-static void do_projectpaint_smear(ProjPaintState *ps, ProjPixel *projPixel, float mask,
-                                  MemArena *smearArena, LinkNode **smearPixels, const float co[2])
+static void do_projectpaint_smear(
+        ProjPaintState *ps, ProjPixel *projPixel, float mask,
+        MemArena *smearArena, LinkNode **smearPixels, const float co[2])
 {
 	unsigned char rgba_ub[4];
 
@@ -4230,8 +4232,9 @@ static void do_projectpaint_smear(ProjPaintState *ps, ProjPixel *projPixel, floa
 	BLI_linklist_prepend_arena(smearPixels, (void *)projPixel, smearArena);
 }
 
-static void do_projectpaint_smear_f(ProjPaintState *ps, ProjPixel *projPixel, float mask,
-                                    MemArena *smearArena, LinkNode **smearPixels_f, const float co[2])
+static void do_projectpaint_smear_f(
+        ProjPaintState *ps, ProjPixel *projPixel, float mask,
+        MemArena *smearArena, LinkNode **smearPixels_f, const float co[2])
 {
 	float rgba[4];
 
@@ -4242,8 +4245,9 @@ static void do_projectpaint_smear_f(ProjPaintState *ps, ProjPixel *projPixel, fl
 	BLI_linklist_prepend_arena(smearPixels_f, (void *)projPixel, smearArena);
 }
 
-static void do_projectpaint_soften_f(ProjPaintState *ps, ProjPixel *projPixel, float mask,
-                                     MemArena *softenArena, LinkNode **softenPixels)
+static void do_projectpaint_soften_f(
+        ProjPaintState *ps, ProjPixel *projPixel, float mask,
+        MemArena *softenArena, LinkNode **softenPixels)
 {
 	float accum_tot = 0.0f;
 	int xk, yk;
@@ -4298,8 +4302,9 @@ static void do_projectpaint_soften_f(ProjPaintState *ps, ProjPixel *projPixel, f
 	}
 }
 
-static void do_projectpaint_soften(ProjPaintState *ps, ProjPixel *projPixel, float mask,
-                                   MemArena *softenArena, LinkNode **softenPixels)
+static void do_projectpaint_soften(
+        ProjPaintState *ps, ProjPixel *projPixel, float mask,
+        MemArena *softenArena, LinkNode **softenPixels)
 {
 	float accum_tot = 0;
 	int xk, yk;
@@ -4580,8 +4585,9 @@ static void *do_projectpaint_thread(void *ph_v)
 						if (is_floatbuf) {
 							/* convert to premultipied */
 							mul_v3_fl(color_f, color_f[3]);
-							IMB_blend_color_float(projPixel->pixel.f_pt,  projPixel->origColor.f_pt,
-							                      color_f, ps->blend);
+							IMB_blend_color_float(
+							        projPixel->pixel.f_pt,  projPixel->origColor.f_pt,
+							        color_f, ps->blend);
 						}
 						else {
 							linearrgb_to_srgb_v3_v3(color_f, color_f);
@@ -4593,8 +4599,9 @@ static void *do_projectpaint_thread(void *ph_v)
 								unit_float_to_uchar_clamp_v3(projPixel->newColor.ch, color_f);
 							}
 							projPixel->newColor.ch[3] = unit_float_to_uchar_clamp(color_f[3]);
-							IMB_blend_color_byte(projPixel->pixel.ch_pt,  projPixel->origColor.ch_pt,
-							                     projPixel->newColor.ch, ps->blend);
+							IMB_blend_color_byte(
+							        projPixel->pixel.ch_pt,  projPixel->origColor.ch_pt,
+							        projPixel->newColor.ch, ps->blend);
 						}
 					}
 					else {
@@ -4603,16 +4610,18 @@ static void *do_projectpaint_thread(void *ph_v)
 							newColor_f[3] = ((float)projPixel->mask) * (1.0f / 65535.0f) * brush->alpha;
 							copy_v3_v3(newColor_f, ps->paint_color_linear);
 
-							IMB_blend_color_float(projPixel->pixel.f_pt,  projPixel->origColor.f_pt,
-							                      newColor_f, ps->blend);
+							IMB_blend_color_float(
+							        projPixel->pixel.f_pt,  projPixel->origColor.f_pt,
+							        newColor_f, ps->blend);
 						}
 						else {
 							float mask = ((float)projPixel->mask) * (1.0f / 65535.0f);
 							projPixel->newColor.ch[3] = mask * 255 * brush->alpha;
 
 							rgb_float_to_uchar(projPixel->newColor.ch, ps->paint_color);
-							IMB_blend_color_byte(projPixel->pixel.ch_pt,  projPixel->origColor.ch_pt,
-							                     projPixel->newColor.ch, ps->blend);
+							IMB_blend_color_byte(
+							        projPixel->pixel.ch_pt,  projPixel->origColor.ch_pt,
+							        projPixel->newColor.ch, ps->blend);
 						}
 					}
 
@@ -4640,15 +4649,17 @@ static void *do_projectpaint_thread(void *ph_v)
 							ps->reproject_ibuf_free_float = true;
 						}
 
-						bicubic_interpolation_color(ps->reproject_ibuf, NULL, projPixel->newColor.f,
-						                            projPixel->projCoSS[0], projPixel->projCoSS[1]);
+						bicubic_interpolation_color(
+						        ps->reproject_ibuf, NULL, projPixel->newColor.f,
+						        projPixel->projCoSS[0], projPixel->projCoSS[1]);
 						if (projPixel->newColor.f[3]) {
 							float mask = ((float)projPixel->mask) * (1.0f / 65535.0f);
 
 							mul_v4_v4fl(projPixel->newColor.f, projPixel->newColor.f, mask);
 
-							blend_color_mix_float(projPixel->pixel.f_pt,  projPixel->origColor.f_pt,
-							                      projPixel->newColor.f);
+							blend_color_mix_float(
+							        projPixel->pixel.f_pt,  projPixel->origColor.f_pt,
+							        projPixel->newColor.f);
 						}
 					}
 					else {
@@ -4657,14 +4668,16 @@ static void *do_projectpaint_thread(void *ph_v)
 							ps->reproject_ibuf_free_uchar = true;
 						}
 
-						bicubic_interpolation_color(ps->reproject_ibuf, projPixel->newColor.ch, NULL,
-						                            projPixel->projCoSS[0], projPixel->projCoSS[1]);
+						bicubic_interpolation_color(
+						        ps->reproject_ibuf, projPixel->newColor.ch, NULL,
+						        projPixel->projCoSS[0], projPixel->projCoSS[1]);
 						if (projPixel->newColor.ch[3]) {
 							float mask = ((float)projPixel->mask) * (1.0f / 65535.0f);
 							projPixel->newColor.ch[3] *= mask;
 
-							blend_color_mix_byte(projPixel->pixel.ch_pt,  projPixel->origColor.ch_pt,
-							                     projPixel->newColor.ch);
+							blend_color_mix_byte(
+							        projPixel->pixel.ch_pt,  projPixel->origColor.ch_pt,
+							        projPixel->newColor.ch);
 						}
 					}
 				}
@@ -5524,12 +5537,13 @@ void PAINT_OT_image_from_view(wmOperatorType *ot)
 
 void BKE_paint_data_warning(struct ReportList *reports, bool uvs, bool mat, bool tex, bool stencil)
 {
-	BKE_reportf(reports, RPT_WARNING, "Missing%s%s%s%s detected!",
-	           !uvs ? " UVs," : "",
-	           !mat ? " Materials," : "",
-	           !tex ? " Textures," : "",
-	           !stencil ? " Stencil," : ""
-	           );
+	BKE_reportf(
+	        reports, RPT_WARNING, "Missing%s%s%s%s detected!",
+	        !uvs ? " UVs," : "",
+	        !mat ? " Materials," : "",
+	        !tex ? " Textures," : "",
+	        !stencil ? " Stencil," : ""
+	);
 }
 
 /* Make sure that active object has a material, and assign UVs and image layers if they do not exist */
@@ -5666,8 +5680,9 @@ static Image *proj_paint_image_create(wmOperator *op, Main *bmain)
 		alpha = RNA_boolean_get(op->ptr, "alpha");
 		RNA_string_get(op->ptr, "name", imagename);
 	}
-	ima = BKE_image_add_generated(bmain, width, height, imagename, alpha ? 32 : 24, use_float,
-	                              gen_type, color, false);
+	ima = BKE_image_add_generated(
+	        bmain, width, height, imagename, alpha ? 32 : 24, use_float,
+	        gen_type, color, false);
 
 	return ima;
 }
@@ -5921,7 +5936,7 @@ static int add_simple_uvs_exec(bContext *C, wmOperator *UNUSED(op))
 	return OPERATOR_FINISHED;
 }
 
-static int add_simple_uvs_poll(bContext *C)
+static bool add_simple_uvs_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 

@@ -4079,25 +4079,25 @@ static void sculpt_update_tex(const Scene *scene, Sculpt *sd, SculptSession *ss)
 
 
 
-int sculpt_mode_poll(bContext *C)
+bool sculpt_mode_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 	return ob && ob->mode & OB_MODE_SCULPT;
 }
 
-int sculpt_mode_poll_view3d(bContext *C)
+bool sculpt_mode_poll_view3d(bContext *C)
 {
 	return (sculpt_mode_poll(C) &&
 	        CTX_wm_region_view3d(C));
 }
 
-int sculpt_poll_view3d(bContext *C)
+bool sculpt_poll_view3d(bContext *C)
 {
 	return (sculpt_poll(C) &&
 	        CTX_wm_region_view3d(C));
 }
 
-int sculpt_poll(bContext *C)
+bool sculpt_poll(bContext *C)
 {
 	return sculpt_mode_poll(C) && paint_poll(C);
 }
@@ -4688,7 +4688,7 @@ static float sculpt_raycast_init(
 	RegionView3D *rv3d = vc->ar->regiondata;
 
 	/* TODO: what if the segment is totally clipped? (return == 0) */
-	ED_view3d_win_to_segment(vc->ar, vc->v3d, mouse, ray_start, ray_end, true);
+	ED_view3d_win_to_segment_clipped(vc->ar, vc->v3d, mouse, ray_start, ray_end, true);
 
 	invert_m4_m4(obimat, ob->obmat);
 	mul_m4_v3(obimat, ray_start);
@@ -5527,7 +5527,7 @@ static int sculpt_optimize_exec(bContext *C, wmOperator *UNUSED(op))
 	return OPERATOR_FINISHED;
 }
 
-static int sculpt_and_dynamic_topology_poll(bContext *C)
+static bool sculpt_and_dynamic_topology_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 
@@ -5826,7 +5826,7 @@ static void SCULPT_OT_sculptmode_toggle(wmOperatorType *ot)
 }
 
 
-static int sculpt_and_dynamic_topology_constant_detail_poll(bContext *C)
+static bool sculpt_and_dynamic_topology_constant_detail_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 	Sculpt *sd = CTX_data_tool_settings(C)->sculpt;

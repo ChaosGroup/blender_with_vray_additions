@@ -93,18 +93,6 @@
 
 static void ui_but_free(const bContext *C, uiBut *but);
 
-bool ui_block_is_menu(const uiBlock *block)
-{
-	return (((block->flag & UI_BLOCK_LOOP) != 0) &&
-	        /* non-menu popups use keep-open, so check this is off */
-	        ((block->flag & UI_BLOCK_KEEP_OPEN) == 0));
-}
-
-bool ui_block_is_pie_menu(const uiBlock *block)
-{
-	return ((block->flag & UI_BLOCK_RADIAL) != 0);
-}
-
 static bool ui_but_is_unit_radians_ex(UnitSettings *unit, const int unit_type)
 {
 	return (unit->system_rotation == USER_UNIT_ROT_RADIANS && unit_type == PROP_UNIT_ROTATION);
@@ -954,7 +942,6 @@ static void ui_menu_block_set_keyaccels(uiBlock *block)
  * but this could be supported */
 void ui_but_add_shortcut(uiBut *but, const char *shortcut_str, const bool do_strip)
 {
-
 	if (do_strip && (but->flag & UI_BUT_HAS_SEP_CHAR)) {
 		char *cpoin = strrchr(but->str, UI_SEP_CHAR);
 		if (cpoin) {
@@ -973,10 +960,11 @@ void ui_but_add_shortcut(uiBut *but, const char *shortcut_str, const bool do_str
 		else {
 			butstr_orig = BLI_strdup(but->str);
 		}
-		BLI_snprintf(but->strdata,
-		             sizeof(but->strdata),
-		             "%s" UI_SEP_CHAR_S "%s",
-		             butstr_orig, shortcut_str);
+		BLI_snprintf(
+		        but->strdata,
+		        sizeof(but->strdata),
+		        "%s" UI_SEP_CHAR_S "%s",
+		        butstr_orig, shortcut_str);
 		MEM_freeN(butstr_orig);
 		but->str = but->strdata;
 		but->flag |= UI_BUT_HAS_SEP_CHAR;
@@ -984,43 +972,68 @@ void ui_but_add_shortcut(uiBut *but, const char *shortcut_str, const bool do_str
 	}
 }
 
+/* -------------------------------------------------------------------- */
+/** \name Find Key Shortcut for Button
+ *
+ * - #ui_but_event_operator_string (and helpers)
+ * - #ui_but_event_property_operator_string
+ * \{ */
+
+static bool ui_but_event_operator_string_from_operator(
+        const bContext *C, uiBut *but,
+        char *buf, const size_t buf_len)
+{
+	BLI_assert(but->optype != NULL);
+	bool found = false;
+	IDProperty *prop = (but->opptr) ? but->opptr->data : NULL;
+
+	if (WM_key_event_operator_string(
+	            C, but->optype->idname, but->opcontext, prop, true,
+	            buf, buf_len))
+	{
+		found = true;
+	}
+	return found;
+}
+
+static bool ui_but_event_operator_string_from_menu(
+        const bContext *C, uiBut *but,
+        char *buf, const size_t buf_len)
+{
+	MenuType *mt = UI_but_menutype_get(but);
+	BLI_assert(mt != NULL);
+
+	bool found = false;
+	IDProperty *prop_menu;
+
+	/* annoying, create a property */
+	IDPropertyTemplate val = {0};
+	prop_menu = IDP_New(IDP_GROUP, &val, __func__); /* dummy, name is unimportant  */
+	IDP_AddToGroup(prop_menu, IDP_NewString(mt->idname, "name", sizeof(mt->idname)));
+
+	if (WM_key_event_operator_string(
+	        C, "WM_OT_call_menu", WM_OP_INVOKE_REGION_WIN, prop_menu, true,
+	        buf, buf_len))
+	{
+		found = true;
+	}
+
+	IDP_FreeProperty(prop_menu);
+	MEM_freeN(prop_menu);
+	return found;
+}
+
 static bool ui_but_event_operator_string(
         const bContext *C, uiBut *but,
         char *buf, const size_t buf_len)
 {
-	MenuType *mt;
 	bool found = false;
 
-	if (but->optype) {
-		IDProperty *prop = (but->opptr) ? but->opptr->data : NULL;
-
-		if (WM_key_event_operator_string(
-		        C, but->optype->idname, but->opcontext, prop, true,
-		        buf, buf_len))
-		{
-			found = true;
-		}
+	if (but->optype != NULL) {
+		found = ui_but_event_operator_string_from_operator(C, but, buf, buf_len);
 	}
-	else if ((mt = UI_but_menutype_get(but))) {
-		IDProperty *prop_menu;
-		IDProperty *prop_menu_name;
-
-		/* annoying, create a property */
-		IDPropertyTemplate val = {0};
-		prop_menu = IDP_New(IDP_GROUP, &val, __func__); /* dummy, name is unimportant  */
-		IDP_AddToGroup(prop_menu, (prop_menu_name = IDP_NewString("", "name", sizeof(mt->idname))));
-
-		IDP_AssignString(prop_menu_name, mt->idname, sizeof(mt->idname));
-
-		if (WM_key_event_operator_string(
-		        C, "WM_OT_call_menu", WM_OP_INVOKE_REGION_WIN, prop_menu, true,
-		        buf, buf_len))
-		{
-			found = true;
-		}
-
-		IDP_FreeProperty(prop_menu);
-		MEM_freeN(prop_menu);
+	else if (UI_but_menutype_get(but) != NULL) {
+		found = ui_but_event_operator_string_from_menu(C, but, buf, buf_len);
 	}
 
 	return found;
@@ -1141,6 +1154,8 @@ static bool ui_but_event_property_operator_string(
 
 	return found;
 }
+
+/** \} */
 
 /**
  * This goes in a seemingly weird pattern:
@@ -2131,8 +2146,9 @@ static void ui_get_but_string_unit(uiBut *but, char *str, int len_max, double va
 		precision = float_precision;
 	}
 
-	bUnit_AsString(str, len_max, ui_get_but_scale_unit(but, value), precision,
-	               unit->system, RNA_SUBTYPE_UNIT_VALUE(unit_type), do_split, pad);
+	bUnit_AsString(
+	        str, len_max, ui_get_but_scale_unit(but, value), precision,
+	        unit->system, RNA_SUBTYPE_UNIT_VALUE(unit_type), do_split, pad);
 }
 
 static float ui_get_but_step_unit(uiBut *but, float step_default)
@@ -2349,10 +2365,11 @@ static bool ui_set_but_string_eval_num_unit(bContext *C, uiBut *but, const char 
 
 	/* ugly, use the draw string to get the value,
 	 * this could cause problems if it includes some text which resolves to a unit */
-	bUnit_ReplaceString(str_unit_convert, sizeof(str_unit_convert), but->drawstr,
-	                    ui_get_but_scale_unit(but, 1.0), but->block->unit->system, RNA_SUBTYPE_UNIT_VALUE(unit_type));
+	bUnit_ReplaceString(
+	        str_unit_convert, sizeof(str_unit_convert), but->drawstr,
+	        ui_get_but_scale_unit(but, 1.0), but->block->unit->system, RNA_SUBTYPE_UNIT_VALUE(unit_type));
 
-	return BPY_execute_string_as_number(C, str_unit_convert, true, r_value);
+	return BPY_execute_string_as_number(C, NULL, str_unit_convert, true, r_value);
 }
 
 #endif /* WITH_PYTHON */
@@ -2367,7 +2384,7 @@ bool ui_but_string_set_eval_num(bContext *C, uiBut *but, const char *str, double
 	if (str[0] != '\0') {
 		bool is_unit_but = (ui_but_is_float(but) && ui_but_is_unit(but));
 		/* only enable verbose if we won't run again with units */
-		if (BPY_execute_string_as_number(C, str, is_unit_but == false, r_value)) {
+		if (BPY_execute_string_as_number(C, NULL, str, is_unit_but == false, r_value)) {
 			/* if the value parsed ok without unit conversion this button may still need a unit multiplier */
 			if (is_unit_but) {
 				char str_new[128];
@@ -2860,6 +2877,11 @@ uiBlock *UI_block_find_in_region(const char *name, ARegion *ar)
 void UI_block_emboss_set(uiBlock *block, char dt)
 {
 	block->dt = dt;
+}
+
+void UI_block_theme_style_set(uiBlock *block, char theme_style)
+{
+	block->theme_style = theme_style;
 }
 
 /**
@@ -3403,12 +3425,14 @@ static void ui_def_but_rna__menu(bContext *UNUSED(C), uiLayout *layout, void *bu
 		}
 		else {
 			if (item->icon) {
-				uiDefIconTextButI(block, UI_BTYPE_BUT_MENU, B_NOP, item->icon, item->name, 0, 0,
-				                  UI_UNIT_X * 5, UI_UNIT_Y, &handle->retvalue, item->value, 0.0, 0, -1, item->description);
+				uiDefIconTextButI(
+				        block, UI_BTYPE_BUT_MENU, B_NOP, item->icon, item->name, 0, 0,
+				        UI_UNIT_X * 5, UI_UNIT_Y, &handle->retvalue, item->value, 0.0, 0, -1, item->description);
 			}
 			else {
-				uiDefButI(block, UI_BTYPE_BUT_MENU, B_NOP, item->name, 0, 0,
-				          UI_UNIT_X * 5, UI_UNIT_X, &handle->retvalue, item->value, 0.0, 0, -1, item->description);
+				uiDefButI(
+				        block, UI_BTYPE_BUT_MENU, B_NOP, item->name, 0, 0,
+				        UI_UNIT_X * 5, UI_UNIT_X, &handle->retvalue, item->value, 0.0, 0, -1, item->description);
 			}
 		}
 	}
@@ -4007,16 +4031,6 @@ int UI_blocklist_min_y_get(ListBase *lb)
 	return min;
 }
 
-bool UI_block_is_empty(const uiBlock *block)
-{
-	for (const uiBut *but = block->buttons.first; but; but = but->next) {
-		if (!ELEM(but->type, UI_BTYPE_SEPR, UI_BTYPE_SEPR_LINE)) {
-			return false;
-		}
-	}
-	return true;
-}
-
 void UI_block_direction_set(uiBlock *block, char direction)
 {
 	block->direction = direction;
@@ -4470,7 +4484,7 @@ static void operator_enum_search_cb(const struct bContext *C, void *but, const c
 		for (item = item_array; item->identifier; item++) {
 			/* note: need to give the index rather than the identifier because the enum can be freed */
 			if (BLI_strcasestr(item->name, str)) {
-				if (false == UI_search_item_add(items, item->name, SET_INT_IN_POINTER(item->value), 0))
+				if (false == UI_search_item_add(items, item->name, POINTER_FROM_INT(item->value), 0))
 					break;
 			}
 		}
@@ -4488,7 +4502,7 @@ static void operator_enum_call_cb(struct bContext *UNUSED(C), void *but, void *a
 
 	if (ot) {
 		if (ot->prop) {
-			RNA_property_enum_set(opptr, ot->prop, GET_INT_FROM_POINTER(arg2));
+			RNA_property_enum_set(opptr, ot->prop, POINTER_AS_INT(arg2));
 			/* We do not call op from here, will be called by button code.
 			 * ui_apply_but_funcs_after() (in interface_handlers.c) called this func before checking operators,
 			 * because one of its parameters is the button itself!

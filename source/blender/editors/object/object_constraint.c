@@ -576,7 +576,7 @@ static const EnumPropertyItem constraint_owner_items[] = {
 	{0, NULL, 0, NULL, NULL}};
 
 
-static int edit_constraint_poll_generic(bContext *C, StructRNA *rna_type)
+static bool edit_constraint_poll_generic(bContext *C, StructRNA *rna_type)
 {
 	PointerRNA ptr = CTX_data_pointer_get_type(C, "constraint", rna_type);
 	Object *ob = (ptr.id.data) ? ptr.id.data : ED_object_active_context(C);
@@ -599,7 +599,7 @@ static int edit_constraint_poll_generic(bContext *C, StructRNA *rna_type)
 	return 1;
 }
 
-static int edit_constraint_poll(bContext *C)
+static bool edit_constraint_poll(bContext *C)
 {
 	return edit_constraint_poll_generic(C, &RNA_Constraint);
 }
@@ -787,10 +787,10 @@ static void child_get_inverse_matrix(Scene *scene, Object *ob, bConstraint *con,
 		if (ob && ob->pose && (pchan = BKE_pose_channel_active(ob))) {
 			bConstraint *con_last;
 			/* calculate/set inverse matrix:
-			 *  We just calculate all transform-stack eval up to but not including this constraint.
-			 *  This is because inverse should just inverse correct for just the constraint's influence
-			 *  when it gets applied; that is, at the time of application, we don't know anything about
-			 *  what follows.
+			 * We just calculate all transform-stack eval up to but not including this constraint.
+			 * This is because inverse should just inverse correct for just the constraint's influence
+			 * when it gets applied; that is, at the time of application, we don't know anything about
+			 * what follows.
 			 */
 			float imat[4][4], tmat[4][4];
 			float pmat[4][4];
@@ -1251,7 +1251,7 @@ void ED_object_constraint_dependency_tag_update(Main *bmain, Object *ob, bConstr
 	DAG_relations_tag_update(bmain);
 }
 
-static int constraint_poll(bContext *C)
+static bool constraint_poll(bContext *C)
 {
 	PointerRNA ptr = CTX_data_pointer_get_type(C, "constraint", &RNA_Constraint);
 	return (ptr.id.data && ptr.data);

@@ -38,7 +38,7 @@ typedef BL::Array<float, 3>   BlVector;
 typedef BL::Array<float, 2>   BlVector2;
 typedef BL::Array<float, 4>   BlAColor;
 typedef BlVector              BlColor;
-typedef BL::Array<int, 20>    BlLayers;
+typedef BL::Array<bool, 20>   BlLayers;
 
 typedef BL::Array<int, 4>     BlFace;
 typedef BlVector2             BlVertUV;
