@@ -83,7 +83,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 		endif()
 	endif()
 	if(MSVC_VERSION EQUAL 1900)
-		set(_min_ver "19.0.23506")
+		set(_min_ver "19.0.24210")
 		if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${_min_ver})
 			message(FATAL_ERROR
 				"Visual Studio 2015 (Update 3, ${_min_ver}) required, "
