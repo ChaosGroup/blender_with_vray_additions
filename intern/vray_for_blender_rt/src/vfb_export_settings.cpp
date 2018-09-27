@@ -568,7 +568,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 	} else if (pluginId.find("Filter") == 0) {
 		const char * imageSampler = "SettingsImageSampler";
 		PointerRNA sampler = get<PointerRNA>(vrayScene, imageSampler);
-		if (RNA_enum_name_get(&sampler, "filter_type") != pluginId) {
+		const std::string &selectedFilter = RNA_enum_identifier_get(&sampler, "filter_type");
+		if (selectedFilter.empty() || pluginId.find(selectedFilter) == std::string::npos) {
 			return false;
 		}
 	} else if (pluginId == "SphericalHarmonicsExporter" || pluginId == "SphericalHarmonicsRenderer") {
