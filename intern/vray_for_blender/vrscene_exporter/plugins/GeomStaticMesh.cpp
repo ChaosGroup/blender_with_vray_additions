@@ -376,6 +376,7 @@ void GeomStaticMesh::initFaces()
 	for(b_mesh.tessfaces.begin(faceIt); faceIt != b_mesh.tessfaces.end(); ++faceIt) {
 		FaceVerts faceVerts = faceIt->vertices_raw();
 
+		typedef BL::Array<float, 3> Normal;
 		// Normals
 		float  n0[3];
 		float  n1[3];
@@ -393,15 +394,23 @@ void GeomStaticMesh::initFaces()
 		}
 		else {
 			if(faceIt->use_smooth()) {
-				copy_v3_v3(n0, &b_mesh.vertices[faceVerts[0]].normal().data[0]);
-				copy_v3_v3(n1, &b_mesh.vertices[faceVerts[1]].normal().data[0]);
-				copy_v3_v3(n2, &b_mesh.vertices[faceVerts[2]].normal().data[0]);
-				if(faceVerts[3])
-					copy_v3_v3(n3, &b_mesh.vertices[faceVerts[3]].normal().data[0]);
+
+				Normal f0Normal = b_mesh.vertices[faceVerts[0]].normal();
+				Normal f1Normal = b_mesh.vertices[faceVerts[1]].normal();
+				Normal f2Normal = b_mesh.vertices[faceVerts[2]].normal();
+
+				copy_v3_v3(n0, &f0Normal.data[0]);
+				copy_v3_v3(n1, &f1Normal.data[0]);
+				copy_v3_v3(n2, &f2Normal.data[0]);
+				if(faceVerts[3]) {
+					Normal f3Normal = b_mesh.vertices[faceVerts[3]].normal();
+					copy_v3_v3(n3, &f3Normal.data[0]);
+				}
 			}
 			else {
 				float fno[3];
-				copy_v3_v3(fno, &faceIt->normal().data[0]);
+				Normal faceNormal = faceIt->normal();
+				copy_v3_v3(fno, &faceNormal.data[0]);
 
 				copy_v3_v3(n0, fno);
 				copy_v3_v3(n1, fno);

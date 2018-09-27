@@ -420,7 +420,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 	int faceIdx       = 0;
 	for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
 		BlFace faceVerts = faceIt->vertices_raw();
-
+		typedef BL::Array<float, 3> Normal;
 		// Normals
 		float n0[3] = {0.0f, 0.0f, 0.0f};
 		float n1[3] = {0.0f, 0.0f, 0.0f};
@@ -439,16 +439,22 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 		}
 		else {
 			if (faceIt->use_smooth()) {
-				copy_v3_v3(n0, &mesh.vertices[faceVerts[0]].normal().data[0]);
-				copy_v3_v3(n1, &mesh.vertices[faceVerts[1]].normal().data[0]);
-				copy_v3_v3(n2, &mesh.vertices[faceVerts[2]].normal().data[0]);
+				Normal f0Normal = mesh.vertices[faceVerts[0]].normal();
+				Normal f1Normal = mesh.vertices[faceVerts[1]].normal();
+				Normal f2Normal = mesh.vertices[faceVerts[2]].normal();
+
+				copy_v3_v3(n0, &f0Normal.data[0]);
+				copy_v3_v3(n1, &f1Normal.data[0]);
+				copy_v3_v3(n2, &f2Normal.data[0]);
 				if (faceVerts[3]) {
-					copy_v3_v3(n3, &mesh.vertices[faceVerts[3]].normal().data[0]);
+					Normal f3Normal = mesh.vertices[faceVerts[3]].normal();
+					copy_v3_v3(n3, &f3Normal.data[0]);
 				}
 			}
 			else {
 				float fno[3];
-				copy_v3_v3(fno, &faceIt->normal().data[0]);
+				Normal faceNormal = faceIt->normal();
+				copy_v3_v3(fno, &faceNormal.data[0]);
 
 				copy_v3_v3(n0, fno);
 				copy_v3_v3(n1, fno);
