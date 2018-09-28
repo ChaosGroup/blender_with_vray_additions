@@ -7917,6 +7917,11 @@ static int bpy_class_call(bContext *C, PointerRNA *ptr, FunctionRNA *func, Param
 				RNA_parameter_list_end(&iter);
 			}
 		}
+#if DEBUG
+		if (ret->ob_refcnt == 1) {
+			Py_IncRef(ret);
+		}
+#endif
 		Py_DECREF(ret);
 	}
 
