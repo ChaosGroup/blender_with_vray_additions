@@ -622,6 +622,9 @@ void BKE_object_init(Object *ob)
 	ob->dt = OB_TEXTURE;
 	ob->empty_drawtype = OB_PLAINAXES;
 	ob->empty_drawsize = 1.0;
+	if (ob->type == OB_EMPTY) {
+		copy_v2_fl(ob->ima_ofs, -0.5f);
+	}
 
 	if (ELEM(ob->type, OB_LAMP, OB_CAMERA, OB_SPEAKER)) {
 		ob->trackflag = OB_NEGZ;
@@ -1123,6 +1126,12 @@ void BKE_object_copy_data(Main *UNUSED(bmain), Object *ob_dst, const Object *ob_
 		ob_dst->mat = MEM_dupallocN(ob_src->mat);
 		ob_dst->matbits = MEM_dupallocN(ob_src->matbits);
 		ob_dst->totcol = ob_src->totcol;
+	}
+	else if (ob_dst->mat != NULL || ob_dst->matbits != NULL) {
+		/* This shall not be needed, but better be safe than sorry. */
+		BLI_assert(!"Object copy: non-NULL material pointers with zero counter, should not happen.");
+		ob_dst->mat = NULL;
+		ob_dst->matbits = NULL;
 	}
 
 	if (ob_src->iuser) ob_dst->iuser = MEM_dupallocN(ob_src->iuser);
@@ -1849,7 +1858,7 @@ static void give_parvert(Object *par, int nr, float vec[3])
 				if (use_special_ss_case) {
 					/* Special case if the last modifier is SS and no constructive modifier are in front of it. */
 					CCGDerivedMesh *ccgdm = (CCGDerivedMesh *)dm;
-					CCGVert *ccg_vert = ccgSubSurf_getVert(ccgdm->ss, SET_INT_IN_POINTER(nr));
+					CCGVert *ccg_vert = ccgSubSurf_getVert(ccgdm->ss, POINTER_FROM_INT(nr));
 					/* In case we deleted some verts, nr may refer to inexistent one now, see T42557. */
 					if (ccg_vert) {
 						float *co = ccgSubSurf_getVertData(ccgdm->ss, ccg_vert);
@@ -2792,7 +2801,7 @@ int BKE_object_obdata_texspace_get(Object *ob, short **r_texflag, float **r_loc,
 static int pc_cmp(const void *a, const void *b)
 {
 	const LinkData *ad = a, *bd = b;
-	if (GET_INT_FROM_POINTER(ad->data) > GET_INT_FROM_POINTER(bd->data))
+	if (POINTER_AS_INT(ad->data) > POINTER_AS_INT(bd->data))
 		return 1;
 	else return 0;
 }
@@ -2805,14 +2814,14 @@ int BKE_object_insert_ptcache(Object *ob)
 	BLI_listbase_sort(&ob->pc_ids, pc_cmp);
 
 	for (link = ob->pc_ids.first, i = 0; link; link = link->next, i++) {
-		int index = GET_INT_FROM_POINTER(link->data);
+		int index = POINTER_AS_INT(link->data);
 
 		if (i < index)
 			break;
 	}
 
 	link = MEM_callocN(sizeof(LinkData), "PCLink");
-	link->data = SET_INT_IN_POINTER(i);
+	link->data = POINTER_FROM_INT(i);
 	BLI_addtail(&ob->pc_ids, link);
 
 	return i;
@@ -2827,7 +2836,7 @@ static int pc_findindex(ListBase *listbase, int index)
 
 	link = listbase->first;
 	while (link) {
-		if (GET_INT_FROM_POINTER(link->data) == index)
+		if (POINTER_AS_INT(link->data) == index)
 			return number;
 
 		number++;
@@ -3700,7 +3709,7 @@ bool BKE_object_modifier_update_subframe(
 		if (ob->track) no_update |= BKE_object_modifier_update_subframe(bmain, eval_ctx, scene, ob->track, 0, recursion, frame, type);
 
 		/* skip subframe if object is parented
-		 *  to vertex of a dynamic paint canvas */
+		 * to vertex of a dynamic paint canvas */
 		if (no_update && (ob->partype == PARVERT1 || ob->partype == PARVERT3))
 			return false;
 

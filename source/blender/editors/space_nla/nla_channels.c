@@ -274,7 +274,8 @@ static int mouse_nla_channels(bContext *C, bAnimContext *ac, float x, int channe
 				if (nlaedit_is_tweakmode_on(ac) == 0) {
 					/* 'push-down' action - only usable when not in TweakMode */
 					/* TODO: make this use the operator instead of calling the function directly
-					 *  however, calling the operator requires that we supply the args, and that works with proper buttons only */
+					 * however, calling the operator requires that we supply the args,
+					 * and that works with proper buttons only */
 					BKE_nla_action_pushdown(adt);
 				}
 				else {
@@ -509,7 +510,7 @@ void NLA_OT_action_pushdown(wmOperatorType *ot)
 
 /* ******************** Action Unlink ******************************** */
 
-static int nla_action_unlink_poll(bContext *C)
+static bool nla_action_unlink_poll(bContext *C)
 {
 	if (ED_operator_nla_active(C)) {
 		return nla_panel_context(C, NULL, NULL, NULL);

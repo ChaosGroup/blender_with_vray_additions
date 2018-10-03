@@ -197,14 +197,14 @@ static void paint_last_stroke_update(Scene *scene, ARegion *ar, const float mval
 /* polling - retrieve whether cursor should be set or operator should be done */
 
 /* Returns true if vertex paint mode is active */
-int vertex_paint_mode_poll(bContext *C)
+bool vertex_paint_mode_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 
 	return ob && ob->mode == OB_MODE_VERTEX_PAINT && ((Mesh *)ob->data)->totpoly;
 }
 
-int vertex_paint_poll(bContext *C)
+bool vertex_paint_poll(bContext *C)
 {
 	if (vertex_paint_mode_poll(C) &&
 	    BKE_paint_brush(&CTX_data_tool_settings(C)->vpaint->paint))
@@ -219,14 +219,14 @@ int vertex_paint_poll(bContext *C)
 	return 0;
 }
 
-int weight_paint_mode_poll(bContext *C)
+bool weight_paint_mode_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 
 	return ob && ob->mode == OB_MODE_WEIGHT_PAINT && ((Mesh *)ob->data)->totpoly;
 }
 
-int weight_paint_poll(bContext *C)
+bool weight_paint_poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 	ScrArea *sa;
@@ -1232,7 +1232,7 @@ static int wpaint_mode_toggle_exec(bContext *C, wmOperator *op)
 }
 
 /* for switching to/from mode */
-static int paint_poll_test(bContext *C)
+static bool paint_poll_test(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 	if (ob == NULL || ob->type != OB_MESH)
@@ -1459,8 +1459,9 @@ static bool wpaint_stroke_test_start(bContext *C, wmOperator *op, const float mo
 	wpd = MEM_callocN(sizeof(struct WPaintData), "WPaintData");
 	paint_stroke_set_mode_data(stroke, wpd);
 	ED_view3d_viewcontext_init(C, &wpd->vc);
-	view_angle_limits_init(&wpd->normal_angle_precalc, vp->paint.brush->falloff_angle,
-	                       (vp->paint.brush->flag & BRUSH_FRONTFACE_FALLOFF) != 0);
+	view_angle_limits_init(
+	        &wpd->normal_angle_precalc, vp->paint.brush->falloff_angle,
+	        (vp->paint.brush->flag & BRUSH_FRONTFACE_FALLOFF) != 0);
 
 	wpd->active.index = vgroup_index.active;
 	wpd->mirror.index = vgroup_index.mirror;
@@ -1599,7 +1600,8 @@ static void do_wpaint_brush_blur_task_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 	const struct SculptVertexPaintGeomMap *gmap = &ss->mode.wpaint.gmap;
 
 	const Brush *brush = data->brush;
@@ -1626,8 +1628,8 @@ static void do_wpaint_brush_blur_task_cb_ex(
 		if (sculpt_brush_test_sq_fn(&test, vd.co)) {
 			/* For grid based pbvh, take the vert whose loop coopresponds to the current grid.
 			 * Otherwise, take the current vert. */
-			const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-			const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+			const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+			const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 			const char v_flag = data->me->mvert[v_index].flag;
 			/* If the vertex is selected */
 			if (!(use_face_sel || use_vert_sel) || v_flag & SELECT) {
@@ -1690,7 +1692,8 @@ static void do_wpaint_brush_smear_task_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 	const struct SculptVertexPaintGeomMap *gmap = &ss->mode.wpaint.gmap;
 
 	const Brush *brush = data->brush;
@@ -1722,8 +1725,8 @@ static void do_wpaint_brush_smear_task_cb_ex(
 			if (sculpt_brush_test_sq_fn(&test, vd.co)) {
 				/* For grid based pbvh, take the vert whose loop cooresponds to the current grid.
 				 * Otherwise, take the current vert. */
-				const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-				const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+				const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+				const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 				const MVert *mv_curr = &data->me->mvert[v_index];
 
 				/* If the vertex is selected */
@@ -1799,7 +1802,8 @@ static void do_wpaint_brush_draw_task_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 	const Scene *scene = CTX_data_scene(data->C);
 
 	const Brush *brush = data->brush;
@@ -1828,8 +1832,8 @@ static void do_wpaint_brush_draw_task_cb_ex(
 			/* Note: grids are 1:1 with corners (aka loops).
 			 * For multires, take the vert whose loop cooresponds to the current grid.
 			 * Otherwise, take the current vert. */
-			const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-			const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+			const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+			const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 
 			const char v_flag = data->me->mvert[v_index].flag;
 			/* If the vertex is selected */
@@ -1872,7 +1876,8 @@ static void do_wpaint_brush_calc_average_weight_cb_ex(
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
 	StrokeCache *cache = ss->cache;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 
 	const bool use_normal = vwpaint_use_normal(data->vp);
 	const bool use_face_sel = (data->me->editflag & ME_EDIT_PAINT_FACE_SEL) != 0;
@@ -1897,8 +1902,8 @@ static void do_wpaint_brush_calc_average_weight_cb_ex(
 			const float angle_cos = (use_normal && vd.no) ?
 			        dot_vf3vs3(sculpt_normal_frontface, vd.no) : 1.0f;
 			if (angle_cos > 0.0 && BKE_brush_curve_strength(data->brush, sqrtf(test.dist), cache->radius) > 0.0) {
-				const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-				// const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+				const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+				// const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 				const char v_flag = data->me->mvert[v_index].flag;
 
 				/* If the vertex is selected. */
@@ -2449,13 +2454,13 @@ static bool vpaint_stroke_test_start(bContext *C, struct wmOperator *op, const f
 	vpd = MEM_callocN(sizeof(*vpd), "VPaintData");
 	paint_stroke_set_mode_data(stroke, vpd);
 	ED_view3d_viewcontext_init(C, &vpd->vc);
-	view_angle_limits_init(&vpd->normal_angle_precalc, vp->paint.brush->falloff_angle,
-	                       (vp->paint.brush->flag & BRUSH_FRONTFACE_FALLOFF) != 0);
+	view_angle_limits_init(
+	        &vpd->normal_angle_precalc, vp->paint.brush->falloff_angle,
+	        (vp->paint.brush->flag & BRUSH_FRONTFACE_FALLOFF) != 0);
 
 	vpd->paintcol = vpaint_get_current_col(scene, vp);
 
-	vpd->is_texbrush = !(brush->vertexpaint_tool == PAINT_BLEND_BLUR) &&
-	                   brush->mtex.tex;
+	vpd->is_texbrush = !(brush->vertexpaint_tool == PAINT_BLEND_BLUR) && brush->mtex.tex;
 
 	/* are we painting onto a modified mesh?,
 	 * if not we can skip face map trickiness */
@@ -2505,7 +2510,8 @@ static void do_vpaint_brush_calc_average_color_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 	const struct SculptVertexPaintGeomMap *gmap = &ss->mode.vpaint.gmap;
 
 	StrokeCache *cache = ss->cache;
@@ -2527,7 +2533,7 @@ static void do_vpaint_brush_calc_average_color_cb_ex(
 	{
 		/* Test to see if the vertex coordinates are within the spherical brush region. */
 		if (sculpt_brush_test_sq_fn(&test, vd.co)) {
-			const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+			const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
 			if (BKE_brush_curve_strength(data->brush, 0.0, cache->radius) > 0.0) {
 				/* If the vertex is selected for painting. */
 				const MVert *mv = &data->me->mvert[v_index];
@@ -2569,7 +2575,8 @@ static void do_vpaint_brush_draw_task_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 	const struct SculptVertexPaintGeomMap *gmap = &ss->mode.vpaint.gmap;
 
 	const Brush *brush = data->brush;
@@ -2597,8 +2604,8 @@ static void do_vpaint_brush_draw_task_cb_ex(
 			/* Note: Grids are 1:1 with corners (aka loops).
 			 * For grid based pbvh, take the vert whose loop cooresponds to the current grid.
 			 * Otherwise, take the current vert. */
-			const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-			const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+			const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+			const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 			const MVert *mv = &data->me->mvert[v_index];
 
 			/* If the vertex is selected for painting. */
@@ -2663,7 +2670,8 @@ static void do_vpaint_brush_blur_task_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 
 	Scene *scene = CTX_data_scene(data->C);
 	const struct SculptVertexPaintGeomMap *gmap = &ss->mode.vpaint.gmap;
@@ -2690,8 +2698,8 @@ static void do_vpaint_brush_blur_task_cb_ex(
 		if (sculpt_brush_test_sq_fn(&test, vd.co)) {
 			/* For grid based pbvh, take the vert whose loop cooresponds to the current grid.
 			 * Otherwise, take the current vert. */
-			const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-			const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+			const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+			const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 			const MVert *mv = &data->me->mvert[v_index];
 
 			/* If the vertex is selected for painting. */
@@ -2774,7 +2782,8 @@ static void do_vpaint_brush_smear_task_cb_ex(
 {
 	SculptThreadedTaskData *data = userdata;
 	SculptSession *ss = data->ob->sculpt;
-	CCGDerivedMesh *ccgdm = BKE_pbvh_get_ccgdm(ss->pbvh);
+	const PBVHType pbvh_type = BKE_pbvh_type(ss->pbvh);
+	const bool has_grids = (pbvh_type == PBVH_GRIDS);
 
 	Scene *scene = CTX_data_scene(data->C);
 	const struct SculptVertexPaintGeomMap *gmap = &ss->mode.vpaint.gmap;
@@ -2807,8 +2816,8 @@ static void do_vpaint_brush_smear_task_cb_ex(
 			if (sculpt_brush_test_sq_fn(&test, vd.co)) {
 				/* For grid based pbvh, take the vert whose loop cooresponds to the current grid.
 				 * Otherwise, take the current vert. */
-				const int v_index = ccgdm ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
-				const float grid_alpha = ccgdm ? 1.0f / vd.gridsize : 1.0f;
+				const int v_index = has_grids ? data->me->mloop[vd.grid_indices[vd.g]].v : vd.vert_indices[vd.i];
+				const float grid_alpha = has_grids ? 1.0f / vd.gridsize : 1.0f;
 				const MVert *mv_curr = &data->me->mvert[v_index];
 
 				/* if the vertex is selected for painting. */

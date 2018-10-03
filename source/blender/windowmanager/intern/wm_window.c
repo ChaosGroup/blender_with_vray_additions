@@ -345,6 +345,7 @@ static uiBlock *block_create_confirm_quit(struct bContext *C, struct ARegion *ar
 	uiBlock *block = UI_block_begin(C, ar, "confirm_quit_popup", UI_EMBOSS);
 
 	UI_block_flag_enable(block, UI_BLOCK_KEEP_OPEN | UI_BLOCK_LOOP | UI_BLOCK_NO_WIN_CLIP | UI_BLOCK_NUMSELECT);
+	UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
 	UI_block_emboss_set(block, UI_EMBOSS);
 
 	uiLayout *layout = UI_block_layout(
@@ -498,9 +499,10 @@ void wm_window_title(wmWindowManager *wm, wmWindow *win)
 	}
 	else if (win->ghostwin) {
 		/* this is set to 1 if you don't have startup.blend open */
-		if (G.save_over && G.main->name[0]) {
-			char str[sizeof(G.main->name) + 24];
-			BLI_snprintf(str, sizeof(str), "Blender (With V-Ray Additions)%s [%s%s]",			             wm->file_saved ? "" : " *", BKE_main_blendfile_path_from_global(),
+		if (G.save_over && BKE_main_blendfile_path_from_global()[0]) {
+			char str[sizeof(((Main *)NULL)->name) + 48];
+			BLI_snprintf(str, sizeof(str), "Blender (With V-Ray Additions)%s [%s%s]",
++			             wm->file_saved ? "" : " *", BKE_main_blendfile_path_from_global(),
 			             G_MAIN->recovered ? " (Recovered)" : "");
 			GHOST_SetTitle(win->ghostwin, str);
 		}
@@ -718,13 +720,13 @@ void wm_window_ghostwindows_ensure(wmWindowManager *wm)
 			win->eventstate = MEM_callocN(sizeof(wmEvent), "window event state");
 
 		/* add keymap handlers (1 handler for all keys in map!) */
-		keymap = WM_keymap_find(wm->defaultconf, "Window", 0, 0);
+		keymap = WM_keymap_ensure(wm->defaultconf, "Window", 0, 0);
 		WM_event_add_keymap_handler(&win->handlers, keymap);
 
-		keymap = WM_keymap_find(wm->defaultconf, "Screen", 0, 0);
+		keymap = WM_keymap_ensure(wm->defaultconf, "Screen", 0, 0);
 		WM_event_add_keymap_handler(&win->handlers, keymap);
 
-		keymap = WM_keymap_find(wm->defaultconf, "Screen Editing", 0, 0);
+		keymap = WM_keymap_ensure(wm->defaultconf, "Screen Editing", 0, 0);
 		WM_event_add_keymap_handler(&win->modalhandlers, keymap);
 
 		/* add drop boxes */
@@ -1466,7 +1468,7 @@ static int wm_window_timer(const bContext *C)
 				else if (wt->event_type == TIMERAUTOSAVE)
 					wm_autosave_timer(C, wm, wt);
 				else if (wt->event_type == TIMERNOTIFIER)
-					WM_main_add_notifier(GET_UINT_FROM_POINTER(wt->customdata), NULL);
+					WM_main_add_notifier(POINTER_AS_UINT(wt->customdata), NULL);
 				else if (win) {
 					wmEvent event;
 					wm_event_init_from_window(win, &event);
@@ -1596,7 +1598,7 @@ wmTimer *WM_event_add_timer_notifier(wmWindowManager *wm, wmWindow *win, unsigne
 	wt->stime = wt->ltime;
 	wt->timestep = timestep;
 	wt->win = win;
-	wt->customdata = SET_UINT_IN_POINTER(type);
+	wt->customdata = POINTER_FROM_UINT(type);
 	wt->flags |= WM_TIMER_NO_FREE_CUSTOM_DATA;
 
 	BLI_addtail(&wm->timers, wt);

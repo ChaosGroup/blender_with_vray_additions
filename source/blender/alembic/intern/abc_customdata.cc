@@ -53,6 +53,8 @@ using Alembic::AbcGeom::OV2fGeomParam;
 using Alembic::AbcGeom::OC4fGeomParam;
 
 
+typedef std::unordered_map<uint64_t, int> uv_index_map;
+
 static inline uint64_t uv_to_hash_key(Imath::V2f v)
 {
 	/* Convert -0.0f to 0.0f, so bitwise comparison works. */
@@ -106,7 +108,7 @@ static void get_uvs(const CDStreamConfig &config,
 		}
 	}
 	else {
-		std::unordered_map<uint64_t, int> idx_map;
+		uv_index_map idx_map;
 		int idx_count = 0;
 
 		for (int i = 0; i < num_poly; ++i) {
@@ -117,7 +119,7 @@ static void get_uvs(const CDStreamConfig &config,
 				loopuvpoly--;
 				Imath::V2f uv(loopuvpoly->uv[0], loopuvpoly->uv[1]);
 				uint64_t k = uv_to_hash_key(uv);
-				std::unordered_map<uint64_t, int>::iterator it = idx_map.find(k);
+				uv_index_map::iterator it = idx_map.find(k);
 				if (it == idx_map.end()) {
 					idx_map[k] = idx_count;
 					uvs.push_back(uv);
@@ -183,7 +185,11 @@ static void write_mcol(const OCompoundProperty &prop, const CDStreamConfig &conf
 	MLoop *mloops = config.mloop;
 	MCol *cfaces = static_cast<MCol *>(data);
 
-	std::vector<Imath::C4f> buffer(config.totvert);
+	std::vector<Imath::C4f> buffer;
+	std::vector<uint32_t> indices;
+
+	buffer.reserve(config.totvert);
+	indices.reserve(config.totvert);
 
 	Imath::C4f col;
 
@@ -201,7 +207,8 @@ static void write_mcol(const OCompoundProperty &prop, const CDStreamConfig &conf
 			col[2] = cface->g * cscale;
 			col[3] = cface->b * cscale;
 
-			buffer[mloop->v] = col;
+			buffer.push_back(col);
+			indices.push_back(buffer.size() - 1);
 		}
 	}
 
@@ -209,6 +216,7 @@ static void write_mcol(const OCompoundProperty &prop, const CDStreamConfig &conf
 
 	OC4fGeomParam::Sample sample(
 		C4fArraySample(&buffer.front(), buffer.size()),
+		UInt32ArraySample(&indices.front(), indices.size()),
 		kVertexScope);
 
 	param.set(sample);

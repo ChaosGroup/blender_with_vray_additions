@@ -422,7 +422,7 @@ int Blender::IsLight(BL::Object ob)
 }
 
 
-ObjectUpdateFlag Blender::getObjectUpdateState(BL::Object ob)
+Blender::ObjectUpdateFlag Blender::getObjectUpdateState(BL::Object ob)
 {
 	using OF = ObjectUpdateFlag;
 	OF flags = OF::None;

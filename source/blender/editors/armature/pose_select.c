@@ -63,8 +63,8 @@
 #include "armature_intern.h"
 
 /* utility macros for storing a temp int in the bone (selection flag) */
-#define PBONE_PREV_FLAG_GET(pchan) ((void)0, (GET_INT_FROM_POINTER((pchan)->temp)))
-#define PBONE_PREV_FLAG_SET(pchan, val) ((pchan)->temp = SET_INT_IN_POINTER(val))
+#define PBONE_PREV_FLAG_GET(pchan) ((void)0, (POINTER_AS_INT((pchan)->temp)))
+#define PBONE_PREV_FLAG_SET(pchan, val) ((pchan)->temp = POINTER_FROM_INT(val))
 
 
 /* ***************** Pose Select Utilities ********************* */
@@ -320,7 +320,7 @@ static int pose_select_connected_invoke(bContext *C, wmOperator *op, const wmEve
 	return OPERATOR_FINISHED;
 }
 
-static int pose_select_linked_poll(bContext *C)
+static bool pose_select_linked_poll(bContext *C)
 {
 	return (ED_operator_view3d_active(C) && ED_operator_posemode(C));
 }

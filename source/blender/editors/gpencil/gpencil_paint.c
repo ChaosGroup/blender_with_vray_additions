@@ -195,7 +195,7 @@ static void gp_session_validatebuffer(tGPsdata *p);
 /* Context Wrangling... */
 
 /* check if context is suitable for drawing */
-static int gpencil_draw_poll(bContext *C)
+static bool gpencil_draw_poll(bContext *C)
 {
 	if (ED_operator_regionactive(C)) {
 		/* check if current context can support GPencil data */
@@ -2138,10 +2138,10 @@ static void gpencil_draw_apply_event(wmOperator *op, const wmEvent *event)
 		p->pressure = wmtab->Pressure;
 
 		/* Hack for pressure sensitive eraser on D+RMB when using a tablet:
-		 *  The pen has to float over the tablet surface, resulting in
-		 *  zero pressure (T47101). Ignore pressure values if floating
-		 *  (i.e. "effectively zero" pressure), and only when the "active"
-		 *  end is the stylus (i.e. the default when not eraser)
+		 * The pen has to float over the tablet surface, resulting in
+		 * zero pressure (T47101). Ignore pressure values if floating
+		 * (i.e. "effectively zero" pressure), and only when the "active"
+		 * end is the stylus (i.e. the default when not eraser)
 		 */
 		if (p->paintmode == GP_PAINTMODE_ERASER) {
 			if ((wmtab->Active != EVT_TABLET_ERASER) && (p->pressure < 0.001f)) {
@@ -2166,7 +2166,7 @@ static void gpencil_draw_apply_event(wmOperator *op, const wmEvent *event)
 		p->straight[1] = 0;
 
 		/* special exception here for too high pressure values on first touch in
-		 *  windows for some tablets, then we just skip first touch...
+		 * windows for some tablets, then we just skip first touch...
 		 */
 		if (tablet && (p->pressure >= 0.99f))
 			return;
