@@ -282,7 +282,7 @@ std::string Blender::CopyDRAsset(VRayForBlender::ExporterSettings &settings, con
 
 	if (settings.settings_dr.network_type == VRayForBlender::SettingsDR::NetworkTypeWindows &&
 		settings.settings_dr.sharing_type == VRayForBlender::SettingsDR::SharingTypeShare) {
-		
+
 		char uncPrefix[2048] = {0,};
 		snprintf(uncPrefix, 2048, "\\\\%s\\%s", settings.settings_dr.hostname.c_str(), settings.settings_dr.share_name.c_str());
 

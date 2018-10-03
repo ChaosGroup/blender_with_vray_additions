@@ -342,8 +342,8 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 1 */_C("objectName"),
 	    /* 2 */_C("groupName"),
 	    /* 3 */_C("ntreeName"),
-		/* 4 */_C("firstFrame"),
-		/* 5 */_C("lastFrame"),
+	    /* 4 */_C("firstFrame"),
+	    /* 5 */_C("lastFrame"),
 	    NULL
 	};
 
@@ -725,7 +725,7 @@ static PyMethodDef methods[] = {
 
     { "set_preview_dir", set_preview_dir, METH_VARARGS, ""},
 
-	{"updatePreview", updatePreview, METH_VARARGS, "Generate preview update event"},
+    {"updatePreview", updatePreview, METH_VARARGS, "Generate preview update event"},
 
     {NULL, NULL, 0, NULL},
 };
