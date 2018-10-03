@@ -30,7 +30,7 @@ using namespace VRayForBlender;
 uint32_t VRayForBlender::to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
 	for (int c = 0; c < 20; ++c) {
-		res |= layers[c];
+		res |= static_cast<int>(layers[c]) << c;
 	}
 	return res;
 }
