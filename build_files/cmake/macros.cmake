@@ -341,13 +341,6 @@ function(SETUP_LIBDIRS)
 			link_directories(${LLVM_LIBPATH})
 		endif()
 
-		if(WITH_VRAY_FOR_BLENDER)
-			link_directories(${APPSDK_ROOT}/bin)
-			link_directories(${APPSDK_ROOT}/lib)
-			link_directories(${APPSDK_PATH}/devel)
-			link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/)
-		endif()
-
 		if(WITH_ALEMBIC)
 			link_directories(${ALEMBIC_LIBPATH})
 			link_directories(${HDF5_LIBPATH})
@@ -528,17 +521,17 @@ function(setup_liblinks
 
 	if(WITH_VRAY_FOR_BLENDER)
 		target_link_libraries(${target} ${JPEG_TURBO_LIB})
+		set(ZMQ_DEPENDENCY_LIBS
+			${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a
+			${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/Release/libsodium.a
+		)
+
 		if(UNIX)
-			target_link_libraries(${target}
-				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a
-				${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/Release/libsodium.a
-				)
+			target_link_libraries(${target} ${ZMQ_DEPENDENCY_LIBS})
 		elseif(WIN32)
 			if (MSVC_VERSION EQUAL 1800)
 				set(MSVC_DIR_NAME "v120")
-			elseif(MSVC_VERSION EQUAL 1900)
-				set(MSVC_DIR_NAME "v140")
-			elseif(MSVC_VERSION GREATER_EQUAL 1910)
+			elseif(MSVC_VERSION GREATER_EQUAL 1900)
 				set(MSVC_DIR_NAME "v140")
 			endif()
 			target_link_libraries(${target} debug ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Debug/${MSVC_DIR_NAME}/static/libzmq.lib)
