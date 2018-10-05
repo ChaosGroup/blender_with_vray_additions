@@ -7,9 +7,11 @@ Requirements
  - Git
  - Cmake
  - Ninja (optional)
- - [ZMQ](http://zeromq.org/) version 4.X.X or build from source/install from package manager
- - [LibSodium](https://download.libsodium.org/) version 1.X.X or build from source/install from package manager, *used only as optional dependency of ZMQ*
- - [libjpeg-turbo](http://libjpeg-turbo.virtualgl.org/) *OS X/Linux ONLY* version 1.X.X or build from source/install from package manager
+ - Library sources:
+     - [ZMQ](http://zeromq.org/) version 4.X.X or build from source/install from package manager
+     - [LibSodium](https://download.libsodium.org/) version 1.X.X or build from source/install from package manager, *used only as optional dependency of ZMQ*
+     - [libjpeg-turbo](http://libjpeg-turbo.virtualgl.org/) *OS X/Linux ONLY* version 1.X.X or build from source/install from package manager
+ - OR Pre-built libraries: [GIT repository](https://github.com/ChaosGroup/vray_for_blender_libs)
  - Compiler:
    - Windows: MSVC 2017
    - Linux: GCC 4.8.X
@@ -44,6 +46,7 @@ Building from source
                 ├───Debug
                 └───Release
     ```
+ - Alternatively the requiered libraries can be obtained built from the [GIT repository](https://github.com/ChaosGroup/vray_for_blender_libs)
  - Assuming Windows and all libs are in C:/dev make a build dir C:/dev/build run the following cmake:
     ```
     cmake -G "Visual Studio 2017 Win64"            \
