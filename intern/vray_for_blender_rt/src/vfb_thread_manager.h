@@ -162,6 +162,10 @@ public:
 		return m_workers.size();
 	}
 
+	/// Change the current thread count to the given
+	/// @param count - new number of threads, if less than 0, then forces to 0
+	void setThreadCount(int count);
+
 	// Stop all threads and discards any tasks not yet started
 	// if thread count is 0, stop will still set the flag for stop to true
 	// and if addTask was called from another thread it will signal the task to stop

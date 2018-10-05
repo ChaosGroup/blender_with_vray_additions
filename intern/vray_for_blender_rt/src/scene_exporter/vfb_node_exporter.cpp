@@ -294,7 +294,7 @@ void DataExporter::init_data(BL::BlendData data, BL::Scene scene, BL::RenderEngi
 	if (cameraOB.type() == BL::Object::type_CAMERA) {
 		m_active_camera = cameraOB;
 	}
-	m_is_preview = engine.is_preview();
+	m_is_preview = engine && engine.is_preview();
 }
 
 void DataExporter::setComputedLayers(uint32_t layers, bool is_local_view)

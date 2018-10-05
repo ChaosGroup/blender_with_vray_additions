@@ -155,6 +155,24 @@ void FrameExportManager::updateFromSettings(BL::Scene & scene)
 		m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
 	}
 
+	// if there are non-render settings, override scene defaults
+	if (m_settings.nonRender.use) {
+		if (m_settings.nonRender.useAnimation) {
+			if (m_settings.nonRender.firstFrame != -1 || m_settings.nonRender.lastFrame != -1) {
+				// set this to override default scene setting
+				m_settings.settings_animation.use = true;
+
+				// override only the passed boundery (start/end)
+				m_sceneFirstFrame = m_frameToRender = m_settings.nonRender.firstFrame != -1 ? m_settings.nonRender.firstFrame : m_frameToRender;
+				m_lastFrameToRender = m_settings.nonRender.lastFrame != -1 ? m_settings.nonRender.lastFrame : m_lastFrameToRender;
+				m_animationFrameStep = 1;
+			}
+		} else {
+			m_animationFrameStep = 0; // we have no animation so dont move
+			m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
+		}
+	}
+
 	// if we won't use FrameExportManager::forEachExportFrame(), but only export current frame we need to set the current frame
 	m_currentFrame = m_frameToRender;
 }
@@ -356,7 +374,7 @@ void SceneExporter::init() {
 
 	if (!m_threadManager) {
 		// lets init ThreadManager based on object count
-		if (m_scene.objects.length() > 10) { // TODO: change to appropriate number
+		if (m_scene.objects.length() > EXPORTER_THREAD_OBJECT_THRESHOLD) {
 			m_threadManager = ThreadManager::make(2);
 		} else {
 			// thread manager with 0 means all objects will be exported from current thread
@@ -1218,6 +1236,9 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
+	// valid object or group name will force export of only it
+	const bool hasNonRenderOverride = m_settings.nonRender.use && (!m_settings.nonRender.objectName.empty() || !m_settings.nonRender.groupName.empty());
+
 	if (!m_frameExporter.isCurrentSubframe()) {
 		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
 		for (auto & ob : Blender::collection(m_scene.objects)) {
@@ -1242,8 +1263,25 @@ void SceneExporter::sync_objects(const bool check_updated) {
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 			RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
 		}
-	}
-	else{
+	} else if (hasNonRenderOverride) {
+		const auto &exportObjects = m_data_exporter.getObjectList(m_settings.nonRender.objectName, m_settings.nonRender.groupName);
+		// override thread count
+		if (exportObjects.size() > EXPORTER_THREAD_OBJECT_THRESHOLD) {
+			m_threadManager->setThreadCount(2);
+		} else {
+			m_threadManager->setThreadCount(0);
+		}
+
+		CondWaitGroup wg(exportObjects.size());
+		for (auto ob : exportObjects) {
+			pre_sync_object(check_updated, ob, wg);
+		}
+
+		if (!is_interrupted() && m_threadManager->workerCount()) {
+			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			wg.wait();
+		}
+	} else {
 		auto range = m_frameExporter.getObjectsWithCurrentSubframes();
 		CondWaitGroup wg(m_frameExporter.countObjectsWithCurrentSubframes());
 		for (auto obIt = range.first; obIt != range.second; ++obIt) {

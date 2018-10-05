@@ -53,6 +53,9 @@ void InteractiveExporter::setup_callbacks()
 bool InteractiveExporter::export_scene(const bool check_updated)
 {
 	const clock_t begin = clock();
+	// nonRender settings (export object set, etc.) can't be used with interactive exporter
+	m_settings.nonRender.use = false;
+
 	m_exporter->resetExportedPluginsCount();
 
 	struct FrameStateCheck {
@@ -172,6 +175,9 @@ void InteractiveExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 void InteractiveExporter::draw()
 {
+	if (!m_engine) {
+		return;
+	}
 	// TODO: is it worth it here to let python run for sync_view
 	// python_thread_state_save();
 	sync_view(true);

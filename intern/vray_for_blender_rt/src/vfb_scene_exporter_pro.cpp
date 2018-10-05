@@ -347,10 +347,12 @@ void ProductionExporter::draw()
 			}
 		}
 
-		m_engine.update_progress(m_exporter->get_progress());
-		for (auto & result : m_renderResultsList) {
-			if (result.layers.length() > 0) {
-				m_engine.update_result(result);
+		if (m_engine) {
+			m_engine.update_progress(m_exporter->get_progress());
+			for (auto & result : m_renderResultsList) {
+				if (result.layers.length() > 0) {
+					m_engine.update_result(result);
+				}
 			}
 		}
 	}
@@ -379,14 +381,16 @@ void ProductionExporter::render_start()
 
 	BL::RenderSettings renderSettings = m_scene.render();
 
-	BL::RenderSettings::layers_iterator rslIt;
-	renderSettings.layers.begin(rslIt);
-	if (rslIt != renderSettings.layers.end()) {
-		BL::SceneRenderLayer sceneRenderLayer(*rslIt);
-		if (sceneRenderLayer && !is_interrupted()) {
-			BL::RenderResult renderResult = m_engine.begin_result(0, 0, viewParams.renderSize.w, viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
-			if (renderResult) {
-				m_renderResultsList.push_back(renderResult);
+	if (m_engine) {
+		BL::RenderSettings::layers_iterator rslIt;
+		renderSettings.layers.begin(rslIt);
+		if (rslIt != renderSettings.layers.end()) {
+			BL::SceneRenderLayer sceneRenderLayer(*rslIt);
+			if (sceneRenderLayer && !is_interrupted()) {
+				BL::RenderResult renderResult = m_engine.begin_result(0, 0, viewParams.renderSize.w, viewParams.renderSize.h, sceneRenderLayer.name().c_str(), nullptr);
+				if (renderResult) {
+					m_renderResultsList.push_back(renderResult);
+				}
 			}
 		}
 	}
@@ -410,9 +414,11 @@ void ProductionExporter::render_end()
 		m_exporter->set_callback_on_bucket_ready([](const VRayBaseTypes::AttrImage &) {});
 	}
 
-	std::lock_guard<PythonGIL> pLock(m_pyGIL);
-	for (auto & result : m_renderResultsList) {
-		m_engine.end_result(result, false, true, true);
+	if (m_engine) {
+		std::lock_guard<PythonGIL> pLock(m_pyGIL);
+		for (auto & result : m_renderResultsList) {
+			m_engine.end_result(result, false, true, true);
+		}
 	}
 }
 

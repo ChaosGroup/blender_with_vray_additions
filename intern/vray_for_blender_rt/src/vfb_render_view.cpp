@@ -531,7 +531,7 @@ void SceneExporter::get_view_from_camera(ViewParams &viewParams, BL::Object &cam
 		viewParams.renderSize.w = renderSettings.resolution_x() * renderSettings.resolution_percentage() / 100;
 		viewParams.renderSize.h = renderSettings.resolution_y() * renderSettings.resolution_percentage() / 100;
 
-		if (renderSettings.use_border()) {
+		if (m_engine && renderSettings.use_border()) {
 			viewParams.is_border = true;
 			viewParams.is_crop = renderSettings.use_crop_to_border();
 

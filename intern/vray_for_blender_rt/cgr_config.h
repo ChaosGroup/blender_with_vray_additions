@@ -275,4 +275,8 @@ typedef unsigned __int64 u_int64_t;
 
 #define CGR_TRANSFORM_HEX_SIZE  129
 
+/// Threshold of objects that will trigger multi-threaded export
+// TODO: change to appropriate number
+static const int EXPORTER_THREAD_OBJECT_THRESHOLD = 10;
+
 #endif // CGR_CONFIG

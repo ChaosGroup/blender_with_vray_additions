@@ -348,7 +348,7 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	};
 
 	//                                   012345678911
-	static const char kwlistTypes[] = "|$Ossssiip";
+	static const char kwlistTypes[] = "|Ossssiip";
 
 	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
                                 /* 0 */ &pyExporter,

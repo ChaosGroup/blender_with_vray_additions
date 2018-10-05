@@ -9,11 +9,7 @@ using namespace std;
 ThreadManager::ThreadManager(int thCount)
 	: m_stop(false)
 {
-	if (thCount > 0) {
-		for (int c = 0; c < thCount; ++c) {
-			m_workers.emplace_back(thread(&ThreadManager::workerRun, this, c));
-		}
-	}
+	setThreadCount(thCount);
 }
 
 ThreadManager::Ptr ThreadManager::make(int thCount) {
@@ -26,6 +22,21 @@ ThreadManager::~ThreadManager() {
 	if (!m_workers.empty()) {
 		VFB_Assert(!"VFB ThreadManager exiting while threads are running!");
 		stop();
+	}
+}
+
+void ThreadManager::setThreadCount(int count) {
+	// it is easier to stop and re-create all threads
+	// it does not force us to stop only indivudual threads and syncronize m_stop
+	if (count != m_workers.size()) {
+		stop();
+		m_stop = false;
+	}
+
+	if (count > 0) {
+		for (int c = 0; c < count; ++c) {
+			m_workers.emplace_back(thread(&ThreadManager::workerRun, this, c));
+		}
 	}
 }
 
