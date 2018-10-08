@@ -160,6 +160,11 @@ void VrsceneExporter::sync()
 
 void VrsceneExporter::writeIncludes()
 {
+	if (m_writers.empty()) {
+		// includes are already written
+		return;
+	}
+
 	if (!exporter_settings.settings_files.use_separate) {
 		return;
 	}

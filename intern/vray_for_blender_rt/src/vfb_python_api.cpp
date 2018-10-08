@@ -342,29 +342,30 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 1 */_C("objectName"),
 	    /* 2 */_C("groupName"),
 	    /* 3 */_C("ntreeName"),
-	    /* 4 */_C("scenePath"),
-	    /* 5 */_C("firstFrame"),
-	    /* 6 */_C("lastFrame"),
-	    /* 7 */_C("useAnimation"),
+	    /* 4 */_C("firstFrame"),
+	    /* 5 */_C("lastFrame"),
+	    /* 6 */_C("useAnimation"),
 	    NULL
 	};
 
 	//                                  012345678911
-	static const char kwlistTypes[] = "|Ossssiip";
+	static const char kwlistTypes[] = "|Osssiip";
 
 	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
-                                /* 0 */ &pyExporter,
-                                /* 1 */ &pyObjectName,
-                                /* 2 */ &pyGroupName,
-                                /* 3 */ &pyNtreeName,
-								/* 4 */ &pyScenePath,
-								/* 5 */ &firstFrame,
-								/* 6 */ &lastFrame,
-								/* 7 */ &useAnimation)) {
+	                         /* 0 */ &pyExporter,
+	                         /* 1 */ &pyObjectName,
+	                         /* 2 */ &pyGroupName,
+	                         /* 3 */ &pyNtreeName,
+	                         /* 4 */ &firstFrame,
+	                         /* 5 */ &lastFrame,
+	                         /* 6 */ &useAnimation)) {
 		Py_RETURN_NONE;
 	}
 
 	SceneExporter *exporter = vfb_cast_exporter(pyExporter);
+	if (!exporter) {
+		Py_RETURN_NONE;
+	}
 	ExporterSettings &settings = exporter->get_export_settings();
 	settings.nonRender.use = true;
 	settings.nonRender.objectName = pyObjectName ? pyObjectName : settings.nonRender.objectName;
