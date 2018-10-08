@@ -124,6 +124,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 
 VrsceneExporter::~VrsceneExporter()
 {
+	free();
 }
 
 
@@ -142,6 +143,7 @@ void VrsceneExporter::free()
 	writeIncludes();
 	m_writers.clear();
 	m_fileWritersMap.clear();
+	m_threadManager->stop();
 }
 
 

@@ -1239,7 +1239,25 @@ void SceneExporter::sync_objects(const bool check_updated) {
 	// valid object or group name will force export of only it
 	const bool hasNonRenderOverride = m_settings.nonRender.use && (!m_settings.nonRender.objectName.empty() || !m_settings.nonRender.groupName.empty());
 
-	if (!m_frameExporter.isCurrentSubframe()) {
+	if (hasNonRenderOverride) {
+		const auto &exportObjects = m_data_exporter.getObjectList(m_settings.nonRender.objectName, m_settings.nonRender.groupName);
+		// override thread count
+		if (exportObjects.size() > EXPORTER_THREAD_OBJECT_THRESHOLD) {
+			m_threadManager->setThreadCount(2);
+		} else {
+			m_threadManager->setThreadCount(0);
+		}
+
+		CondWaitGroup wg(exportObjects.size());
+		for (auto ob : exportObjects) {
+			pre_sync_object(check_updated, ob, wg);
+		}
+
+		if (!is_interrupted() && m_threadManager->workerCount()) {
+			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			wg.wait();
+		}
+	} else if (!m_frameExporter.isCurrentSubframe()) {
 		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
 		for (auto & ob : Blender::collection(m_scene.objects)) {
 			// If motion blur is enabled, export only object without subframes, theese with will be exported later
@@ -1262,24 +1280,6 @@ void SceneExporter::sync_objects(const bool check_updated) {
 			// Reset update flag
 			PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 			RNA_int_set(&vrayObject, "data_updated", CGR_NONE);
-		}
-	} else if (hasNonRenderOverride) {
-		const auto &exportObjects = m_data_exporter.getObjectList(m_settings.nonRender.objectName, m_settings.nonRender.groupName);
-		// override thread count
-		if (exportObjects.size() > EXPORTER_THREAD_OBJECT_THRESHOLD) {
-			m_threadManager->setThreadCount(2);
-		} else {
-			m_threadManager->setThreadCount(0);
-		}
-
-		CondWaitGroup wg(exportObjects.size());
-		for (auto ob : exportObjects) {
-			pre_sync_object(check_updated, ob, wg);
-		}
-
-		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
-			wg.wait();
 		}
 	} else {
 		auto range = m_frameExporter.getObjectsWithCurrentSubframes();

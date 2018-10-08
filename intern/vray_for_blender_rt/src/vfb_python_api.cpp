@@ -342,12 +342,14 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 1 */_C("objectName"),
 	    /* 2 */_C("groupName"),
 	    /* 3 */_C("ntreeName"),
-	    /* 4 */_C("firstFrame"),
-	    /* 5 */_C("lastFrame"),
+	    /* 4 */_C("scenePath"),
+	    /* 5 */_C("firstFrame"),
+	    /* 6 */_C("lastFrame"),
+	    /* 7 */_C("useAnimation"),
 	    NULL
 	};
 
-	//                                   012345678911
+	//                                  012345678911
 	static const char kwlistTypes[] = "|Ossssiip";
 
 	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
@@ -373,7 +375,7 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	settings.nonRender.lastFrame = lastFrame;
 	settings.nonRender.useAnimation = useAnimation;
 
-	Py_RETURN_NONE;
+	Py_RETURN_TRUE;
 }
 
 static PyObject* vfb_free(PyObject*, PyObject *value)
