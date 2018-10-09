@@ -173,6 +173,8 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	use_motion_blur = false;
 	use_physical_camera = false;
 
+	std::string leftStereoCamName, rightStereoCamName;
+
 	// Find if we need hide from view
 	if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 		for (auto ob : Blender::collection(scene.objects)) {
@@ -204,25 +206,8 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 				PointerRNA cameraStereo = RNA_pointer_get(&vrayCamera, "CameraStereoscopic");
 				use_stereo_camera = (stereoSettings.data && RNA_boolean_get(&stereoSettings, "use")) && (cameraStereo.data && RNA_boolean_get(&cameraStereo, "use"));
 				if (use_stereo_camera) {
-					const auto leftCamName = RNA_std_string_get(&cameraStereo, "LeftCam");
-					const auto rightCamName = RNA_std_string_get(&cameraStereo, "RightCam");
-
-					BL::BlendData::objects_iterator obIt;
-					int found = 0;
-					for (data.objects.begin(obIt); found < 2 && obIt != data.objects.end(); ++obIt) {
-						const auto camName = obIt->name();
-						if (camName == leftCamName) {
-							camera_stereo_left = *obIt;
-							found++;
-						} else if (camName == rightCamName) {
-							camera_stereo_right = *obIt;
-							found++;
-						}
-					}
-					if (found != 2) {
-						use_stereo_camera = false;
-						PRINT_ERROR("Failed to find cameras for stereo camera!");
-					}
+					leftStereoCamName = RNA_std_string_get(&cameraStereo, "LeftCam");
+					rightStereoCamName = RNA_std_string_get(&cameraStereo, "RightCam");
 				}
 			}
 
@@ -313,8 +298,51 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	close_on_stop = RNA_boolean_get(&m_vrayExporter, "autoclose");
 
 	verbose_level = static_cast<VRayVerboseLevel>(RNA_enum_ext_get(&m_vrayExporter, "verboseLevel"));
+
+	updateObjectsData(scene, leftStereoCamName, rightStereoCamName);
 }
 
+
+void ExporterSettings::updateObjectsData(BL::Scene scene, const std::string &leftCamName, const std::string &rightCamName)
+{
+	use_hide_from_view = false;
+	selectedObjects.clear();
+	camera_stereo_left = camera_stereo_right = PointerRNA_NULL;
+
+	for (BL::Object & ob : Blender::collection(scene.objects)) {
+		const auto &obName = ob.name();
+		if (use_stereo_camera && obName == leftCamName) {
+			camera_stereo_left = ob;
+		} else if (use_stereo_camera && obName == rightCamName) {
+			camera_stereo_right = ob;
+		}
+
+		if (ob.select()) {
+			selectedObjects.insert(ob);
+		}
+
+		if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
+			auto dataPtr = ob.data().ptr;
+			PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
+			if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+				loopCameras.push_back(ob);
+			}
+
+			if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+				if (RNA_boolean_get(&vrayCamera, "hide_from_view")) {
+					use_hide_from_view = true;
+				}
+			}
+		}
+	}
+
+	if (use_stereo_camera) {
+		if (!camera_stereo_left || !camera_stereo_right) {
+			use_stereo_camera = false;
+			PRINT_ERROR("Failed to find cameras for stereo camera!");
+		}
+	}
+}
 
 bool ExporterSettings::check_data_updates()
 {
@@ -640,7 +668,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			AttrListPlugin selectedObjectsList;
 			if (get<bool>(propertyGroup, "render_mask_objects_selected")) {
 				// for each selected object, get all exported plugins
-				for (const BL::Object &ob : selectedObjects) {
+				for (const BL::Object &ob : settings.selectedObjects) {
 					for (const std::string &pluginName : dataExporter.m_id_track.getAllObjectPlugins(ob)) {
 						selectedObjectsList.append(pluginName);
 					}

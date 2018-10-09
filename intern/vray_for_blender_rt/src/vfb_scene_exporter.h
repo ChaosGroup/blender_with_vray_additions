@@ -312,7 +312,7 @@ public:
 		, m_exporter(nullptr)
 		, m_frameExporter(m_settings)
 		, m_data_exporter(m_settings)
-		, m_settingsExporter(m_data_exporter, m_settings, m_viewParams, m_frameExporter, m_selectedObjects)
+		, m_settingsExporter(m_data_exporter, m_settings, m_viewParams, m_frameExporter)
 		, m_sceneComputedLayers(0)
 		, m_isLocalView(false)
 		, m_isUndoSync(false)
@@ -408,7 +408,6 @@ protected:
 	/// lock before python_thread_state_restore and unlock after python_thread_state_save
 	std::mutex           m_python_state_lock;
 protected:
-	ObList               m_selectedObjects; ///< List of objects that are selected by user
 	PluginExporterPtr    m_exporter; ///< Pointer to actuial plugin exporter
 	ExporterSettings     m_settings; ///< Holder for all settings that affect way of export
 	FrameExportManager   m_frameExporter; ///< Handles chaning the current time so all needed keyframe data is exported

@@ -118,15 +118,7 @@ void FrameExportManager::updateFromSettings(BL::Scene & scene)
 	if (m_settings.settings_animation.use) {
 		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 			if (m_loopCameras.empty()) {
-				for (auto & ob : Blender::collection(scene.objects)) {
-					if (ob.type() == BL::Object::type_CAMERA) {
-						auto dataPtr = ob.data().ptr;
-						PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
-						if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-							m_loopCameras.push_back(ob);
-						}
-					}
-				}
+				m_loopCameras = m_settings.loopCameras;
 
 				std::sort(m_loopCameras.begin(), m_loopCameras.end(), [](const BL::Object & l, const BL::Object & r) {
 					return const_cast<BL::Object&>(l).name() < const_cast<BL::Object&>(r).name();
@@ -1226,10 +1218,6 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 		else {
 			sync_object(ob, check_updated);
 		}
-
-		if (ob.select()) {
-			m_selectedObjects.push_back(ob);
-		}
 	}, ThreadManager::Priority::LOW);
 }
 
@@ -1237,10 +1225,18 @@ void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
 	// valid object or group name will force export of only it
-	const bool hasNonRenderOverride = m_settings.nonRender.use && (!m_settings.nonRender.objectName.empty() || !m_settings.nonRender.groupName.empty());
+	const bool hasNonRenderOverride = m_settings.nonRender.use && (
+		!m_settings.nonRender.objectName.empty() ||
+		!m_settings.nonRender.groupName.empty() ||
+		m_settings.nonRender.onlySelected
+	);
 
 	if (hasNonRenderOverride) {
-		const auto &exportObjects = m_data_exporter.getObjectList(m_settings.nonRender.objectName, m_settings.nonRender.groupName);
+		const HashSet<BL::Object> & exportObjects =
+		      m_settings.nonRender.onlySelected
+		    ? m_settings.selectedObjects
+		    : m_data_exporter.getObjectList(m_settings.nonRender.objectName, m_settings.nonRender.groupName);
+
 		// override thread count
 		if (exportObjects.size() > EXPORTER_THREAD_OBJECT_THRESHOLD) {
 			m_threadManager->setThreadCount(2);

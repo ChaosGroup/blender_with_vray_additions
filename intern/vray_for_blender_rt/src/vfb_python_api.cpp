@@ -333,9 +333,8 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	const char *pyObjectName= nullptr;
 	const char *pyGroupName = nullptr;
 	const char *pyNtreeName = nullptr;
-	const char *pyScenePath = nullptr;
 	int firstFrame = -1, lastFrame = -1;
-	int useAnimation = false;
+	int useAnimation = false, onlySelected = false;
 
 	static char *kwlist[] = {
 	    /* 0 */_C("exporter"),
@@ -345,11 +344,12 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 4 */_C("firstFrame"),
 	    /* 5 */_C("lastFrame"),
 	    /* 6 */_C("useAnimation"),
+	    /* 7 */_C("onlySelected"),
 	    NULL
 	};
 
 	//                                  012345678911
-	static const char kwlistTypes[] = "|Osssiip";
+	static const char kwlistTypes[] = "|Osssiipp";
 
 	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 	                         /* 0 */ &pyExporter,
@@ -358,7 +358,8 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	                         /* 3 */ &pyNtreeName,
 	                         /* 4 */ &firstFrame,
 	                         /* 5 */ &lastFrame,
-	                         /* 6 */ &useAnimation)) {
+	                         /* 6 */ &useAnimation,
+	                         /* 7 */ &onlySelected)) {
 		Py_RETURN_NONE;
 	}
 

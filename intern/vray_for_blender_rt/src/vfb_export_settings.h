@@ -164,6 +164,8 @@ struct ExporterSettings {
 
 	ExporterSettings();
 	void              update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene scene, BL::SpaceView3D view3d);
+	/// Go trough all object once and collect anything we need (stereo cameras, selected objects, cameras in scene)
+	void              updateObjectsData(BL::Scene scene, const std::string &leftCamName, const std::string &rightCamName);
 
 	bool              check_data_updates();
 	bool              is_first_frame();
@@ -226,17 +228,20 @@ struct ExporterSettings {
 
 	RenderMode        render_mode;
 
+	HashSet<BL::Object> selectedObjects;
+	std::vector<BL::Object> loopCameras;
+
 	struct NonRenderOverrides {
 		/// Flag which will be true if we want to export but not render, used for example for ExportSets
 		/// This will also force using STD exporter
 		bool use = false;
-		bool useAnimation = false;
-		int firstFrame = -1;
-		int lastFrame = -1;
-		std::string objectName;
-		std::string groupName;
-		std::string ntreeName;
-		std::string scenePath;
+		bool useAnimation = false; ///< Export animation
+		bool onlySelected = false; ///< Export only selected objects, overrides @objectName and @groupName
+		int firstFrame = -1; ///< If not -1, then overrides firstFrame
+		int lastFrame = -1; ///< If not -1, then overrides lastFrame
+		std::string objectName; ///< If not empty only this object is exported and @geoupName objects
+		std::string groupName; ///< If not empty only object from group and @objectName are exported
+		std::string ntreeName; ///< If not empty export only this ntree
 	} nonRender;
 
 	float                      getViewportResolutionPercentage() const { return m_viewportResolution; }
@@ -262,14 +267,13 @@ class FrameExportManager;
 /// Class that will handle all Settings* plugins
 /// If any override must be applied to any Settings* plugin it should be done in the class
 struct VRaySettingsExporter {
-	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter, const ObList &selectedObjects)
+	VRaySettingsExporter(DataExporter &dataExporter, const ExporterSettings &settings, const ViewParams &viewParams, const FrameExportManager &frameExporter)
 		: scene(PointerRNA_NULL)
 		, context(PointerRNA_NULL)
 		, dataExporter(dataExporter)
 		, settings(settings)
 		, viewParams(viewParams)
 		, frameExporter(frameExporter)
-		, selectedObjects(selectedObjects)
 		, vrayScene(PointerRNA_NULL)
 		, vrayExporter(PointerRNA_NULL)
 	{}
@@ -310,7 +314,6 @@ private:
 	const ExporterSettings &settings; ///< Export settings
 	const ViewParams &viewParams; ///< Viewparams we use to get img width and height
 	const FrameExportManager &frameExporter; ///< Frame exporter used to get anim stand and end
-	const ObList &selectedObjects; ///< Selected objects
 
 	PointerRNA vrayScene; ///< The scene.vray object
 	PointerRNA vrayExporter; ///< The scene.vray.Exporter object
