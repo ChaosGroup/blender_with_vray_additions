@@ -747,6 +747,10 @@ if(WITH_BUILDINFO)
 endif()
 
 if(WITH_VRAY_FOR_BLENDER)
+	if(WITH_STATIC_LIBC)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+	endif()
+
 	set(LIBS_ROOT "" CACHE PATH "Prebuilt libs location (zmq, [sodium, jpeg])")
 
 	if(NOT LIBS_ROOT)
