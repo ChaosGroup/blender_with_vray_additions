@@ -115,7 +115,25 @@ void FrameExportManager::updateFromSettings(BL::Scene & scene)
 		m_mbIntervalStartOffset = 0;
 	}
 
-	if (m_settings.settings_animation.use) {
+	// if there are non-render settings, override scene defaults
+	if (m_settings.nonRender.use) {
+		if (m_settings.nonRender.useAnimation) {
+			// set this to override default scene setting
+			m_settings.settings_animation.use = true;
+			m_animationFrameStep = scene.frame_step();
+
+			if (m_settings.nonRender.firstFrame != -1 || m_settings.nonRender.lastFrame != -1) {
+				// override only the passed boundery (start/end)
+				m_sceneFirstFrame = m_frameToRender = m_settings.nonRender.firstFrame != -1 ? m_settings.nonRender.firstFrame : m_frameToRender;
+				m_lastFrameToRender = m_settings.nonRender.lastFrame != -1 ? m_settings.nonRender.lastFrame : m_lastFrameToRender;
+			}
+
+			m_frameToRender = m_sceneFirstFrame - m_animationFrameStep;
+		} else {
+			m_animationFrameStep = 0; // we have no animation so dont move
+			m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
+		}
+	} else if (m_settings.settings_animation.use) {
 		if (m_settings.settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
 			if (m_loopCameras.empty()) {
 				m_loopCameras = m_settings.loopCameras;
@@ -145,24 +163,6 @@ void FrameExportManager::updateFromSettings(BL::Scene & scene)
 	} else {
 		m_animationFrameStep = 0; // we have no animation so dont move
 		m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
-	}
-
-	// if there are non-render settings, override scene defaults
-	if (m_settings.nonRender.use) {
-		if (m_settings.nonRender.useAnimation) {
-			if (m_settings.nonRender.firstFrame != -1 || m_settings.nonRender.lastFrame != -1) {
-				// set this to override default scene setting
-				m_settings.settings_animation.use = true;
-
-				// override only the passed boundery (start/end)
-				m_sceneFirstFrame = m_frameToRender = m_settings.nonRender.firstFrame != -1 ? m_settings.nonRender.firstFrame : m_frameToRender;
-				m_lastFrameToRender = m_settings.nonRender.lastFrame != -1 ? m_settings.nonRender.lastFrame : m_lastFrameToRender;
-				m_animationFrameStep = 1;
-			}
-		} else {
-			m_animationFrameStep = 0; // we have no animation so dont move
-			m_lastFrameToRender = m_frameToRender = (m_sceneSavedFrame + m_sceneSavedSubframe);
-		}
 	}
 
 	// if we won't use FrameExportManager::forEachExportFrame(), but only export current frame we need to set the current frame
