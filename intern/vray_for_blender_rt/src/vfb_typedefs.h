@@ -53,7 +53,7 @@ template <typename KeyT, typename ValT, typename HashT = std::hash<KeyT>>
 using HashMap = std::unordered_map<KeyT, ValT, HashT>;
 
 template <typename KeyT, typename ValT, class LessCompare = std::less<KeyT>>
-using TreeMap = std::map<KeyT, ValT, LessCompare>;
+using OrderedMap = std::map<KeyT, ValT, LessCompare>;
 
 typedef HashSet<std::string> StringHashSet;
 

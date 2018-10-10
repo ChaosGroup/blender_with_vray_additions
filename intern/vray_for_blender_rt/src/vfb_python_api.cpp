@@ -332,7 +332,8 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	PyObject *pyExporter = nullptr;
 	const char *pyObjectName= nullptr;
 	const char *pyGroupName = nullptr;
-	const char *pyNtreeName = nullptr;
+	PyObject *pyNtree = nullptr;
+	PyObject *pyNtreeId = nullptr;
 	int firstFrame = -1, lastFrame = -1;
 	int useAnimation = false, onlySelected = false;
 
@@ -340,26 +341,28 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 0 */_C("exporter"),
 	    /* 1 */_C("objectName"),
 	    /* 2 */_C("groupName"),
-	    /* 3 */_C("ntreeName"),
-	    /* 4 */_C("firstFrame"),
-	    /* 5 */_C("lastFrame"),
-	    /* 6 */_C("useAnimation"),
-	    /* 7 */_C("onlySelected"),
+	    /* 3 */_C("firstFrame"),
+	    /* 4 */_C("lastFrame"),
+	    /* 5 */_C("useAnimation"),
+	    /* 6 */_C("onlySelected"),
+	    /* 7 */_C("ntreeId"),
+	    /* 8 */_C("ntree"),
 	    NULL
 	};
 
 	//                                  012345678911
-	static const char kwlistTypes[] = "|Osssiipp";
+	static const char kwlistTypes[] = "|OssiippOO";
 
 	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 	                         /* 0 */ &pyExporter,
 	                         /* 1 */ &pyObjectName,
 	                         /* 2 */ &pyGroupName,
-	                         /* 3 */ &pyNtreeName,
-	                         /* 4 */ &firstFrame,
-	                         /* 5 */ &lastFrame,
-	                         /* 6 */ &useAnimation,
-	                         /* 7 */ &onlySelected)) {
+	                         /* 3 */ &firstFrame,
+	                         /* 4 */ &lastFrame,
+	                         /* 5 */ &useAnimation,
+	                         /* 6 */ &onlySelected,
+	                         /* 7 */ &pyNtreeId,
+	                         /* 8 */ &pyNtree)) {
 		Py_RETURN_NONE;
 	}
 
@@ -371,11 +374,20 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	settings.nonRender.use = true;
 	settings.nonRender.objectName = pyObjectName ? pyObjectName : settings.nonRender.objectName;
 	settings.nonRender.groupName = pyGroupName ? pyGroupName : settings.nonRender.groupName;
-	settings.nonRender.ntreeName = pyNtreeName ? pyNtreeName : settings.nonRender.ntreeName;
+	if (pyNtree && pyNtreeId) {
+		bNodeTree *ntree = static_cast<bNodeTree*>(PyLong_AsVoidPtr(pyNtree));
+		ID *ntreeId = static_cast<ID*>(PyLong_AsVoidPtr(pyNtreeId));
+		if (ntree && ntreeId) {
+			PointerRNA ntreePtr;
+			RNA_pointer_create(ntreeId, &RNA_NodeTree, ntree, &ntreePtr);
+			settings.nonRender.ntree = BL::NodeTree(ntreePtr);
+		}
+	}
 	// if first or last frame are -1, we will read from scene
 	settings.nonRender.firstFrame = firstFrame;
 	settings.nonRender.lastFrame = lastFrame;
 	settings.nonRender.useAnimation = useAnimation;
+	exporter->updateSettings();
 
 	Py_RETURN_TRUE;
 }

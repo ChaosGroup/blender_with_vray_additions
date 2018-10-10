@@ -131,7 +131,9 @@ VrsceneExporter::~VrsceneExporter()
 void VrsceneExporter::init()
 {
 	PRINT_INFO_EX("Initting VrsceneExporter");
-	m_threadManager = ThreadManager::make(2);
+	if (!m_threadManager) {
+		m_threadManager = ThreadManager::make(2);
+	}
 	for (auto & w : m_fileWritersMap) {
 		w.second->setFormat(exporter_settings.export_file_format);
 	}

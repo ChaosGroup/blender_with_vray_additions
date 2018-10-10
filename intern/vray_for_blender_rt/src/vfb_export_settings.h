@@ -241,7 +241,7 @@ struct ExporterSettings {
 		int lastFrame = -1; ///< If not -1, then overrides lastFrame
 		std::string objectName; ///< If not empty only this object is exported and @geoupName objects
 		std::string groupName; ///< If not empty only object from group and @objectName are exported
-		std::string ntreeName; ///< If not empty export only this ntree
+		BL::NodeTree ntree = BL::NodeTree(PointerRNA_NULL); ///< If not empty export only this ntree (then only selected will affect nodes)
 	} nonRender;
 
 	float                      getViewportResolutionPercentage() const { return m_viewportResolution; }

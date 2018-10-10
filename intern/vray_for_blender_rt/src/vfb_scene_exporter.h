@@ -323,6 +323,9 @@ public:
 public:
 	virtual void         init();
 	        void         init_data();
+
+	/// Force the exporter to re-read settings (there might be overrides)
+	void                 updateSettings();
 	void                 free();
 	PluginExporterPtr  get_plugin_exporter() { return m_exporter; };
 
@@ -337,7 +340,8 @@ public:
 	/// Export all scene data to render current frame (may include exporting multiple frames for motion blur)
 	/// @check_updated - true if we need to check object's flag or just export everything
 	virtual bool         export_scene(const bool check_updated = false);
-	void                 sync_prepass();
+	/// This is called right before sync will export all data so all ntrees have correct update flags
+	void                 resetNtreeTags();
 
 	ViewParams           get_current_view_params();
 

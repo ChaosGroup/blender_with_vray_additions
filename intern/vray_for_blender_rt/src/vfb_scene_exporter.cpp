@@ -346,12 +346,20 @@ SceneExporter::~SceneExporter()
 	free();
 }
 
+void SceneExporter::updateSettings()
+{
+	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
+	m_frameExporter.updateFromSettings(m_scene);
+	if (m_exporter) {
+		m_exporter->init();
+	}
+}
+
 void SceneExporter::init() {
 	m_active_camera = SceneExporter::getActiveCamera(m_view3d, m_scene);
 
 	// make sure we update settings before exporter - it will read from settings
-	m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
-	m_frameExporter.updateFromSettings(m_scene);
+	updateSettings();
 
 	create_exporter();
 	VFB_Assert(m_exporter && "Failed to create exporter!");
@@ -459,10 +467,20 @@ void SceneExporter::sync(const bool check_updated)
 		m_data_exporter.syncStart(m_isUndoSync);
 	}
 
-	m_settingsExporter.exportPlugins();
-	sync_prepass();
+	if (!m_settings.nonRender.use) {
+		m_settingsExporter.exportPlugins();
+	}
+	resetNtreeTags();
 
 	calculate_scene_layers();
+
+	if (m_settings.nonRender.use && m_settings.nonRender.ntree) {
+		VFB_Assert(check_updated == false && "Can't update for non render export");
+		m_data_exporter.exportArbitraryNtree(m_settings.nonRender.ntree);
+		m_exporter->sync();
+		m_isUndoSync = false;
+		return;
+	}
 
 	// TODO: this is hack so we can export object dependent on effect before any other objects so we
 	// can hide/show them correctly
@@ -518,7 +536,7 @@ static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, co
 }
 
 
-void SceneExporter::sync_prepass()
+void SceneExporter::resetNtreeTags()
 {
 	m_data_exporter.setActiveCamera(m_active_camera);
 	m_data_exporter.resetSyncState();

@@ -986,3 +986,40 @@ void DataExporter::syncEnd()
 	m_is_undo_sync = false;
 }
 
+void DataExporter::exportArbitraryNtree(BL::NodeTree ntree)
+{
+	// map ntree id to expected output node that should be present
+	static const OrderedMap<std::string, std::string> ntreeOutputNode = {
+	    std::make_pair("VRayNodeTreeScene", "VRayNodeRenderChannels"),
+	    std::make_pair("VRayNodeTreeWorld", "VRayNodeEnvironment"),
+	    std::make_pair("VRayNodeTreeMaterial", "VRayNodeOutputMaterial"),
+	    std::make_pair("VRayNodeTreeObject", "VRayNodeObjectOutput"),
+	    std::make_pair("VRayNodeTreeLight", "VRayNodeTreeLight"),
+	};
+
+	const auto outputNameIter = ntreeOutputNode.find(ntree.bl_idname());
+	if (outputNameIter == ntreeOutputNode.end()) {
+		PRINT_ERROR("Failed to export node tree - unknown identifier \"%s\"", ntree.bl_idname().c_str());
+		return;
+	}
+	BL::Node outputNode(Nodes::GetNodeByType(ntree, outputNameIter->second));
+	if (!outputNode) {
+		PRINT_ERROR("Failed to export node tree - missing output node \"%s\"", outputNameIter->second.c_str());
+		return;
+	}
+
+	BL::Object contextObject(PointerRNA_NULL);
+	if (!m_settings.nonRender.objectName.empty()) {
+		const auto &objectsSet = getObjectList(m_settings.nonRender.objectName, "");
+		if (!objectsSet.empty()) {
+			contextObject = *objectsSet.begin();
+		}
+	}
+
+	NodeContext context(m_data, m_scene, contextObject);
+
+	for (BL::NodeSocket socket : Blender::collection(outputNode.inputs)) {
+		exportSocket(ntree, socket, context);
+	}
+}
+

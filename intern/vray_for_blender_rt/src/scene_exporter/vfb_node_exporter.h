@@ -412,6 +412,8 @@ public:
 	void              setNSamples(PluginDesc &pluginDesc, BL::Object ob) const;
 
 	bool              objectIsMeshLight(BL::Object ob);
+	/// Used explicitly to export node trees for non render export
+	void              exportArbitraryNtree(BL::NodeTree ntree);
 	AttrValue         exportMaterial(BL::Material ma, BL::Object ob, bool exportAsOverride = false);
 	AttrValue         exportVRayClipper(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	AttrValue         exportObject(BL::Object ob, bool check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
