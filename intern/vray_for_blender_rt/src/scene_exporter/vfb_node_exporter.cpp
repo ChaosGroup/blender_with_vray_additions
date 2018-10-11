@@ -418,7 +418,7 @@ AttrValue DataExporter::exportVRayNodeAuto(BL::NodeTree &ntree, BL::Node &node, 
 
 	return m_exporter->export_plugin(pluginDesc);
 }
-#include "DNA_node_types.h"
+
 
 AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context)
 {
@@ -989,24 +989,15 @@ void DataExporter::syncEnd()
 void DataExporter::exportArbitraryNtree(BL::NodeTree ntree)
 {
 	// map ntree id to expected output node that should be present
-	static const OrderedMap<std::string, std::string> ntreeOutputNode = {
-	    std::make_pair("VRayNodeTreeScene", "VRayNodeRenderChannels"),
-	    std::make_pair("VRayNodeTreeWorld", "VRayNodeEnvironment"),
-	    std::make_pair("VRayNodeTreeMaterial", "VRayNodeOutputMaterial"),
-	    std::make_pair("VRayNodeTreeObject", "VRayNodeObjectOutput"),
-	    std::make_pair("VRayNodeTreeLight", "VRayNodeTreeLight"),
-	};
+	static const HashSet<std::string> ntreeOutputNode = {"VRayNodeRenderChannels","VRayNodeEnvironment","VRayNodeOutputMaterial","VRayNodeObjectOutput","VRayNodeTreeLight"};
 
-	const auto outputNameIter = ntreeOutputNode.find(ntree.bl_idname());
-	if (outputNameIter == ntreeOutputNode.end()) {
-		PRINT_ERROR("Failed to export node tree - unknown identifier \"%s\"", ntree.bl_idname().c_str());
+	BL::Node rootNode(getNtreeSelectedNode(ntree));
+	if (!rootNode) {
+		PRINT_ERROR("Failed to export node tree - no selected node");
 		return;
 	}
-	BL::Node outputNode(Nodes::GetNodeByType(ntree, outputNameIter->second));
-	if (!outputNode) {
-		PRINT_ERROR("Failed to export node tree - missing output node \"%s\"", outputNameIter->second.c_str());
-		return;
-	}
+
+	const bool writeFakeRoot = ntreeOutputNode.find(rootNode.bl_idname()) != ntreeOutputNode.end();
 
 	BL::Object contextObject(PointerRNA_NULL);
 	if (!m_settings.nonRender.objectName.empty()) {
@@ -1018,8 +1009,25 @@ void DataExporter::exportArbitraryNtree(BL::NodeTree ntree)
 
 	NodeContext context(m_data, m_scene, contextObject);
 
-	for (BL::NodeSocket socket : Blender::collection(outputNode.inputs)) {
-		exportSocket(ntree, socket, context);
+	std::string rootPluginName;
+	if (writeFakeRoot) {
+		rootPluginName = "RootPlugin@" + rootNode.bl_idname();
+		PluginDesc fakeRoot(rootPluginName, rootNode.bl_idname());
+		for (BL::NodeSocket socket : Blender::collection(rootNode.inputs)) {
+			rootPluginName = exportSocket(ntree, socket, context).as<AttrPlugin>().plugin;
+		}
+	} else {
+		// user selected some node in the middle of the material tree
+		BL::NodeSocket fakeSocket(PointerRNA_NULL);
+		rootPluginName = exportVRayNode(ntree, rootNode, fakeSocket, context).as<AttrPlugin>().plugin;
+	}
+
+	if (!m_settings.nonRender.assetType.empty()) {
+		std::string assetTypeUpper = m_settings.nonRender.assetType;
+		assetTypeUpper[0] = ::toupper(assetTypeUpper[0]);
+		PluginDesc fakeAssetDesc(assetTypeUpper, "Asset");
+		fakeAssetDesc.add(m_settings.nonRender.assetType, String::StripString(rootPluginName));
+		m_exporter->export_plugin(fakeAssetDesc);
 	}
 }
 

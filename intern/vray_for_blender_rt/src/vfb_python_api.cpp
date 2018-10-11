@@ -332,6 +332,7 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	PyObject *pyExporter = nullptr;
 	const char *pyObjectName= nullptr;
 	const char *pyGroupName = nullptr;
+	const char *pyAssetType = nullptr;
 	PyObject *pyNtree = nullptr;
 	PyObject *pyNtreeId = nullptr;
 	int firstFrame = -1, lastFrame = -1;
@@ -347,11 +348,12 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	    /* 6 */_C("onlySelected"),
 	    /* 7 */_C("ntreeId"),
 	    /* 8 */_C("ntree"),
+	    /* 9 */_C("assetType"),
 	    NULL
 	};
 
 	//                                  012345678911
-	static const char kwlistTypes[] = "|OssiippOO";
+	static const char kwlistTypes[] = "|OssiippOOs";
 
 	if (!PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
 	                         /* 0 */ &pyExporter,
@@ -362,7 +364,8 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 	                         /* 5 */ &useAnimation,
 	                         /* 6 */ &onlySelected,
 	                         /* 7 */ &pyNtreeId,
-	                         /* 8 */ &pyNtree)) {
+	                         /* 8 */ &pyNtree,
+	                         /* 9 */ &pyAssetType)) {
 		Py_RETURN_NONE;
 	}
 
@@ -381,6 +384,9 @@ static PyObject* set_export_options(PyObject*, PyObject *args, PyObject *keywds)
 			PointerRNA ntreePtr;
 			RNA_pointer_create(ntreeId, &RNA_NodeTree, ntree, &ntreePtr);
 			settings.nonRender.ntree = BL::NodeTree(ntreePtr);
+			if (pyAssetType) {
+				settings.nonRender.assetType = pyAssetType;
+			}
 		}
 	}
 	// if first or last frame are -1, we will read from scene

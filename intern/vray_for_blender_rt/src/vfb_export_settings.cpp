@@ -303,7 +303,6 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 		// override additional settings
 		export_meshes = true;
 		exporter_type = ExporterType::ExpoterTypeFile;
-		export_file_format = ExportFormat::ExportFormatZIP;
 	}
 
 	updateObjectsData(scene, leftStereoCamName, rightStereoCamName);
