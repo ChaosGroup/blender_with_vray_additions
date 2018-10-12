@@ -21,6 +21,9 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
+
+#include <BKE_global.h>
+
 #include <boost/range/adaptor/reversed.hpp>
 
 #define SPRINTF_FORMAT_INIT_IN_SCOPE()                              \
@@ -87,16 +90,16 @@ void IdTrack::clear() {
 void IdTrack::insert(BL::Object ob, const std::string &plugin, PluginType type) {
 	switch (type) {
 	case IdTrack::CLIPPER:
-		PRINT_INFO_EX("IdTrack plugin %s CLIPPER", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s CLIPPER", plugin.c_str());
 		break;
 	case IdTrack::DUPLI_INSTACER:
-		PRINT_INFO_EX("IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
 		break;
 	case IdTrack::DUPLI_NODE:
-		PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s DUPLI_NODE", plugin.c_str());
 		break;
 	case IdTrack::HAIR:
-		PRINT_INFO_EX("IdTrack plugin %s HAIR", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s HAIR", plugin.c_str());
 		break;
 	default:
 		break;
