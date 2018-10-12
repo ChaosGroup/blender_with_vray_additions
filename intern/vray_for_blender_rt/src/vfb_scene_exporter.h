@@ -346,6 +346,8 @@ public:
 	ViewParams           get_current_view_params();
 
 	ExporterSettings    &get_export_settings() { return m_settings; }
+	/// Read the exported properties for the rendered image
+	const std::string   &getRenderedImagePath() const { return m_settingsExporter.getRenderedImagePath(); }
 
 	/// Export all scene data for the current frame
 	void                 sync(const bool check_updated=false);

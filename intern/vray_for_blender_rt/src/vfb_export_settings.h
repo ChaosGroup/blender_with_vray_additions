@@ -291,6 +291,10 @@ struct VRaySettingsExporter {
 	/// Export settings plugins required to be some other plugin in the scene
 	void exportDelayedPlugins();
 
+	const std::string &getRenderedImagePath() const {
+		return renderedImagePath;
+	}
+
 	static std::string pythonPreviewDir;
 private:
 	/// Get overrides for specific plugin description
@@ -318,6 +322,8 @@ private:
 
 	PointerRNA vrayScene; ///< The scene.vray object
 	PointerRNA vrayExporter; ///< The scene.vray.Exporter object
+
+	std::string renderedImagePath; ///< Set when exporting SettingsOuput and used by python to load the image if needed
 
 	/// Set of plugins we want to skip for various reasons
 	static const HashSet<std::string> IgnoredPlugins;

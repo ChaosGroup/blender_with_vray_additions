@@ -802,6 +802,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 				imgDir = pythonPreviewDir;
 				imgFile = "preview.exr";
 				pluginDesc.add("img_file_needFrameNumber", false);
+				renderedImagePath = imgDir + imgFile;
 			} else {
 				imgDir = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_dir"), context);
 				imgFile = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "img_file"), context);
@@ -826,6 +827,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 
 			// make sure the directory exists
 			fs::create_directories(imgDir);
+
+			renderedImagePath = imgDir + imgFile;
 
 			pluginDesc.add("img_dir", imgDir);
 			pluginDesc.add("img_file", imgFile);

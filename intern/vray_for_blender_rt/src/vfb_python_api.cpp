@@ -722,6 +722,16 @@ static PyObject* updatePreview(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* getRenderedImagePath(PyObject *, PyObject *value)
+{
+	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
+	if (exporter) {
+		return Py_BuildValue("s", exporter->getRenderedImagePath().c_str());
+	}
+	Py_RETURN_NONE;
+}
+
+
 static PyMethodDef methods[] = {
     { "load",                vfb_load,   METH_VARARGS, ""},
     { "unload", (PyCFunction)vfb_unload, METH_NOARGS,  ""},
@@ -747,7 +757,8 @@ static PyMethodDef methods[] = {
 
     { "set_preview_dir", set_preview_dir, METH_VARARGS, ""},
 
-    {"updatePreview", updatePreview, METH_VARARGS, "Generate preview update event"},
+    { "updatePreview", updatePreview, METH_VARARGS, "Generate preview update event"},
+    { "getRenderedImagePath", getRenderedImagePath, METH_O, "Get the full path for the result image of this render"},
 
     {NULL, NULL, 0, NULL},
 };
