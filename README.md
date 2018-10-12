@@ -26,7 +26,7 @@ Building from source
 --------------------
  - Clone this repository ```git clone https://github.com/bdancer/blender-for-vray```
  - Checkout git branch ```git checkout dev/vray_for_blender/vb35``` (from inside of blender-for-vray)
- - Get all submodules ```git subomdule update --init --recursive```
+ - Get all submodules ```git submodule update --init --recursive```
  - Put ZMQ, LibSodium and jpeg in the following structure
     ```
     blender-for-vray-libs
@@ -57,4 +57,4 @@ Building from source
     ```
  - Open Visual Studion and build the INSTALL project
  - Inside the build folder (C:/dev/build/bin/Debug/<BLEDNER VERSION>/scripts/addons) run ```git clone https://github.com/ChaosGroup/vray_for_blender_exporter vb30```
- - Inside the vb30 folder ```git subomdule update --init --recursive```
+ - Inside the vb30 folder ```git submodule update --init --recursive```
