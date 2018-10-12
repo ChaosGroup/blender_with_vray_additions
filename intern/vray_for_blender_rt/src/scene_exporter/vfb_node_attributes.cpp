@@ -209,21 +209,18 @@ static AttrValue exportColorTextureAsFloat(PluginExporterPtr &exporter,
 /// @param paramValue Parameter value.
 /// @param paramTexture Parameter texture value.
 /// @param paramTextureAmount Texture multiplier.
-/// @param textureClamp Clamp texture to 1.0f.
 /// @returns Float texture.
 static AttrValue exportCombineTexture(PluginExporterPtr &exporter,
                                       PluginDesc &pluginDesc,
                                       const std::string &texParamName,
                                       AttrValue paramValue,
                                       AttrValue paramTexture,
-                                      float paramTextureAmount,
-                                      int textureClamp = true)
+                                      float paramTextureAmount)
 {
 	PluginDesc texCombine(pluginDesc.pluginName + "|" + texParamName + "@Mult", "TexCombineColor");
 	texCombine.add("color", paramValue);
 	texCombine.add("texture", paramTexture);
 	texCombine.add("texture_multiplier", paramTextureAmount);
-	texCombine.add("texture_clamp", textureClamp);
 
 	return exporter->export_plugin(texCombine);
 }
@@ -235,21 +232,18 @@ static AttrValue exportCombineTexture(PluginExporterPtr &exporter,
 /// @param paramValue Parameter value.
 /// @param paramTexture Parameter texture value.
 /// @param paramTextureAmount Texture multiplier.
-/// @param textureClamp Clamp texture to 1.0f.
 /// @returns Float texture.
 static AttrValue exportCombineTextureAsFloat(PluginExporterPtr &exporter,
 											 PluginDesc &pluginDesc,
 											 const std::string &texParamName,
 											 AttrValue paramValue,
 											 AttrValue paramTexture,
-											 float paramTextureAmount,
-											 int textureClamp = true)
+											 float paramTextureAmount)
 {
 	PluginDesc texCombine(pluginDesc.pluginName + "|" + texParamName + "@Mult", "TexCombineFloat");
 	texCombine.add("value", paramValue);
 	texCombine.add("texture", paramTexture);
 	texCombine.add("texture_multiplier", paramTextureAmount);
-	texCombine.add("texture_clamp", textureClamp);
 
 	return exporter->export_plugin(texCombine);
 }
