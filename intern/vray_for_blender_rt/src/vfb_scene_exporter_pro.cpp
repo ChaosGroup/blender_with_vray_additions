@@ -287,8 +287,6 @@ bool ProductionExporter::export_scene(const bool)
 		render_end();
 	}
 
-	m_exporter->free();
-
 	return true;
 }
 

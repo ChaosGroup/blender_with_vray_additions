@@ -187,7 +187,7 @@ void VrsceneExporter::start()
 
 void VrsceneExporter::stop()
 {
-
+	free();
 }
 
 
