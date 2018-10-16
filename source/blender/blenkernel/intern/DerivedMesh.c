@@ -2658,7 +2658,9 @@ static void mesh_build_data(
 	DM_set_object_boundbox(ob, ob->derivedFinal);
 
 	ob->derivedFinal->needsFree = 0;
-	ob->derivedDeform->needsFree = 0;
+	if (ob->derivedDeform) {
+		ob->derivedDeform->needsFree = 0;
+	}
 	ob->lastDataMask = dataMask;
 	ob->lastNeedMapping = need_mapping;
 
