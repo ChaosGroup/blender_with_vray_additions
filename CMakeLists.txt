@@ -747,6 +747,16 @@ if(WITH_BUILDINFO)
 endif()
 
 if(WITH_VRAY_FOR_BLENDER)
+	if(WITH_STATIC_LIBC)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+	endif()
+
+	set(LIBS_ROOT "" CACHE PATH "Prebuilt libs location (zmq, [sodium, jpeg])")
+
+	if(NOT LIBS_ROOT)
+		message(FATAL_ERROR "Missing pre-built dependencies (libzmq, libsodium)")
+	endif()
+
 	add_definitions(-DWITH_VRAY_FOR_BLENDER)
 
 	if(USE_BLENDER_VRAY_APPSDK)
@@ -770,22 +780,27 @@ if(WITH_VRAY_FOR_BLENDER)
 		add_definitions(-DUSE_BLENDER_VRAY_APPSDK)
 	endif()
 
-	set(LIBS_ROOT "" CACHE PATH "ZMQ lib location")
 
 	if (UNIX)
-		set(JPEG ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
-		set(JPEG_INCLUDE_DIR "${JPEG}/include")
-		set(JPEG_LIBPATH ${JPEG}/lib/Release)
-		set(JPEG_NAMES jpeg-turbo jpeg)
-		find_library(JPEG_TURBO_LIB REQUIRED PATHS ${JPEG_LIBPATH} NAMES ${JPEG_NAMES})
+		if (EXISTS ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
+			set(JPEG ${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo)
+			set(JPEG_INCLUDE_DIR "${JPEG}/include")
+			set(JPEG_LIBPATH ${JPEG}/lib/Release ${JPEG}/lib)
+			set(JPEG_NAMES jpeg-turbo jpeg)
+			find_library(JPEG_TURBO_LIB REQUIRED
+				PATHS ${JPEG_LIBPATH}
+				NAMES ${JPEG_NAMES})
+			if (NOT JPEG_TURBO_LIB)
+				message(FATAL_ERROR "Missing jpeg-turbo in \"${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo\"")
+			endif()
+		else()
+			message(FATAL_ERROR "Missing jpeg-turbo in \"${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/jpeg-turbo\"")
+		endif()
 	endif()
 
 	add_definitions(-DSODIUM_STATIC)
 	add_definitions(-DZMQ_STATIC)
 
-	if(NOT LIBS_ROOT)
-		message(FATAL_ERROR "V-Ray AppSDK require ZMQ and ZMQ wrapper to build")
-	endif()
 	add_definitions(-DWITH_VRAY_FOR_BLENDER_ZMQ)
 endif()
 

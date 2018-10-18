@@ -85,6 +85,8 @@ file(GLOB_RECURSE SOURCES *.cpp *.hpp)
 
 if (WITH_CYCLES_OSL)
 	add_definitions(-DWITH_OSL)
+	add_definitions(-DOSL_STATIC_BUILD)
+	add_definitions(-DOSL_STATIC_LIBRARY)
 endif()
 
 
