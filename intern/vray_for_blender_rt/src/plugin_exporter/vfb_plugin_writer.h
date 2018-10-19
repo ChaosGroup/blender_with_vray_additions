@@ -19,17 +19,17 @@
 #ifndef VRAY_FOR_BLENDER_PLUGIN_WRITER_FILE_H
 #define VRAY_FOR_BLENDER_PLUGIN_WRITER_FILE_H
 
+#include "vfb_plugin_attrs.h"
+#include "vfb_export_settings.h"
+#include "vfb_thread_manager.h"
+#include "vfb_utils_vrscene.h"
+
 #include <cstdio>
 #include <string>
 #include <memory>
 #include <atomic>
-#include <set>
 #include <deque>
-
-#include "vfb_plugin_attrs.h"
-#include "vfb_export_settings.h"
-#include "vfb_thread_manager.h"
-
+#include <algorithm>
 
 namespace VRayForBlender {
 
@@ -49,7 +49,7 @@ public:
 
 	bool good() const;
 
-	file_t *getFile() { return m_file; }
+	file_t *getFile() const { return m_file; }
 	void setAnimationFrame(float frame) { m_animationFrame = frame; }
 	float getAnimationFrame() const { return m_animationFrame; }
 
@@ -85,7 +85,7 @@ public:
 		auto & item = m_items.back();
 
 		// Array's data is actually shared_ptr so copy it inside to preserve the data
-		m_threadManager->addTask([&item, task, this](int, const volatile bool &) {
+		m_threadManager->addTask([&item, task](int, const volatile bool &) {
 			char * zipData = GetStringZip(reinterpret_cast<const u_int8_t *>(*task), task.getBytesCount());
 			item.asyncDone(zipData);
 		}, ThreadManager::Priority::LOW);
@@ -160,7 +160,6 @@ private:
 	file_t                         *m_file; ///< The file object coming from python api
 	ExporterSettings::ExportFormat  m_format; ///< The file format (ASCII, HEX, ZIP)
 
-private:
 	PluginWriter(const PluginWriter&) = delete;
 	PluginWriter &operator=(const PluginWriter&) = delete;
 };
