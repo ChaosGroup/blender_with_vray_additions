@@ -32,8 +32,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/format/free_funcs.hpp>
-#include <boost/filesystem.hpp>
 
 using namespace VRayForBlender;
 
