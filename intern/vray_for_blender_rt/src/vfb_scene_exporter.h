@@ -344,7 +344,7 @@ public:
 	/// Export all scene data for the current frame
 	void                 sync(const bool check_updated=false);
 	void                 sync_view(const bool check_updated=false);
-	void                 pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg);
+	void                 pre_sync_object(bool check_updated, BL::Object &ob);
 
 	void                 sync_objects(const bool check_updated=false);
 	void                 sync_effects(const bool check_updated=false);
@@ -415,8 +415,6 @@ protected:
 	VRaySettingsExporter m_settingsExporter; ///< Exporter for all Settings* plugins
 
 	uint32_t             m_sceneComputedLayers; ///< Bool values for each layer compressed in one int
-
-	ThreadManager::Ptr   m_threadManager; ///< Pointer to the ThreadManager used for object export
 
 	bool                 m_isLocalView; ///< True if "local view" is enabled
 	bool                 m_isUndoSync; ///< True if the current sync is caused because user did undo action

@@ -353,16 +353,6 @@ void SceneExporter::init() {
 	setup_callbacks();
 
 	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
-
-	if (!m_threadManager) {
-		// lets init ThreadManager based on object count
-		if (m_scene.objects.length() > 10) { // TODO: change to appropriate number
-			m_threadManager = ThreadManager::make(2);
-		} else {
-			// thread manager with 0 means all objects will be exported from current thread
-			m_threadManager = ThreadManager::make(0);
-		}
-	}
 }
 
 void SceneExporter::init_data()
@@ -379,14 +369,8 @@ void SceneExporter::create_exporter()
 	}
 }
 
-
 void SceneExporter::free()
-{
-	if (m_threadManager) {
-		m_threadManager->stop();
-	}
-}
-
+{}
 
 void SceneExporter::render_start()
 {
@@ -1144,97 +1128,83 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 	m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_MODIFIER, true);
 }
 
-void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, CondWaitGroup &wg) {
+void SceneExporter::pre_sync_object(bool check_updated, BL::Object &ob) {
 	if (is_interrupted()) {
 		return;
 	}
 
-	m_threadManager->addTask([this, check_updated, ob, &wg](int, const volatile bool &) mutable {
-		// make wrapper to call wg.done() on function exit
-		RAIIWaitGroupTask<CondWaitGroup> doneTask(wg);
+	const auto obName = ob.name();
+	SCOPED_TRACE_EX("Export task for object (%s)", obName.c_str());
+
+	using namespace Blender;
+	const ObjectUpdateFlag flags = getObjectUpdateState(ob);
+
+	const bool is_updated = m_data_exporter.hasLayerChanged() || (check_updated ? flags & ObjectUpdateFlag::Object : true);
+	const bool visible = m_data_exporter.isObjectVisible(ob);
+
+	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
+	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+	const bool noClipper = !RNA_boolean_get(&vrayClipper, "enabled");
+
+	bool has_array_mod = false;
+	if (noClipper) {
+		for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
+			if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
+				// stop on last non array mod - we export only array mods on top of mod stack
+				break;
+			}
+			if (ob.modifiers[c].show_render()) {
+				// we found atleast one stuitable array mod
+				has_array_mod = true;
+				break;
+			}
+		}
+	}
+	if (ob.is_duplicator()) {
+		if (is_updated) {
+			sync_dupli(ob, check_updated);
+		}
 		if (is_interrupted()) {
 			return;
 		}
 
-		const auto obName = ob.name();
-		SCOPED_TRACE_EX("Export task for object (%s)", obName.c_str());
+		// As in old exporter - dont sync base if its light dupli
+		if (!Blender::IsLight(ob)) {
+			ObjectOverridesAttrs overAttrs;
 
-		using namespace Blender;
-		const ObjectUpdateFlag flags = getObjectUpdateState(ob);
+			overAttrs.override = true;
+			overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+			overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+			overAttrs.visible = visible;
 
-		const bool is_updated = m_data_exporter.hasLayerChanged() || (check_updated ? flags & ObjectUpdateFlag::Object : true);
-		const bool visible = m_data_exporter.isObjectVisible(ob);
-
-		PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
-		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-		const bool noClipper = !RNA_boolean_get(&vrayClipper, "enabled");
-
-		bool has_array_mod = false;
-		if (noClipper) {
-			for (int c = ob.modifiers.length() - 1; c >= 0; --c) {
-				if (ob.modifiers[c].type() != BL::Modifier::type_ARRAY) {
-					// stop on last non array mod - we export only array mods on top of mod stack
-					break;
-				}
-				if (ob.modifiers[c].show_render()) {
-					// we found atleast one stuitable array mod
-					has_array_mod = true;
-					break;
-				}
-			}
+			sync_object(ob, check_updated, overAttrs);
 		}
-		if (ob.is_duplicator()) {
-			if (is_updated) {
-				sync_dupli(ob, check_updated);
-			}
-			if (is_interrupted()) {
-				return;
-			}
+	}
+	else if (has_array_mod) {
+		sync_array_mod(ob, check_updated);
+	}
+	else {
+		sync_object(ob, check_updated);
+	}
 
-			// As in old exporter - dont sync base if its light dupli
-			if (!Blender::IsLight(ob)) {
-				ObjectOverridesAttrs overAttrs;
-
-				overAttrs.override = true;
-				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overAttrs.visible = visible;
-
-				sync_object(ob, check_updated, overAttrs);
-			}
-		}
-		else if (has_array_mod) {
-			sync_array_mod(ob, check_updated);
-		}
-		else {
-			sync_object(ob, check_updated);
-		}
-
-		if (ob.select()) {
-			m_selectedObjects.push_back(ob);
-		}
-	}, ThreadManager::Priority::LOW);
+	if (ob.select()) {
+		m_selectedObjects.push_back(ob);
+	}
 }
 
 void SceneExporter::sync_objects(const bool check_updated) {
 	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
 
 	if (!m_frameExporter.isCurrentSubframe()) {
-		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
 		for (auto & ob : Blender::collection(m_scene.objects)) {
 			// If motion blur is enabled, export only object without subframes, theese with will be exported later
 			if (!m_settings.use_motion_blur) {
-				pre_sync_object(check_updated, ob, wg);
+				pre_sync_object(check_updated, ob);
 			} else {
 				if (!m_frameExporter.hasObjectSubframes(ob)) {
-					pre_sync_object(check_updated, ob, wg);
+					pre_sync_object(check_updated, ob);
 				}
 			}
-		}
-
-		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
-			wg.wait();
 		}
 
 		// this needs to happen after all object are already exported
@@ -1246,15 +1216,10 @@ void SceneExporter::sync_objects(const bool check_updated) {
 	}
 	else{
 		auto range = m_frameExporter.getObjectsWithCurrentSubframes();
-		CondWaitGroup wg(m_frameExporter.countObjectsWithCurrentSubframes());
+
 		for (auto obIt = range.first; obIt != range.second; ++obIt) {
 			BL::Object ob((*obIt).second);
-			pre_sync_object(check_updated, ob, wg);
-		}
-
-		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
-			wg.wait();
+			pre_sync_object(check_updated, ob);
 		}
 	}
 }
