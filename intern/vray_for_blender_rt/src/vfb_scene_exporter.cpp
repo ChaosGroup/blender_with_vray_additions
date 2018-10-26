@@ -401,6 +401,7 @@ void SceneExporter::render_start()
 bool SceneExporter::export_scene(const bool check_updated)
 {
 	m_settingsExporter.init(m_exporter, m_scene, m_context);
+	m_data_exporter.setIsIPR(check_updated);
 	return true;
 }
 

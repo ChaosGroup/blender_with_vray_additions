@@ -157,10 +157,14 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
-		PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
-		attrValue = AttrPlugin(geomDesc.pluginName);
+		const std::string meshName = getMeshName(ob) + getIdUniqueName(ntree);
 
-		if (m_settings.export_meshes) {
+		if (m_exporter->getPluginManager().inCache(meshName)) {
+			attrValue = AttrPlugin(meshName);
+		}
+		else if (m_settings.export_meshes) {
+			PluginDesc geomDesc(meshName, "GeomStaticMesh");
+
 			PointerRNA geomStaticMesh = RNA_pointer_get(&node.ptr, "GeomStaticMesh");
 			const int osdLevel = RNA_int_get(&geomStaticMesh, "osd_subdiv_level");
 
@@ -169,8 +173,15 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 			options.mode = m_evalMode;
 			options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 
-			int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
-			if (!err) {
+			const Mesh::MeshExportResult res = FillMeshData(m_data,
+			                                                m_scene,
+			                                                ob,
+			                                                options,
+			                                                geomDesc,
+			                                                m_exporter->getPluginManager(),
+			                                                m_exporter->get_current_frame(),
+			                                                !isIPR);
+			if (res == Mesh::MeshExportResult::exported) {
 				geomDesc.add("dynamic_geometry", RNA_boolean_get(&geomStaticMesh, "dynamic_geometry"));
 				geomDesc.add("environment_geometry", RNA_boolean_get(&geomStaticMesh, "environment_geometry"));
 				geomDesc.add("primary_visibility", RNA_boolean_get(&geomStaticMesh, "primary_visibility"));

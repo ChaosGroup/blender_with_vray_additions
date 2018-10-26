@@ -343,7 +343,7 @@ public:
 	/// Get plugin name for given object and override attributes
 	std::string       getObjectPluginName(BL::Object ob, const ObjectOverridesAttrs &overrideAttr = ObjectOverridesAttrs());
 
-	static std::string       getIdUniqueName(BL::Pointer ob);
+	static std::string       getIdUniqueName(const BL::Pointer &ob);
 	static std::string       getIdUniqueName(ID * id);
 
 	/// Used for Cryptomatte
@@ -396,7 +396,6 @@ public:
 	void              setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL::NodeSocket &fromSocket, NodeContext &context, PluginDesc &pluginDesc);
 	void              setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const ParamDesc::AttrDesc &attrName, PluginDesc &pluginDesc);
 	void              setAttrsFromPropGroupAuto(PluginDesc &pluginDesc, PointerRNA *propGroup, const std::string &pluginID);
-
 
 	BL::NodeSocket    getSocketByAttr(BL::Node node, const std::string &attrName);
 	BL::Node          getConnectedNode(BL::NodeTree &ntree, BL::NodeSocket &fromSocket, NodeContext &context);
@@ -473,6 +472,9 @@ public:
 	void              setActiveCamera(BL::Object camera);
 	void              refreshHideLists();
 	bool              isObjectInHideList(BL::Object ob, const std::string &listName) const;
+
+	/// Set IPR update state.
+	void setIsIPR(int value) { isIPR = value; }
 
 private:
 	/// Find the corresponding uvwgen used for the texture that might be attached to @textureSocket
@@ -583,7 +585,6 @@ private:
 	MaterialCache     m_exported_materials;
 	std::mutex        m_materials_mtx;
 
-
 	struct InstancerData {
 		AttrInstancer instancer;
 		BL::Object ob;
@@ -593,6 +594,9 @@ private:
 	typedef HashMap<std::string, InstancerData> InstCache;
 	InstCache         m_prevFrameInstancer;
 	std::mutex        m_instMtx;
+
+	/// Flag indicating that we're inside an IPR update call.
+	int isIPR{false};
 };
 
 // implemented in vfb_export_object.cpp

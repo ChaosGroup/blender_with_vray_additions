@@ -135,11 +135,23 @@ AttrValue DataExporter::exportDomainGeomStaticMesh(const std::string &geomPlugin
 	options.mode = m_evalMode;
 	options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 
-	if (VRayForBlender::Mesh::FillMeshData(m_data, m_scene, domainOb, options, geomDesc)) {
-		return AttrValue();
+	const Mesh::MeshExportResult res = FillMeshData(m_data,
+	                                                m_scene,
+	                                                domainOb,
+	                                                options,
+	                                                geomDesc,
+	                                                m_exporter->getPluginManager(),
+	                                                m_exporter->get_current_frame(),
+	                                                !isIPR);
+	switch (res) {
+		case Mesh::MeshExportResult::exported:
+			return m_exporter->export_plugin(geomDesc);
+		case Mesh::MeshExportResult::cached:
+			return AttrValue(geomPluginName);
+		case Mesh::MeshExportResult::error:
+		default:
+			return AttrValue();
 	}
-
-	return m_exporter->export_plugin(geomDesc);
 }
 
 AttrValue DataExporter::exportVRayNodeSmokeDomain(BL::NodeTree ntree, BL::Node node, BL::Object domainOb, NodeContext &context)

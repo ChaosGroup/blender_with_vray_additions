@@ -771,18 +771,17 @@ std::string DataExporter::getAssetName(BL::Object ob)
 
 std::string DataExporter::getNodeName(BL::Object ob)
 {
-	return "Node@" + getIdUniqueName(ob);
+	return "Node@" + getIdUniqueName(static_cast<BL::ID>(ob));
 }
 
 std::string DataExporter::getMeshName(BL::Object ob)
 {
-	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
-	                 ? ob
-	                 : ob.data();
+	const BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
+		                       ? static_cast<BL::ID>(ob)
+		                       : ob.data();
 
 	return "Geom@" + getIdUniqueName(data_id);
 }
-
 
 std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset)
 {
@@ -902,7 +901,7 @@ std::vector<std::string> DataExporter::cryptomatteAllNames(BL::Object ob) {
 	return names;
 }
 
-std::string DataExporter::getIdUniqueName(BL::Pointer ob) {
+std::string DataExporter::getIdUniqueName(const BL::Pointer &ob) {
 	return getIdUniqueName(reinterpret_cast<ID*>(ob.ptr.data));
 }
 

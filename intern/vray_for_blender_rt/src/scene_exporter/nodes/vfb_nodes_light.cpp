@@ -24,7 +24,7 @@ AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &n
 {
 	AttrValue attrValue;
 
-	auto ob = context.object_context.object;
+	BL::Object ob = context.object_context.object;
 
 	if(!ob) {
 		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
@@ -40,12 +40,13 @@ AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &n
 		return attrValue;
 	}
 
-	std::string prefix = "";
+	std::string prefix;
 	if (override && !override.useInstancer) {
 		prefix = override.namePrefix;
 	}
 
-	const auto pluginName = prefix + "MeshLight@" + GenPluginName(node, ntree, context);
+	const std::string pluginName = prefix + "MeshLight@" + getIdUniqueName(ob);
+
 	PluginDesc pluginDesc(pluginName, "LightMesh");
 	setAttrsFromNodeAuto(ntree, node, fromSocket, context, pluginDesc);
 

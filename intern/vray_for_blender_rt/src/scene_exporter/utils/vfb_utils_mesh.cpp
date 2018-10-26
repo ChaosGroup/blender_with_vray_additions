@@ -20,23 +20,27 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_math.h"
 #include "vfb_typedefs.h"
+#include "vfb_plugin_manager.h"
 
 #include "utils/cgr_hash.h"
 
+#include "DNA_mesh_types.h"
+
+#include <thread>
+
 using namespace VRayForBlender;
 
-struct ChanVertex {
-	ChanVertex():
-	    v(),
-	    index(0)
+struct ChanVertex
+{
+	ChanVertex()
+		: index(0)
 	{}
 
 	template <int size>
 	ChanVertex(const BL::Array<float, size> &data)
-		: v()
-	    , index(0)
+		: index(0)
 	{
-		float * dest = &v.x;
+		float *dest = &v.x;
 		for (int c = 0; c < std::min(3, size); c++) {
 			dest[c] = data[c];
 		}
@@ -54,7 +58,7 @@ struct MapVertexHash {
 	std::size_t operator () (const ChanVertex &mv) const {
 		MHash hash;
 		MurmurHash3_x86_32(&mv.v, sizeof(AttrVector), 42, &hash);
-		return (std::size_t)hash;
+		return static_cast<std::size_t>(hash);
 	}
 };
 
@@ -133,7 +137,6 @@ struct MapChannelRaw:
 			for (mesh.tessfaces.begin(faceIt); faceIt != mesh.tessfaces.end(); ++faceIt, ++faceIdx) {
 				BlFace faceVerts = faceIt->vertices_raw();
 
-				BL::Mesh::tessface_uv_textures_iterator uvIt;
 				for(mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
 					BL::MeshTextureFaceLayer  uvLayer(*uvIt);
 					const std::string &uvLayerName = uvLayer.name();
@@ -159,7 +162,6 @@ struct MapChannelRaw:
 					}
 				}
 
-				BL::Mesh::tessface_vertex_colors_iterator colIt;
 				for(mesh.tessface_vertex_colors.begin(colIt); colIt != mesh.tessface_vertex_colors.end(); ++colIt) {
 					BL::MeshColorLayer  colLayer(*colIt);
 					const std::string &colLayerName = colLayer.name();
@@ -188,7 +190,7 @@ struct MapChannelRaw:
 
 			// Setup face data
 			for (auto &mcIt : map_channels.data) {
-				for (int i = 0; i < mcIt.second.faces.getData()->size(); ++i) {
+				for (int i = 0; i < int(mcIt.second.faces.getData()->size()); ++i) {
 					(*mcIt.second.faces)[i] = i;
 				}
 			}
@@ -300,10 +302,29 @@ private:
 
 };
 
-
-int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, VRayForBlender::Mesh::ExportOptions options, PluginDesc &pluginDesc)
+static int getThreadID()
 {
-	int err = 0;
+	return std::hash<std::thread::id>()(std::this_thread::get_id()) % 100000;
+}
+
+VRayForBlender::Mesh::MeshExportResult VRayForBlender::Mesh::FillMeshData(BL::BlendData data,
+                                                                          BL::Scene scene,
+                                                                          BL::Object ob,
+                                                                          ExportOptions options,
+                                                                          PluginDesc &pluginDesc,
+                                                                          PluginManager &plugMan,
+                                                                          float t,
+                                                                          int checkCache)
+{
+	if (checkCache) {
+		if (plugMan.inCache(pluginDesc.pluginName))
+			return MeshExportResult::cached;
+
+		// Update cache as soon as possible to prevent duplicate data processing.
+		plugMan.updateCache(pluginDesc, t);
+	}
+
+	PRINT_INFO_EX("[%i] \"%s\"", getThreadID(), ob.name().c_str());
 
 	ScopedTraceFormat trace("Waiting for WRITE_LOCK_BLENDER for object (%s)", ob.name().c_str());
 	WRITE_LOCK_BLENDER_RAII;
@@ -357,9 +378,8 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 	if (!mesh) {
 		PRINT_ERROR("Object: %s => Incorrect mesh!",
 			ob.name().c_str());
-		return 1;
+		return MeshExportResult::error;
 	}
-
 
 	const int useAutoSmooth = mesh.use_auto_smooth();
 	if (useAutoSmooth) {
@@ -377,7 +397,15 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 	}
 
 	if (numFaces == 0) {
-		return err;
+		::Mesh *rawMesh = reinterpret_cast<::Mesh*>(ob.data().ptr.data);
+
+		if (rawMesh->totface > 0) {
+			assert(false);
+		}
+
+		data.meshes.remove(mesh, false, true, false);
+		PRINT_WARN("Object: %s => Empty mesh!", ob.name().c_str());
+		return MeshExportResult::error;
 	}
 
 	AttrListVector  vertices(mesh.vertices.length());
@@ -514,7 +542,7 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 
 		// Store UV / vertex colors
 		if (channels_data->numChannels() && channels_data->needProcessFaces()) {
-			int channel_vert_index = chanVertIndex;
+			const int channel_vert_index = chanVertIndex;
 
 			BL::Mesh::tessface_uv_textures_iterator uvIt;
 			for (mesh.tessface_uv_textures.begin(uvIt); uvIt != mesh.tessface_uv_textures.end(); ++uvIt) {
@@ -588,5 +616,5 @@ int VRayForBlender::Mesh::FillMeshData(BL::BlendData data, BL::Scene scene, BL::
 		pluginDesc.add("dynamic_geometry", true);
 	}
 
-	return err;
+	return MeshExportResult::exported;
 }

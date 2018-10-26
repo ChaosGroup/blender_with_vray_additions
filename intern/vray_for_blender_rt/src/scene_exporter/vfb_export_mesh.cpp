@@ -21,22 +21,43 @@
 
 using namespace VRayForBlender;
 
-AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs & oattrs)
+AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverridesAttrs &oattrs)
 {
 	AttrValue geom;
 
-	PluginDesc geomDesc(getMeshName(ob), "GeomStaticMesh");
+	const std::string meshName = getMeshName(ob);
 
-	VRayForBlender::Mesh::ExportOptions options;
+	PluginDesc geomDesc(meshName, "GeomStaticMesh");
+
+	Mesh::ExportOptions options;
 	options.merge_channel_vertices = false;
 	options.mode = m_evalMode;
 	options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 	options.force_dynamic_geometry = m_settings.is_gpu && m_settings.is_viewport ||
 	                                 oattrs && oattrs.useInstancer;
 
-	const int err = VRayForBlender::Mesh::FillMeshData(m_data, m_scene, ob, options, geomDesc);
-	if (!err) {
-		geom = m_exporter->export_plugin(geomDesc);
+	const Mesh::MeshExportResult res = FillMeshData(m_data,
+	                                                m_scene,
+	                                                ob,
+	                                                options,
+	                                                geomDesc,
+	                                                m_exporter->getPluginManager(),
+	                                                m_exporter->get_current_frame(),
+	                                                !isIPR);
+
+	switch (res) {
+		case Mesh::MeshExportResult::exported: {
+			geom = m_exporter->export_plugin(geomDesc);
+			break;
+		}
+		case Mesh::MeshExportResult::cached: {
+			geom = AttrValue(meshName);
+			break;
+		}
+		case Mesh::MeshExportResult::error:
+		default: {
+			break;
+		}
 	}
 
 	return geom;
