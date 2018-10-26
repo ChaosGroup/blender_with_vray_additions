@@ -324,7 +324,7 @@ VRayForBlender::Mesh::MeshExportResult VRayForBlender::Mesh::FillMeshData(BL::Bl
 		plugMan.updateCache(pluginDesc, t);
 	}
 
-	PRINT_INFO_EX("[%i] \"%s\"", getThreadID(), ob.name().c_str());
+	// PRINT_INFO_EX("[%i] \"%s\"", getThreadID(), ob.name().c_str());
 
 	ScopedTraceFormat trace("Waiting for WRITE_LOCK_BLENDER for object (%s)", ob.name().c_str());
 	WRITE_LOCK_BLENDER_RAII;
