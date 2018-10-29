@@ -399,9 +399,7 @@ VRayForBlender::Mesh::MeshExportResult VRayForBlender::Mesh::FillMeshData(BL::Bl
 	if (numFaces == 0) {
 		::Mesh *rawMesh = reinterpret_cast<::Mesh*>(ob.data().ptr.data);
 
-		if (rawMesh->totface > 0) {
-			assert(false);
-		}
+		VFB_Assert(rawMesh->totface == 0 && "Raw mesh has different faces than c++ api mesh");
 
 		data.meshes.remove(mesh, false, true, false);
 		PRINT_WARN("Object: %s => Empty mesh!", ob.name().c_str());
