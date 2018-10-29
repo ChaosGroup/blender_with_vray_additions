@@ -275,4 +275,6 @@ typedef unsigned __int64 u_int64_t;
 
 #define CGR_TRANSFORM_HEX_SIZE  129
 
+#define USE_MT_EXPORTER 0
+
 #endif // CGR_CONFIG

@@ -355,6 +355,7 @@ void SceneExporter::init() {
 	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
 
 	if (!m_threadManager) {
+#if USE_MT_EXPORTER
 		// lets init ThreadManager based on object count
 		if (m_scene.objects.length() > 10) { // TODO: change to appropriate number
 			m_threadManager = ThreadManager::make(2);
@@ -362,6 +363,9 @@ void SceneExporter::init() {
 			// thread manager with 0 means all objects will be exported from current thread
 			m_threadManager = ThreadManager::make(0);
 		}
+#else
+		m_threadManager = ThreadManager::make(0);
+#endif
 	}
 }
 
