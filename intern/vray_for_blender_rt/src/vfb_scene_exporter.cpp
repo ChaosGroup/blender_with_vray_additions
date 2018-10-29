@@ -418,7 +418,7 @@ void SceneExporter::render_start()
 
 bool SceneExporter::export_scene(const bool check_updated)
 {
-	m_settingsExporter.init(m_exporter, m_scene, m_context);
+	m_settingsExporter.init(m_exporter, m_scene, m_context, get_current_view_params());
 	return true;
 }
 

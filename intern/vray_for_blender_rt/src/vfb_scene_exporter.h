@@ -312,7 +312,7 @@ public:
 		, m_exporter(nullptr)
 		, m_frameExporter(m_settings)
 		, m_data_exporter(m_settings)
-		, m_settingsExporter(m_data_exporter, m_settings, m_viewParams, m_frameExporter)
+		, m_settingsExporter(m_data_exporter, m_settings, m_frameExporter)
 		, m_sceneComputedLayers(0)
 		, m_isLocalView(false)
 		, m_isUndoSync(false)

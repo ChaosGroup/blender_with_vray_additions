@@ -468,15 +468,15 @@ const HashSet<std::string> VRaySettingsExporter::DelayPlugins = {
 	"SettingsEXR",
 	"SettingsVRST",
 	"SettingsImageSampler",
-	"SettingsOutput",
 };
 
 
-void VRaySettingsExporter::init(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context)
+void VRaySettingsExporter::init(PluginExporterPtr pluginExporter, BL::Scene &scene, BL::Context &context, const ViewParams &viewParams)
 {
 	this->pluginExporter = pluginExporter;
 	this->scene = scene;
 	this->context = context;
+	this->viewParams = viewParams;
 
 	vrayScene = RNA_pointer_get(&scene.ptr, "vray");
 	vrayExporter = RNA_pointer_get(&vrayScene, "Exporter");
@@ -839,6 +839,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		pluginDesc.add("anim_start", frameExporter.getFirstFrame());
 		pluginDesc.add("anim_end", frameExporter.getLastFrame());
 		pluginDesc.add("frame_start", frameExporter.getFirstFrame());
+		pluginDesc.add("frames_per_second", 1);
 
 		if (settings.is_preview) {
 			pluginDesc.add("img_noAlpha", true);
@@ -934,7 +935,9 @@ void VRaySettingsExporter::exportLCGISettings()
 void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginParamDesc &desc)
 {
 	PointerRNA propGroup;
-	PluginDesc pluginDesc(desc.pluginID, desc.pluginID);
+	std::string pluginName = desc.pluginID;
+	pluginName[0] = tolower(pluginName[0]);
+	PluginDesc pluginDesc(pluginName, desc.pluginID);
 	try {
 		if (!checkPluginOverrides(desc.pluginID, propGroup, pluginDesc)) {
 			return;
