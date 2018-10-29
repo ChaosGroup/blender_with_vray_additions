@@ -327,16 +327,18 @@ void ExporterSettings::updateObjectsData(BL::Scene scene, const std::string &lef
 			selectedObjects.insert(ob);
 		}
 
-		if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop) {
+		if (settings_animation.mode == SettingsAnimation::AnimationModeCameraLoop && ob.data()) {
 			auto dataPtr = ob.data().ptr;
 			PointerRNA vrayCamera = RNA_pointer_get(&dataPtr, "vray");
-			if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-				loopCameras.push_back(ob);
-			}
+			if (vrayCamera.type) {
+				if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+					loopCameras.push_back(ob);
+				}
 
-			if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
-				if (RNA_boolean_get(&vrayCamera, "hide_from_view")) {
-					use_hide_from_view = true;
+				if (RNA_boolean_get(&vrayCamera, "use_camera_loop")) {
+					if (RNA_boolean_get(&vrayCamera, "hide_from_view")) {
+						use_hide_from_view = true;
+					}
 				}
 			}
 		}
