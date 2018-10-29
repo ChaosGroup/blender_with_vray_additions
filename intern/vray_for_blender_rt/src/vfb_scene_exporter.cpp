@@ -422,22 +422,23 @@ void SceneExporter::calculate_scene_layers()
 		if (m_settings.use_active_layers == ExporterSettings::ActiveLayersCustom) {
 			viewLayers = m_settings.active_layers;
 		} else if (m_settings.use_active_layers == ExporterSettings::ActiveLayersAll) {
-			for (int c = 0; c < 20; ++c) {
-				viewLayers[c] = 1;
+			for (int c = 0; c < ArraySize(viewLayers.data); ++c) {
+				viewLayers[c] = true;
 			}
 		} else {
 			viewLayers = m_scene.layers();
 		}
 	}
 
-	for (int c = 0; c < 20; ++c) {
+	for (int c = 0; c < ArraySize(viewLayers.data); ++c) {
 		m_sceneComputedLayers |= (!!viewLayers[c] << c);
 	}
 
 	if (m_isLocalView) {
+		const int offsetLayers = ArraySize(viewLayers.data);
 		auto viewLocalLayers = m_view3d.layers_local_view();
-		for (int c = 0; c < 8; ++c) {
-			m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
+		for (int c = 0; c < ArraySize(viewLocalLayers.data); ++c) {
+			m_sceneComputedLayers |= (!!viewLocalLayers[c] << (offsetLayers + c));
 		}
 
 		// truncate to local view layers

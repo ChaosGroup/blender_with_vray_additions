@@ -29,8 +29,8 @@ using namespace VRayForBlender;
 
 uint32_t VRayForBlender::to_int_layer(const BlLayers & layers) {
 	uint32_t res = 0;
-	for (int c = 0; c < 20; ++c) {
-		res |= layers[c];
+	for (int c = 0; c < ArraySize(layers.data); ++c) {
+		res |= static_cast<int>(layers[c]) << c;
 	}
 	return res;
 }
@@ -42,7 +42,10 @@ uint32_t VRayForBlender::get_layer(BL::Object ob, bool use_local, uint32_t scene
 	auto ob_layers = ob.layers();
 	auto ob_local_layers = ob.layers_local_view();
 
-	for (int c = 0; c < 20; c++) {
+	const int localLayerCount = ArraySize(ob_local_layers.data);
+	const int layerCount = ArraySize(ob_layers.data);
+
+	for (int c = 0; c < layerCount; c++) {
 		if (ob_layers[c]) {
 			layer |= (1 << c);
 		}
@@ -53,20 +56,20 @@ uint32_t VRayForBlender::get_layer(BL::Object ob, bool use_local, uint32_t scene
 		 * override, which matches behavior of Blender Internal.
 		 */
 		if (layer & scene_layers) {
-			for (int c = 0; c < 8; c++) {
-				layer |= (1 << (20 + c));
+			for (int c = 0; c < localLayerCount; c++) {
+				layer |= (1 << (layerCount + c));
 			}
 		}
 	} else {
-		for (int c = 0; c < 8; c++) {
+		for (int c = 0; c < localLayerCount; c++) {
 			if (ob_local_layers[c]) {
-				layer |= (1 << (20 + c));
+				layer |= (1 << (layerCount + c));
 			}
 		}
 	}
 
 	if (use_local) {
-		layer >>= 20;
+		layer >>= layerCount;
 	}
 
 	return layer;
