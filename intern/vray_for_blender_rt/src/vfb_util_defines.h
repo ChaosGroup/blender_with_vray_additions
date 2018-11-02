@@ -77,4 +77,10 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 	#define VFB_Assert(test) (void)((!(test)) ? (_VFB_ASSERT_PRINT_POS(test), 0) : 0);
 #endif
 
+/// Disables copy-constructor and assignment operator
+#define VFB_DISABLE_COPY(cls) \
+private: \
+	cls(const cls&) = delete; \
+	cls& operator=(const cls&) = delete;
+
 #endif // CGR_UTIL_DEFINES_H
