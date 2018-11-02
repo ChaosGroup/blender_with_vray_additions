@@ -417,6 +417,7 @@ const HashSet<std::string> VRaySettingsExporter::IgnoredPlugins = {
 	// Deprecated
 	"SettingsPhotonMap",
 	"RTEngine",
+	"EffectLens",
 	// Manually exported
 	"SettingsGI",
 	"SettingsLightCache",
@@ -454,10 +455,6 @@ void VRaySettingsExporter::exportPlugins()
 	const PluginParamDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
 	for (const ParamDesc::PluginParamDesc * const desc : settingsPlugins) {
 		if (IgnoredPlugins.find(desc->pluginID) != IgnoredPlugins.end()) {
-			continue;
-		}
-
-		if (!settings.show_vfb && desc->pluginID == "EffectLens") {
 			continue;
 		}
 
@@ -805,8 +802,6 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			pluginDesc.add("img_noAlpha", true);
 		}
 	} else if (pluginId == "SettingsRTEngine") {
-		pluginDesc.add("enabled", true);
-
 		if (settings.is_viewport) {
 			pluginDesc.add("cpu_samples_per_pixel", 1);
 			pluginDesc.add("cpu_bundle_size", 64);
