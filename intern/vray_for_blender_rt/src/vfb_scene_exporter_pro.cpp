@@ -78,7 +78,7 @@ bool ProductionExporter::wait_for_frame_render()
 	bool stop = false;
 	m_exporter->start();
 	if (m_settings.settings_animation.use) {
-		PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+		getLog().info("Waiting for renderer to render animation frame %f, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
 	}
 
 	auto lastTime = high_resolution_clock::now();
@@ -89,16 +89,16 @@ bool ProductionExporter::wait_for_frame_render()
 		if (duration_cast<seconds>(now - lastTime).count() > 1) {
 			lastTime = now;
 			if (m_settings.settings_animation.use) {
-				PRINT_INFO_EX("Waiting for renderer to render animation frame %f, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
+				getLog().info("Waiting for renderer to render animation frame %f, current %f", m_frameExporter.getCurrentRenderFrame(), m_exporter->get_last_rendered_frame());
 			}
 		}
 		if (is_interrupted()) {
-			PRINT_INFO_EX("Interrupted - stopping animation rendering!");
+			getLog().info("Interrupted - stopping animation rendering!");
 			stop = true;
 			break;
 		}
 		if (m_exporter->is_aborted()) {
-			PRINT_INFO_EX("Renderer stopped - stopping animation rendering!");
+			getLog().info("Renderer stopped - stopping animation rendering!");
 			stop = true;
 			break;
 		}
@@ -230,7 +230,7 @@ bool ProductionExporter::export_scene(const bool)
 
 		// wait render for current frame only
 		if (actualRendering) {
-			PRINT_INFO_EX("Frame sync time %.3f sec.", frameSyncSeconds);
+			getLog().info("Frame sync time %.3f sec.", frameSyncSeconds);
 			if (!wait_for_frame_render()) {
 				break;
 			}
@@ -240,7 +240,7 @@ bool ProductionExporter::export_scene(const bool)
 
 	m_data_exporter.flushInstancerData();
 
-	PRINT_INFO_EX("Total sync time %.3f sec.", totalSyncTime);
+	getLog().info("Total sync time %.3f sec.", totalSyncTime);
 
 	if (!isFileExport) {
 		std::unique_lock<std::mutex> uLock(m_python_state_lock, std::defer_lock);
@@ -331,7 +331,7 @@ void ProductionExporter::draw()
 		m_lastReportTime = now;
 		if (m_settings.settings_animation.use) {
 			int progress = 100.f * m_exporter->get_progress();
-			PRINT_INFO_EX("Rendering progress frame: %f [%d%%]", m_frameExporter.getCurrentRenderFrame(), progress);
+			getLog().info("Rendering progress frame: %f [%d%%]", m_frameExporter.getCurrentRenderFrame(), progress);
 		}
 	}
 

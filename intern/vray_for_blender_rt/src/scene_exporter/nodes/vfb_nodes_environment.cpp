@@ -27,7 +27,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 
 	if (m_engine && m_engine.is_preview()) {
 		if (!m_context) {
-			PRINT_WARN("Invalid context!");
+			getLog().warning("Invalid context!");
 			return;
 		}
 		worldScene = m_context.scene();
@@ -37,13 +37,13 @@ void DataExporter::exportEnvironment(NodeContext &context)
 	}
 
 	if (!worldScene) {
-		PRINT_WARN("Invalid world context!");
+		getLog().warning("Invalid world context!");
 		return;
 	}
 
 	BL::World world = worldScene.world();
 	if (!world) {
-		PRINT_WARN("Scene doesn't contain a \"World\" datablock!");
+		getLog().warning("Scene doesn't contain a \"World\" datablock!");
 	}
 	else {
 		PointerRNA vrayWorld = RNA_pointer_get(&world.ptr, "vray");
@@ -57,7 +57,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 		if (worldTree) {
 			BL::Node worldOutput = Nodes::GetNodeByType(worldTree, "VRayNodeWorldOutput");
 			if (!worldOutput) {
-				PRINT_ERROR("Environment: \"World Output\" node is not found!");
+				getLog().error("Environment: \"World Output\" node is not found!");
 			}
 			else {
 				AttrListPlugin environment_volume;
@@ -68,7 +68,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 					BL::Node effectsNode = getConnectedNode(worldTree, effectsSock, context);
 					if (effectsNode) {
 						if (NOT(effectsNode.bl_idname() == "VRayNodeEffectsHolder")) {
-							PRINT_ERROR("Environment: \'Effects\' socket must be connected to \"Effects Container\" node!");
+							getLog().error("Environment: \'Effects\' socket must be connected to \"Effects Container\" node!");
 						}
 						else {
 							BL::Node::inputs_iterator inIt;
@@ -90,7 +90,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 					BL::Node envNode = getConnectedNode(worldTree, envSock, context);
 					if (envNode) {
 						if (NOT(envNode.bl_idname() == "VRayNodeEnvironment")) {
-							PRINT_ERROR("Environment: \'Environment\' socket must be connected to \"Environment\" node!");
+							getLog().error("Environment: \'Environment\' socket must be connected to \"Environment\" node!");
 						}
 						else {
 							pluginDesc.add("bg_color",      AttrColor(0.0f, 0.0f, 0.0f));

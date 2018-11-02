@@ -84,7 +84,7 @@ void DataExporter::refreshHideLists()
 	m_hide_lists.clear();
 
 	if (!m_active_camera) {
-		PRINT_WARN("No active camera set in DataExporter!");
+		getLog().warning("No active camera set in DataExporter!");
 		return;
 	}
 
@@ -229,13 +229,13 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		//
 		BL::Node nodeOutput = Nodes::GetNodeByType(ntree, "VRayNodeObjectOutput");
 		if (!nodeOutput) {
-			PRINT_ERROR("Object: %s Node tree: %s => Output node not found!",
+			getLog().error("Object: %s Node tree: %s => Output node not found!",
 				ob.name().c_str(), ntree.name().c_str());
 		}
 		else {
 			BL::NodeSocket geometrySocket = Nodes::GetInputSocketByName(nodeOutput, "Geometry");
 			if (!(geometrySocket && geometrySocket.is_linked())) {
-				PRINT_ERROR("Object: %s Node tree: %s => Geometry node is not set!",
+				getLog().error("Object: %s Node tree: %s => Geometry node is not set!",
 					ob.name().c_str(), ntree.name().c_str());
 			}
 			else {
@@ -251,7 +251,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 
 				if (!geom) {
-					PRINT_ERROR("Object: %s Node tree: %s => Incorrect geometry!", ob.name().c_str(), ntree.name().c_str());
+					getLog().error("Object: %s Node tree: %s => Incorrect geometry!", ob.name().c_str(), ntree.name().c_str());
 					return node;
 				}
 				// Check if connected node is a LightMesh,
@@ -264,7 +264,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				}
 				BL::NodeSocket materialSocket = Nodes::GetInputSocketByName(nodeOutput, "Material");
 				if (!(materialSocket && materialSocket.is_linked())) {
-					PRINT_ERROR("Object: %s Node tree: %s => Material node is `not set! Using object materials.",
+					getLog().error("Object: %s Node tree: %s => Material node is `not set! Using object materials.",
 						ob.name().c_str(), ntree.name().c_str());
 
 					// Use existing object materials
@@ -273,7 +273,7 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 				else {
 					mtl = DataExporter::exportSocket(ntree, materialSocket, context);
 					if (!mtl) {
-						PRINT_ERROR("Object: %s Node tree: %s => Incorrect material!",
+						getLog().error("Object: %s Node tree: %s => Incorrect material!",
 							ob.name().c_str(), ntree.name().c_str());
 					}
 				}
@@ -543,7 +543,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 				// data was updated - must export mesh
 				hair_geom = exportGeomMayaHair(ob, psys, psm);
 				if (!hair_geom) {
-					PRINT_ERROR("Object: %s => Incorrect hair geometry!", ob.name().c_str());
+					getLog().error("Object: %s => Incorrect hair geometry!", ob.name().c_str());
 				}
 			} else if (m_layer_changed) {
 				// changed layer, maybe hair's geom is still not exported
@@ -552,7 +552,7 @@ void DataExporter::exportHair(BL::Object ob, BL::ParticleSystemModifier psm, BL:
 				} else {
 					hair_geom = exportGeomMayaHair(ob, psys, psm);
 					if (!hair_geom) {
-						PRINT_ERROR("Object: %s => Incorrect geometry!", ob.name().c_str());
+						getLog().error("Object: %s => Incorrect geometry!", ob.name().c_str());
 					}
 				}
 			}

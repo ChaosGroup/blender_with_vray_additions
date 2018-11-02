@@ -27,13 +27,13 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 	AttrValue attrValue;
 
 	if (!context.object_context.object) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
 		BL::NodeSocket meshSock = Nodes::GetInputSocketByName(node, "Mesh");
 		if (!(meshSock && meshSock.is_linked())) {
-			PRINT_ERROR("Node tree: %s => Node name: %s => Mesh socket is not linked!",
+			getLog().error("Node tree: %s => Node name: %s => Mesh socket is not linked!",
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
@@ -45,7 +45,7 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 			}
 
 			if (!mesh) {
-				PRINT_ERROR("Node tree: %s => Node name: %s => Error exporting connected mesh!",
+				getLog().error("Node tree: %s => Node name: %s => Error exporting connected mesh!",
 				            ntree.name().c_str(), node.name().c_str());
 			}
 			else {
@@ -66,7 +66,7 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 					if (displace_type == 2) {
 						BL::NodeSocket texSock = Nodes::GetSocketByAttr(node, "displacement_tex_color");
 						if (!(texSock && texSock.is_linked())) {
-							PRINT_ERROR("Node tree: %s => Node name: %s => 3D displacement is selected, but no color texture presents!",
+							getLog().error("Node tree: %s => Node name: %s => 3D displacement is selected, but no color texture presents!",
 							            ntree.name().c_str(), node.name().c_str());
 
 						}
@@ -77,7 +77,7 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 					else {
 						BL::NodeSocket texSock = Nodes::GetSocketByAttr(node, "displacement_tex_float");
 						if (!(texSock && texSock.is_linked())) {
-							PRINT_ERROR("Node tree: %s => Node name: %s => Normal/2D displacement is selected, but no float texture presents!",
+							getLog().error("Node tree: %s => Node name: %s => Normal/2D displacement is selected, but no float texture presents!",
 							            ntree.name().c_str(), node.name().c_str());
 						}
 						else {
@@ -102,13 +102,13 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree &ntree
 	AttrValue attrValue;
 
 	if (!context.object_context.object) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
 		BL::NodeSocket meshSock = Nodes::GetInputSocketByName(node, "Mesh");
 		if (!(meshSock && meshSock.is_linked())) {
-			PRINT_ERROR("Node tree: %s => Node name: %s => Mesh socket is not linked!",
+			getLog().error("Node tree: %s => Node name: %s => Mesh socket is not linked!",
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
@@ -123,7 +123,7 @@ AttrValue DataExporter::exportVRayNodeGeomStaticSmoothedMesh(BL::NodeTree &ntree
 			}
 
 			if (!mesh) {
-				PRINT_ERROR("Node tree: %s => Node name: %s => Error exporting connected mesh!",
+				getLog().error("Node tree: %s => Node name: %s => Error exporting connected mesh!",
 				            ntree.name().c_str(), node.name().c_str());
 			}
 			else {
@@ -153,7 +153,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 	BL::Object ob(context.object_context.object);
 
 	if (!(ob && ob.data())) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {

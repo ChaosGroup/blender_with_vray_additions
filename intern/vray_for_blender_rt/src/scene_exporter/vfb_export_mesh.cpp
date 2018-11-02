@@ -18,6 +18,7 @@
 
 #include "vfb_node_exporter.h"
 #include "vfb_utils_mesh.h"
+#include "vfb_log.h"
 
 using namespace VRayForBlender;
 
@@ -35,6 +36,8 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 	options.use_subsurf_to_osd = m_settings.use_subsurf_to_osd;
 	options.force_dynamic_geometry = m_settings.is_gpu && m_settings.is_viewport ||
 	                                 oattrs && oattrs.useInstancer;
+
+	getLog().info("Exporting mesh: %s...", ob.name().c_str());
 
 	const Mesh::MeshExportResult res = FillMeshData(m_data,
 	                                                m_scene,

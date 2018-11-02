@@ -28,7 +28,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputMaterial(BL::NodeTree &ntree,
 
 	auto ob = context.object_context.object;
 	if (!ob) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
@@ -191,7 +191,7 @@ AttrValue DataExporter::exportVRayNodeMetaStandardMaterial(BL::NodeTree &ntree, 
 	if (context.material) {
 		mtlSingleBrdf.add("scene_name", AttrListString({context.material.name()}));
 	} else {
-		PRINT_WARN("Missing scene_name for MtlSingleBRDF (%s), Cryptomatte with material mode will exclude this one!", baseName.c_str());
+		getLog().warning("Missing scene_name for MtlSingleBRDF (%s), Cryptomatte with material mode will exclude this one!", baseName.c_str());
 	}
 
 	setAttrsFromNode(ntree, node, fromSocket, context, mtlSingleBrdf, "MtlSingleBRDF", ParamDesc::PluginMaterial);

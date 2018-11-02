@@ -221,7 +221,7 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 					}
 					if (found != 2) {
 						use_stereo_camera = false;
-						PRINT_ERROR("Failed to find cameras for stereo camera!");
+						getLog().error("Failed to find cameras for stereo camera!");
 					}
 				}
 			}
@@ -677,7 +677,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		const int minRate = get<int>(propertyGroup, "min_rate");
 		const int maxRate = get<int>(propertyGroup, "max_rate");
 		if (minRate > maxRate) {
-			PRINT_WARN("SettingsIrradianceMap: \"Min. Rate\" is more than \"Max. Rate\"");
+			getLog().warning("SettingsIrradianceMap: \"Min. Rate\" is more than \"Max. Rate\"");
 			pluginDesc.add("min_rate", maxRate);
 			pluginDesc.add("max_rate", minRate);
 		}
@@ -850,13 +850,13 @@ void VRaySettingsExporter::exportLCGISettings()
 	try {
 		checkPluginOverrides(settingsGI.pluginID, giPropGroup, settingsGI);
 	} catch (PropNotFound &ex) {
-		PRINT_ERROR("Property \"%s\" not found when exporting SettingsGI", ex.what());
+		getLog().error("Property \"%s\" not found when exporting SettingsGI", ex.what());
 	}
 
 	try {
 		checkPluginOverrides(settingsLC.pluginID, lcPropGroup, settingsLC);
 	} catch (PropNotFound &ex) {
-		PRINT_ERROR("Property \"%s\" not found when exporting SettingsLightCache", ex.what());
+		getLog().error("Property \"%s\" not found when exporting SettingsLightCache", ex.what());
 	}
 
 	dataExporter.setAttrsFromPropGroupAuto(settingsLC, &lcPropGroup, settingsLC.pluginID);
@@ -898,7 +898,7 @@ void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginParamDesc
 		dataExporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, desc.pluginID);
 		pluginExporter->export_plugin(pluginDesc);
 	} catch (PropNotFound &ex) {
-		PRINT_ERROR("Property \"%s\" not found when exporting %s", ex.what(), desc.pluginID.c_str());
+		getLog().error("Property \"%s\" not found when exporting %s", ex.what(), desc.pluginID.c_str());
 	}
 
 }

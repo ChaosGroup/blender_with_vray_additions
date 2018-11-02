@@ -137,7 +137,7 @@ void TexVoxelData::initSmoke() {
 	SmokeDomainSettings *sds = m_smd->domain;
 
 	if (NOT(sds && sds->fluid)) {
-		PRINT_ERROR("Object: %s => Domain and / or fluid data not found!", m_ob->id.name + 2);
+		getLog().error("Object: %s => Domain and / or fluid data not found!", m_ob->id.name + 2);
 		return;
 	}
 
@@ -188,7 +188,7 @@ void TexVoxelData::initSmoke() {
 			max_flame = _fl;
 		}
 	}
-	PRINT_INFO_EX("Flame range: [%.3f-%.3f]", min_flame, max_flame);
+	getLog().info("Flame range: [%.3f-%.3f]", min_flame, max_flame);
 
 	float max_dens = 0.0;
 	float min_dens = 0.0;
@@ -201,7 +201,7 @@ void TexVoxelData::initSmoke() {
 			max_dens = _d;
 		}
 	}
-	PRINT_INFO_EX("Density range: [%.3f-%.3f]", min_dens, max_dens);
+	getLog().info("Density range: [%.3f-%.3f]", min_dens, max_dens);
 #endif
 	if (dens) {
 		m_dens.resize(tot_res_high);

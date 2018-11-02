@@ -119,17 +119,17 @@ AttrValue DataExporter::exportMaterial(BL::Material ma, BL::Object ob, bool expo
 			pluginType = GetNodePluginType(selected);
 
 			if (pluginType == PT::PluginBRDF || pluginType == PT::PluginMaterial) {
-				PRINT_INFO_EX("Exporting selected material node only %s", nodeClass.c_str());
+				getLog().info("Exporting selected material node only %s", nodeClass.c_str());
 				material = val;
 				needExport = false;
 			} else if (pluginType == PT::PluginTexture) {
-				PRINT_INFO_EX("Exporting selected texture node only %s", nodeClass.c_str());
+				getLog().info("Exporting selected texture node only %s", nodeClass.c_str());
 				PluginDesc brdfLightWrapper("BRDFLightWrapper@" + val.as<AttrPlugin>().plugin, "BRDFLight");
 				brdfLightWrapper.add("color", val);
 				material = m_exporter->export_plugin(brdfLightWrapper);
 				needExport = false;
 			} else {
-				PRINT_INFO_EX("Selected node is of unsupported type!");
+				getLog().info("Selected node is of unsupported type!");
 			}
 		}
 	}

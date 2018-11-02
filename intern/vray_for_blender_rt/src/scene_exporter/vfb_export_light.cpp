@@ -110,7 +110,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 		}
 	}
 	else {
-		PRINT_ERROR("Lamp: %s Type: %i => Lamp type is not supported!",
+		getLog().error("Lamp: %s Type: %i => Lamp type is not supported!",
 				    ob.name().c_str(), lamp.type());
 		return plugin;
 	}
@@ -131,7 +131,7 @@ AttrValue DataExporter::exportLight(BL::Object ob, bool check_updated, const Obj
 	}
 
 	if (ntree && !lightNode) {
-		PRINT_ERROR("Lamp \"%s\" node tree output node is not found!",
+		getLog().error("Lamp \"%s\" node tree output node is not found!",
 					ob.name().c_str());
 	}
 

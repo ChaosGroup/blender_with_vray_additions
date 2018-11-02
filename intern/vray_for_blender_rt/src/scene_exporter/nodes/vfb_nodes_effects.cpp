@@ -47,7 +47,7 @@ std::string VRayNodeExporter::exportVRayNodeTexMayaFluid(BL::NodeTree &ntree, BL
 		BL::Node domainNode = VRayNodeExporter::getConnectedNode(domainSock, context);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
-				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
+				getLog().error("Domain object must be selected with \"Select Object\" node!");
 			}
 			else {
 				BL::Object domainOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, domainNode, domainSock, context);
@@ -92,7 +92,7 @@ AttrValue DataExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node
 		BL::Node domainNode = Nodes::GetConnectedNode(domainSock);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
-				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
+				getLog().error("Domain object must be selected with \"Select Object\" node!");
 			}
 			else {
 				BL::Object domainOb = exportVRayNodeSelectObject(ntree, domainNode, domainSock, context);
@@ -101,7 +101,7 @@ AttrValue DataExporter::exportVRayNodeTexVoxelData(BL::NodeTree &ntree, BL::Node
 
 					// This is a smoke simulation and we need to export smoke data
 					if (NOT(smokeMod)) {
-						PRINT_ERROR("Invalid Smoke modifier!");
+						getLog().error("Invalid Smoke modifier!");
 					}
 					else {
 						PointerRNA texVoxelData = RNA_pointer_get(&node.ptr, "TexVoxelData");
@@ -279,18 +279,18 @@ AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::No
 		const std::string &conNodeIdName = conNode.bl_idname();
 		if (conNodeIdName != "VRayNodeEnvFogMeshGizmo") {
 			if (conNodeIdName != "VRayNodeSelectObject" && conNodeIdName != "VRayNodeSelectGroup") {
-				PRINT_ERROR("\"Gizmos\" socket expects \"Fog Gizmo\" node!");
+				getLog().error("\"Gizmos\" socket expects \"Fog Gizmo\" node!");
 				return plugin;
 			}
 
 			ObList domainObList;
 			getSelectorObjectList(conNode, domainObList);
 			if (domainObList.empty()) {
-				PRINT_WARN("No objects selected for Gizmos!");
+				getLog().warning("No objects selected for Gizmos!");
 				return plugin;
 			}
 
-			PRINT_WARN("Missing \"Fog Gizmo\" node connected to \"Gizmos\" socket. Fog Gizmos will be auto-generated.");
+			getLog().warning("Missing \"Fog Gizmo\" node connected to \"Gizmos\" socket. Fog Gizmos will be auto-generated.");
 			const std::string &pluginName = GenPluginName(node, ntree, context);
 			AttrListPlugin domains;
 			for(const auto &domainOb : domainObList) {
@@ -360,7 +360,7 @@ std::string VRayNodeExporter::exportVRayNodePhxShaderSim(BL::NodeTree &ntree, BL
 		BL::Node domainNode = VRayNodeExporter::getConnectedNode(domainSock, context);
 		if(domainNode) {
 			if(NOT(domainNode.bl_idname() == "VRayNodeSelectObject")) {
-				PRINT_ERROR("Domain object must be selected with \"Select Object\" node!");
+				getLog().error("Domain object must be selected with \"Select Object\" node!");
 			}
 			else {
 				domainOb = VRayNodeExporter::exportVRayNodeSelectObject(ntree, domainNode, domainSock, context);

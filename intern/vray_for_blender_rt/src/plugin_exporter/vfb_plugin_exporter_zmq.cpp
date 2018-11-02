@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
 #include "vfb_params_json.h"
+#include "vfb_log.h"
 
 #include "BLI_utildefines.h"
 
@@ -39,14 +39,14 @@ bool ZmqServer::start(const char * addr) {
 	std::lock_guard<std::mutex> lock(clientMtx);
 
 	if (!serverCheck) {
-		PRINT_INFO_EX("Starting heartbeat client for %s", addr);
+		getLog().info("Starting heartbeat client for %s", addr);
 		serverCheck.reset(new ZmqClient(true));
 		serverCheck->connect(addr);
 		if (serverCheck->connected()) {
 			return true;
 		}
 	} else {
-		PRINT_ERROR("Heartbeat client already running...");
+		getLog().error("Heartbeat client already running...");
 		// return true as we are running good.
 		if (serverCheck->good() && serverCheck->connected()) {
 			return true;
@@ -60,18 +60,18 @@ bool ZmqServer::stop() {
 	std::lock_guard<std::mutex> lock(clientMtx);
 
 	if (serverCheck) {
-		PRINT_INFO_EX("Stopping hearbeat client... ");
+		getLog().info("Stopping hearbeat client... ");
 		if (serverCheck->good() && serverCheck->connected()) {
 			serverCheck->stopServer();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		}
 		serverCheck->syncStop();
 		serverCheck.reset();
-		PRINT_INFO_EX("... done.");
+		getLog().info("... done.");
 		return true;
 	}
 
-	PRINT_ERROR("No zmq heartbeat client running...");
+	getLog().error("No zmq heartbeat client running...");
 	return false;
 }
 
@@ -157,7 +157,7 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 
 			break;
 		default:
-			PRINT_WARN("MISSING IMAGE FORMAT CONVERTION FOR %d", img.imageType);
+			getLog().warning("MISSING IMAGE FORMAT CONVERTION FOR %d", img.imageType);
 		}
 
 		{
@@ -314,7 +314,7 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 void ZmqExporter::init()
 {
 	try {
-		PRINT_INFO_EX("Initing ZmqExporter");
+		getLog().info("Initing ZmqExporter");
 		using std::placeholders::_1;
 		using std::placeholders::_2;
 
@@ -381,7 +381,7 @@ void ZmqExporter::init()
 			m_cachedValues.render_mode = exporter_settings.render_mode;
 		}
 	} catch (zmq::error_t &e) {
-		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
+		getLog().error("Failed to initialize ZMQ client\n%s", e.what());
 	}
 }
 
@@ -554,7 +554,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	checkZmqClient();
 
 	if (pluginDesc.pluginID.empty()) {
-		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
+		getLog().warning("[%s] PluginDesc.pluginID is not set!",
 			pluginDesc.pluginName.c_str());
 		return AttrPlugin();
 	}

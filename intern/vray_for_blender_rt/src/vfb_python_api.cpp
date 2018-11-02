@@ -33,6 +33,7 @@
 
 #include <Python.h>
 #include "BKE_global.h"
+#include "vfb_log.h"
 
 using namespace VRayForBlender;
 
@@ -91,7 +92,7 @@ static PyObject* vfb_zmq_heartbeat_start(PyObject*, PyObject *args)
 			Py_RETURN_TRUE;
 		}
 	} else {
-		PRINT_ERROR("Failed to get connection string");
+		getLog().error("Failed to get connection string");
 	}
 
 	Py_RETURN_FALSE;
@@ -125,17 +126,17 @@ static VRayForBlender::SceneExporter *vfb_cast_exporter(PyObject *value)
 
 static PyObject* vfb_load(PyObject*, PyObject *args)
 {
-	PRINT_INFO_EX("vfb_load()");
+	getLog().info("vfb_load()");
 
 	char *jsonDirpath = NULL;
 	if (!PyArg_ParseTuple(args, "s", &jsonDirpath)) {
-		PRINT_ERROR("PyArg_ParseTuple");
+		getLog().error("PyArg_ParseTuple");
 	}
 	else {
 		try {
 			VRayForBlender::InitPluginDescriptions(jsonDirpath);
 		} catch (std::exception &ex) {
-			PRINT_ERROR("Exception: %s", ex.what());
+			getLog().error("Exception: %s", ex.what());
 		}
 	}
 
@@ -145,7 +146,7 @@ static PyObject* vfb_load(PyObject*, PyObject *args)
 
 static PyObject* vfb_unload(PyObject*)
 {
-	PRINT_INFO_EX("vfb_unload()");
+	getLog().info("vfb_unload()");
 
 	vfb_zmq_heartbeat_stop(nullptr);
 
@@ -155,7 +156,7 @@ static PyObject* vfb_unload(PyObject*)
 
 static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 {
-	PRINT_INFO_EX("vfb_init()");
+	getLog().info("vfb_init()");
 
 	VRayForBlender::SceneExporter *exporter = nullptr;
 
@@ -222,7 +223,7 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 		if (exporter->get_active_camera().type() != BL::Object::type_CAMERA) {
 			delete exporter;
 			exporter = nullptr;
-			PRINT_ERROR("Scene's active camera is not of type CAMERA");
+			getLog().error("Scene's active camera is not of type CAMERA");
 			return PyLong_FromVoidPtr(exporter);
 		}
 
@@ -241,7 +242,7 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 		exporter->init_data();
 
 	} else {
-		PRINT_ERROR("Failed to initialize exporter!");
+		getLog().error("Failed to initialize exporter!");
 	}
 
 	return PyLong_FromVoidPtr(exporter);
@@ -250,7 +251,7 @@ static PyObject* vfb_init(PyObject*, PyObject *args, PyObject *keywds)
 
 static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 {
-	PRINT_INFO_EX("vfb_init_rt()");
+	getLog().info("vfb_init_rt()");
 
 	VRayForBlender::SceneExporter *exporter = nullptr;
 
@@ -300,7 +301,7 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 		if (exporter->get_active_camera().type() != BL::Object::type_CAMERA) {
 			delete exporter;
 			exporter = nullptr;
-			PRINT_ERROR("Scene's active camera is not of type CAMERA");
+			getLog().error("Scene's active camera is not of type CAMERA");
 			return PyLong_FromVoidPtr(exporter);
 		}
 
@@ -316,17 +317,24 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 			exporter->render_start();
 		}
 	} else {
-		PRINT_ERROR("Failed to initialize RT exporter!");
+		getLog().error("Failed to initialize RT exporter!");
 	}
 
 	return PyLong_FromVoidPtr(exporter);
 }
 
+static PyObject* vfb_exit(PyObject*)
+{
+	getLog().info("vfb_exit()");
 
+	getLog().stopLogging();
+
+	Py_RETURN_NONE;
+}
 
 static PyObject* vfb_free(PyObject*, PyObject *value)
 {
-	PRINT_INFO_EX("vfb_free()");
+	getLog().info("vfb_free()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
@@ -338,13 +346,14 @@ static PyObject* vfb_free(PyObject*, PyObject *value)
 		}
 	}
 
+
 	Py_RETURN_NONE;
 }
 
 /// Export data from blender for production rendering
 static PyObject* vfb_update(PyObject*, PyObject *value)
 {
-	PRINT_INFO_EX("vfb_update()");
+	getLog().info("vfb_update()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
@@ -361,7 +370,7 @@ static PyObject* vfb_update(PyObject*, PyObject *value)
 /// Start production rendering
 static PyObject* vfb_render(PyObject*, PyObject *value)
 {
-	PRINT_INFO_EX("vfb_render()");
+	getLog().info("vfb_render()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
@@ -375,7 +384,7 @@ static PyObject* vfb_render(PyObject*, PyObject *value)
 /// Export data for viewport rendering
 static PyObject* vfb_view_update(PyObject*, PyObject *value)
 {
-	PRINT_INFO_EX("vfb_view_update()");
+	getLog().info("vfb_view_update()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
@@ -388,7 +397,7 @@ static PyObject* vfb_view_update(PyObject*, PyObject *value)
 /// Draw rendered image for viewport rendering
 static PyObject* vfb_view_draw(PyObject*, PyObject *value)
 {
-	// PRINT_INFO_EX("vfb_view_draw()");
+	// getLog().info("vfb_view_draw()");
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
@@ -402,7 +411,7 @@ static PyObject* vfb_view_draw(PyObject*, PyObject *value)
 
 static PyObject* vfb_get_exporter_types(PyObject*, PyObject*)
 {
-	PRINT_INFO_EX("vfb_get_exporter_types()");
+	getLog().info("vfb_get_exporter_types()");
 
 	PyObject *expTypesList = PyTuple_New(ExpoterTypeLast);
 
@@ -449,7 +458,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 		for (int c = 0; c < sizeof(texSockets) / sizeof(texSockets[0]); c++) {
 			auto socket = b_node.outputs[texSockets[c]];
 			if (!socket) {
-				PRINT_ERROR("Missing socket \"%s\" on TexOSL", texSockets[c].c_str());
+				getLog().error("Missing socket \"%s\" on TexOSL", texSockets[c].c_str());
 			}
 			used_sockets.insert(socket.ptr.data);
 		}
@@ -477,7 +486,7 @@ static PyObject* vfb_osl_update_node_func(PyObject * /*self*/, PyObject *args)
 
 		if (param->isclosure && param->isoutput) {
 			if (!isMtl) {
-				PRINT_WARN("Closure output is not supported for TexOSL");
+				getLog().warning("Closure output is not supported for TexOSL");
 				continue;
 			} else {
 				socket_type = "VRaySocketMtl";
@@ -613,7 +622,7 @@ static PyObject* vfb_osl_setstdosl_path(PyObject * /*self*/, PyObject *args) {
 
 	if (mgr.stdOSLPath != stdoslfile) {
 		mgr.stdOSLPath = stdoslfile;
-		PRINT_INFO_EX("Using \"%s\" for stdosl path.", stdoslfile);
+		getLog().info("Using \"%s\" for stdosl path.", stdoslfile);
 	}
 #endif
 
@@ -623,23 +632,50 @@ static PyObject* vfb_osl_setstdosl_path(PyObject * /*self*/, PyObject *args) {
 
 static PyObject* set_preview_dir(PyObject*, PyObject *args)
 {
-	PRINT_INFO_EX("vfb_load()");
+	getLog().info("vfb_load()");
 
 	char *previewDir = NULL;
 	if (!PyArg_ParseTuple(args, "s", &previewDir)) {
-		PRINT_ERROR("PyArg_ParseTuple");
+		getLog().error("PyArg_ParseTuple");
 	}
 	else {
 		if (previewDir) {
 			VRaySettingsExporter::pythonPreviewDir = previewDir;
 		} else {
-			PRINT_ERROR("Failed to set preview directory");
+			getLog().error("Failed to set preview directory");
 		}
 	}
 
 	Py_RETURN_NONE;
 }
 
+static PyObject* vfb_log(PyObject*, PyObject *args, PyObject *keywds)
+{
+	const char *message = nullptr;
+	int level = -1;
+
+	static char *kwlist[] = {
+		/* 0 */_C("message"),
+		/* 1 */_C("level"),
+		NULL
+	};
+
+	static const char kwlistTypes[] = "s|i";
+
+	if (PyArg_ParseTupleAndKeywords(args, keywds, kwlistTypes, kwlist,
+	                                /* 0 */ &message,
+	                                /* 1 */ &level))
+	{
+		LogLevel logLevel = LogLevel::info;
+		if (level >= 0) {
+			logLevel = LogLevel(level);
+		}
+
+		getLog().log(logLevel, "%s", message);
+	}
+
+	Py_RETURN_NONE;
+}
 
 static PyMethodDef methods[] = {
     { "load",                vfb_load,   METH_VARARGS, ""},
@@ -648,8 +684,11 @@ static PyMethodDef methods[] = {
     { "init",    (PyCFunction)vfb_init,    METH_VARARGS|METH_KEYWORDS, ""},
     { "init_rt", (PyCFunction)vfb_init_rt, METH_VARARGS|METH_KEYWORDS, ""},
     { "free",                 vfb_free,    METH_O, ""},
+    { "exit",    (PyCFunction)vfb_exit,    METH_NOARGS, ""},
 
-    { "update",      vfb_update,      METH_O, "" },
+    { "log", PyCFunction(vfb_log), METH_VARARGS|METH_KEYWORDS, ""},
+
+	{ "update",      vfb_update,      METH_O, "" },
     { "render",      vfb_render,      METH_O, "" },
     { "view_update", vfb_view_update, METH_O, "" },
     { "view_draw",   vfb_view_draw,   METH_O, "" },
@@ -681,5 +720,7 @@ static struct PyModuleDef module = {
 
 void* VRayForBlenderRT_initPython()
 {
+	getLog().startLogging();
+
 	return (void*)PyModule_Create(&module);
 }

@@ -83,7 +83,7 @@ int DataExporter::fillBitmapAttributes(BL::NodeTree &ntree, BL::Node &node, BL::
 				pluginDesc.add("gamma", RNA_float_get(&settingsColorMapping, "input_gamma"));
 				pluginDesc.add("color_space", 1);
 
-				PRINT_INFO_EX("Node tree: %s => Node name: %s => \"Use Input Gamma\" is used. "
+				getLog().info("Node tree: %s => Node name: %s => \"Use Input Gamma\" is used. "
 				              "\"Color Space\" is forced to \"Gamma Corrected\"",
 				              ntree.name().c_str(), node.name().c_str());
 			}
@@ -102,7 +102,7 @@ AttrValue DataExporter::exportVRayNodeBitmapBuffer(BL::NodeTree &ntree, BL::Node
 	PluginDesc pluginDesc(pluginName, "BitmapBuffer");
 
 	if (fillBitmapAttributes(ntree, node, fromSocket, context, pluginDesc)) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
+		getLog().error("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
@@ -179,7 +179,7 @@ AttrValue DataExporter::exportVRayNodeMetaImageTexture(BL::NodeTree &ntree, BL::
 	PluginDesc bitmapDesc(bitmapPluginName, "BitmapBuffer");
 
 	if (fillBitmapAttributes(ntree, node, fromSocket, context, bitmapDesc)) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
+		getLog().error("Node tree: %s => Node name: %s => Something wrong with BitmapBuffer!",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {
@@ -406,7 +406,7 @@ AttrValue DataExporter::exportVRayNodeTexSky(BL::NodeTree &ntree, BL::Node &node
 		BL::Node conNode(Nodes::GetConnectedNode(sunSock));
 		if (conNode) {
 			if (NOT(conNode.bl_idname() == "VRayNodeSelectObject")) {
-				PRINT_ERROR("Sun node could be selected only with \"Select Object\" node.");
+				getLog().error("Sun node could be selected only with \"Select Object\" node.");
 			}
 			else {
 				BL::Object sunOb = exportVRayNodeSelectObject(ntree, conNode, sunSock, context);
@@ -551,7 +551,7 @@ AttrValue DataExporter::exportVRayNodeTexRemap(BL::NodeTree &ntree, BL::Node &no
 
 		BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, "texture"));
 		if (!tex) {
-			PRINT_ERROR("Failed to export TexRemap ramp for %s", node.name().c_str());
+			getLog().error("Failed to export TexRemap ramp for %s", node.name().c_str());
 			return AttrPlugin("NULL");
 		}
 		char pluginName[String::MAX_PLG_LEN] = {0, };

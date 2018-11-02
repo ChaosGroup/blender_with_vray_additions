@@ -1,7 +1,7 @@
 #include "vfb_thread_manager.h"
-#include "cgr_config.h" // PRINT_INFO_EX
 
 #include "vfb_util_defines.h"
+#include "vfb_log.h"
 
 using namespace VRayForBlender;
 using namespace std;
@@ -65,7 +65,7 @@ void ThreadManager::addTask(ThreadManager::Task task, ThreadManager::Priority pr
 }
 
 void ThreadManager::workerRun(int thIdx) {
-	PRINT_INFO_EX("Thread [%d] starting ...", thIdx);
+	getLog().info("Thread [%d] starting...", thIdx);
 
 	while (!m_stop) {
 		Task task;
@@ -85,5 +85,5 @@ void ThreadManager::workerRun(int thIdx) {
 		task(thIdx, m_stop);
 	}
 
-	PRINT_INFO_EX("Thread [%d] stopping.", thIdx);
+	getLog().info("Thread [%d] stopping...", thIdx);
 }

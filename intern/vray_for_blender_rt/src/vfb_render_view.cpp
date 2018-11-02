@@ -364,7 +364,7 @@ void SceneExporter::get_view_from_viewport(ViewParams &viewParams)
 		                          : m_view3d.camera();
 
 		if (!cameraObject || !cameraObject.data() || cameraObject.type() != BL::Object::type_CAMERA) {
-			PRINT_ERROR("View camera is not found!");
+			getLog().error("View camera is not found!");
 			return;
 		}
 
@@ -577,7 +577,7 @@ ViewParams SceneExporter::get_current_view_params()
 	else {
 		BL::Object sceneCamera(m_active_camera);
 		if (!sceneCamera || sceneCamera.type() != BL::Object::type_CAMERA) {
-			PRINT_ERROR("Active scene camera is not set!")
+			getLog().error("Active scene camera is not set!");
 		}
 		else {
 			get_view_from_camera(viewParams, sceneCamera);

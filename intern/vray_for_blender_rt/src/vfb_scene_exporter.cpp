@@ -133,11 +133,11 @@ void FrameExportManager::updateFromSettings(BL::Scene & scene)
 				});
 
 				if (m_loopCameras.empty()) {
-					PRINT_WARN("Using camera loop without any camera's marked!");
+					getLog().warning("Using camera loop without any camera's marked!");
 				} else {
-					PRINT_INFO_EX("Camera loop mode, in order camera list:");
+					getLog().info("Camera loop mode, in order camera list:");
 					for (auto & c : m_loopCameras) {
-						PRINT_INFO_EX("Loop camera \"%s\"", c.name().c_str());
+						getLog().info("Loop camera \"%s\"", c.name().c_str());
 					}
 				}
 			}
@@ -398,7 +398,7 @@ void SceneExporter::render_start()
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		m_exporter->start();
 	} else {
-		PRINT_INFO_EX("Work mode WorkModeExportOnly, skipping renderer_start");
+		getLog().info("Work mode WorkModeExportOnly, skipping renderer_start");
 	}
 }
 
@@ -506,7 +506,7 @@ static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, co
 {
 	BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttr));
 	if (tex && (tex.is_updated() || tex.is_updated_data())) {
-		PRINT_INFO_EX("Texture %s is updated...",
+		getLog().info("Texture %s is updated...",
 		              tex.name().c_str());
 		DataExporter::tag_ntree(ntree);
 	}
@@ -722,7 +722,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 		m_exporter->remove_plugin(exportInstName);
 
-		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
+		getLog().info("Skipping duplication empty %s", ob.name().c_str());
 
 		return;
 	}
@@ -1028,7 +1028,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
 
 			if (!amd->dupliTms) {
-				PRINT_ERROR("ArrayModifier dupliTms is null for object \"%s\"", nodeName.c_str());
+				getLog().error("ArrayModifier dupliTms is null for object \"%s\"", nodeName.c_str());
 				return;
 			}
 
@@ -1221,7 +1221,7 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 }
 
 void SceneExporter::sync_objects(const bool check_updated) {
-	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
+	getLog().info("SceneExporter::sync_objects(%i)", check_updated);
 
 	if (!m_frameExporter.isCurrentSubframe()) {
 		CondWaitGroup wg(m_scene.objects.length() - m_frameExporter.countObjectsWithSubframes());
@@ -1237,7 +1237,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}
 
 		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			getLog().info("Started export for all objects - waiting for all.");
 			wg.wait();
 		}
 
@@ -1257,7 +1257,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}
 
 		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			getLog().info("Started export for all objects - waiting for all.");
 			wg.wait();
 		}
 	}

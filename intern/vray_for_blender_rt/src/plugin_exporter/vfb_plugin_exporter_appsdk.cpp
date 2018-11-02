@@ -169,7 +169,7 @@ void AppSdkExporter::init()
 			m_vray = new VRay::VRayRenderer(options);
 		}
 		catch (std::exception &e) {
-			PRINT_ERROR("Error initializing renderer! Error: \"%s\"",
+			getLog().error("Error initializing renderer! Error: \"%s\"",
 			            e.what());
 			m_vray = nullptr;
 		}
@@ -187,7 +187,7 @@ void AppSdkExporter::init()
 
 void AppSdkExporter::CbOnImageReady(VRay::VRayRenderer&, void *)
 {
-	PRINT_INFO_EX("AppSdkExporter::CbOnImageReady");
+	getLog().info("AppSdkExporter::CbOnImageReady");
 	if (callback_on_image_ready) {
 		callback_on_image_ready.cb();
 	}
@@ -228,7 +228,7 @@ void AppSdkExporter::sync()
 
 void AppSdkExporter::start()
 {
-	PRINT_INFO_EX("AppSdkExporter::start()");
+	getLog().info("AppSdkExporter::start()");
 	m_started = true;
 	m_vray->setOnBucketReady<AppSdkExporter, &AppSdkExporter::bucket_ready>(*this);
 	m_vray->start();
@@ -285,17 +285,17 @@ RenderImage AppSdkExporter::get_render_channel(RenderChannelType channelType)
 			if (renderElement) {
 				VRay::RenderElement::PixelFormat pixelFormat = renderElement.getDefaultPixelFormat();
 
-				//PRINT_INFO_EX("Found render channel: %i (pixel format %i)",
+				//getLog().info("Found render channel: %i (pixel format %i)",
 				//              channelType, pixelFormat);
 
 				renderChannel = AppSDKRenderImage(renderElement.getImage(), pixelFormat);
 			}
 		}
 		catch (VRay::VRayException &e) {
-			PRINT_WARN("VRayException %s", e.what());
+			getLog().warning("VRayException %s", e.what());
 		}
 		catch (...) {
-			PRINT_WARN("Ignored exception AppSdkExporter::get_render_channel");
+			getLog().warning("Ignored exception AppSdkExporter::get_render_channel");
 		}
 	}
 
@@ -343,14 +343,14 @@ void AppSdkExporter::set_camera_plugin(const std::string &pluginName)
 	if (m_vray) {
 		VRay::Plugin plugin = m_vray->getPlugin(pluginName, false);
 		if (plugin) {
-			PRINT_WARN("Setting camera plugin to: %s",
+			getLog().warning("Setting camera plugin to: %s",
 			           plugin.getName());
 
 			m_vray->setCamera(plugin);
 
 			VRay::Error err = m_vray->getLastError();
 			if (err != VRay::SUCCESS) {
-				PRINT_ERROR("Error setting camera plugin \"%s\" [%s]!",
+				getLog().error("Error setting camera plugin \"%s\" [%s]!",
 				            plugin.getName(), err.toString());
 			}
 		}
@@ -364,7 +364,7 @@ void AppSdkExporter::set_render_mode(RenderMode renderMode)
 		VRay::RendererOptions::RenderMode _curMode = m_vray->getRenderMode();
 		VRay::RendererOptions::RenderMode _newMode = (VRay::RendererOptions::RenderMode)renderMode;
 		if (_curMode != _newMode) {
-			PRINT_WARN("AppSdkExporter::set_render_mode(%i)", _newMode);
+			getLog().warning("AppSdkExporter::set_render_mode(%i)", _newMode);
 
 			m_vray->setRenderMode(_newMode);
 			m_vray->stop();
@@ -376,7 +376,7 @@ void AppSdkExporter::set_render_mode(RenderMode renderMode)
 
 void AppSdkExporter::commit_changes()
 {
-	PRINT_WARN("AppSdkExporter::commit_changes()");
+	getLog().warning("AppSdkExporter::commit_changes()");
 
 	if (m_vray) {
 		m_vray->commit();
@@ -397,13 +397,13 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 	AttrPlugin plugin;
 
 	if (pluginDesc.pluginID.empty()) {
-		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
+		getLog().warning("[%s] PluginDesc.pluginID is not set!",
 		           pluginDesc.pluginName.c_str());
 	}
 	else {
 		VRay::Plugin plug =  m_vray->getOrCreatePlugin(pluginDesc.pluginName, pluginDesc.pluginID);
 		if (NOT(plug)) {
-			PRINT_ERROR("Failed to create plugin: %s [%s]",
+			getLog().error("Failed to create plugin: %s [%s]",
 			            pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str());
 		}
 		else {
@@ -412,7 +412,7 @@ AttrPlugin AppSdkExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 			for (const auto &pIt : pluginDesc.pluginAttrs) {
 				const PluginAttr &p = pIt.second;
 #if 0
-				PRINT_INFO_EX("Updating: \"%s\" => %s.%s",
+				getLog().info("Updating: \"%s\" => %s.%s",
 				              pluginDesc.pluginName.c_str(), pluginDesc.pluginID.c_str(), p.attrName.c_str());
 #endif
 				if (p.attrValue.type == ValueTypeUnknown) {
@@ -539,7 +539,7 @@ int AppSdkExporter::remove_plugin_impl(const std::string &pluginName)
 	bool res = true;
 
 	if (m_vray) {
-		PRINT_WARN("Removing plugin: \"%s\"",
+		getLog().warning("Removing plugin: \"%s\"",
 		           pluginName.c_str());
 
 		m_pluginManager.remove(pluginName);
@@ -550,7 +550,7 @@ int AppSdkExporter::remove_plugin_impl(const std::string &pluginName)
 
 			VRay::Error err = m_vray->getLastError();
 			if (err != VRay::SUCCESS) {
-				PRINT_ERROR("Error removing plugin \"%s\" [%s]!",
+				getLog().error("Error removing plugin \"%s\" [%s]!",
 				            plugin.getName(), err.toString());
 			}
 		}
@@ -562,7 +562,7 @@ int AppSdkExporter::remove_plugin_impl(const std::string &pluginName)
 
 void AppSdkExporter::export_vrscene(const std::string &filepath)
 {
-	PRINT_WARN("AppSdkExporter::export_vrscene()");
+	getLog().warning("AppSdkExporter::export_vrscene()");
 
 	VRay::VRayExportSettings exportParams;
 	exportParams.useHexFormat = false;
@@ -570,12 +570,12 @@ void AppSdkExporter::export_vrscene(const std::string &filepath)
 
 	int res = m_vray->exportScene(filepath, exportParams);
 	if (res) {
-		PRINT_ERROR("Error exporting scene!");
+		getLog().error("Error exporting scene!");
 	}
 
 	VRay::Error err = m_vray->getLastError();
 	if (err != VRay::SUCCESS) {
-		PRINT_ERROR("Error: %s",
+		getLog().error("Error: %s",
 		            err.toString());
 	}
 }

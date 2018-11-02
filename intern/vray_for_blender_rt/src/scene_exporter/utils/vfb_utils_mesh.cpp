@@ -324,7 +324,7 @@ VRayForBlender::Mesh::MeshExportResult VRayForBlender::Mesh::FillMeshData(BL::Bl
 		plugMan.updateCache(pluginDesc, t);
 	}
 
-	// PRINT_INFO_EX("[%i] \"%s\"", getThreadID(), ob.name().c_str());
+	// getLog().info("[%i] \"%s\"", getThreadID(), ob.name().c_str());
 
 	ScopedTraceFormat trace("Waiting for WRITE_LOCK_BLENDER for object (%s)", ob.name().c_str());
 	WRITE_LOCK_BLENDER_RAII;
@@ -376,7 +376,7 @@ VRayForBlender::Mesh::MeshExportResult VRayForBlender::Mesh::FillMeshData(BL::Bl
 
 	BL::Mesh mesh = data.meshes.new_from_object(scene, ob, true, options.mode, false, false);
 	if (!mesh) {
-		PRINT_ERROR("Object: %s => Incorrect mesh!",
+		getLog().error("Object: %s => Incorrect mesh!",
 			ob.name().c_str());
 		return MeshExportResult::error;
 	}
@@ -402,7 +402,7 @@ VRayForBlender::Mesh::MeshExportResult VRayForBlender::Mesh::FillMeshData(BL::Bl
 		VFB_Assert(rawMesh->totface == 0 && "Raw mesh has different faces than c++ api mesh");
 
 		data.meshes.remove(mesh, false, true, false);
-		PRINT_WARN("Object: %s => Empty mesh!", ob.name().c_str());
+		getLog().warning("Object: %s => Empty mesh!", ob.name().c_str());
 		return MeshExportResult::error;
 	}
 

@@ -18,6 +18,7 @@
 
 #include "cgr_config.h"
 #include "vfb_rna.h"
+#include "vfb_log.h"
 
 #include "DNA_ID.h"
 #include "BLI_path_util.h"
@@ -81,7 +82,7 @@ int VRayForBlender::RNA_enum_ext_get(PointerRNA *ptr, const char *attrName)
 	if (!enumItem->identifier) {
 		PropertyRNA *prop = RNA_struct_find_property(ptr, attrName);
 		if (prop) {
-			PRINT_ERROR("Property \"%s\": Enum identifier is not found!",
+			getLog().error("Property \"%s\": Enum identifier is not found!",
 				prop->name);
 		}
 	}

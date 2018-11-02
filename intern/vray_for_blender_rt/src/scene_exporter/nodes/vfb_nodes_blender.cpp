@@ -45,7 +45,7 @@ void DataExporter::fillNodeVectorCurveData(BL::NodeTree ntree, BL::Node node, At
 
 	BL::CurveMap curve = curveMapping.curves[0];
 	if (!curve) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect curve!",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect curve!",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else {

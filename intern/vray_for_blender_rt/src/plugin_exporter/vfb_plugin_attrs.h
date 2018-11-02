@@ -25,6 +25,7 @@
 #include "vfb_util_defines.h"
 #include "vfb_typedefs.h"
 #include "vfb_rna.h"
+#include "vfb_log.h"
 
 #include "utils/cgr_hash.h"
 
@@ -223,12 +224,12 @@ struct PluginDesc {
 	}
 
 	void showAttributes() const {
-		PRINT_INFO_EX("Plugin \"%s.%s\" parameters:",
+		getLog().info("Plugin \"%s.%s\" parameters:",
 			pluginID.c_str(), pluginName.c_str());
 
 		for (const auto &pIt : pluginAttrs) {
 			const PluginAttr &p = pIt.second;
-			PRINT_INFO_EX("  %s at %.3f [%s]",
+			getLog().info("  %s at %.3f [%s]",
 			              p.attrName.c_str(), p.time, p.attrValue.getTypeAsString());
 		}
 	}

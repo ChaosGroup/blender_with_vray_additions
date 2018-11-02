@@ -57,7 +57,7 @@ AttrListValue DataExporter::buildScriptArgumentList(BL::NodeTree &ntree, BL::Nod
 	OSL::OSLQuery query;
 	auto & oslManager = Blender::OSLManager::getInstance();
 	if (!oslManager.queryFromNode(node, query, m_data.filepath(), true, &scriptPath)) {
-		PRINT_WARN("Failed to query node \"%s\"", node.name().c_str());
+		getLog().warning("Failed to query node \"%s\"", node.name().c_str());
 		return list;
 	}
 
@@ -102,7 +102,7 @@ AttrValue DataExporter::exportVRayNodeShaderScript(BL::NodeTree &ntree, BL::Node
 	BL::NodeSocket toSocket(Nodes::GetConnectedSocket(fromSocket));
 	if (!toSocket) {
 		// this should not happen since we get here if toSocket is valid
-		PRINT_ERROR("Exporting disconnected node!");
+		getLog().error("Exporting disconnected node!");
 		return AttrValue();
 	}
 

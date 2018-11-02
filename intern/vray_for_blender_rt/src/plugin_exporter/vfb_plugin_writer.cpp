@@ -102,7 +102,7 @@ PluginWriter::PluginWriter(ThreadManager::Ptr tm, file_t *file, ExporterSettings
     , m_format(format)
 {
 	if (!file) {
-		PRINT_ERROR("Plugin Writer create with invalid file pointer!");
+		getLog().error("Plugin Writer create with invalid file pointer!");
 	}
 }
 
@@ -148,7 +148,7 @@ void write_file_impl(FILE * file, const char * data, int len = -1)
 {
 	const int writeLen = len == -1 ? strlen(data) : len;
 	if (fwrite(data, 1, writeLen, file) != writeLen) {
-		PRINT_ERROR("Failed to write to file!");
+		getLog().error("Failed to write to file!");
 	}
 }
 }

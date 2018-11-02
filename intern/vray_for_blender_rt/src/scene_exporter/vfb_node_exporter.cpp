@@ -275,7 +275,7 @@ void DataExporter::sync()
 			}
 
 			if (should_remove) {
-				PRINT_INFO_EX("Removing plugin: %s, with type: %s, for ob [%s]", plIter->first.c_str(), type, dIt->first.c_str());
+				getLog().info("Removing plugin: %s, with type: %s, for ob [%s]", plIter->first.c_str(), type, dIt->first.c_str());
 				m_exporter->remove_plugin(plIter->first);
 				plIter = dep.plugins.erase(plIter);
 			} else {
@@ -368,7 +368,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 		attrValue = AttrVector(vector);
 	}
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketBRDF) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
+		getLog().error("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
 		            ntree.name().c_str(), socket.node().name().c_str(), socketTypeName.c_str());
 	}
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketPlugin) {
@@ -384,7 +384,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketEffect) {}
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketMtl) {}
 	else {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
+		getLog().error("Node tree: %s => Node name: %s => Unsupported socket type: %s",
 		            ntree.name().c_str(), socket.node().name().c_str(), socketTypeName.c_str());
 	}
 
@@ -433,10 +433,10 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	const std::string &nodeClass = node.bl_idname();
 
 #if 0
-	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"",
+	getLog().info("Exporting \"%s\" from \"%s\"",
 	              node.name().c_str(), ntree.name().c_str());
 	if (context.object_context.object) {
-		PRINT_INFO_EX("  For object \"%s\"",
+		getLog().info("  For object \"%s\"",
 		              context.object_context.object.name().c_str());
 	}
 #endif
@@ -452,7 +452,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = Nodes::GetInputSocketByName(node, "Material");
 		if (!materialInSock.is_linked()) {
-			PRINT_ERROR("Node tree: %s => Node name: %s => Material socket is not linked!",
+			getLog().error("Node tree: %s => Node name: %s => Material socket is not linked!",
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
@@ -462,7 +462,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeOutputTexture") {
 		BL::NodeSocket textureInSock = Nodes::GetInputSocketByName(node, "Texture");
 		if (!textureInSock.is_linked()) {
-			PRINT_ERROR("Node tree: %s => Node name: %s => Texture socket is not linked!",
+			getLog().error("Node tree: %s => Node name: %s => Texture socket is not linked!",
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {

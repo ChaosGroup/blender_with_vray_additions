@@ -43,7 +43,7 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 	const std::string & attrName = attrDesc.name;
 	PropertyRNA *prop = RNA_struct_find_property(propGroup, attrName.c_str());
 	if (NOT(prop)) {
-		PRINT_ERROR("Property '%s' not found!",
+		getLog().error("Property '%s' not found!",
 		            attrName.c_str());
 	}
 	else {
@@ -109,7 +109,7 @@ void DataExporter::setAttrFromPropGroup(PointerRNA *propGroup, ID *holder, const
 			}
 		}
 		else {
-			PRINT_ERROR("Property '%s': Unsupported property type '%i'.",
+			getLog().error("Property '%s': Unsupported property type '%i'.",
 			            RNA_property_identifier(prop), propType);
 		}
 	}
@@ -273,7 +273,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 		const ParamDesc::AttrType &attrType = attrDesc.type;
 
 		if (attrType == ParamDesc::AttrTypeInvalid) {
-			PRINT_WARN("Plugin \"%s\" has unknown param type for \"%s\" property.", pluginParamDesc.pluginID.c_str(), attrName.c_str());
+			getLog().warning("Plugin \"%s\" has unknown param type for \"%s\" property.", pluginParamDesc.pluginID.c_str(), attrName.c_str());
 		}
 
 		if (attrType > ParamDesc::AttrTypeOutputStart && attrType < ParamDesc::AttrTypeOutputEnd) {
@@ -284,7 +284,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 		}
 		// Skip manually specified attributes
 		else if (!pluginDesc.get(attrName)) {
-			// PRINT_INFO_EX("  Processing attribute: \"%s\"", attrName.c_str());
+			// getLog().info("  Processing attribute: \"%s\"", attrName.c_str());
 
 			if (ParamDesc::TypeHasSocket(attrType)) {
 				BL::NodeSocket curSock = Nodes::GetSocketByAttr(node, attrName);
@@ -415,7 +415,7 @@ void DataExporter::setAttrsFromNode(BL::NodeTree &ntree, BL::Node &node, BL::Nod
 
 			std::string chanName = pluginAttrs["name"];
 			if (NOT(chanName.length())) {
-				PRINT_WARN("Node tree: \"%s\" => Node: \"%s\" => Render channel name is not set! Generating default..",
+				getLog().warning("Node tree: \"%s\" => Node: \"%s\" => Render channel name is not set! Generating default..",
 				           ntree.name().c_str(), node.name().c_str());
 
 				if (pluginID == "RenderChannelColor") {
@@ -444,11 +444,11 @@ void DataExporter::setAttrsFromNodeAuto(BL::NodeTree &ntree, BL::Node &node, BL:
 	const std::string           &pluginID   = DataExporter::GetNodePluginID(node);
 
 	if (pluginID.empty()) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node plugin ID!",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect node plugin ID!",
 		            ntree.name().c_str(), node.name().c_str());
 	}
 	else if (NOT(RNA_struct_find_property(&node.ptr, pluginID.c_str()))) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Property group \"%s\" not found!",
+		getLog().error("Node tree: %s => Node name: %s => Property group \"%s\" not found!",
 		            ntree.name().c_str(), node.name().c_str(), pluginID.c_str());
 	}
 	else {

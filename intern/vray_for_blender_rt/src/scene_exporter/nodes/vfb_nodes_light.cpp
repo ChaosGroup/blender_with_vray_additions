@@ -27,14 +27,14 @@ AttrValue DataExporter::exportVRayNodeLightMesh(BL::NodeTree &ntree, BL::Node &n
 	BL::Object ob = context.object_context.object;
 
 	if(!ob) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
+		getLog().error("Node tree: %s => Node name: %s => Incorrect node context! Probably used in not suitable node tree type.",
 					ntree.name().c_str(), node.name().c_str());
 		return attrValue;
 	}
 
 	BL::NodeSocket geomSock = Nodes::GetInputSocketByName(node, "Geometry");
 	if(!geomSock.is_linked()) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Geometry socket is not linked!",
+		getLog().error("Node tree: %s => Node name: %s => Geometry socket is not linked!",
 					ntree.name().c_str(), node.name().c_str());
 
 		return attrValue;
