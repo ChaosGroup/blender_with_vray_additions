@@ -313,7 +313,7 @@ Logger::~Logger()
 	stopLogging();
 }
 
-void Logger::printMessage(const VfhLogMessage &msg)
+void Logger::printMessage(const VfhLogMessage &msg) const
 {
 	char strTime[100];
 	char strDate[100];
@@ -339,6 +339,13 @@ void Logger::printMessage(const VfhLogMessage &msg)
 #ifdef _WIN32
 	OutputDebugStringA(buf);
 #endif
+
+	if (re) {
+		std::string guiMsg("V-Ray: ");
+		guiMsg.append(msg.message);
+
+		re.update_stats("", guiMsg.c_str());
+	}
 }
 
 void Logger::run() const
@@ -426,6 +433,11 @@ void Logger::log(LogLevel level, const char *format, ...) const
 void Logger::setLogLevel(LogLevel value)
 {
 	logLevel = value;
+}
+
+void Logger::setRenderEngine(BL::RenderEngine value)
+{
+	re = value;
 }
 
 void Logger::info(const char *format, ...) const

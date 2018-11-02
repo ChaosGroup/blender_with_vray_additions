@@ -52,6 +52,8 @@ void InteractiveExporter::setup_callbacks()
 
 bool InteractiveExporter::export_scene(const bool check_updated)
 {
+	getLog().setRenderEngine(m_engine);
+
 	const clock_t begin = clock();
 	m_exporter->resetExportedPluginsCount();
 
@@ -156,6 +158,8 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 	getLog().info("Synced [%d] plugins in %.3f sec.", m_exporter->getExportedPluginsCount(), elapsed_secs);
+
+	getLog().setRenderEngine(PointerRNA_NULL);
 
 	return true;
 }

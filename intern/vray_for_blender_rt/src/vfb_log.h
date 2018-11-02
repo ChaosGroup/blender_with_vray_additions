@@ -67,6 +67,9 @@ struct Logger {
 	/// Set max log level to be printed, unless Logger::msg is used where current filter is ignored.
 	void setLogLevel(LogLevel value);
 
+	/// Set render engine.
+	void setRenderEngine(BL::RenderEngine value);
+
 	/// Initialize the logger, needs to be called only once.
 	/// Don't call this from static variable's ctor, which is inside a module (causes deadlock).
 	void startLogging();
@@ -93,7 +96,8 @@ private:
 	typedef std::vector<VfhLogMessage> VfhLogQueue;
 
 	/// Printing
-	static void printMessage(const VfhLogMessage &data);
+	/// @param msg Log message.
+	void printMessage(const VfhLogMessage &msg) const;
 
 	/// Add message to the queue.
 	/// @param level Message level.
@@ -123,7 +127,7 @@ private:
 	std::thread logThread;
 
 	/// Render engine for GUI messages.
-	BL::RenderEngine re;
+	mutable BL::RenderEngine re;
 };
 
 /// Get singleton instance of Logger.
