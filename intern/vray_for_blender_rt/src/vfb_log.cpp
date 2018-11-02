@@ -20,6 +20,7 @@
 
 #include "BKE_global.h"
 
+#include <cstring>
 #ifdef _WIN32
 #include <windows.h>
 #else
