@@ -99,8 +99,6 @@ RenderMode ExporterSettings::getRenderMode()
 
 void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::BlendData data, BL::Scene _scene, BL::SpaceView3D view3d)
 {
-	getLog().setRenderEngine(engine);
-
 	is_viewport = !!view3d;
 	is_preview = engine && engine.is_preview();
 

@@ -69,6 +69,9 @@ struct Logger {
 	/// Log string with custom level.
 	PRINTF_ATTR(3, 4) void log(LogLevel level, const char *format, ...) const;
 
+	/// Set max log level to be printed, unless Logger::msg is used where current filter is ignored.
+	void setLogLevel(LogLevel value);
+
 	/// Initialize the logger, needs to be called only once.
 	/// Don't call this from static variable's ctor, which is inside a module (causes deadlock).
 	void startLogging();

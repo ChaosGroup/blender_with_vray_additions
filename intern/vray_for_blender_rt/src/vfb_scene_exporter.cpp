@@ -386,8 +386,6 @@ void SceneExporter::create_exporter()
 
 void SceneExporter::free()
 {
-	getLog().setRenderEngine(PointerRNA_NULL);
-
 	if (m_threadManager) {
 		m_threadManager->stop();
 	}

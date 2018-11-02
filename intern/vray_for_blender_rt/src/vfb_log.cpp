@@ -95,7 +95,6 @@ static void win_cprint(HANDLE mConsoleHandle, const char *buf, const char *escSe
 }
 #endif
 
-
 #ifdef _WIN32
 static void cprint_stripped(const char *buf, HANDLE mConsoleHandle)
 #else

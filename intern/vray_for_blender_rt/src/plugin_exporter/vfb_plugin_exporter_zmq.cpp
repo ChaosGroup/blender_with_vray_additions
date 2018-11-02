@@ -254,8 +254,13 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 		}
 
 		getLog().log(msgLevel, msg.c_str());
-	}
-	else if (msgType == VRayMessage::Type::Image) {
+
+		if (callback_on_message_update) {
+			std::string guiMsg("V-Ray: ");
+			guiMsg.append(msg);
+			callback_on_message_update("", guiMsg.c_str());
+		}
+	} else if (msgType == VRayMessage::Type::Image) {
 		auto * set = message.getValue<VRayBaseTypes::AttrImageSet>();
 		bool ready = set->sourceType == VRayBaseTypes::ImageSourceType::ImageReady;
 		bool rtImageUpdate = false;
