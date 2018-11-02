@@ -52,7 +52,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 			break;
 		}
 		case Mesh::MeshExportResult::cached: {
-			geom = AttrValue(meshName);
+			geom = AttrPlugin(meshName);
 			break;
 		}
 		case Mesh::MeshExportResult::error:
