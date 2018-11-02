@@ -25,12 +25,233 @@
 #include <windows.h>
 #endif
 
+#define MY_COLOR_RED      "\033[0;31m"
+#define MY_COLOR_GREEN    "\033[0;32m"
+#define MY_COLOR_YELLOW   "\033[0;33m"
+#define MY_COLOR_BLUE     "\033[0;34m"
+#define MY_COLOR_CYAN     "\033[1;34m"
+#define MY_COLOR_MAGENTA  "\033[0;35m"
+#define MY_COLOR_DEFAULT  "\033[0m"
+
+/// ESC sequence start marker.
+static const char ESC_START = '\033';
+
+/// ESC sequence end marker.
+static const char ESC_END = 'm';
+
+// Max message buffer size
+const int COLOR_BUF_LEN = 2048;
+
+// Max esc sequene length
+const int MAX_ESC_LEN = 64;
+
 /// The ID of the main thread - used to distinguish in log.
 static const std::thread::id mainThreadID = std::this_thread::get_id();
 
 static const char *months[12] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
+
+#ifdef _WIN32
+static CONSOLE_SCREEN_BUFFER_INFO CSBI;
+static int BACKGROUND_INFO;
+
+struct win_to_ansi_struct {
+	const char *color;
+	const int colorLen;
+	int color_id;
+};
+
+static struct win_to_ansi_struct AnsiToWinColor[] = {
+	{MY_COLOR_RED, strlen(MY_COLOR_RED), FOREGROUND_RED},
+	{MY_COLOR_GREEN, strlen(MY_COLOR_GREEN), FOREGROUND_GREEN},
+	{MY_COLOR_YELLOW, strlen(MY_COLOR_YELLOW), FOREGROUND_RED | FOREGROUND_GREEN},
+	{MY_COLOR_BLUE, strlen(MY_COLOR_BLUE), FOREGROUND_GREEN | FOREGROUND_BLUE},
+	{MY_COLOR_CYAN, strlen(MY_COLOR_CYAN), FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY},
+	{MY_COLOR_MAGENTA, strlen(MY_COLOR_MAGENTA), FOREGROUND_RED | FOREGROUND_BLUE},
+	{MY_COLOR_DEFAULT, strlen(MY_COLOR_DEFAULT), FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED},
+};
+
+static void win_cprint(HANDLE mConsoleHandle, const char *buf, const char *escSeq = NULL)
+{
+	if (!escSeq)
+		return;
+
+	// Using WriteFile here for correct redirection to file
+	DWORD bytesWritten;
+	WriteFile(mConsoleHandle, buf, DWORD(strlen(buf)), &bytesWritten, NULL);
+
+	for (size_t i = 0; i < ArraySize(AnsiToWinColor); ++i) {
+		const win_to_ansi_struct &p = AnsiToWinColor[i];
+
+		if (strncmp(p.color, escSeq, p.colorLen) != 0)
+			continue;
+		if (strncmp(p.color, MY_COLOR_DEFAULT, p.colorLen) == 0)
+			SetConsoleTextAttribute(mConsoleHandle, CSBI.wAttributes);
+		else
+			SetConsoleTextAttribute(mConsoleHandle, BACKGROUND_INFO | p.color_id);
+		break;
+	}
+}
+#endif
+
+
+#ifdef _WIN32
+static void cprint_stripped(const char *buf, HANDLE mConsoleHandle)
+#else
+static void cprint_stripped(const char *buf)
+#endif
+{
+	if (!buf || buf[0] == '\0')
+		return;
+
+	int bufPos = 0;
+	int copyBufPos = 0;
+
+	// Flag showing that bufPos is inside
+	// escape sequence
+	bool inEsc = false;
+
+	char *copyBuf = new char[strlen(buf) + 1];
+
+	while (buf[bufPos] != '\0') {
+		if (buf[bufPos] == ESC_START)
+			inEsc = true;
+		else if (inEsc && buf[bufPos] == ESC_END)
+			inEsc = false;
+		else if (!inEsc)
+			copyBuf[copyBufPos++] = buf[bufPos];
+		bufPos++;
+	}
+	copyBuf[copyBufPos] = '\0';
+
+#ifdef _WIN32
+	win_cprint(mConsoleHandle, copyBuf);
+#else
+	printf("%s", copyBuf);
+#endif
+
+	FreePtrArr(copyBuf);
+}
+
+static void cprint(bool useColor, const char *buf)
+{
+	if (!buf || buf[0] == '\0')
+		return;
+
+#ifndef _WIN32
+	// UNIX natively supports ANSI escape colors.
+	// isatty(1) == 1 means we are printing to the terminal,
+	// otherwise we are printing to the file and want
+	// colorizing to be off.
+	//
+	if(useColor && isatty(1))
+		printf("%s", buf);
+	else
+		cprint_stripped(buf);
+	return;
+#else
+	HANDLE mConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	GetConsoleScreenBufferInfo(mConsoleHandle, &CSBI);
+	BACKGROUND_INFO = CSBI.wAttributes & 0xF0;
+
+	if (mConsoleHandle == INVALID_HANDLE_VALUE) {
+		printf("cprint: Invalid handle!\n");
+		return;
+	}
+
+	if (!useColor) {
+		cprint_stripped(buf, mConsoleHandle);
+		return;
+	}
+
+	char *copyBuf = new char[strlen(buf) + 1];
+	char escSeq[MAX_ESC_LEN];
+
+	int bufPos = 0;
+	int copyBufPos = 0;
+	int escPos = 0;
+
+	bool inEsc = false;
+
+	while (buf[bufPos] != '\0') {
+		if (buf[bufPos] == ESC_START)
+			inEsc = true;
+		if (!inEsc)
+			copyBuf[copyBufPos++] = buf[bufPos];
+		else {
+			if (buf[bufPos] == ESC_END) {
+				escSeq[escPos++] = ESC_END;
+				escSeq[escPos++] = '\0';
+
+				copyBuf[copyBufPos] = '\0';
+				copyBufPos = 0;
+
+				win_cprint(mConsoleHandle, copyBuf, escSeq);
+
+				inEsc = false;
+				escPos = 0;
+				bufPos++;
+				continue;
+			}
+			else {
+				escSeq[escPos++] = buf[bufPos];
+				if (escPos == MAX_ESC_LEN) {
+					printf("cprint: Incorrect ESC length!\n");
+					break;
+				}
+			}
+		}
+
+		bufPos++;
+	}
+	copyBuf[copyBufPos] = '\0';
+
+	// Print if we have any data left
+	if (copyBufPos)
+		win_cprint(mConsoleHandle, copyBuf);
+
+	FreePtrArr(copyBuf);
+
+	// Reset color back to default
+	SetConsoleTextAttribute(mConsoleHandle, CSBI.wAttributes);
+#endif // _WIN32
+}
+
+static void cprintf(bool useColor, const char *format, ...)
+{
+	if (!format || format[0] == '\0')
+		return;
+
+	va_list args;
+	char buf[COLOR_BUF_LEN];
+	char *buffer = buf;
+
+	va_start(args, format);
+	// first get the required number of chars to avoid buffer overflows
+#ifdef _WIN32
+	int len = _vscprintf(format, args);
+#else
+	int len = vsnprintf(NULL, 0, format, args);
+#endif
+	va_end(args);
+
+	++len;
+
+	if (len > COLOR_BUF_LEN)
+		buffer = new char[len];
+
+	va_start(args, format);
+
+	vsnprintf(buffer, len, format, args);
+	cprint(useColor, buffer);
+
+	va_end(args);
+
+	if (buffer != buf)
+		delete [] buffer;
+}
 
 static const char *logLevelAsString(LogLevel level)
 {
@@ -47,12 +268,12 @@ static const char *logLevelAsString(LogLevel level)
 static const char *logLevelAsColor(LogLevel level)
 {
 	switch (level) {
-		case LogLevel::info: return COLOR_DEFAULT;
-		case LogLevel::progress: return COLOR_GREEN;
-		case LogLevel::warning: return COLOR_YELLOW;
-		case LogLevel::error: return COLOR_RED;
-		case LogLevel::debug: return COLOR_CYAN;
-		default: return COLOR_DEFAULT;
+		case LogLevel::info: return MY_COLOR_DEFAULT;
+		case LogLevel::progress: return MY_COLOR_GREEN;
+		case LogLevel::warning: return MY_COLOR_YELLOW;
+		case LogLevel::error: return MY_COLOR_RED;
+		case LogLevel::debug: return MY_COLOR_CYAN;
+		default: return MY_COLOR_DEFAULT;
 	}
 }
 
@@ -87,6 +308,11 @@ Logger::Logger()
 	, re(PointerRNA_NULL)
 {}
 
+Logger::~Logger()
+{
+	stopLogging();
+}
+
 void Logger::printMessage(const VfhLogMessage &msg)
 {
 	char strTime[100];
@@ -97,7 +323,7 @@ void Logger::printMessage(const VfhLogMessage &msg)
 	dateToStr(strDate, ArraySize(strDate), msg.time);
 
 	snprintf(buf, ArraySize(buf),
-		COLOR_BLUE "[%s|%s]" COLOR_DEFAULT " VFB |%s%8s" COLOR_DEFAULT "| %s %s%s%s" COLOR_DEFAULT,
+		MY_COLOR_BLUE "[%s|%s]" MY_COLOR_DEFAULT " VFB |%s%8s" MY_COLOR_DEFAULT "| %s %s%s%s" MY_COLOR_DEFAULT,
 		strDate,
 		strTime,
 		logLevelAsColor(msg.level),
@@ -108,9 +334,7 @@ void Logger::printMessage(const VfhLogMessage &msg)
 		msg.level == LogLevel::progress ? "\r" : "\n"
 	);
 
-	FILE *output = msg.level == LogLevel::error ? stderr : stdout;
-	fprintf(output, "%s", buf);
-	fflush(output);
+	cprintf(true, "%s", buf);
 
 #ifdef _WIN32
 	OutputDebugStringA(buf);

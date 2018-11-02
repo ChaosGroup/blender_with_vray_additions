@@ -44,6 +44,7 @@ enum class LogLevel {
 /// Simple logger class wrapping over printf.
 struct Logger {
 	Logger();
+	~Logger();
 
 	/// Log string with info level.
 	PRINTF_ATTR(2, 3) void info(const char *format, ...) const;
