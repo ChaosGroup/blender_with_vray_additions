@@ -22,6 +22,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h> // for isatty
 #endif
 
 #define MY_COLOR_RED      "\033[0;31m"
