@@ -37,8 +37,6 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 	options.force_dynamic_geometry = m_settings.is_gpu && m_settings.is_viewport ||
 	                                 oattrs && oattrs.useInstancer;
 
-	getLog().info("Exporting mesh: %s...", ob.name().c_str());
-
 	const Mesh::MeshExportResult res = FillMeshData(m_data,
 	                                                m_scene,
 	                                                ob,
