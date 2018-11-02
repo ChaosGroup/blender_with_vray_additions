@@ -166,8 +166,6 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 
 bool ProductionExporter::export_scene(const bool)
 {
-	getLog().setRenderEngine(PointerRNA_NULL);
-
 	m_frameExporter.updateFromSettings(m_scene);
 	SceneExporter::export_scene(false);
 

@@ -226,47 +226,36 @@ RenderImage ZmqExporter::get_image() {
 	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
-
 enum MessageLevel {
 	MessageError = 9999,
 	MessageWarning = 19999,
 	MessageInfo = 29999
 };
 
-const char * vrayLogLevelToString(int lvl, ExporterSettings::VRayVerboseLevel stsLevel) {
-	if (lvl > MessageLevel::MessageInfo) {
-		return stsLevel >= ExporterSettings::LevelAll ? "Debug" : nullptr;
-	} else if (lvl > MessageLevel::MessageWarning) {
-		return stsLevel >= ExporterSettings::LevelProgress ? "Info" : nullptr;
-	} else if (lvl > MessageLevel::MessageError) {
-		return stsLevel >= ExporterSettings::LevelWarnings ? "Warning" : nullptr;
-	} else if (lvl > 0) {
-		return stsLevel >= ExporterSettings::LevelErrors ? "Error" : nullptr;
-	} else {
-		return stsLevel >= ExporterSettings::LevelAll ? "N/A" : nullptr;
-	}
-}
-
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::VRayLog) {
-		const char * lvlStr = vrayLogLevelToString(message.getLogLevel(), exporter_settings.verbose_level);
-
-		if (lvlStr) {
-			fprintf(stdout, "VRay%s: %s\n", lvlStr, message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->value.c_str());
-			fflush(stdout);
+		std::string msg = *message.getValue<AttrString>();
+		const auto newLine = msg.find_first_of("\n\r");
+		if (newLine != std::string::npos) {
+			msg.resize(newLine);
 		}
 
-		if (this->callback_on_message_update) {
-			std::string msg = *message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>();
-			auto newLine = msg.find_first_of("\n\r");
-			if (newLine != std::string::npos) {
-				msg.resize(newLine);
-			}
-
-			this->callback_on_message_update("", msg.c_str());
+		LogLevel msgLevel = LogLevel::debug;
+		const int logLevel = message.getLogLevel();
+		if (logLevel <= MessageError) {
+			msgLevel = LogLevel::error;
 		}
-	} else if (msgType == VRayMessage::Type::Image) {
+		else if (logLevel > MessageError && logLevel <= MessageWarning) {
+			msgLevel = LogLevel::warning;
+		}
+		else if (logLevel > MessageWarning && logLevel <= MessageInfo) {
+			msgLevel = LogLevel::info;
+		}
+
+		getLog().log(msgLevel, msg.c_str());
+	}
+	else if (msgType == VRayMessage::Type::Image) {
 		auto * set = message.getValue<VRayBaseTypes::AttrImageSet>();
 		bool ready = set->sourceType == VRayBaseTypes::ImageSourceType::ImageReady;
 		bool rtImageUpdate = false;

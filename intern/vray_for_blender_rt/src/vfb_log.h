@@ -34,6 +34,7 @@
 #endif
 
 enum class LogLevel {
+	none,
 	info,
 	progress,
 	warning,

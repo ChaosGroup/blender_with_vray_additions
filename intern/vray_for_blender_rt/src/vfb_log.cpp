@@ -313,6 +313,16 @@ Logger::~Logger()
 	stopLogging();
 }
 
+void Logger::setLogLevel(LogLevel value)
+{
+	logLevel = value;
+}
+
+void Logger::setRenderEngine(BL::RenderEngine value)
+{
+	re = value;
+}
+
 void Logger::printMessage(const VfhLogMessage &msg) const
 {
 	char strTime[100];
@@ -395,6 +405,9 @@ void Logger::add(const VfhLogMessage &msg) const
 
 void Logger::add(LogLevel level, const char *format, va_list args) const
 {
+	if (logLevel == LogLevel::none)
+		return;
+
 	// Show all messages in debug.
 	if (!G.debug) {
 		const bool showMessage = level <= logLevel;
@@ -422,6 +435,9 @@ void Logger::add(LogLevel level, const char *format, va_list args) const
 
 void Logger::log(LogLevel level, const char *format, ...) const
 {
+	if (logLevel == LogLevel::none)
+		return;
+
 	va_list args;
 	va_start(args, format);
 
@@ -430,18 +446,11 @@ void Logger::log(LogLevel level, const char *format, ...) const
 	va_end(args);
 }
 
-void Logger::setLogLevel(LogLevel value)
-{
-	logLevel = value;
-}
-
-void Logger::setRenderEngine(BL::RenderEngine value)
-{
-	re = value;
-}
-
 void Logger::info(const char *format, ...) const
 {
+	if (logLevel == LogLevel::none)
+		return;
+
 	va_list args;
 	va_start(args, format);
 
@@ -452,6 +461,9 @@ void Logger::info(const char *format, ...) const
 
 void Logger::warning(const char *format, ...) const
 {
+	if (logLevel == LogLevel::none)
+		return;
+
 	va_list args;
 	va_start(args, format);
 
@@ -462,6 +474,9 @@ void Logger::warning(const char *format, ...) const
 
 void Logger::error(const char *format, ...) const
 {
+	if (logLevel == LogLevel::none)
+		return;
+
 	va_list args;
 	va_start(args, format);
 
@@ -485,6 +500,9 @@ void Logger::debug(const char *format, ...) const
 
 void Logger::progress(const char *format, ...) const
 {
+	if (logLevel == LogLevel::none)
+		return;
+
 	va_list args;
 	va_start(args, format);
 
