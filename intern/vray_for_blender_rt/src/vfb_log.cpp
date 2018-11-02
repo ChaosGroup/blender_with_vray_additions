@@ -17,7 +17,6 @@
 */
 
 #include "vfb_log.h"
-#include "vfb_util_defines.h"
 
 #include "BKE_global.h"
 
@@ -439,11 +438,6 @@ void Logger::log(LogLevel level, const char *format, ...) const
 	add(level, format, args);
 
 	va_end(args);
-}
-
-void Logger::setLogLevel(LogLevel value)
-{
-	logLevel = value;
 }
 
 void Logger::info(const char *format, ...) const

@@ -19,7 +19,7 @@
 #ifndef VRAY_FOR_BLENDER_LOG_H
 #define VRAY_FOR_BLENDER_LOG_H
 
-#include "vfb_rna.h"
+#include "vfb_util_defines.h"
 
 #include <cstdarg>
 #include <thread>
@@ -46,10 +46,6 @@ enum class LogLevel {
 struct Logger {
 	Logger();
 	~Logger();
-
-	/// Disable copy-ing as this is global singleton
-	Logger(const Logger &) = delete;
-	Logger& operator=(const Logger &) = delete;
 
 	/// Log string with info level.
 	PRINTF_ATTR(2, 3) void info(const char *format, ...) const;
@@ -127,6 +123,8 @@ private:
 
 	/// Logger thread.
 	std::thread logThread;
+
+	VFB_DISABLE_COPY(Logger);
 };
 
 /// Get singleton instance of Logger.
