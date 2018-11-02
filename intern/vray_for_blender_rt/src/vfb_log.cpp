@@ -305,22 +305,17 @@ int dateToStr(char *str, int strLen, time_t time)
 
 Logger::Logger()
 	: logLevel(LogLevel::error)
-	, re(PointerRNA_NULL)
+	, isRunning(false)
 {}
 
 Logger::~Logger()
 {
-	stopLogging();
+	VFB_Assert(!isRunning && "Logger must be stopped before destroying it");
 }
 
 void Logger::setLogLevel(LogLevel value)
 {
 	logLevel = value;
-}
-
-void Logger::setRenderEngine(BL::RenderEngine value)
-{
-	re = value;
 }
 
 void Logger::printMessage(const VfhLogMessage &msg) const
@@ -349,13 +344,6 @@ void Logger::printMessage(const VfhLogMessage &msg) const
 #ifdef _WIN32
 	OutputDebugStringA(buf);
 #endif
-
-	if (re) {
-		std::string guiMsg("V-Ray: ");
-		guiMsg.append(msg.message);
-
-		re.update_stats("", guiMsg.c_str());
-	}
 }
 
 void Logger::run() const
@@ -382,12 +370,20 @@ void Logger::startLogging()
 	logThread = std::thread(&Logger::run, this);
 }
 
-void Logger::stopLogging()
+void Logger::stopLogging(bool flush)
 {
+	if (!isRunning) {
+		return;
+	}
 	isRunning = false;
 
 	{
 		std::lock_guard<std::mutex> lock(mutex);
+		if (flush) {
+			for (const VfhLogMessage &msg : queue) {
+				printMessage(msg);
+			}
+		}
 		queue.clear();
 	}
 
@@ -444,6 +440,11 @@ void Logger::log(LogLevel level, const char *format, ...) const
 	add(level, format, args);
 
 	va_end(args);
+}
+
+void Logger::setLogLevel(LogLevel value)
+{
+	logLevel = value;
 }
 
 void Logger::info(const char *format, ...) const

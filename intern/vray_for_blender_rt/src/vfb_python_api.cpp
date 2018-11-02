@@ -149,6 +149,7 @@ static PyObject* vfb_unload(PyObject*)
 	getLog().info("vfb_unload()");
 
 	vfb_zmq_heartbeat_stop(nullptr);
+	getLog().stopLogging(true);
 
 	Py_RETURN_NONE;
 }
@@ -326,8 +327,6 @@ static PyObject* vfb_init_rt(PyObject*, PyObject *args, PyObject *keywds)
 static PyObject* vfb_exit(PyObject*)
 {
 	getLog().info("vfb_exit()");
-
-	getLog().stopLogging();
 
 	Py_RETURN_NONE;
 }
