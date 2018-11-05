@@ -22,6 +22,7 @@
 #include "vfb_util_defines.h"
 
 #include <cstdarg>
+#include <string>
 #include <thread>
 #include <queue>
 #include <mutex>
