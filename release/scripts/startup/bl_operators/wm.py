@@ -1039,9 +1039,9 @@ class WM_OT_doc_view(Operator):
 
     doc_id = doc_id
     if bpy.app.version_cycle == "release":
-        _prefix = ("https://docs.blender.org/api/blender_python_api_current")
+        _prefix = ("https://docs.blender.org/api/current")
     else:
-        _prefix = ("https://docs.blender.org/api/blender_python_api_master")
+        _prefix = ("https://docs.blender.org/api/master")
 
     def execute(self, context):
         url = _wm_doc_get_id(self.doc_id, do_url=True, url_prefix=self._prefix)
@@ -1417,10 +1417,10 @@ class WM_OT_appconfig_activate(Operator):
 
     def execute(self, context):
         import os
-        bpy.utils.keyconfig_set(self.filepath)
-
-        filepath = self.filepath.replace("keyconfig", "interaction")
-
+        filepath = self.filepath
+        bpy.utils.keyconfig_set(filepath)
+        dirname, filename = os.path.split(filepath)
+        filepath = os.path.normpath(os.path.join(dirname, os.pardir, "interaction", filename))
         if os.path.exists(filepath):
             bpy.ops.script.execute_preset(
                 filepath=filepath,

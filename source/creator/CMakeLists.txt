@@ -770,6 +770,19 @@ elseif(WIN32)
 				DESTINATION ${BLENDER_VERSION}/python/bin
 				CONFIGURATIONS Debug
 			)
+			if(WINDOWS_PYTHON_DEBUG)
+				install(
+					FILES ${LIBDIR}/python/lib/python${_PYTHON_VERSION_NO_DOTS}.pdb
+					DESTINATION "."
+					CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
+				)
+
+				install(
+					FILES ${LIBDIR}/python/lib/python${_PYTHON_VERSION_NO_DOTS}_d.pdb
+					DESTINATION "."
+					CONFIGURATIONS Debug
+				)
+			endif()
 		endif()
 
 		unset(_PYTHON_VERSION_NO_DOTS)
@@ -789,7 +802,7 @@ elseif(WIN32)
 
 	if(MSVC)
 		install(
-			FILES ${LIBDIR}/pthreads/lib/pthreadVC2.dll
+			FILES ${LIBDIR}/pthreads/lib/pthreadVC3.dll
 			DESTINATION "."
 		)
 	endif()
@@ -1049,5 +1062,10 @@ if(WIN32 AND NOT WITH_PYTHON_MODULE)
 		TARGETS blender
 		COMPONENT Blender
 		DESTINATION "."
+	)
+	set_target_properties(
+		blender
+		PROPERTIES
+			VS_USER_PROPS "blender.Cpp.user.props"
 	)
 endif()

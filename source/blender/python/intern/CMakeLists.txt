@@ -172,6 +172,10 @@ if(WITH_VRAY_FOR_BLENDER)
 	)
 endif()
 
+if(WITH_CYCLES_EMBREE)
+	add_definitions(-DWITH_CYCLES_EMBREE)
+endif()
+
 if(WITH_FREESTYLE)
 	list(APPEND INC
 		../../freestyle/intern/python

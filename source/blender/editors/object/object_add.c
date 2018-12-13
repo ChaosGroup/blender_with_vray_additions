@@ -537,7 +537,7 @@ static int effector_add_exec(bContext *C, wmOperator *op)
 			ob->empty_drawtype = OB_SINGLE_ARROW;
 	}
 
-	ob->pd = object_add_collision_fields(type);
+	ob->pd = BKE_partdeflect_new(type);
 
 	DAG_relations_tag_update(CTX_data_main(C));
 
@@ -1145,7 +1145,7 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 
 	// create flag that signals if call to ntreeVerifyNodes is needed
 	int defined_validate_nodes = 0;
-	FOREACH_NODETREE(bmain, ntree, owner_id) {
+	FOREACH_NODETREE_BEGIN(bmain, ntree, owner_id) {
 		bNode *node;
 
 		for (node = ntree->nodes.first; node; node = node->next) {
@@ -1157,7 +1157,7 @@ static int object_delete_exec(bContext *C, wmOperator *op)
 		if (defined_validate_nodes) {
 			break;
 		}
-	} FOREACH_NODETREE_END
+	} FOREACH_NODETREE_END;
 
 	IDProperty *scene_properties = scene->id.properties;
 	IDProperty *vray_group = NULL;

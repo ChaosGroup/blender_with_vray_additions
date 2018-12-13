@@ -355,7 +355,7 @@ static void text_from_buf(Text *text, const unsigned char *buffer, const int len
 	 * - rest of line (if last line in file hasn't got \n terminator).
 	 *   in this case content of such line would be used to fill text line buffer
 	 * - file is empty. in this case new line is needed to start editing from.
-	 * - last characted in buffer is \n. in this case new line is needed to
+	 * - last character in buffer is \n. in this case new line is needed to
 	 *   deal with newline at end of file. (see [#28087]) (sergey) */
 	if (llen != 0 || text->nlines == 0 || buffer[len - 1] == '\n') {
 		TextLine *tmp;
@@ -476,7 +476,7 @@ Text *BKE_text_load(Main *bmain, const char *file, const char *relpath)
  *
  * WARNING! This function will not handle ID user count!
  *
- * \param flag  Copying options (see BKE_library.h's LIB_ID_COPY_... flags for more).
+ * \param flag: Copying options (see BKE_library.h's LIB_ID_COPY_... flags for more).
  */
 void BKE_text_copy_data(Main *UNUSED(bmain), Text *ta_dst, const Text *ta_src, const int UNUSED(flag))
 {
@@ -2968,9 +2968,9 @@ int txt_setcurr_tab_spaces(Text *text, int space)
 	}
 	if (strstr(text->curl->line, word)) {
 		/* if we find a ':' on this line, then add a tab but not if it is:
-		 *  1) in a comment
-		 *  2) within an identifier
-		 *	3) after the cursor (text->curc), i.e. when creating space before a function def [#25414]
+		 * 1) in a comment
+		 * 2) within an identifier
+		 * 3) after the cursor (text->curc), i.e. when creating space before a function def [#25414]
 		 */
 		int a;
 		bool is_indent = false;
