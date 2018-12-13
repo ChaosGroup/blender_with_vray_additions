@@ -16,8 +16,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  * Contributor:
- *		Jeroen Bakker
- *		Monique Dewanchand
+ *      Jeroen Bakker
+ *      Monique Dewanchand
  */
 
 #include <algorithm>
@@ -437,7 +437,7 @@ void ExecutionGroup::determineChunkRect(rcti *rect, const unsigned int chunkNumb
 MemoryBuffer *ExecutionGroup::allocateOutputBuffer(int /*chunkNumber*/,
                                                    rcti *rect)
 {
-	// we asume that this method is only called from complex execution groups.
+	// we assume that this method is only called from complex execution groups.
 	NodeOperation *operation = this->getOutputOperation();
 	if (operation->isWriteBufferOperation()) {
 		WriteBufferOperation *writeOperation = (WriteBufferOperation *)operation;

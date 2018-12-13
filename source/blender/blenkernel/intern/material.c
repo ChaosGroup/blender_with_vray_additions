@@ -225,7 +225,7 @@ Material *BKE_material_add(Main *bmain, const char *name)
  *
  * WARNING! This function will not handle ID user count!
  *
- * \param flag  Copying options (see BKE_library.h's LIB_ID_COPY_... flags for more).
+ * \param flag: Copying options (see BKE_library.h's LIB_ID_COPY_... flags for more).
  */
 void BKE_material_copy_data(Main *bmain, Material *ma_dst, const Material *ma_src, const int flag)
 {
@@ -273,12 +273,15 @@ Material *BKE_material_copy(Main *bmain, const Material *ma)
 /* XXX (see above) material copy without adding to main dbase */
 Material *BKE_material_localize(Material *ma)
 {
-	/* TODO replace with something like
-	 * 	Material *ma_copy;
-	 * 	BKE_id_copy_ex(bmain, &ma->id, (ID **)&ma_copy, LIB_ID_COPY_NO_MAIN | LIB_ID_COPY_NO_PREVIEW | LIB_ID_COPY_NO_USER_REFCOUNT, false);
-	 * 	return ma_copy;
+	/* TODO(bastien): Replace with something like:
 	 *
-	 * ... Once f*** nodes are fully converted to that too :( */
+	 *   Material *ma_copy;
+	 *   BKE_id_copy_ex(bmain, &ma->id, (ID **)&ma_copy,
+	 *                  LIB_ID_COPY_NO_MAIN | LIB_ID_COPY_NO_PREVIEW | LIB_ID_COPY_NO_USER_REFCOUNT,
+	 *                  false);
+	 *   return ma_copy;
+	 *
+	 * NOTE: Only possible once nested node trees are fully converted to that too. */
 
 	Material *man;
 	int a;

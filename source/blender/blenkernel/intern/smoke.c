@@ -532,7 +532,7 @@ void smokeModifier_createType(struct SmokeModifierData *smd)
 			smd->domain->flame_smoke_color[2] = 0.7f;
 
 			smd->domain->viewsettings = MOD_SMOKE_VIEW_SHOWBIG;
-			smd->domain->effector_weights = BKE_add_effector_weights(NULL);
+			smd->domain->effector_weights = BKE_effector_add_weights(NULL);
 
 #ifdef WITH_OPENVDB_BLOSC
 			smd->domain->openvdb_comp = VDB_COMPRESSION_BLOSC;
@@ -724,7 +724,7 @@ static int get_lamp(Scene *scene, float *light)
 }
 
 /**********************************************************
- *	Obstacles
+ * Obstacles
  **********************************************************/
 
 typedef struct ObstaclesFromDMData {
@@ -982,7 +982,7 @@ static void update_obstacles(Scene *scene, Object *ob, SmokeDomainSettings *sds,
 }
 
 /**********************************************************
- *	Flow emission code
+ * Flow emission code
  **********************************************************/
 
 typedef struct EmissionMap {
@@ -1460,8 +1460,8 @@ static void sample_derivedmesh(
 	if (sfs->volume_density) {
 		if (BLI_bvhtree_ray_cast(treeData->tree, ray_start, ray_dir, 0.0f, &hit, treeData->raycast_callback, treeData) != -1) {
 			float dot = ray_dir[0] * hit.no[0] + ray_dir[1] * hit.no[1] + ray_dir[2] * hit.no[2];
-			/*  If ray and hit face normal are facing same direction
-			 *	hit point is inside a closed mesh. */
+			/* If ray and hit face normal are facing same direction
+			 * hit point is inside a closed mesh. */
 			if (dot >= 0) {
 				/* Also cast a ray in opposite direction to make sure
 				 * point is at least surrounded by two faces */
@@ -1508,7 +1508,7 @@ static void sample_derivedmesh(
 				interp_v3_v3v3v3(hit_normal, n1, n2, n3, weights);
 				normalize_v3(hit_normal);
 				/* apply normal directional and random velocity
-				 * - TODO: random disabled for now since it doesnt really work well as pressure calc smoothens it out... */
+				 * - TODO: random disabled for now since it doesn't really work well as pressure calc smoothens it out... */
 				velocity_map[index * 3]   += hit_normal[0] * sfs->vel_normal * 0.25f;
 				velocity_map[index * 3 + 1] += hit_normal[1] * sfs->vel_normal * 0.25f;
 				velocity_map[index * 3 + 2] += hit_normal[2] * sfs->vel_normal * 0.25f;
@@ -1691,8 +1691,8 @@ static void emit_from_derivedmesh(Object *flow_ob, SmokeDomainSettings *sds, Smo
 			}
 		}
 
-		/*	Transform dm vertices to
-		 *   domain grid space for fast lookups */
+		/* Transform dm vertices to
+		 * domain grid space for fast lookups */
 		for (i = 0; i < numOfVerts; i++) {
 			float n[3];
 			/* vert pos */
@@ -1775,7 +1775,7 @@ static void emit_from_derivedmesh(Object *flow_ob, SmokeDomainSettings *sds, Smo
 }
 
 /**********************************************************
- *	Smoke step
+ *  Smoke step
  **********************************************************/
 
 static void adjustDomainResolution(SmokeDomainSettings *sds, int new_shift[3], EmissionMap *emaps, unsigned int numflowobj, float dt)
@@ -2140,7 +2140,7 @@ static void update_flowsfluids(
 		VECSUB(new_shift, total_shift, sds->shift);
 		copy_v3_v3_int(sds->shift, total_shift);
 
-		/* calculate new domain boundary points so that smoke doesnt slide on sub-cell movement */
+		/* calculate new domain boundary points so that smoke doesn't slide on sub-cell movement */
 		sds->p0[0] = sds->dp0[0] - sds->cell_size[0] * (sds->shift_f[0] - total_shift[0] - 0.5f);
 		sds->p0[1] = sds->dp0[1] - sds->cell_size[1] * (sds->shift_f[1] - total_shift[1] - 0.5f);
 		sds->p0[2] = sds->dp0[2] - sds->cell_size[2] * (sds->shift_f[2] - total_shift[2] - 0.5f);

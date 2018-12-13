@@ -749,7 +749,7 @@ static void ui_template_id(
 	template_ui->idlb = which_libbase(CTX_data_main(C), idcode);
 
 	/* create UI elements for this template
-	 *	- template_ID makes a copy of the template data and assigns it to the relevant buttons
+	 * - template_ID makes a copy of the template data and assigns it to the relevant buttons
 	 */
 	if (template_ui->idlb) {
 		uiLayoutRow(layout, true);
@@ -1144,7 +1144,7 @@ uiLayout *uiTemplateModifier(uiLayout *layout, bContext *C, PointerRNA *ptr)
 	/* find modifier and draw it */
 	cageIndex = modifiers_getCageIndex(scene, ob, &lastCageIndex, 0);
 
-	/* XXX virtual modifiers are not accesible for python */
+	/* XXX virtual modifiers are not accessible for python */
 	vmd = modifiers_getVirtualModifierList(ob, &virtualModifierData);
 
 	for (i = 0; vmd; i++, vmd = vmd->next) {
@@ -2039,7 +2039,7 @@ static uiBlock *curvemap_clipping_func(bContext *C, ARegion *ar, void *cumap_v)
 
 	block = UI_block_begin(C, ar, __func__, UI_EMBOSS);
 
-	/* use this for a fake extra empy space around the buttons */
+	/* use this for a fake extra empty space around the buttons */
 	uiDefBut(block, UI_BTYPE_LABEL, 0, "",           -4, 16, width + 8, 6 * UI_UNIT_Y, NULL, 0, 0, 0, 0, "");
 
 	bt = uiDefButBitI(
@@ -2638,10 +2638,10 @@ void uiTemplateLayers(
 	}
 
 	/* the number of layers determines the way we group them
-	 *	- we want 2 rows only (for now)
-	 *	- the number of columns (cols) is the total number of buttons per row
-	 *	  the 'remainder' is added to this, as it will be ok to have first row slightly wider if need be
-	 *	- for now, only split into groups if group will have at least 5 items
+	 * - we want 2 rows only (for now)
+	 * - the number of columns (cols) is the total number of buttons per row
+	 *   the 'remainder' is added to this, as it will be ok to have first row slightly wider if need be
+	 * - for now, only split into groups if group will have at least 5 items
 	 */
 	layers = RNA_property_array_length(ptr, prop);
 	cols = (layers / 2) + (layers % 2);
@@ -2707,10 +2707,10 @@ void uiTemplateGameStates(
 	}
 
 	/* the number of states determines the way we group them
-	 *	- we want 2 rows only (for now)
-	 *	- the number of columns (cols) is the total number of buttons per row
-	 *	  the 'remainder' is added to this, as it will be ok to have first row slightly wider if need be
-	 *	- for now, only split into groups if group will have at least 5 items
+	 * - we want 2 rows only (for now)
+	 * - the number of columns (cols) is the total number of buttons per row
+	 *   the 'remainder' is added to this, as it will be ok to have first row slightly wider if need be
+	 * - for now, only split into groups if group will have at least 5 items
 	 */
 	states = RNA_property_array_length(ptr, prop);
 	cols = (states / 2) + (states % 2);
@@ -3670,7 +3670,7 @@ void uiTemplateOperatorPropertyButs(
 			/* only for popups, see [#36109] */
 
 			/* if button is operator's default property, and a text-field, enable focus for it
-			 *	- this is used for allowing operators with popups to rename stuff with fewer clicks
+			 * - this is used for allowing operators with popups to rename stuff with fewer clicks
 			 */
 			if (is_popup) {
 				if ((but->rnaprop == op->type->prop) && (but->type == UI_BTYPE_TEXT)) {
