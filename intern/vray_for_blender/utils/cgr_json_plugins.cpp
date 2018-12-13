@@ -83,7 +83,7 @@ void VRayPluginsDesc::init(const std::string &dirPath)
 				boost::property_tree::json_parser::read_json(fileStream, pTree);
 			}
 			catch (...) {
-				PRINT_ERROR("Parsing error of \"%s\"!", path.c_str())
+				PRINT_ERROR("Parsing error of \"%s\"!", path.string().c_str());
 			}
 		}
 	}
