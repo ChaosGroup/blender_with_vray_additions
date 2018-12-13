@@ -47,7 +47,7 @@ int PluginExporter::remove_plugin(const std::string &name) {
 	std::lock_guard<std::recursive_mutex> lock(m_exportMtx);
 	int result = 1;
 	if (m_pluginManager.inCache(name)) {
-		PRINT_INFO_EX("Removing plugin: [%s]", name.c_str());
+		getLog().info("Removing plugin: [%s]", name.c_str());
 		m_pluginManager.remove(name);
 		result = this->remove_plugin_impl(name);
 	}

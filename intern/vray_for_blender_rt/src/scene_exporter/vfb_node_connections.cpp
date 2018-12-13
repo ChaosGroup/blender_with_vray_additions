@@ -36,7 +36,7 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 		BL::Node     groupNode(toNode);
 		BL::NodeTree groupTree(Nodes::GetGroupNodeTree(groupNode));
 		if (!groupTree) {
-			PRINT_ERROR("Node tree \"%s\", group node \"%s\": Tree not found!",
+			getLog().error("Node tree \"%s\", group node \"%s\": Tree not found!",
 					    ntree.name().c_str(), groupNode.name().c_str());
 		}
 		else {
@@ -55,7 +55,7 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 				}
 			}
 			if (!groupOutput) {
-				PRINT_ERROR("Group node \"%s\", group tree \"%s\": Output node not found!",
+				getLog().error("Group node \"%s\", group tree \"%s\": Output node not found!",
 						    groupNode.name().c_str(), groupTree.name().c_str());
 			}
 			else {
@@ -74,7 +74,7 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 					}
 				}
 				if (!groupOutputInSocket) {
-					PRINT_ERROR("Group tree \"%s\", group output \"%s\": Input socket is not found!",
+					getLog().error("Group tree \"%s\", group output \"%s\": Input socket is not found!",
 							    groupTree.name().c_str(), groupOutput.name().c_str());
 				}
 				else {
@@ -94,11 +94,11 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 		BL::NodeGroup groupNode  = context.getGroupNode();
 		BL::NodeTree  parentTree = context.getNodeTree();
 		if (!parentTree) {
-			PRINT_ERROR("Group tree \"%s\", group input \"%s\": Parent tree is not found in context!",
+			getLog().error("Group tree \"%s\", group input \"%s\": Parent tree is not found in context!",
 					    ntree.name().c_str(), groupInputNode.name().c_str());
 		}
 		else if (!groupNode) {
-			PRINT_ERROR("Group tree \"%s\", group input \"%s\": Parent group node is not found in context!",
+			getLog().error("Group tree \"%s\", group input \"%s\": Parent group node is not found in context!",
 					    ntree.name().c_str(), groupInputNode.name().c_str());
 		}
 		else {
@@ -120,7 +120,7 @@ void DataExporter::exportLinkedSocketEx2(BL::NodeTree &ntree, BL::NodeSocket &fr
 				}
 			}
 			if (!groupNodeInputSocket) {
-				PRINT_ERROR("Group tree \"%s\", group node \"%s\": Input socket is not found!",
+				getLog().error("Group tree \"%s\", group node \"%s\": Input socket is not found!",
 						    parentTree.name().c_str(), groupNode.name().c_str());
 			}
 			else {

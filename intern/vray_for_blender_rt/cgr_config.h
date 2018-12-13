@@ -279,4 +279,6 @@ typedef unsigned __int64 u_int64_t;
 // TODO: change to appropriate number
 static const int EXPORTER_THREAD_OBJECT_THRESHOLD = 10;
 
+#define USE_MT_EXPORTER 0
+
 #endif // CGR_CONFIG

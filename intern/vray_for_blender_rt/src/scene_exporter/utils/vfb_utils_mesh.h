@@ -22,10 +22,17 @@
 #include "vfb_rna.h"
 #include "vfb_plugin_attrs.h"
 
-#include <string>
-
 namespace VRayForBlender {
+
+class PluginManager;
+
 namespace Mesh {
+
+enum class MeshExportResult {
+	error,
+	exported,
+	cached
+};
 
 struct ExportOptions {
 	ExportOptions()
@@ -41,7 +48,14 @@ struct ExportOptions {
 	bool     use_subsurf_to_osd;
 };
 
-int FillMeshData(BL::BlendData data, BL::Scene scene, BL::Object ob, ExportOptions options, PluginDesc &pluginDesc);
+MeshExportResult FillMeshData(BL::BlendData data,
+                              BL::Scene scene,
+                              BL::Object ob,
+                              ExportOptions options,
+                              PluginDesc &pluginDesc,
+                              PluginManager &plugMan,
+                              float t,
+                              int checkCache);
 
 } // namespace Mesh
 } // namespace VRayForBlender

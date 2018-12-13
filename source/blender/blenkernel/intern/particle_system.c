@@ -1610,9 +1610,9 @@ static void sph_density_accum_cb(void *userdata, int index, const float co[3], f
 
 	/* Ugh! One particle has too many neighbors! If some aren't taken into
 	 * account, the forces will be biased by the tree search order. This
-	 * effectively adds enery to the system, and results in a churning motion.
+	 * effectively adds energy to the system, and results in a churning motion.
 	 * But, we have to stop somewhere, and it's not the end of the world.
-	 *  - jahka and z0r
+	 * - jahka and z0r
 	 */
 	if (pfr->tot_neighbors >= SPH_NEIGHBORS)
 		return;
@@ -2187,7 +2187,7 @@ static void basic_rotate(ParticleSettings *part, ParticleData *pa, float dfra, f
 }
 
 /************************************************
- *			Collisions
+ * Collisions
  *
  * The algorithm is roughly:
  *  1. Use a BVH tree to search for faces that a particle may collide with.
@@ -4335,7 +4335,7 @@ void particle_system_update(Main *bmain, Scene *scene, Object *ob, ParticleSyste
 							pa->flag &= ~PARS_NO_DISP;
 					}
 
-					/* free unexisting after reseting particles */
+					/* free unexisting after resetting particles */
 					if (free_unexisting)
 						free_unexisting_particles(&sim);
 

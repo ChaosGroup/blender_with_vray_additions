@@ -143,11 +143,11 @@ void FrameExportManager::updateFromSettings(BL::Scene & scene)
 				});
 
 				if (m_loopCameras.empty()) {
-					PRINT_WARN("Using camera loop without any camera's marked!");
+					getLog().warning("Using camera loop without any camera's marked!");
 				} else {
-					PRINT_INFO_EX("Camera loop mode, in order camera list:");
+					getLog().info("Camera loop mode, in order camera list:");
 					for (auto & c : m_loopCameras) {
-						PRINT_INFO_EX("Loop camera \"%s\"", c.name().c_str());
+						getLog().info("Loop camera \"%s\"", c.name().c_str());
 					}
 				}
 			}
@@ -373,6 +373,7 @@ void SceneExporter::init() {
 	m_exporter->set_commit_state(VRayBaseTypes::CommitAutoOff);
 
 	if (!m_threadManager) {
+#if USE_MT_EXPORTER
 		// lets init ThreadManager based on object count
 		if (m_scene.objects.length() > EXPORTER_THREAD_OBJECT_THRESHOLD) {
 			m_threadManager = ThreadManager::make(2);
@@ -380,6 +381,9 @@ void SceneExporter::init() {
 			// thread manager with 0 means all objects will be exported from current thread
 			m_threadManager = ThreadManager::make(0);
 		}
+#else
+		m_threadManager = ThreadManager::make(0);
+#endif
 	}
 }
 
@@ -412,13 +416,14 @@ void SceneExporter::render_start()
 	    m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		m_exporter->start();
 	} else {
-		PRINT_INFO_EX("Work mode WorkModeExportOnly, skipping renderer_start");
+		getLog().info("Work mode WorkModeExportOnly, skipping renderer_start");
 	}
 }
 
 bool SceneExporter::export_scene(const bool check_updated)
 {
 	m_settingsExporter.init(m_exporter, m_scene, m_context, get_current_view_params());
+	m_data_exporter.setIsIPR(check_updated);
 	return true;
 }
 
@@ -435,22 +440,23 @@ void SceneExporter::calculate_scene_layers()
 		if (m_settings.use_active_layers == ExporterSettings::ActiveLayersCustom) {
 			viewLayers = m_settings.active_layers;
 		} else if (m_settings.use_active_layers == ExporterSettings::ActiveLayersAll) {
-			for (int c = 0; c < 20; ++c) {
-				viewLayers[c] = 1;
+			for (int c = 0; c < ArraySize(viewLayers.data); ++c) {
+				viewLayers[c] = true;
 			}
 		} else {
 			viewLayers = m_scene.layers();
 		}
 	}
 
-	for (int c = 0; c < 20; ++c) {
+	for (int c = 0; c < ArraySize(viewLayers.data); ++c) {
 		m_sceneComputedLayers |= (!!viewLayers[c] << c);
 	}
 
 	if (m_isLocalView) {
+		const int offsetLayers = ArraySize(viewLayers.data);
 		auto viewLocalLayers = m_view3d.layers_local_view();
-		for (int c = 0; c < 8; ++c) {
-			m_sceneComputedLayers |= (!!viewLocalLayers[c] << (20 + c));
+		for (int c = 0; c < ArraySize(viewLocalLayers.data); ++c) {
+			m_sceneComputedLayers |= (!!viewLocalLayers[c] << (offsetLayers + c));
 		}
 
 		// truncate to local view layers
@@ -529,7 +535,7 @@ static void TagNtreeIfIdPropTextureUpdated(BL::NodeTree ntree, BL::Node node, co
 {
 	BL::Texture tex(Blender::GetDataFromProperty<BL::Texture>(&node.ptr, texAttr));
 	if (tex && (tex.is_updated() || tex.is_updated_data())) {
-		PRINT_INFO_EX("Texture %s is updated...",
+		getLog().info("Texture %s is updated...",
 		              tex.name().c_str());
 		DataExporter::tag_ntree(ntree);
 	}
@@ -745,7 +751,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 		m_exporter->remove_plugin(exportInstName);
 
-		PRINT_INFO_EX("Skipping duplication empty %s", ob.name().c_str());
+		getLog().info("Skipping duplication empty %s", ob.name().c_str());
 
 		return;
 	}
@@ -1051,7 +1057,7 @@ void SceneExporter::sync_array_mod(BL::Object ob, const int &check_updated) {
 			const auto * amd = reinterpret_cast<ArrayModifierData*>(arrMod.ptr.data);
 
 			if (!amd->dupliTms) {
-				PRINT_ERROR("ArrayModifier dupliTms is null for object \"%s\"", nodeName.c_str());
+				getLog().error("ArrayModifier dupliTms is null for object \"%s\"", nodeName.c_str());
 				return;
 			}
 
@@ -1240,7 +1246,7 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 }
 
 void SceneExporter::sync_objects(const bool check_updated) {
-	PRINT_INFO_EX("SceneExporter::sync_objects(%i)", check_updated);
+	getLog().info("SceneExporter::sync_objects(%i)", check_updated);
 
 	// valid object or group name will force export of only it
 	const bool hasNonRenderOverride = m_settings.nonRender.use && (
@@ -1285,7 +1291,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}
 
 		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			getLog().info("Started export for all objects - waiting for all.");
 			wg.wait();
 		}
 
@@ -1304,7 +1310,7 @@ void SceneExporter::sync_objects(const bool check_updated) {
 		}
 
 		if (!is_interrupted() && m_threadManager->workerCount()) {
-			PRINT_INFO_EX("Started export for all objects - waiting for all.");
+			getLog().info("Started export for all objects - waiting for all.");
 			wg.wait();
 		}
 	}

@@ -2424,7 +2424,7 @@ bool BKE_mesh_center_of_volume(const Mesh *me, float r_cent[3])
 	}
 	/* otherwise we get NAN for 0 polys */
 	if (total_volume != 0.0f) {
-		/* multipy by 0.25 to get the correct centroid */
+		/* multiply by 0.25 to get the correct centroid */
 		/* no need to divide volume by 6 as the centroid is weighted by 6x the volume, so it all cancels out */
 		mul_v3_fl(r_cent, 0.25f / total_volume);
 	}
@@ -2627,7 +2627,7 @@ void BKE_mesh_loops_to_mface_corners(
 /**
  * Convert all CD layers from loop/poly to tessface data.
  *
- * \param loopindices is an array of an int[4] per tessface, mapping tessface's verts to loops indices.
+ * \param loopindices: is an array of an int[4] per tessface, mapping tessface's verts to loops indices.
  *
  * \note when mface is not NULL, mface[face_index].v4 is used to test quads, else, loopindices[face_index][3] is used.
  */
@@ -3461,9 +3461,9 @@ void BKE_mesh_mdisp_flip(MDisps *md, const bool use_loop_mdisp_flip)
  * Flip (invert winding of) the given \a mpoly, i.e. reverse order of its loops
  * (keeping the same vertex as 'start point').
  *
- * \param mpoly the polygon to flip.
- * \param mloop the full loops array.
- * \param ldata the loops custom data.
+ * \param mpoly: the polygon to flip.
+ * \param mloop: the full loops array.
+ * \param ldata: the loops custom data.
  */
 void BKE_mesh_polygon_flip_ex(
         MPoly *mpoly, MLoop *mloop, CustomData *ldata,
@@ -3728,11 +3728,11 @@ void BKE_mesh_flush_select_from_verts(Mesh *me)
  * (\a vert_cos_src, \a vert_cos_dst),
  * and applies the difference to \a vert_cos_new relative to \a vert_cos_org.
  *
- * \param vert_cos_src reference deform source.
- * \param vert_cos_dst reference deform destination.
+ * \param vert_cos_src: reference deform source.
+ * \param vert_cos_dst: reference deform destination.
  *
- * \param vert_cos_org reference for the output location.
- * \param vert_cos_new resulting coords.
+ * \param vert_cos_org: reference for the output location.
+ * \param vert_cos_new: resulting coords.
  */
 void BKE_mesh_calc_relative_deform(
         const MPoly *mpoly, const int totpoly,

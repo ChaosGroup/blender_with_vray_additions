@@ -2305,7 +2305,6 @@ void TEXT_OT_scroll(wmOperatorType *ot)
 	 * scroll_bar. Both do basically the same thing (aside
 	 * from keymaps).*/
 	ot->idname = "TEXT_OT_scroll";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->exec = text_scroll_exec;
@@ -2397,7 +2396,6 @@ void TEXT_OT_scroll_bar(wmOperatorType *ot)
 	 * scroll. Both do basically the same thing (aside
 	 * from keymaps).*/
 	ot->idname = "TEXT_OT_scroll_bar";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->invoke = text_scroll_bar_invoke;
@@ -3194,7 +3192,7 @@ static int text_resolve_conflict_invoke(bContext *C, wmOperator *op, const wmEve
 	switch (BKE_text_file_modified_check(text)) {
 		case 1:
 			if (text->flags & TXT_ISDIRTY) {
-				/* modified locally and externally, ahhh. offer more possibilites. */
+				/* modified locally and externally, ahhh. offer more possibilities. */
 				pup = UI_popup_menu_begin(C, IFACE_("File Modified Outside and Inside Blender"), ICON_NONE);
 				layout = UI_popup_menu_layout(pup);
 				uiItemEnumO_ptr(layout, op->type, IFACE_("Reload from disk (ignore local changes)"),

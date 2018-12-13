@@ -21,6 +21,9 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
+
+#include <BKE_global.h>
+
 #include <boost/range/adaptor/reversed.hpp>
 
 #define SPRINTF_FORMAT_INIT_IN_SCOPE()                              \
@@ -87,16 +90,16 @@ void IdTrack::clear() {
 void IdTrack::insert(BL::Object ob, const std::string &plugin, PluginType type) {
 	switch (type) {
 	case IdTrack::CLIPPER:
-		PRINT_INFO_EX("IdTrack plugin %s CLIPPER", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s CLIPPER", plugin.c_str());
 		break;
 	case IdTrack::DUPLI_INSTACER:
-		PRINT_INFO_EX("IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s DUPLI_INSTACER", plugin.c_str());
 		break;
 	case IdTrack::DUPLI_NODE:
-		PRINT_INFO_EX("IdTrack plugin %s DUPLI_NODE", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s DUPLI_NODE", plugin.c_str());
 		break;
 	case IdTrack::HAIR:
-		PRINT_INFO_EX("IdTrack plugin %s HAIR", plugin.c_str());
+		DEBUG_PRINT(1, "IdTrack plugin %s HAIR", plugin.c_str());
 		break;
 	default:
 		break;
@@ -272,7 +275,7 @@ void DataExporter::sync()
 			}
 
 			if (should_remove) {
-				PRINT_INFO_EX("Removing plugin: %s, with type: %s, for ob [%s]", plIter->first.c_str(), type, dIt->first.c_str());
+				getLog().info("Removing plugin: %s, with type: %s, for ob [%s]", plIter->first.c_str(), type, dIt->first.c_str());
 				m_exporter->remove_plugin(plIter->first);
 				plIter = dep.plugins.erase(plIter);
 			} else {
@@ -365,7 +368,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 		attrValue = AttrVector(vector);
 	}
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketBRDF) {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
+		getLog().error("Node tree: %s => Node name: %s => Mandatory socket of type '%s' is not linked!",
 		            ntree.name().c_str(), socket.node().name().c_str(), socketTypeName.c_str());
 	}
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketPlugin) {
@@ -381,7 +384,7 @@ AttrValue DataExporter::exportDefaultSocket(BL::NodeTree &ntree, BL::NodeSocket 
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketEffect) {}
 	else if (socketVRayType == VRayNodeSocketType::vrayNodeSocketMtl) {}
 	else {
-		PRINT_ERROR("Node tree: %s => Node name: %s => Unsupported socket type: %s",
+		getLog().error("Node tree: %s => Node name: %s => Unsupported socket type: %s",
 		            ntree.name().c_str(), socket.node().name().c_str(), socketTypeName.c_str());
 	}
 
@@ -430,10 +433,10 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	const std::string &nodeClass = node.bl_idname();
 
 #if 0
-	PRINT_INFO_EX("Exporting \"%s\" from \"%s\"",
+	getLog().info("Exporting \"%s\" from \"%s\"",
 	              node.name().c_str(), ntree.name().c_str());
 	if (context.object_context.object) {
-		PRINT_INFO_EX("  For object \"%s\"",
+		getLog().info("  For object \"%s\"",
 		              context.object_context.object.name().c_str());
 	}
 #endif
@@ -449,7 +452,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeOutputMaterial") {
 		BL::NodeSocket materialInSock = Nodes::GetInputSocketByName(node, "Material");
 		if (!materialInSock.is_linked()) {
-			PRINT_ERROR("Node tree: %s => Node name: %s => Material socket is not linked!",
+			getLog().error("Node tree: %s => Node name: %s => Material socket is not linked!",
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
@@ -459,7 +462,7 @@ AttrValue DataExporter::exportVRayNode(BL::NodeTree &ntree, BL::Node &node, BL::
 	else if (nodeClass == "VRayNodeOutputTexture") {
 		BL::NodeSocket textureInSock = Nodes::GetInputSocketByName(node, "Texture");
 		if (!textureInSock.is_linked()) {
-			PRINT_ERROR("Node tree: %s => Node name: %s => Texture socket is not linked!",
+			getLog().error("Node tree: %s => Node name: %s => Texture socket is not linked!",
 			            ntree.name().c_str(), node.name().c_str());
 		}
 		else {
@@ -768,18 +771,17 @@ std::string DataExporter::getAssetName(BL::Object ob)
 
 std::string DataExporter::getNodeName(BL::Object ob)
 {
-	return "Node@" + getIdUniqueName(ob);
+	return "Node@" + getIdUniqueName(static_cast<BL::ID>(ob));
 }
 
 std::string DataExporter::getMeshName(BL::Object ob)
 {
-	BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
-	                 ? ob
-	                 : ob.data();
+	const BL::ID data_id = ob.is_modified(m_scene, m_evalMode)
+		                       ? static_cast<BL::ID>(ob)
+		                       : ob.data();
 
 	return "Geom@" + getIdUniqueName(data_id);
 }
-
 
 std::string DataExporter::getHairName(BL::Object ob, BL::ParticleSystem psys, BL::ParticleSettings pset)
 {
@@ -899,7 +901,7 @@ std::vector<std::string> DataExporter::cryptomatteAllNames(BL::Object ob) {
 	return names;
 }
 
-std::string DataExporter::getIdUniqueName(BL::Pointer ob) {
+std::string DataExporter::getIdUniqueName(const BL::Pointer &ob) {
 	return getIdUniqueName(reinterpret_cast<ID*>(ob.ptr.data));
 }
 

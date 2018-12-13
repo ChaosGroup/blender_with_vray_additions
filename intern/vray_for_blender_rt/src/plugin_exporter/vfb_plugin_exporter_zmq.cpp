@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-
 #include "vfb_plugin_exporter_zmq.h"
 #include "vfb_export_settings.h"
 #include "vfb_params_json.h"
+#include "vfb_log.h"
 
 #include "BLI_utildefines.h"
 
@@ -39,14 +39,14 @@ bool ZmqServer::start(const char * addr) {
 	std::lock_guard<std::mutex> lock(clientMtx);
 
 	if (!serverCheck) {
-		PRINT_INFO_EX("Starting heartbeat client for %s", addr);
+		getLog().info("Starting heartbeat client for %s", addr);
 		serverCheck.reset(new ZmqClient(true));
 		serverCheck->connect(addr);
 		if (serverCheck->connected()) {
 			return true;
 		}
 	} else {
-		PRINT_ERROR("Heartbeat client already running...");
+		getLog().error("Heartbeat client already running...");
 		// return true as we are running good.
 		if (serverCheck->good() && serverCheck->connected()) {
 			return true;
@@ -60,18 +60,18 @@ bool ZmqServer::stop() {
 	std::lock_guard<std::mutex> lock(clientMtx);
 
 	if (serverCheck) {
-		PRINT_INFO_EX("Stopping hearbeat client... ");
+		getLog().info("Stopping hearbeat client... ");
 		if (serverCheck->good() && serverCheck->connected()) {
 			serverCheck->stopServer();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		}
 		serverCheck->syncStop();
 		serverCheck.reset();
-		PRINT_INFO_EX("... done.");
+		getLog().info("... done.");
 		return true;
 	}
 
-	PRINT_ERROR("No zmq heartbeat client running...");
+	getLog().error("No zmq heartbeat client running...");
 	return false;
 }
 
@@ -157,7 +157,7 @@ void ZmqExporter::ZmqRenderImage::update(const VRayBaseTypes::AttrImage &img, Zm
 
 			break;
 		default:
-			PRINT_WARN("MISSING IMAGE FORMAT CONVERTION FOR %d", img.imageType);
+			getLog().warning("MISSING IMAGE FORMAT CONVERTION FOR %d", img.imageType);
 		}
 
 		{
@@ -226,45 +226,39 @@ RenderImage ZmqExporter::get_image() {
 	return get_render_channel(RenderChannelType::RenderChannelTypeNone);
 }
 
-
 enum MessageLevel {
 	MessageError = 9999,
 	MessageWarning = 19999,
 	MessageInfo = 29999
 };
 
-const char * vrayLogLevelToString(int lvl, ExporterSettings::VRayVerboseLevel stsLevel) {
-	if (lvl > MessageLevel::MessageInfo) {
-		return stsLevel >= ExporterSettings::LevelAll ? "Debug" : nullptr;
-	} else if (lvl > MessageLevel::MessageWarning) {
-		return stsLevel >= ExporterSettings::LevelProgress ? "Info" : nullptr;
-	} else if (lvl > MessageLevel::MessageError) {
-		return stsLevel >= ExporterSettings::LevelWarnings ? "Warning" : nullptr;
-	} else if (lvl > 0) {
-		return stsLevel >= ExporterSettings::LevelErrors ? "Error" : nullptr;
-	} else {
-		return stsLevel >= ExporterSettings::LevelAll ? "N/A" : nullptr;
-	}
-}
-
 void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 	const auto msgType = message.getType();
 	if (msgType == VRayMessage::Type::VRayLog) {
-		const char * lvlStr = vrayLogLevelToString(message.getLogLevel(), exporter_settings.verbose_level);
-
-		if (lvlStr) {
-			fprintf(stdout, "VRay%s: %s\n", lvlStr, message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>()->value.c_str());
-			fflush(stdout);
+		std::string msg = *message.getValue<AttrString>();
+		const auto newLine = msg.find_first_of("\n\r");
+		if (newLine != std::string::npos) {
+			msg.resize(newLine);
 		}
 
-		if (this->callback_on_message_update) {
-			std::string msg = *message.getValue<VRayBaseTypes::AttrSimpleType<std::string>>();
-			auto newLine = msg.find_first_of("\n\r");
-			if (newLine != std::string::npos) {
-				msg.resize(newLine);
-			}
+		LogLevel msgLevel = LogLevel::debug;
+		const int logLevel = message.getLogLevel();
+		if (logLevel <= MessageError) {
+			msgLevel = LogLevel::error;
+		}
+		else if (logLevel > MessageError && logLevel <= MessageWarning) {
+			msgLevel = LogLevel::warning;
+		}
+		else if (logLevel > MessageWarning && logLevel <= MessageInfo) {
+			msgLevel = LogLevel::info;
+		}
 
-			this->callback_on_message_update("", msg.c_str());
+		getLog().log(msgLevel, msg.c_str());
+
+		if (callback_on_message_update) {
+			std::string guiMsg("V-Ray: ");
+			guiMsg.append(msg);
+			callback_on_message_update("", guiMsg.c_str());
 		}
 	} else if (msgType == VRayMessage::Type::Image) {
 		auto * set = message.getValue<VRayBaseTypes::AttrImageSet>();
@@ -314,7 +308,7 @@ void ZmqExporter::zmqCallback(const VRayMessage & message, ZmqClient *) {
 void ZmqExporter::init()
 {
 	try {
-		PRINT_INFO_EX("Initing ZmqExporter");
+		getLog().info("Initing ZmqExporter");
 		using std::placeholders::_1;
 		using std::placeholders::_2;
 
@@ -381,7 +375,7 @@ void ZmqExporter::init()
 			m_cachedValues.render_mode = exporter_settings.render_mode;
 		}
 	} catch (zmq::error_t &e) {
-		PRINT_ERROR("Failed to initialize ZMQ client\n%s", e.what());
+		getLog().error("Failed to initialize ZMQ client\n%s", e.what());
 	}
 }
 
@@ -554,7 +548,7 @@ AttrPlugin ZmqExporter::export_plugin_impl(const PluginDesc & pluginDesc)
 	checkZmqClient();
 
 	if (pluginDesc.pluginID.empty()) {
-		PRINT_WARN("[%s] PluginDesc.pluginID is not set!",
+		getLog().warning("[%s] PluginDesc.pluginID is not set!",
 			pluginDesc.pluginName.c_str());
 		return AttrPlugin();
 	}

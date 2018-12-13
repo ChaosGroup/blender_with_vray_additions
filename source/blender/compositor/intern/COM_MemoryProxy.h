@@ -16,8 +16,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  * Contributor:
- *		Jeroen Bakker
- *		Monique Dewanchand
+ *      Jeroen Bakker
+ *      Monique Dewanchand
  */
 
 class MemoryProxy;
@@ -39,7 +39,7 @@ class WriteBufferOperation;
 class MemoryProxy {
 private:
 	/**
-	 * \brief reference to the ouput operation of the executiongroup
+	 * \brief reference to the output operation of the executiongroup
 	 */
 	WriteBufferOperation *m_writeBufferOperation;
 
@@ -73,7 +73,7 @@ public:
 
 	/**
 	 * \brief set the ExecutionGroup that can be scheduled to calculate a certain chunk.
-	 * \param group the ExecutionGroup to set
+	 * \param group: the ExecutionGroup to set
 	 */
 	void setExecutor(ExecutionGroup *executor) { this->m_executor = executor; }
 
@@ -84,7 +84,7 @@ public:
 
 	/**
 	 * \brief set the WriteBufferOperation that is responsible for writing to this MemoryProxy
-	 * \param operation
+	 * \param operation:
 	 */
 	void setWriteBufferOperation(WriteBufferOperation *operation) { this->m_writeBufferOperation = operation; }
 

@@ -306,6 +306,15 @@ void ExporterSettings::update(BL::Context context, BL::RenderEngine engine, BL::
 	}
 
 	updateObjectsData(scene, leftStereoCamName, rightStereoCamName);
+
+	switch (verbose_level) {
+		case LevelNoInfo:   getLog().setLogLevel(LogLevel::none); break;
+		case LevelErrors:   getLog().setLogLevel(LogLevel::error);break;
+		case LevelWarnings: getLog().setLogLevel(LogLevel::warning); break;
+		case LevelProgress: getLog().setLogLevel(LogLevel::progress); break;
+		case LevelAll:      getLog().setLogLevel(LogLevel::debug);break;
+		default: ;
+	}
 }
 
 
@@ -453,6 +462,7 @@ const HashSet<std::string> VRaySettingsExporter::IgnoredPlugins = {
 	// Deprecated
 	"SettingsPhotonMap",
 	"RTEngine",
+	"EffectLens",
 	// Manually exported
 	"SettingsGI",
 	"SettingsLightCache",
@@ -490,10 +500,6 @@ void VRaySettingsExporter::exportPlugins()
 	const PluginParamDescList &settingsPlugins = GetPluginsOfType(ParamDesc::PluginType::PluginSettings);
 	for (const ParamDesc::PluginParamDesc * const desc : settingsPlugins) {
 		if (IgnoredPlugins.find(desc->pluginID) != IgnoredPlugins.end()) {
-			continue;
-		}
-
-		if (!settings.show_vfb && desc->pluginID == "EffectLens") {
 			continue;
 		}
 
@@ -716,7 +722,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		const int minRate = get<int>(propertyGroup, "min_rate");
 		const int maxRate = get<int>(propertyGroup, "max_rate");
 		if (minRate > maxRate) {
-			PRINT_WARN("SettingsIrradianceMap: \"Min. Rate\" is more than \"Max. Rate\"");
+			getLog().warning("SettingsIrradianceMap: \"Min. Rate\" is more than \"Max. Rate\"");
 			pluginDesc.add("min_rate", maxRate);
 			pluginDesc.add("max_rate", minRate);
 		}
@@ -845,8 +851,6 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			pluginDesc.add("img_noAlpha", true);
 		}
 	} else if (pluginId == "SettingsRTEngine") {
-		pluginDesc.add("enabled", true);
-
 		if (settings.is_viewport) {
 			pluginDesc.add("cpu_samples_per_pixel", 1);
 			pluginDesc.add("cpu_bundle_size", 64);
@@ -895,13 +899,13 @@ void VRaySettingsExporter::exportLCGISettings()
 	try {
 		checkPluginOverrides(settingsGI.pluginID, giPropGroup, settingsGI);
 	} catch (PropNotFound &ex) {
-		PRINT_ERROR("Property \"%s\" not found when exporting SettingsGI", ex.what());
+		getLog().error("Property \"%s\" not found when exporting SettingsGI", ex.what());
 	}
 
 	try {
 		checkPluginOverrides(settingsLC.pluginID, lcPropGroup, settingsLC);
 	} catch (PropNotFound &ex) {
-		PRINT_ERROR("Property \"%s\" not found when exporting SettingsLightCache", ex.what());
+		getLog().error("Property \"%s\" not found when exporting SettingsLightCache", ex.what());
 	}
 
 	dataExporter.setAttrsFromPropGroupAuto(settingsLC, &lcPropGroup, settingsLC.pluginID);
@@ -945,7 +949,7 @@ void VRaySettingsExporter::exportSettingsPlugin(const ParamDesc::PluginParamDesc
 		dataExporter.setAttrsFromPropGroupAuto(pluginDesc, &propGroup, desc.pluginID);
 		pluginExporter->export_plugin(pluginDesc);
 	} catch (PropNotFound &ex) {
-		PRINT_ERROR("Property \"%s\" not found when exporting %s", ex.what(), desc.pluginID.c_str());
+		getLog().error("Property \"%s\" not found when exporting %s", ex.what(), desc.pluginID.c_str());
 	}
 
 }

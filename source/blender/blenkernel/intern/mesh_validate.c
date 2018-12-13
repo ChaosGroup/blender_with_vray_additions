@@ -362,7 +362,7 @@ bool BKE_mesh_validate_arrays(
 		SortFace *sf_prev;
 		unsigned int totsortface = 0;
 
-		PRINT_ERR("No Polys, only tesselated Faces\n");
+		PRINT_ERR("No Polys, only tessellated Faces\n");
 
 		for (i = 0, mf = mfaces, sf = sort_faces; i < totface; i++, mf++) {
 			bool remove = false;
@@ -1446,8 +1446,8 @@ void BKE_mesh_calc_edges_legacy(Mesh *me, const bool use_old)
 /**
  * Calculate edges from polygons
  *
- * \param mesh  The mesh to add edges into
- * \param update  When true create new edges co-exist
+ * \param mesh: The mesh to add edges into
+ * \param update: When true create new edges co-exist
  */
 void BKE_mesh_calc_edges(Mesh *mesh, bool update, const bool select)
 {

@@ -247,7 +247,6 @@ void MESH_OT_subdivide_edgering(wmOperatorType *ot)
 {
 	/* identifiers */
 	ot->name = "Subdivide Edge-Ring";
-	ot->description = "";
 	ot->idname = "MESH_OT_subdivide_edgering";
 
 	/* api callbacks */
@@ -2850,9 +2849,9 @@ void MESH_OT_solidify(wmOperatorType *ot)
  * Contributed by Robert Wenzlaff (Det. Thorn).
  *
  * 2.5 Revamp:
- *  - non modal (no menu before cutting)
- *  - exit on mouse release
- *  - polygon/segment drawing can become handled by WM cb later
+ * - non modal (no menu before cutting)
+ * - exit on mouse release
+ * - polygon/segment drawing can become handled by WM cb later
  *
  * bmesh port version
  */
@@ -2898,7 +2897,7 @@ static float bm_edge_seg_isect(
 		b2 = ((x22 * y21) - (x21 * y22)) / xdiff2;
 	}
 	else {
-		m2 = MAXSLOPE;  /* Verticle slope  */
+		m2 = MAXSLOPE;  /* Vertical slope  */
 		b2 = x22;
 	}
 

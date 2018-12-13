@@ -17,6 +17,7 @@
  */
 
 #include "vfb_render_image.h"
+#include "vfb_log.h"
 
 #include <cstring>
 #include <algorithm>
@@ -181,7 +182,7 @@ void RenderImage::cropTo(int width, int height)
 	int t_height = height < this->h ? height : this->h;
 
 	if (t_width == this->w && t_height == this->h) {
-		PRINT_WARN("Failed to crop image to [%dx%d] from [%dx%d]", width, height, w, h);
+		getLog().warning("Failed to crop image to [%dx%d] from [%dx%d]", width, height, w, h);
 		return;
 	}
 
@@ -211,7 +212,7 @@ void jpegErrorExit(j_common_ptr cinfo) {
 	JpegErrorManager * myerr = (JpegErrorManager*)cinfo->err;
 	char jpegErrMsg[JMSG_LENGTH_MAX + 1];
 	(*cinfo->err->format_message) (cinfo, jpegErrMsg);
-	PRINT_WARN("Error in jpeg decompress [%s]!", jpegErrMsg);
+	getLog().warning("Error in jpeg decompress [%s]!", jpegErrMsg);
 	longjmp(myerr->setjmp_buffer, 1);
 }
 
@@ -270,7 +271,7 @@ float * VRayForBlender::jpegToPixelData(unsigned char * data, int size, int &cha
 	jpegError.pub.error_exit = jpegErrorExit;
 
 	if (setjmp(jpegError.setjmp_buffer)) {
-		PRINT_WARN("Longjmp after jpeg error!");
+		getLog().warning("Longjmp after jpeg error!");
 		jpeg_destroy_decompress(&jpegInfo);
 		return nullptr;
 	}

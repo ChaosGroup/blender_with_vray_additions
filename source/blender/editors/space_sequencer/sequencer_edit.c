@@ -217,8 +217,7 @@ static void seq_proxy_build_job(const bContext *C)
 		if ((seq->flag & SELECT)) {
 			BKE_sequencer_proxy_rebuild_context(pj->main, pj->scene, seq, file_list, &pj->queue);
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 
 	BLI_gset_free(file_list, MEM_freeN);
 
@@ -455,8 +454,7 @@ void ED_sequencer_deselect_all(Scene *scene)
 	SEQP_BEGIN (ed, seq)
 	{
 		seq->flag &= ~SEQ_ALLSEL;
-	}
-	SEQ_END
+	} SEQ_END;
 
 }
 
@@ -558,7 +556,7 @@ int seq_effect_find_selected(Scene *scene, Sequence *activeseq, int type, Sequen
 	switch (BKE_sequence_effect_get_num_inputs(type)) {
 		case 0:
 			*selseq1 = *selseq2 = *selseq3 = NULL;
-			return 1; /* succsess */
+			return 1; /* success */
 		case 1:
 			if (seq2 == NULL) {
 				*error_str = N_("At least one selected sequence strip is needed");
@@ -645,8 +643,7 @@ static void del_seq_clear_modifiers_recurs(Scene *scene, Sequence *deleting_sequ
 				}
 			}
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 }
 
 static void recurs_del_seq_flag(Scene *scene, ListBase *lb, short flag, short deleteall)
@@ -993,8 +990,7 @@ static void set_filter_seq(Scene *scene)
 			}
 
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 }
 #endif
 
@@ -1034,8 +1030,7 @@ static void UNUSED_FUNCTION(seq_remap_paths) (Scene *scene)
 				printf("new %s\n", seq->strip->dir);
 			}
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 
 }
 
@@ -1394,7 +1389,7 @@ static int sequencer_slip_invoke(bContext *C, wmOperator *op, const wmEvent *eve
 	int num_seq, i;
 	View2D *v2d = UI_view2d_fromcontext(C);
 
-	/* first recursively cound the trimmed elements */
+	/* first recursively count the trimmed elements */
 	num_seq = slip_count_sequences_rec(ed->seqbasep, true);
 
 	if (num_seq == 0)
@@ -1504,7 +1499,7 @@ static int sequencer_slip_exec(bContext *C, wmOperator *op)
 	int offset = RNA_int_get(op->ptr, "offset");
 	bool success = false;
 
-	/* first recursively cound the trimmed elements */
+	/* first recursively count the trimmed elements */
 	num_seq = slip_count_sequences_rec(ed->seqbasep, true);
 
 	if (num_seq == 0)
@@ -2673,7 +2668,7 @@ static int sequencer_meta_separate_exec(bContext *C, wmOperator *UNUSED(op))
 	BLI_remlink(ed->seqbasep, last_seq);
 	BKE_sequence_free(scene, last_seq);
 
-	/* emtpy meta strip, delete all effects depending on it */
+	/* empty meta strip, delete all effects depending on it */
 	for (seq = ed->seqbasep->first; seq; seq = seq->next)
 		if ((seq->type & SEQ_TYPE_EFFECT) && seq_depends_on_meta(seq, last_seq))
 			seq->flag |= SEQ_FLAG_DELETE;
@@ -3288,7 +3283,6 @@ void SEQUENCER_OT_copy(wmOperatorType *ot)
 	/* identifiers */
 	ot->name = "Copy";
 	ot->idname = "SEQUENCER_OT_copy";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->exec = sequencer_copy_exec;
@@ -3353,7 +3347,6 @@ void SEQUENCER_OT_paste(wmOperatorType *ot)
 	/* identifiers */
 	ot->name = "Paste";
 	ot->idname = "SEQUENCER_OT_paste";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->exec = sequencer_paste_exec;
@@ -3520,8 +3513,7 @@ static int sequencer_rebuild_proxy_exec(bContext *C, wmOperator *UNUSED(op))
 			}
 			BKE_sequencer_free_imbuf(scene, &ed->seqbase, false);
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 
 	BLI_gset_free(file_list, MEM_freeN);
 
@@ -3599,8 +3591,7 @@ static int sequencer_enable_proxies_exec(bContext *C, wmOperator *op)
 					seq->strip->proxy->build_flags &= ~SEQ_PROXY_SKIP_EXISTING;
 			}
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 
 	WM_event_add_notifier(C, NC_SCENE | ND_SEQUENCER, scene);
 
@@ -3683,7 +3674,6 @@ void SEQUENCER_OT_change_effect_input(struct wmOperatorType *ot)
 	/* identifiers */
 	ot->name = "Change Effect Input";
 	ot->idname = "SEQUENCER_OT_change_effect_input";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->exec = sequencer_change_effect_input_exec;
@@ -3743,7 +3733,6 @@ void SEQUENCER_OT_change_effect_type(struct wmOperatorType *ot)
 	/* identifiers */
 	ot->name = "Change Effect Type";
 	ot->idname = "SEQUENCER_OT_change_effect_type";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->exec = sequencer_change_effect_type_exec;
@@ -3878,7 +3867,6 @@ void SEQUENCER_OT_change_path(struct wmOperatorType *ot)
 	/* identifiers */
 	ot->name = "Change Data/Files";
 	ot->idname = "SEQUENCER_OT_change_path";
-	ot->description = "";
 
 	/* api callbacks */
 	ot->exec = sequencer_change_path_exec;
@@ -3951,8 +3939,7 @@ static int sequencer_export_subtitles_exec(bContext *C, wmOperator *op)
 		if (seq->type == SEQ_TYPE_TEXT) {
 			BLI_addtail(&text_seq, MEM_dupallocN(seq));
 		}
-	}
-	SEQ_END
+	} SEQ_END;
 
 	if (BLI_listbase_is_empty(&text_seq)) {
 		BKE_report(op->reports, RPT_ERROR, "No subtitles (text strips) to export");

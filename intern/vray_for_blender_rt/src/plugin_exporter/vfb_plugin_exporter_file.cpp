@@ -118,7 +118,7 @@ void VrsceneExporter::set_export_file(VRayForBlender::ParamDesc::PluginType type
 			m_writers[type] = writer;
 		}
 	} else {
-		PRINT_ERROR("Setting nullptr file for %d", static_cast<int>(type));
+		getLog().error("Setting nullptr file for %d", static_cast<int>(type));
 	}
 }
 
@@ -130,7 +130,7 @@ VrsceneExporter::~VrsceneExporter()
 
 void VrsceneExporter::init()
 {
-	PRINT_INFO_EX("Initting VrsceneExporter");
+	getLog().debug("Initializing VrsceneExporter");
 	if (!m_threadManager) {
 		m_threadManager = ThreadManager::make(2);
 	}
@@ -152,7 +152,7 @@ void VrsceneExporter::free()
 void VrsceneExporter::sync()
 {
 	PluginExporter::sync();
-	PRINT_INFO_EX("Flushing all data to files");
+	getLog().info("Flushing all data to files");
 	for (auto & writer : m_fileWritersMap) {
 		writer.second->blockFlushAll();
 	}
@@ -172,7 +172,7 @@ void VrsceneExporter::writeIncludes()
 	}
 	const auto writerPtr = m_writers[ParamDesc::PluginSettings];
 	if (!writerPtr) {
-		PRINT_ERROR("Missing file for PluginSettings");
+		getLog().error("Missing file for PluginSettings");
 		return;
 	}
 	*writerPtr << m_includesString;
@@ -223,7 +223,7 @@ AttrPlugin VrsceneExporter::export_plugin_impl(const PluginDesc &pluginDesc)
 		if (!writerPtr) {
 			writerPtr = m_writers[ParamDesc::PluginSettings];
 			if (!writerPtr) {
-				PRINT_ERROR("Failed to get plugin writer for type %d exporting %s with id [%s]",
+				getLog().error("Failed to get plugin writer for type %d exporting %s with id [%s]",
 					writerType, name.c_str(), pluginDesc.pluginID.c_str());
 				return plugin;
 			}

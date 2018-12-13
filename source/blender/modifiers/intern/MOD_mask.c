@@ -129,9 +129,9 @@ static DerivedMesh *applyModifier(
 	}
 
 	/* Overview of Method:
-	 *	1. Get the vertices that are in the vertexgroup of interest
-	 *	2. Filter out unwanted geometry (i.e. not in vertexgroup), by populating mappings with new vs old indices
-	 *	3. Make a new mesh containing only the mapping data
+	 * 1. Get the vertices that are in the vertexgroup of interest
+	 * 2. Filter out unwanted geometry (i.e. not in vertexgroup), by populating mappings with new vs old indices
+	 * 3. Make a new mesh containing only the mapping data
 	 */
 
 	/* get original number of verts, edges, and faces */
@@ -140,7 +140,7 @@ static DerivedMesh *applyModifier(
 	maxPolys = dm->getNumPolys(dm);
 
 	/* check if we can just return the original mesh
-	 *	- must have verts and therefore verts assigned to vgroups to do anything useful
+	 * - must have verts and therefore verts assigned to vgroups to do anything useful
 	 */
 	if (!(ELEM(mmd->mode, MOD_MASK_MODE_ARM, MOD_MASK_MODE_VGROUP)) ||
 	    (maxVerts == 0) || BLI_listbase_is_empty(&ob->defbase))
@@ -196,7 +196,7 @@ static DerivedMesh *applyModifier(
 			for (j = 0; j < dv->totweight; j++, dw++) {
 				if (dw->def_nr < defbase_tot) {
 					if (bone_select_array[dw->def_nr]) {
-						if (dw->weight != 0.0f) {
+						if (dw->weight > mmd->threshold) {
 							found = true;
 							break;
 						}
@@ -228,7 +228,7 @@ static DerivedMesh *applyModifier(
 
 		/* add vertices which exist in vertexgroup into ghash for filtering */
 		for (i = 0, dv = dvert; i < maxVerts; i++, dv++) {
-			const bool found = defvert_find_weight(dv, defgrp_index) != 0.0f;
+			const bool found = defvert_find_weight(dv, defgrp_index) > mmd->threshold;
 			if (found_test != found) {
 				continue;
 			}

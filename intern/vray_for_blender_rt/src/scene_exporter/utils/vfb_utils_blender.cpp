@@ -20,6 +20,7 @@
 #include "vfb_utils_string.h"
 #include "vfb_utils_math.h"
 #include "vfb_export_settings.h"
+#include "vfb_log.h"
 
 #include "DNA_ID.h"
 #include "DNA_object_types.h"
@@ -96,11 +97,11 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 		osoPath.replace_extension(".oso");
 		std::string strOsoPath = osoPath.string();
 		if (!compile(scriptPath, strOsoPath)) {
-			PRINT_ERROR("Failed to compile OSL file: \"%s\"", scriptPath.c_str());
+			getLog().error("Failed to compile OSL file: \"%s\"", scriptPath.c_str());
 			success = false;
 		} else {
 			if (!queryFromFile(strOsoPath, query)) {
-				PRINT_ERROR("Failed to query compiled OSO file: \"%s\"", output->c_str());
+				getLog().error("Failed to query compiled OSO file: \"%s\"", output->c_str());
 				success = false;
 			}
 		}
@@ -122,7 +123,7 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 				std::string bytecode = compileToBuffer(oslCode);
 
 				if (bytecode.empty() || !queryFromBytecode(bytecode, query)) {
-					PRINT_ERROR("Failed query for osl node: \"%s\"", node.name().c_str());
+					getLog().error("Failed query for osl node: \"%s\"", node.name().c_str());
 					success = false;
 				} else if (writeToFile && output) {
 					boost::filesystem::path tempPath = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("%%%%-%%%%-%%%%-%%%%.osl");
@@ -131,14 +132,14 @@ bool Blender::OSLManager::queryFromNode(BL::Node node, OSL::OSLQuery & query, co
 					if (tmpFile && tmpFile.write(oslCode.c_str(), oslCode.length())) {
 						compileFromFile = false;
 					} else {
-						PRINT_ERROR("Failed to write OSL script to temp file \"%s\"", output->c_str());
+						getLog().error("Failed to write OSL script to temp file \"%s\"", output->c_str());
 					}
 				}
 			} else {
 				scriptPath = text.filepath();
 			}
 		} else {
-			PRINT_ERROR("Invalid script selected for osl node \"%s\"", node.name().c_str());
+			getLog().error("Invalid script selected for osl node \"%s\"", node.name().c_str());
 			success = false;
 		}
 	}

@@ -1099,7 +1099,7 @@ void uiItemsFullEnumO_items(
 					uiItemS(target);
 				}
 				else {
-					/* XXX bug here, colums draw bottom item badly */
+					/* XXX bug here, columns draw bottom item badly */
 					uiItemS(target);
 				}
 			}
@@ -1943,8 +1943,11 @@ static uiBut *ui_item_menu(
 	else
 		but = uiDefMenuBut(block, func, arg, name, 0, 0, w, h, tip);
 
-	if (argN) { /* ugly .. */
-		but->poin = (char *)but;
+	if (argN) {
+		/* ugly .. */
+		if (arg != argN) {
+			but->poin = (char *)but;
+		}
 		but->func_argN = argN;
 	}
 
@@ -1978,7 +1981,9 @@ void uiItemM(uiLayout *layout, const char *menuname, const char *name, int icon)
 	if (layout->root->type == UI_LAYOUT_MENU && !icon)
 		icon = ICON_BLANK1;
 
-	ui_item_menu(layout, name, icon, ui_item_menutype_func, mt, NULL, TIP_(mt->description), false);
+	ui_item_menu(
+	        layout, name, icon, ui_item_menutype_func, mt, NULL,
+	        mt->description ? TIP_(mt->description) : "", false);
 }
 
 /* label item */
@@ -2078,6 +2083,18 @@ void uiItemMenuF(uiLayout *layout, const char *name, int icon, uiMenuCreateFunc 
 		return;
 
 	ui_item_menu(layout, name, icon, func, arg, NULL, "", false);
+}
+
+/**
+ * Version of #uiItemMenuF that free's `argN`.
+ */
+void uiItemMenuFN(uiLayout *layout, const char *name, int icon, uiMenuCreateFunc func, void *argN)
+{
+	if (!func)
+		return;
+
+	/* Second 'argN' only ensures it gets freed. */
+	ui_item_menu(layout, name, icon, func, argN, argN, "", false);
 }
 
 typedef struct MenuItemLevel {
