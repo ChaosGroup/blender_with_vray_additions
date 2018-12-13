@@ -49,7 +49,7 @@ Building from source
  - Alternatively the requiered libraries can be obtained built from the [GIT repository](https://github.com/ChaosGroup/vray_for_blender_libs)
  - Assuming Windows and all libs are in C:/dev make a build dir C:/dev/build run the following cmake:
     ```
-    cmake -G "Visual Studio 2017 Win64"            \
+    cmake -G "Visual Studio 15 2017 Win64"         \
         -DWITH_VRAY_FOR_BLENDER=ON                 \
         -DLIBS_ROOT=C:/dev/blender-for-vray-libs   \
         -DLIBDIR=C:/dev/win64_vc14                 \
