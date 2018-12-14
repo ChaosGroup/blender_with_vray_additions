@@ -54,6 +54,8 @@
 #include "util/util_system.h"
 #include "util/util_thread.h"
 
+#include "pmmintrin.h"
+
 CCL_NAMESPACE_BEGIN
 
 class CPUDevice;
