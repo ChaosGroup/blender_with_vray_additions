@@ -693,16 +693,28 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		if (get<bool>(vrayExporter, "draft")) {
 			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 5.0));
 		}
+		const std::string savePath = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "auto_save_file"), context);
 
-		if (!get<bool>(propertyGroup, "auto_save")) {
+		const bool canSaveFile = get<bool>(propertyGroup, "auto_save") && !savePath.empty();
+		if (!canSaveFile) {
 			pluginDesc.add("auto_save_file", AttrIgnore());
 		}
 
 		// There is no file prop when we are calculating it
 		enum Mode {SingleFrame, MultiFrame, FromFile, AddToMap, IncrementalToMap, Bucket, AnimationPrepass, AnimationRender};
 		const Mode mode = static_cast<Mode>(RNA_enum_ext_get(&propertyGroup, "mode"));
-		if (mode != FromFile) {
+		if (mode == FromFile || mode == AnimationRender) {
+			// if mode is one that reads from file, remove file save option
+			pluginDesc.add("auto_save_file", AttrIgnore());
+		} else {
+			// only FromFile and AnimationRender read from a file, if different disable file option
 			pluginDesc.add("file", AttrIgnore());
+			// try to make sure VRay will write the file correctly
+			fs::path dirPath = savePath;
+			dirPath.remove_filename();
+			if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+				getLog().warning("Unable to save Irradiance map file to \"%s\"", savePath.c_str());
+			}
 		}
 	} else if (pluginId == "SettingsLightCache") {
 		if (get<bool>(propertyGroup, "num_passes_auto")) {
