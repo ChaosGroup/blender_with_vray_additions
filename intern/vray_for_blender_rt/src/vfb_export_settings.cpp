@@ -694,7 +694,6 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 5.0));
 		}
 		const std::string savePath = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "auto_save_file"), context);
-
 		const bool canSaveFile = get<bool>(propertyGroup, "auto_save") && !savePath.empty();
 		if (!canSaveFile) {
 			pluginDesc.add("auto_save_file", AttrIgnore());
@@ -710,10 +709,12 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			// only FromFile and AnimationRender read from a file, if different disable file option
 			pluginDesc.add("file", AttrIgnore());
 			// try to make sure VRay will write the file correctly
-			fs::path dirPath = savePath;
-			dirPath.remove_filename();
-			if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
-				getLog().warning("Unable to save Irradiance map file to \"%s\"", savePath.c_str());
+			if (canSaveFile) {
+				fs::path dirPath = savePath;
+				dirPath.remove_filename();
+				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+					getLog().warning("Unable to save Irradiance map file to \"%s\"", savePath.c_str());
+				}
 			}
 		}
 	} else if (pluginId == "SettingsLightCache") {
@@ -725,7 +726,9 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			pluginDesc.add("subdivs", static_cast<int>(get<int>(propertyGroup, "subdivs") / 10.0));
 		}
 
-		if (!get<bool>(propertyGroup, "auto_save")) {
+		const std::string savePath = String::ExpandFilenameVariables(get<std::string>(propertyGroup, "auto_save_file"), context);
+		const bool canSaveFile = get<bool>(propertyGroup, "auto_save") && !savePath.empty();
+		if (!canSaveFile) {
 			pluginDesc.add("auto_save_file", AttrIgnore());
 		}
 
@@ -734,6 +737,13 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 		const Mode mode = static_cast<Mode>(RNA_enum_ext_get(&propertyGroup, "mode"));
 		if (mode != FromFile) {
 			pluginDesc.add("file", AttrIgnore());
+			if (canSaveFile) {
+				fs::path dirPath = savePath;
+				dirPath.remove_filename();
+				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+					getLog().warning("Unable to save Light Cache file to \"%s\"", savePath.c_str());
+				}
+			}
 		}
 	} else if (pluginId == "SettingsOptions") {
 		if (settings.settings_dr.use && settings.settings_dr.sharing_type == SettingsDR::SharingTypeTransfer) {
