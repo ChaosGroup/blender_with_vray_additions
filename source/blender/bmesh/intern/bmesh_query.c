@@ -1685,7 +1685,7 @@ float BM_edge_calc_face_angle(const BMEdge *e)
 *
 * \return angle in radians
 */
-float BM_edge_calc_face_angle_with_imat3_ex(const BMEdge *e, float imat3[3][3], const float fallback)
+float BM_edge_calc_face_angle_with_imat3_ex(const BMEdge *e, const float imat3[3][3], const float fallback)
 {
 	if (BM_edge_is_manifold(e)) {
 		const BMLoop *l1 = e->l;
@@ -1706,7 +1706,7 @@ float BM_edge_calc_face_angle_with_imat3_ex(const BMEdge *e, float imat3[3][3], 
 		return fallback;
 	}
 }
-float BM_edge_calc_face_angle_with_imat3(const BMEdge *e, float imat3[3][3])
+float BM_edge_calc_face_angle_with_imat3(const BMEdge *e, const float imat3[3][3])
 {
 	return BM_edge_calc_face_angle_with_imat3_ex(e, imat3, DEG2RADF(90.0f));
 }
@@ -1860,7 +1860,7 @@ float BM_vert_calc_shell_factor_ex(const BMVert *v, const float no[3], const cha
  * \note quite an obscure function.
  * used in bmesh operators that have a relative scale options,
  */
-float BM_vert_calc_mean_tagged_edge_length(const BMVert *v)
+float BM_vert_calc_median_tagged_edge_length(const BMVert *v)
 {
 	BMIter iter;
 	BMEdge *e;

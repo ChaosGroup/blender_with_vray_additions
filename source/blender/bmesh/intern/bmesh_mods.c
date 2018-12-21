@@ -299,12 +299,12 @@ BMFace *BM_face_split(
 			float f_dst_center[3];
 			float f_src_center[3];
 
-			BM_face_calc_center_mean(f_tmp, f_src_center);
+			BM_face_calc_center_median(f_tmp, f_src_center);
 
-			BM_face_calc_center_mean(f, f_dst_center);
+			BM_face_calc_center_median(f, f_dst_center);
 			BM_face_interp_multires_ex(bm, f, f_tmp, f_dst_center, f_src_center, cd_loop_mdisp_offset);
 
-			BM_face_calc_center_mean(f_new, f_dst_center);
+			BM_face_calc_center_median(f_new, f_dst_center);
 			BM_face_interp_multires_ex(bm, f_new, f_tmp, f_dst_center, f_src_center, cd_loop_mdisp_offset);
 
 #if 0
@@ -329,7 +329,7 @@ BMFace *BM_face_split(
  *
  * \param bm: The bmesh
  * \param f: the original face
- * \param l_a, l_b: Vertices which define the split edge, must be different.
+ * \param l_a, l_b: Vertices which define the split edge, must be different
  * \param cos: Array of coordinates for intermediate points
  * \param n: Length of \a cos (must be > 0)
  * \param r_l: pointer which will receive the BMLoop for the first split edge (from \a l_a) in the new face
@@ -642,7 +642,7 @@ BMVert *BM_edge_split(BMesh *bm, BMEdge *e, BMVert *v, BMEdge **r_e, float fac)
 		for (i = 0; i < BLI_array_len(oldfaces); i++) {
 			float f_center_old[3];
 
-			BM_face_calc_center_mean(oldfaces[i], f_center_old);
+			BM_face_calc_center_median(oldfaces[i], f_center_old);
 
 			for (j = 0; j < 2; j++) {
 				BMEdge *e1 = j ? e_new : e;
@@ -660,7 +660,7 @@ BMVert *BM_edge_split(BMesh *bm, BMEdge *e, BMVert *v, BMEdge **r_e, float fac)
 					if (BM_ELEM_API_FLAG_TEST(l->f, _FLAG_OVERLAP)) {
 						float f_center[3];
 
-						BM_face_calc_center_mean(l->f, f_center);
+						BM_face_calc_center_median(l->f, f_center);
 						BM_face_interp_multires_ex(
 						        bm, l->f, oldfaces[i],
 						        f_center, f_center_old, cd_loop_mdisp_offset);

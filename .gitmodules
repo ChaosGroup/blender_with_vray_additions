@@ -3,21 +3,25 @@
 	url = git://git.blender.org/blender-addons.git
 	ignore = all
 	branch = master
+	ignore = all
 [submodule "release/scripts/addons_contrib"]
 	path = release/scripts/addons_contrib
 	url = git://git.blender.org/blender-addons-contrib.git
 	ignore = all
 	branch = master
+	ignore = all
 [submodule "release/datafiles/locale"]
 	path = release/datafiles/locale
 	url = git://git.blender.org/blender-translations.git
 	ignore = all
-[submodule "intern/vray_for_blender_rt/extern/vray-zmq-wrapper"]
-	path = intern/vray_for_blender_rt/extern/vray-zmq-wrapper
-	url = https://github.com/ChaosGroup/vray_for_blender_zmq_wrapper/
-	branch = master
 [submodule "source/tools"]
 	path = source/tools
 	url = git://git.blender.org/blender-dev-tools.git
 	ignore = all
 	branch = master
+	ignore = all
+[submodule "intern/vray_for_blender_rt/extern/vray-zmq-wrapper"]
+	path = intern/vray_for_blender_rt/extern/vray-zmq-wrapper
+	url = https://github.com/ChaosGroup/vray_for_blender_zmq_wrapper/
+	branch = master
+	ignore = all

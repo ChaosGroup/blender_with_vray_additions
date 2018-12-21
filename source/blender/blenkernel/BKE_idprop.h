@@ -33,6 +33,10 @@
 #include "BLI_compiler_attrs.h"
 #include "BLI_ghash.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct IDProperty;
 struct ID;
 
@@ -102,6 +106,7 @@ void IDP_ReplaceGroupInGroup(struct IDProperty *dest, const struct IDProperty *s
 void IDP_ReplaceInGroup(struct IDProperty *group, struct IDProperty *prop) ATTR_NONNULL();
 void IDP_ReplaceInGroup_ex(struct IDProperty *group, struct IDProperty *prop, struct IDProperty *prop_exist);
 void IDP_MergeGroup(IDProperty *dest, const IDProperty *src, const bool do_overwrite) ATTR_NONNULL();
+void IDP_MergeGroup_ex(IDProperty *dest, const IDProperty *src, const bool do_overwrite, const int flag) ATTR_NONNULL();
 bool IDP_AddToGroup(struct IDProperty *group, struct IDProperty *prop) ATTR_NONNULL();
 bool IDP_InsertToGroup(struct IDProperty *group, struct IDProperty *previous,
                       struct IDProperty *pnew) ATTR_NONNULL(1 /* group */, 3 /* pnew */);
@@ -129,9 +134,9 @@ void IDP_ClearProperty(IDProperty *prop);
 
 void IDP_RelinkProperty(struct IDProperty *prop);
 
-void IDP_RelinkProperty(struct IDProperty *prop);
-
 void IDP_ID_Tag(IDProperty * prop, short tag, bool set);
+	
+void IDP_Reset(IDProperty *prop, const IDProperty *reference);
 
 #define IDP_Int(prop)                     ((prop)->data.val)
 #define IDP_Array(prop)                   ((prop)->data.pointer)
@@ -168,5 +173,9 @@ void IDP_repr_fn(
         void (*str_append_fn)(void *user_data, const char *str, uint str_len),
         void *user_data);
 void  IDP_print(const struct IDProperty *prop);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __BKE_IDPROP_H__ */

@@ -47,7 +47,6 @@
 #include "RNA_types.h"
 
 #include "bpy.h"
-#include "gpu.h"
 #include "bpy_rna.h"
 #include "bpy_path.h"
 #include "bpy_capi_utils.h"
@@ -60,9 +59,9 @@
 
 #include "BKE_appdir.h"
 #include "BKE_context.h"
-#include "BKE_text.h"
-#include "BKE_main.h"
 #include "BKE_global.h" /* only for script checking */
+#include "BKE_main.h"
+#include "BKE_text.h"
 
 #include "CCL_api.h"
 
@@ -76,6 +75,7 @@
 #include "../generic/blf_py_api.h"
 #include "../generic/idprop_py_api.h"
 #include "../generic/imbuf_py_api.h"
+#include "../gpu/gpu_py_api.h"
 #include "../bmesh/bmesh_py_api.h"
 #include "../mathutils/mathutils.h"
 
@@ -258,7 +258,7 @@ static struct _inittab bpy_internal_modules[] = {
 	{"_vray_for_blender_rt", CGR_initPythonRT},
 #endif
 #endif
-	{"gpu", GPU_initPython},
+	{"gpu", BPyInit_gpu},
 	{"idprop", BPyInit_idprop},
 	{NULL, NULL}
 };
@@ -563,7 +563,8 @@ static bool python_script_exec(
 
 	if (py_dict) {
 #ifdef PYMODULE_CLEAR_WORKAROUND
-		PyModuleObject *mmod = (PyModuleObject *)PyDict_GetItemString(PyImport_GetModuleDict(), "__main__");
+		PyModuleObject *mmod = (PyModuleObject *)PyDict_GetItem(
+		        PyImport_GetModuleDict(), bpy_intern_str___main__);
 		PyObject *dict_back = mmod->md_dict;
 		/* freeing the module will clear the namespace,
 		 * gives problems running classes defined in this namespace being used later. */
