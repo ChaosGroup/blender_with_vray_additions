@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <pmmintrin.h>
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -53,8 +55,6 @@
 #include "util/util_progress.h"
 #include "util/util_system.h"
 #include "util/util_thread.h"
-
-#include "pmmintrin.h"
 
 CCL_NAMESPACE_BEGIN
 
