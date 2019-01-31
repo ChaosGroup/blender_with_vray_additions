@@ -62,7 +62,7 @@ void PluginExporter::sync() {
 
 AttrPlugin PluginExporter::export_plugin(const PluginDesc &pluginDesc, bool replace, bool dontExport)
 {
-	if (is_prepass || dontExport) {
+	if (dontExport) {
 		return AttrPlugin(pluginDesc.pluginName);
 	}
 
