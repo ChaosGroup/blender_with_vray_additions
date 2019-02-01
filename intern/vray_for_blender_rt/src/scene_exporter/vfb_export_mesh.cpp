@@ -44,7 +44,7 @@ AttrValue DataExporter::exportGeomStaticMesh(BL::Object ob, const ObjectOverride
 	                                                geomDesc,
 	                                                m_exporter->getPluginManager(),
 	                                                m_exporter->get_current_frame(),
-	                                                !isIPR);
+	                                                !isIPR && !m_exporter->getIgnorePluginExport());
 
 	switch (res) {
 		case Mesh::MeshExportResult::exported: {

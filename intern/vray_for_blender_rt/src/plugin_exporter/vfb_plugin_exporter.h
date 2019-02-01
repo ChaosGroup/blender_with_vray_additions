@@ -71,7 +71,7 @@ public:
 	    , current_scene_frame(-1.f)
 	    , render_progress(0.f)
 	    , is_viewport(false)
-	    , is_prepass(false)
+	    , ignorePluginExport(false)
 	    , commit_state(CommitState::CommitNone)
 	    , m_pluginManager(settings.exporter_type == ExporterType::ExpoterTypeFile)
 	{}
@@ -144,9 +144,9 @@ public:
 	float                get_progress() const { return render_progress; }
 	const std::string &  get_progress_message() const { return progress_message; }
 
-	// if prepass is true - no exporting is done
-	void                 set_prepass(bool flag) { is_prepass = flag; }
-	bool                 get_is_prepass() const { return is_prepass; }
+	// Get/set plugin export ignore flag
+	void                 setIgnorePluginExport(bool flag) { ignorePluginExport = flag; }
+	bool                 getIgnorePluginExport() const { return ignorePluginExport; }
 
 	PluginManager       &getPluginManager() { return m_pluginManager; }
 
@@ -162,7 +162,8 @@ protected:
 	float                render_progress;
 	std::string          progress_message;
 	bool                 is_viewport;
-	bool                 is_prepass;
+	/// Flag set when exporter is need to run trough export and collect object info but not export plugins
+	bool                 ignorePluginExport;
 	CommitState          commit_state;
 	std::vector<PluginDesc> delayedPlugins; ///< Plugins delayed until last to be exported (exported on sync())
 

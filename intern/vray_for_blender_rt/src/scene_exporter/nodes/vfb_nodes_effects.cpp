@@ -142,7 +142,7 @@ AttrValue DataExporter::exportDomainGeomStaticMesh(const std::string &geomPlugin
 	                                                geomDesc,
 	                                                m_exporter->getPluginManager(),
 	                                                m_exporter->get_current_frame(),
-	                                                !isIPR);
+	                                                !isIPR && !m_exporter->getIgnorePluginExport());
 	switch (res) {
 		case Mesh::MeshExportResult::exported:
 			return m_exporter->export_plugin(geomDesc);
@@ -247,6 +247,17 @@ AttrValue DataExporter::exportVRayNodeEnvFogMeshGizmo(BL::NodeTree &ntree, BL::N
 				if (isObjectVisible(domainOb)) {
 					auto res = exportVRayNodeSmokeDomain(ntree, node, domainOb, context);
 					domains.append(res.as<AttrPlugin>());
+				} else {
+					const bool savedFlag = m_exporter->getIgnorePluginExport();
+					m_exporter->setIgnorePluginExport(true);
+					auto res = exportVRayNodeSmokeDomain(ntree, node, domainOb, context);
+					VFB_Assert(res.type == ValueTypePlugin && "Invalid smoke domain return");
+
+					const std::string &pluginName = res.as<AttrPlugin>().plugin;
+					m_exporter->setIgnorePluginExport(savedFlag);
+					if (m_exporter->getPluginManager().inCache(pluginName)) {
+						m_exporter->remove_plugin(pluginName);
+					}
 				}
 			}
 		}

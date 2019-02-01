@@ -180,7 +180,7 @@ AttrValue DataExporter::exportVRayNodeBlenderOutputGeometry(BL::NodeTree &ntree,
 			                                                geomDesc,
 			                                                m_exporter->getPluginManager(),
 			                                                m_exporter->get_current_frame(),
-			                                                !isIPR);
+			                                                !isIPR && !m_exporter->getIgnorePluginExport());
 			if (res == Mesh::MeshExportResult::exported) {
 				geomDesc.add("dynamic_geometry", RNA_boolean_get(&geomStaticMesh, "dynamic_geometry"));
 				geomDesc.add("environment_geometry", RNA_boolean_get(&geomStaticMesh, "environment_geometry"));
