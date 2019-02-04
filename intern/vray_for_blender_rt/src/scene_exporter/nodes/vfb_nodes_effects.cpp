@@ -279,11 +279,8 @@ AttrValue DataExporter::exportVRayNodeEnvironmentFog(BL::NodeTree &ntree, BL::No
 		                      "EnvironmentFog");
 
 	BL::NodeSocket gizmosSock = Nodes::GetSocketByAttr(node, "gizmos");
-	if (!gizmosSock || !gizmosSock.is_linked()) {
-		return plugin;
-	}
-
 	BL::Node conNode = getConnectedNode(ntree, gizmosSock, context);
+
 	// if gizmo is not connected export the fog to cover the whole scene
 	if (conNode) {
 		AttrValue gizmos;
