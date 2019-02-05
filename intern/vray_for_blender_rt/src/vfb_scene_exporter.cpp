@@ -892,7 +892,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		dupliIdx++;
 	}
 
-	if (noClipper) {
+	if (noClipper && instancerIdx > 0) {
 		m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
