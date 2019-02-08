@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <pmmintrin.h>
+
 #include <stdlib.h>
 #include <string.h>
 

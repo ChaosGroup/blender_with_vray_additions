@@ -60,6 +60,8 @@ set(SRC_HEADERS
 	device_task.h
 )
 
+set_source_files_properties(device_cpu.cpp PROPERTIES COMPILE_FLAGS "${CYCLES_SSE3_KERNEL_FLAGS}")
+
 add_definitions(${GL_DEFINITIONS})
 if(WITH_CYCLES_NETWORK)
 	add_definitions(-DWITH_NETWORK)

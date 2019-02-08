@@ -68,7 +68,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 					BL::Node effectsNode = getConnectedNode(worldTree, effectsSock, context);
 					if (effectsNode) {
 						if (NOT(effectsNode.bl_idname() == "VRayNodeEffectsHolder")) {
-							getLog().error("Environment: \'Effects\' socket must be connected to \"Effects Container\" node!");
+							getLog().error("Environment: 'Effects' socket must be connected to \"Effects Container\" node!");
 						}
 						else {
 							BL::Node::inputs_iterator inIt;
@@ -90,7 +90,7 @@ void DataExporter::exportEnvironment(NodeContext &context)
 					BL::Node envNode = getConnectedNode(worldTree, envSock, context);
 					if (envNode) {
 						if (NOT(envNode.bl_idname() == "VRayNodeEnvironment")) {
-							getLog().error("Environment: \'Environment\' socket must be connected to \"Environment\" node!");
+							getLog().error("Environment: 'Environment' socket must be connected to \"Environment\" node!");
 						}
 						else {
 							pluginDesc.add("bg_color",      AttrColor(0.0f, 0.0f, 0.0f));

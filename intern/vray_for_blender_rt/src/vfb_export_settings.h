@@ -154,10 +154,10 @@ struct ExporterSettings {
 	};
 
 	enum class GIEngine {
-		EngineIrradianceMap,
-		EngineBruteForce,
-		EngineLightCache,
-		EngineSphericalharmonics,
+		EngineIrradianceMap = 0,
+		EngineBruteForce = 2,
+		EngineLightCache = 3,
+		EngineSphericalharmonics = 4,
 	};
 
 	using ImageType = VRayBaseTypes::AttrImage::ImageType;
