@@ -192,6 +192,10 @@ public:
 			, index(index)
 		{}
 
+		bool hasData() const {
+			return N > 0 && data.containers[0].size() > 0;
+		}
+
 		/// Set the @flag
 		void set(FlagEnum flag) {
 			data.containers[static_cast<int>(flag)][index] = true;
@@ -203,7 +207,7 @@ public:
 		}
 
 		/// Get the @flag
-		bool get(FlagEnum flag) {
+		bool get(FlagEnum flag) const {
 			return data.containers[static_cast<int>(flag)][index];
 		}
 	};

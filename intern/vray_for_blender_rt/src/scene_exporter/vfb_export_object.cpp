@@ -469,6 +469,9 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 		nodeDesc.add("clip_mesh", AttrPlugin("NULL"));
 	}
 
+	// not VRayClipper param
+	nodeDesc.del("use_obj_mesh");
+
 	nodeDesc.add("object_id", ob.pass_index());
 	if (overrideAttrs) {
 		nodeDesc.add("transform", overrideAttrs.tm);
