@@ -388,7 +388,7 @@ static PyObject* vfb_view_update(PyObject*, PyObject *value)
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {
 		ReverseRAIILock<PythonGIL> lck(exporter->m_pyGIL);
-		exporter->export_scene(true);
+		exporter->sync_view(true);
 	}
 	Py_RETURN_NONE;
 }
