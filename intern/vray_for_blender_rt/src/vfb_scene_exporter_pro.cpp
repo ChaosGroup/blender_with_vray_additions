@@ -472,6 +472,10 @@ void ProductionExporter::cb_on_rt_image_updated()
 {
 	std::lock_guard<std::mutex> l(m_callback_mtx);
 
+	if (is_interrupted()) {
+		return;
+	}
+
 	if (!m_exporter) {
 		return;
 	}
