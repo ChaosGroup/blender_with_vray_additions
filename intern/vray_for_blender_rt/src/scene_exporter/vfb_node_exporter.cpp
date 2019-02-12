@@ -141,7 +141,6 @@ bool DataExporter::isObVrscene(BL::Object ob) {
 bool DataExporter::isObMesh(BL::Object ob) {
 	auto obType = ob.type();
 	return (obType == BL::Object::type_MESH    ||
-			obType == BL::Object::type_CURVE   ||
 			obType == BL::Object::type_SURFACE ||
 			obType == BL::Object::type_FONT    ||
 			obType == BL::Object::type_META);
