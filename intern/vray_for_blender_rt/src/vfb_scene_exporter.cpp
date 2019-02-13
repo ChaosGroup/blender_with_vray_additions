@@ -740,12 +740,13 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		GEOMETRY, HIDDEN, LIGHT, MESH_LIGHT, CLIPPER, FLAGS_COUNT
 	};
 	using IF = InstanceFlags;
-	Blender::FlagsArray<IF, IF::FLAGS_COUNT> instanceFlags;
+	typedef Blender::FlagsArray<IF, IF::FLAGS_COUNT> FlagsArray;
+	FlagsArray instanceFlags;
 
 	AttrInstancer instances;
 	instances.frameNumber = m_frameExporter.getCurrentFrame();
 
-	const auto shouldSkipDupli = [](const auto &flags) -> bool {
+	const auto shouldSkipDupli = [](const FlagsArray::Flags &flags) -> bool {
 		// hidden geometries are not exported at all, but hidden mesh lights are
 		if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
 			return true;
