@@ -258,8 +258,8 @@ MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int 
 	const int obHashData[4] = {
 		dupliIndex,
 		dupliObject.index(),
-		reinterpret_cast<intptr_t>(dupliObject.object().ptr.data),
-		reinterpret_cast<intptr_t>(dupliGenerator.ptr.data),
+		int(reinterpret_cast<intptr_t>(dupliObject.object().ptr.data)),
+		int(reinterpret_cast<intptr_t>(dupliGenerator.ptr.data)),
 	};
 
 	MHash particleID = 42;
@@ -275,7 +275,10 @@ MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int 
 
 MHash getParticleID(BL::Object arrayGenerator, int arrayIndex)
 {
-	const int data[2] = {arrayIndex, reinterpret_cast<intptr_t>(arrayGenerator.ptr.data)};
+	const int data[2] = {
+		arrayIndex,
+		int(reinterpret_cast<intptr_t>(arrayGenerator.ptr.data)),
+	};
 
 	MHash particleID = 42;
 	MurmurHash3_x86_32(data, sizeof(data), particleID, &particleID);
