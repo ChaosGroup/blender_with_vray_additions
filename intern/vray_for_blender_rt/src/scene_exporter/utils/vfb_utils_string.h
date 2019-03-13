@@ -31,8 +31,6 @@ const int MAX_PLG_LEN = 256;
 
 std::string GetUniqueName(HashSet<std::string> &namesSet, const std::string &name);
 
-std::string StripString(std::string &str);
-
 /// Expand some variables from the provided string
 /// $C is camera name, $S is scene name, $F is blend file name
 /// @param expr - path containing variables and/or starting with //

@@ -21,10 +21,12 @@
 #include "vfb_utils_blender.h"
 #include "vfb_utils_string.h"
 #include "vfb_utils_nodes.h"
+#include "utils/cgr_string.h"
 
 #include <BKE_global.h>
 
 #include <boost/range/adaptor/reversed.hpp>
+
 
 #define SPRINTF_FORMAT_INIT_IN_SCOPE()                              \
 	char formatBuff[String::MAX_PLG_LEN] = {0,};                    \

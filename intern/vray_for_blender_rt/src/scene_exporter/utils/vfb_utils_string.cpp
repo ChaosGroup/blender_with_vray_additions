@@ -50,36 +50,6 @@ std::string VRayForBlender::String::GetUniqueName(HashSet<std::string> &namesSet
 }
 
 
-std::string VRayForBlender::String::StripString(std::string &str)
-{
-	for (int i = 0; i < str.length(); ++i) {
-		const char &c = str[i];
-
-		// Valid characters
-		if ((c >= 'A' && c <= 'Z') ||
-		    (c >= 'a' && c <= 'z') ||
-		    (c >= '0' && c <= '9') ||
-		    (c == '|')             ||
-		    (c == '@'))
-		{
-			continue;
-		}
-
-		if(c == '+') {
-			str[i] = 'p';
-		}
-		else if(c == '-') {
-			str[i] = 'm';
-		}
-		else {
-			// Replace illigal chars with "_"
-			str[i] = '_';
-		}
-	}
-
-	return str;
-}
-
 namespace {
 /// Apply datetime's strftime to expression:
 /// import datetime

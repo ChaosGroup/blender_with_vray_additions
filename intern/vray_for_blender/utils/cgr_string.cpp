@@ -59,6 +59,10 @@ struct ReplaceTable
 		data['|'] = '|';
 		data['+'] = 'p';
 		data['-'] = 'm';
+		// dot and underscore are valid characters for names in Blender
+		// if dot is replaced with underscore objects might get same plugin names
+		// BezierCurve.001 / BezierCurve_001
+		data['.'] = '|';
 	}
 
 	void update(const char * ignore) {
