@@ -613,6 +613,9 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			propertyGroup = settingsCM;
 		}
 	} else if (pluginId == "SettingsImageSampler") {
+		// set so VRay 3.6 will have Denoiser enabled
+		pluginDesc.add("dmc_adaptive_method", 1);
+
 		if (get<bool>(propertyGroup, "use_dmc_treshhold")) {
 			PointerRNA dmcSampler = get<PointerRNA>(vrayScene, "SettingsDMCSampler");
 			pluginDesc.add("dmc_threshold", AttrValue(get<float>(dmcSampler, "adaptive_threshold")));
