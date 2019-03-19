@@ -715,7 +715,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			if (canSaveFile) {
 				fs::path dirPath = savePath;
 				dirPath.remove_filename();
-				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+				boost::system::error_code code;
+				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath, code))) {
 					getLog().warning("Unable to save Irradiance map file to \"%s\"", savePath.c_str());
 				}
 			}
@@ -743,7 +744,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			if (canSaveFile) {
 				fs::path dirPath = savePath;
 				dirPath.remove_filename();
-				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+				boost::system::error_code code;
+				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath, code))) {
 					getLog().warning("Unable to save Light Cache file to \"%s\"", savePath.c_str());
 				}
 			}
@@ -821,10 +823,14 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			}
 
 			// make sure the directory exists
-			fs::create_directories(imgDir);
-
-			pluginDesc.add("img_dir", imgDir);
-			pluginDesc.add("img_file", imgFile);
+			boost::system::error_code code;
+			if (!fs::create_directories(imgDir, code)) {
+				const auto & str = code.message();
+				getLog().error("Failed to create Output directory \"%s\" : %s", imgDir.c_str(), str.c_str());
+			} else {
+				pluginDesc.add("img_dir", imgDir);
+				pluginDesc.add("img_file", imgFile);
+			}
 		}
 
 		pluginDesc.add("anim_start", frameExporter.getFirstFrame());

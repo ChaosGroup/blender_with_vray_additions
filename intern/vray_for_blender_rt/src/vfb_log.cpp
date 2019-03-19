@@ -407,7 +407,7 @@ void Logger::add(LogLevel level, const char *format, va_list args) const
 
 	// Show all messages in debug.
 	if (!G.debug) {
-		const bool showMessage = level <= logLevel;
+		const bool showMessage = level >= logLevel;
 		if (!showMessage) {
 			return;
 		}
