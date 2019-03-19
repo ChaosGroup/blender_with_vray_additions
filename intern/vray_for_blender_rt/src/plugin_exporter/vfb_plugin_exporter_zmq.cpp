@@ -23,7 +23,11 @@
 
 #include "BLI_utildefines.h"
 
+#include <boost/filesystem.hpp>
+
 #include <limits>
+
+namespace fs = boost::filesystem;
 
 using namespace VRayForBlender;
 
@@ -521,9 +525,20 @@ void ZmqExporter::stop()
 
 void ZmqExporter::export_vrscene(const std::string &filepath)
 {
-	checkZmqClient();
-	m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ExportScene, filepath));
-	m_client->waitForMessages();
+	if (exporter_settings.settings_files.use_separate) {
+		getLog().warning("ZMQ will ignore option \"Separate Files\" and export in one file!");
+	}
+	fs::path dirPath(filepath);
+	dirPath.remove_filename();
+
+	boost::system::error_code code;
+	if (!fs::exists(dirPath) && !fs::create_directories(dirPath, code)) {
+		getLog().error("Failed to create directory \"%s\": %s", filepath.c_str(), code.message().c_str());
+	} else {
+		checkZmqClient();
+		m_client->send(VRayMessage::msgRendererAction(VRayMessage::RendererAction::ExportScene, filepath));
+		m_client->waitForMessages();
+	}
 }
 
 int ZmqExporter::remove_plugin_impl(const std::string &name)
