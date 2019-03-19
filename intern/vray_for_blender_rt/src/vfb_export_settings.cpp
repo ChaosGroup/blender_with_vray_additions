@@ -824,7 +824,7 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 
 			// make sure the directory exists
 			boost::system::error_code code;
-			if (!fs::create_directories(imgDir, code)) {
+			if (!fs::exists(imgDir) && !fs::create_directories(imgDir, code)) {
 				const auto & str = code.message();
 				getLog().error("Failed to create Output directory \"%s\" : %s", imgDir.c_str(), str.c_str());
 			} else {
