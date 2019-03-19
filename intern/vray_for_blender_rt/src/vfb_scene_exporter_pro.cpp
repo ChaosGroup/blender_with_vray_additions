@@ -119,13 +119,8 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 		if (!isFileExport) {
 			std::lock(uLock, lock);
 		}
-
-		const FrameExportManager::BlenderFramePair sceneFramePair(m_scene.frame_current(), m_scene.frame_subframe());
-		const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
-
-		if (sceneFramePair != setFramePair) {
-			FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
-		}
+		const FrameExportManager::BlenderFramePair & setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
+		FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
 
 		if (aMode == AnimMode::AnimationModeCameraLoop) {
 			m_active_camera = frameExp.getActiveCamera();

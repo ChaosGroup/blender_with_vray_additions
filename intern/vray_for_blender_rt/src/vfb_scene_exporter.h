@@ -244,13 +244,16 @@ public:
 	/// @param frame - the whole part of the frame
 	/// @param subframe - the fractional part of the frame
 	static void changeSceneFrame(BL::Scene & scene, BL::BlendData & data, int frame, float subframe) {
-		scene.frame_set(data.ptr.data, frame, subframe);
+		changeSceneFrame(scene, data, BlenderFramePair(frame, subframe));
 	}
 
 	/// Change current frame
 	/// @param pair - pair containing whole and fractional part of frame pair
 	static void changeSceneFrame(BL::Scene & scene, BL::BlendData & data, const BlenderFramePair & pair) {
-		changeSceneFrame(scene, data, pair.frame, pair.subframe);
+		const FrameExportManager::BlenderFramePair sceneFramePair(scene.frame_current(), scene.frame_subframe());
+		if (sceneFramePair != pair) {
+			scene.frame_set(data.ptr.data, pair.frame, pair.subframe);
+		}
 	}
 
 private:
