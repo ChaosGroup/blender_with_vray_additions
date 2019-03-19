@@ -335,6 +335,11 @@ public:
 	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
 
+	/// Check if the given duplicator object can be exported, useful to avoid building view/render mesh
+	/// @param ob - the object, assumed to be duplicator
+	/// @return true if ob will be exported, false otherwise (e.g on hidden layer)
+	bool                 canExportDupli(BL::Object ob);
+
 	void                 sync_array_mod(BL::Object ob, const int &check_updated);
 
 	/// Export all scene data to render current frame (may include exporting multiple frames for motion blur)

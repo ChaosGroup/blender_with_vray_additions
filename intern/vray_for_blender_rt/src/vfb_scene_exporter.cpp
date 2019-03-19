@@ -718,18 +718,26 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	sync_object_modiefiers(ob, check_updated);
 }
 
-void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
-{
+
+bool SceneExporter::canExportDupli(BL::Object ob) {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+	// TODO: check if we can skip clipper having more info
 	const bool isClipper = RNA_boolean_get(&vrayClipper, "enabled");
 
 	using OVisibility = DataExporter::ObjectVisibility;
 
 	const int base_visibility = OVisibility::HIDE_VIEWPORT | OVisibility::HIDE_RENDER | OVisibility::HIDE_LAYER | OVisibility::HIDE_CAMERA_ALL;
-	const bool skip_export = !m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
+	const bool canExport = m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
-	if (skip_export && !isClipper) {
+	return canExport || isClipper;
+}
+
+void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
+{
+	using OVisibility = DataExporter::ObjectVisibility;
+
+	if (!canExportDupli(ob)) {
 		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 		m_exporter->remove_plugin(exportInstName);
 
@@ -737,6 +745,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		return;
 	}
+
 	MHash maxParticleId = 0;
 
 	enum class InstanceFlags {
@@ -1208,31 +1217,34 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 				}
 			}
 		}
+
+		ObjectOverridesAttrs overAttrs;
 		if (ob.is_duplicator()) {
-			if (is_updated) {
-				sync_dupli(ob, check_updated);
-			}
-			if (is_interrupted()) {
-				return;
-			}
+			// if ob is dupli but no exportable, don't do anything
+			if (canExportDupli(ob)) {
+				if (is_updated) {
+					sync_dupli(ob, check_updated);
+				}
+				if (is_interrupted()) {
+					return;
+				}
 
-			// As in old exporter - dont sync base if its light dupli
-			if (!Blender::IsLight(ob)) {
-				ObjectOverridesAttrs overAttrs;
+				// As in old exporter - dont sync base if its light dupli
+				if (!Blender::IsLight(ob)) {
+					overAttrs.override = true;
+					overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					overAttrs.visible = visible;
 
-				overAttrs.override = true;
-				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overAttrs.visible = visible;
-
-				sync_object(ob, check_updated, overAttrs);
+					sync_object(ob, check_updated, overAttrs);
+				}
 			}
 		}
 		else if (has_array_mod) {
 			sync_array_mod(ob, check_updated);
 		}
 		else {
-			sync_object(ob, check_updated);
+			sync_object(ob, check_updated, overAttrs);
 		}
 
 		if (ob.select()) {
