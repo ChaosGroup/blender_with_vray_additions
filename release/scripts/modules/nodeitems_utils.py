@@ -99,7 +99,10 @@ class NodeItem:
     @staticmethod
     def draw(self, layout, context):
         default_context = bpy.app.translations.contexts.default
-        props = layout.operator("node.add_node", text=self.label, text_ctxt=default_context, icon=self.icon)
+        try:
+            props = layout.operator("node.add_node", text=self.label, text_ctxt=default_context, icon=self.icon)
+        except:
+            props = layout.operator("node.add_node", text=self.label, text_ctxt=default_context)
 
         # props = layout.operator("node.add_node", text=self.label, text_ctxt=self.translation_context)
         props.type = self.nodetype
@@ -148,7 +151,9 @@ def register_node_categories(identifier, cat_list):
             "bl_label": cat.name,
             "category": cat,
             "poll": cat.poll,
-            "draw": draw_node_menu_item
+            "draw": draw_node_panel_item
+            # TODO: investigate if this is fine for all cases
+            # "draw": draw_node_menu_item
         })
         panel_type = type("NODE_PT_category_" + cat.identifier, (bpy.types.Panel,), {
             "bl_space_type": 'NODE_EDITOR',
