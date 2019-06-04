@@ -54,16 +54,19 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 				}
 				else {
 					PointerRNA geomDisplacedMesh = RNA_pointer_get(&node.ptr, "GeomDisplacedMesh");
-					const int &displace_type = RNA_enum_get(&geomDisplacedMesh, "type");
+					enum DisplacementType {
+						DisplaceNormal, Displace2D, DisplaceVector, DisplaceVectorAbsolute, DisplaceVectorObject
+					};
+
+					const DisplacementType displaceType = static_cast<DisplacementType>(RNA_enum_get(&geomDisplacedMesh, "type"));
 
 					PluginDesc pluginDesc(DataExporter::GenPluginName(node, ntree, context),
 					                      "GeomDisplacedMesh");
 					pluginDesc.add("mesh", mesh);
-					pluginDesc.add("displace_2d",         (displace_type == 1));
-					// map 0, 1 -> 0; 2 -> 1; 3 -> 2; 4 -> 3
-					pluginDesc.add("vector_displacement", displace_type > 1 ? displace_type - 1 : 0);
+					pluginDesc.add("displace_2d", displaceType == Displace2D);
+					pluginDesc.add("vector_displacement", false);
 
-					if (displace_type == 2) {
+					if (displaceType >= DisplaceVector) {
 						BL::NodeSocket texSock = Nodes::GetSocketByAttr(node, "displacement_tex_color");
 						if (!(texSock && texSock.is_linked())) {
 							getLog().error("Node tree: %s => Node name: %s => 3D displacement is selected, but no color texture presents!",
@@ -71,6 +74,7 @@ AttrValue DataExporter::exportVRayNodeGeomDisplacedMesh(BL::NodeTree &ntree, BL:
 
 						}
 						else {
+							pluginDesc.add("vector_displacement", displaceType - 1);
 							pluginDesc.add("displacement_tex_color", exportLinkedSocket(ntree, texSock, context));
 						}
 					}
