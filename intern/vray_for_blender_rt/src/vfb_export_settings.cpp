@@ -807,6 +807,14 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 				const ImageFormat format = static_cast<ImageFormat>(RNA_enum_ext_get(&propertyGroup, "img_format"));
 				const char *extensions[] = {".png", ".jpg", ".tiff", ".tga", ".sgi", ".exr", ".vrimg"};
 
+				// Frame by frame animation runs V-Ray seperatelly and it won't append frame number so do it manually
+				if (settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
+					const int frameNum = frameExporter.getCurrentRenderFrame();
+					char frameBuff[32] = {0,};
+					snprintf(frameBuff, sizeof(frameBuff), ".%04d", frameNum);
+					imgFile += frameBuff;
+				}
+
 				if (format >= PNG && format <= VRIMG) {
 					imgFile += extensions[format];
 				} else {
