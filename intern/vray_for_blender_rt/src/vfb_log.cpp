@@ -311,6 +311,7 @@ Logger::Logger()
 
 Logger::~Logger()
 {
+	logThread.detach();
 	VFB_Assert(!isRunning && "Logger must be stopped before destroying it");
 }
 
