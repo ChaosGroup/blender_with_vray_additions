@@ -66,11 +66,11 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 #define VFB_Assert(test) assert(test);
 #else
 #if defined(__GNUC__)
-		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "VFB_Assert failed: %s:%d, %s(), at \'%s\'\n", __FILE__, __LINE__, __func__, #a)
+		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "BLI_assert failed: %s:%d, %s(), at \'%s\'\n", __FILE__, __LINE__, __func__, #a)
 #elif defined(_MSC_VER)
-		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "VFB_Assert failed: %s:%d, %s(), at \'%s\'\n", __FILE__, __LINE__, __FUNCTION__, #a)
+		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "BLI_assert failed: %s:%d, %s(), at \'%s\'\n", __FILE__, __LINE__, __FUNCTION__, #a)
 #else
-		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "VFB_Assert failed: %s:%d, at \'%s\'\n", __FILE__, __LINE__, #a)
+		#define _VFB_ASSERT_PRINT_POS(a) fprintf(stderr, "BLI_assert failed: %s:%d, at \'%s\'\n", __FILE__, __LINE__, #a)
 #endif
 
 	/// Assert will **ALWAYS** test its condition but will only call assert in debug mode
