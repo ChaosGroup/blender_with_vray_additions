@@ -265,23 +265,33 @@ BL::Object FrameExportManager::getActiveCamera()
 namespace {
 MHash getParticleID(BL::Object dupliGenerator, BL::DupliObject dupliObject, int dupliIndex)
 {
-	MHash particleID = dupliIndex ^
-	                   dupliObject.index() ^
-	                   reinterpret_cast<intptr_t>(dupliObject.object().ptr.data) ^
-	                   reinterpret_cast<intptr_t>(dupliGenerator.ptr.data);
+	const int obHashData[4] = {
+		dupliIndex,
+		dupliObject.index(),
+		int(reinterpret_cast<intptr_t>(dupliObject.object().ptr.data)),
+		int(reinterpret_cast<intptr_t>(dupliGenerator.ptr.data)),
+	};
 
-	for (int i = 0; i < 16; ++i) {
-		particleID ^= dupliObject.persistent_id()[i];
-	}
+	MHash particleID = 42;
+	MurmurHash3_x86_32(obHashData, sizeof(obHashData), particleID, &particleID);
+
+	const int persistentIDSize = 16;
+	const BL::Array<int, persistentIDSize> &objectPersistentId = dupliObject.persistent_id();
+
+	MurmurHash3_x86_32(objectPersistentId.data, persistentIDSize * sizeof(int), particleID, &particleID);
 
 	return particleID;
 }
 
 MHash getParticleID(BL::Object arrayGenerator, int arrayIndex)
 {
-	const MHash particleID = arrayIndex ^
-	                         reinterpret_cast<intptr_t>(arrayGenerator.ptr.data);
+	const int data[2] = {
+		arrayIndex,
+		int(reinterpret_cast<intptr_t>(arrayGenerator.ptr.data)),
+	};
 
+	MHash particleID = 42;
+	MurmurHash3_x86_32(data, sizeof(data), particleID, &particleID);
 	return particleID;
 }
 }
@@ -736,18 +746,26 @@ void SceneExporter::sync_object(BL::Object ob, const int &check_updated, const O
 	sync_object_modiefiers(ob, check_updated);
 }
 
-void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
-{
+
+bool SceneExporter::canExportDupli(BL::Object ob) {
 	PointerRNA vrayObject = RNA_pointer_get(&ob.ptr, "vray");
 	PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-	bool noClipper = !RNA_boolean_get(&vrayClipper, "enabled");
+	// TODO: check if we can skip clipper having more info
+	const bool isClipper = RNA_boolean_get(&vrayClipper, "enabled");
 
 	using OVisibility = DataExporter::ObjectVisibility;
 
 	const int base_visibility = OVisibility::HIDE_VIEWPORT | OVisibility::HIDE_RENDER | OVisibility::HIDE_LAYER | OVisibility::HIDE_CAMERA_ALL;
-	const bool skip_export = !m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
+	const bool canExport = m_data_exporter.isObjectVisible(ob, DataExporter::ObjectVisibility(base_visibility));
 
-	if (skip_export && noClipper) {
+	return canExport || isClipper;
+}
+
+void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
+{
+	using OVisibility = DataExporter::ObjectVisibility;
+
+	if (!canExportDupli(ob)) {
 		const auto exportInstName = "NodeWrapper@Instancer2@" + m_data_exporter.getNodeName(ob);
 		m_exporter->remove_plugin(exportInstName);
 
@@ -755,70 +773,81 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 
 		return;
 	}
+
 	MHash maxParticleId = 0;
 
 	enum class InstanceFlags {
 		GEOMETRY, HIDDEN, LIGHT, MESH_LIGHT, CLIPPER, FLAGS_COUNT
 	};
 	using IF = InstanceFlags;
-	Blender::FlagsArray<IF, IF::FLAGS_COUNT> instanceFlags;
+	typedef Blender::FlagsArray<IF, IF::FLAGS_COUNT> FlagsArray;
+	FlagsArray instanceFlags;
 
 	AttrInstancer instances;
 	instances.frameNumber = m_frameExporter.getCurrentFrame();
 
-	int num_instances = 0;
-	int idx_instances = 0;
-	if (noClipper) {
-		int c = 0;
-		for (auto & instance : Blender::collection(ob.dupli_list)) {
-			BL::Object      parentOb(instance.object());
-			instanceFlags.push_back(false);
-			auto flags = instanceFlags.get_flags(c++);
+	const auto shouldSkipDupli = [](const FlagsArray::Flags &flags) -> bool {
+		// hidden geometries are not exported at all, but hidden mesh lights are
+		if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
+			return true;
+		} else {
+			return false;
+		}
+	};
 
-			if (instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render())) {
-				flags.set(IF::HIDDEN);
-			} else if (!m_data_exporter.isObjectVisible(parentOb, OVisibility(~OVisibility::HIDE_LAYER))) {
-				flags.set(IF::HIDDEN);
-			}
+	int numInstances = 0;
+	int numInstancerItems = 0;
 
-			if (Blender::IsGeometry(parentOb)) {
-				flags.set(IF::GEOMETRY);
-			}
+	int flagIndex = 0;
+	for (auto & instance : Blender::collection(ob.dupli_list)) {
+		BL::Object      parentOb(instance.object());
+		instanceFlags.push_back(false);
+		auto flags = instanceFlags.get_flags(flagIndex++);
 
-			if (Blender::IsLight(parentOb)) {
-				flags.set(IF::LIGHT);
-			} else if (m_data_exporter.objectIsMeshLight(parentOb)) {
-				flags.set(IF::MESH_LIGHT);
-			}
-
-			// hidden geometries are not exported at all, but hidden mesh lights are
-			if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
-				continue;
-			}
-
-			PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
-			PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
-
-			if (RNA_boolean_get(&vrayClipper, "enabled")) {
-				flags.set(IF::CLIPPER);
-			}
-
-			const bool nodeBasedDupli = flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || (flags.get(IF::CLIPPER) && !flags.get(IF::HIDDEN));
-			const bool instancerBasedDupli = !flags.get(IF::HIDDEN);
-
-			// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
-			// if any of the duplicated objects is clipper or light we cant use instancer
-			if (nodeBasedDupli || instancerBasedDupli) {
-				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, idx_instances));
-				++num_instances;
-			}
-			++idx_instances;
+		if (instance.hide() || (!m_exporter->get_is_viewport() && parentOb.hide_render())) {
+			flags.set(IF::HIDDEN);
+		} else if (!m_data_exporter.isObjectVisible(parentOb, OVisibility(~OVisibility::HIDE_LAYER))) {
+			flags.set(IF::HIDDEN);
 		}
 
-		if (noClipper) { // this could be removed
-			instances.data.resize(num_instances);
+		if (Blender::IsGeometry(parentOb)) {
+			flags.set(IF::GEOMETRY);
+		}
+
+		if (Blender::IsLight(parentOb)) {
+			flags.set(IF::LIGHT);
+		} else if (m_data_exporter.objectIsMeshLight(parentOb)) {
+			flags.set(IF::MESH_LIGHT);
+		}
+
+		if (shouldSkipDupli(flags)) {
+			continue;
+		}
+
+		PointerRNA vrayObject = RNA_pointer_get(&parentOb.ptr, "vray");
+		PointerRNA vrayClipper = RNA_pointer_get(&vrayObject, "VRayClipper");
+
+		if (RNA_boolean_get(&vrayClipper, "enabled")) {
+			flags.set(IF::CLIPPER);
+		}
+
+		const bool nodeBasedDupli = flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || flags.get(IF::CLIPPER);
+		const bool instancerBasedDupli = !flags.get(IF::HIDDEN) && !nodeBasedDupli;
+
+		// TODO: consider caching instancer suitable objects - there could be alot of instances of the same object
+		// if any of the duplicated objects is clipper or light we cant use instancer
+		if (nodeBasedDupli || instancerBasedDupli) {
+			++numInstances;
+			if (instancerBasedDupli) {
+				// NOTE: use num instances to calculate particle ID - later both instancer and node based need particle ID
+				// but only instancer items need their particleID offset closer to 0
+				maxParticleId = std::max(maxParticleId, getParticleID(ob, instance, numInstances));
+				++numInstancerItems;
+			}
 		}
 	}
+
+	instances.data.resize(numInstancerItems);
 
 	if (is_interrupted()) {
 		return;
@@ -844,22 +873,22 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		auto flags = instanceFlags.get_flags(c++);
 		BL::Object parentOb(instance.object());
 
-		if (!flags.get(IF::MESH_LIGHT) && flags.get(IF::GEOMETRY) && flags.get(IF::HIDDEN)) {
+		if (shouldSkipDupli(flags)) {
 			continue;
 		}
 
-		MHash persistendID;
-		persistendID = getParticleID(ob, instance, dupliIdx);
+		// node based duplication is for: (light, mesh light, visible clipper)
+		const bool nodeBasedDupli = flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || flags.get(IF::CLIPPER);
+		const bool instancerBasedDupli = !flags.get(IF::HIDDEN) && !nodeBasedDupli;
+
+		const MHash persistentID = getParticleID(ob, instance, dupliIdx);
 
 		ObjectOverridesAttrs overrideAttrs;
 		overrideAttrs.override = true;
 		overrideAttrs.isDupli = true;
 		overrideAttrs.dupliEmitter = ob;
 
-
-		// TODO: if we check here it might be faster to skip the redundent call to sync_object
-		// node based duplication is for: (light, mesh light, visible clipper)
-		if (flags.get(IF::LIGHT) || flags.get(IF::MESH_LIGHT) || (flags.get(IF::CLIPPER) && !flags.get(IF::HIDDEN))) {
+		if (nodeBasedDupli) {
 			overrideAttrs.useInstancer = false;
 
 			// sync dupli base object
@@ -871,10 +900,10 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			overrideAttrs.visible = true;
 			overrideAttrs.override = true;
 			overrideAttrs.tm = AttrTransformFromBlTransform(instance.matrix());
-			overrideAttrs.id = persistendID;
+			overrideAttrs.id = persistentID;
 
 			char namePrefix[255] = {0, };
-			snprintf(namePrefix, 250, "Dupli%u@", persistendID);
+			snprintf(namePrefix, 250, "Dupli%u@", persistentID);
 			overrideAttrs.namePrefix = namePrefix;
 
 			if (flags.get(IF::CLIPPER)) {
@@ -889,7 +918,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 				m_data_exporter.m_id_track.insert(ob, overrideAttrs.namePrefix + m_data_exporter.getLightName(parentOb), IdTrack::DUPLI_LIGHT);
 			}
 			sync_object(parentOb, check_updated, overrideAttrs);
-		} else if (!flags.get(IF::HIDDEN)) {
+		} else if (instancerBasedDupli) {
 
 			// if object instancing this child is from group, then we need to hide all of the sources since they are implicitly linked in this scene
 			overrideAttrs.visible = !flags.get(IF::HIDDEN) && m_data_exporter.isObjectVisible(parentOb, OVisibility::HIDE_LAYER) && !linkedGroup && !hideFromParent;
@@ -904,7 +933,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 			mul_m4_m4m4(tm, ((DupliObject*)instance.ptr.data)->mat, inverted);
 
 			AttrInstancer::Item &instancer_item = (*instances.data)[instancerIdx];
-			instancer_item.index = persistendID;
+			instancer_item.index = maxParticleId - persistentID;
 			instancer_item.node = m_data_exporter.getNodeName(parentOb);
 			instancer_item.tm = AttrTransformFromBlTransform(tm);
 			if (m_settings.use_motion_blur && m_settings.calculate_instancer_velocity) {
@@ -920,7 +949,7 @@ void SceneExporter::sync_dupli(BL::Object ob, const int &check_updated)
 		dupliIdx++;
 	}
 
-	if (noClipper && instancerIdx > 0) {
+	if (instancerIdx > 0) {
 		m_data_exporter.exportVrayInstancer2(ob, instances, IdTrack::DUPLI_INSTACER);
 	}
 }
@@ -1216,31 +1245,34 @@ void SceneExporter::pre_sync_object(const bool check_updated, BL::Object &ob, Co
 				}
 			}
 		}
+
+		ObjectOverridesAttrs overAttrs;
 		if (ob.is_duplicator()) {
-			if (is_updated) {
-				sync_dupli(ob, check_updated);
-			}
-			if (is_interrupted()) {
-				return;
-			}
+			// if ob is dupli but no exportable, don't do anything
+			if (canExportDupli(ob)) {
+				if (is_updated) {
+					sync_dupli(ob, check_updated);
+				}
+				if (is_interrupted()) {
+					return;
+				}
 
-			// As in old exporter - dont sync base if its light dupli
-			if (!Blender::IsLight(ob)) {
-				ObjectOverridesAttrs overAttrs;
+				// As in old exporter - dont sync base if its light dupli
+				if (!Blender::IsLight(ob)) {
+					overAttrs.override = true;
+					overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
+					overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
+					overAttrs.visible = visible;
 
-				overAttrs.override = true;
-				overAttrs.id = reinterpret_cast<intptr_t>(ob.ptr.data);
-				overAttrs.tm = AttrTransformFromBlTransform(ob.matrix_world());
-				overAttrs.visible = visible;
-
-				sync_object(ob, check_updated, overAttrs);
+					sync_object(ob, check_updated, overAttrs);
+				}
 			}
 		}
 		else if (has_array_mod) {
 			sync_array_mod(ob, check_updated);
 		}
 		else {
-			sync_object(ob, check_updated);
+			sync_object(ob, check_updated, overAttrs);
 		}
 	}, ThreadManager::Priority::LOW);
 }

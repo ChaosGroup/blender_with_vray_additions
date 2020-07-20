@@ -122,12 +122,8 @@ bool InteractiveExporter::export_scene(const bool check_updated)
 		}
 
 		m_frameExporter.forEachExportFrame([this](FrameExportManager & frameExp) {
-			const FrameExportManager::BlenderFramePair sceneFramePair = {m_scene.frame_current(), m_scene.frame_subframe()};
 			const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
-
-			if (sceneFramePair != setFramePair) {
-				FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
-			}
+			FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
 
 			m_settings.update(m_context, m_engine, m_data, m_scene, m_view3d);
 			// set the frame to export (so values are inserted for that time)

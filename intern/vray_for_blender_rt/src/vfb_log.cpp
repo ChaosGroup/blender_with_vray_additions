@@ -311,6 +311,7 @@ Logger::Logger()
 
 Logger::~Logger()
 {
+	logThread.detach();
 	VFB_Assert(!isRunning && "Logger must be stopped before destroying it");
 }
 
@@ -407,7 +408,7 @@ void Logger::add(LogLevel level, const char *format, va_list args) const
 
 	// Show all messages in debug.
 	if (!G.debug) {
-		const bool showMessage = level <= logLevel;
+		const bool showMessage = level >= logLevel;
 		if (!showMessage) {
 			return;
 		}

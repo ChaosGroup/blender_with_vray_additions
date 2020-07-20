@@ -55,6 +55,8 @@ VRayForBlender::ParamDesc::PluginType VRayForBlender::ParamDesc::GetPluginTypeFr
 	}
 	else if (typeString == "LIGHT") {
 		pluginType = ParamDesc::PluginLight;
+	} else if (typeString == "OBJECT") {
+		pluginType = ParamDesc::PluginObject;
 	}
 
 	return pluginType;

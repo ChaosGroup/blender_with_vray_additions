@@ -244,13 +244,16 @@ public:
 	/// @param frame - the whole part of the frame
 	/// @param subframe - the fractional part of the frame
 	static void changeSceneFrame(BL::Scene & scene, BL::BlendData & data, int frame, float subframe) {
-		scene.frame_set(data.ptr.data, frame, subframe);
+		changeSceneFrame(scene, data, BlenderFramePair(frame, subframe));
 	}
 
 	/// Change current frame
 	/// @param pair - pair containing whole and fractional part of frame pair
 	static void changeSceneFrame(BL::Scene & scene, BL::BlendData & data, const BlenderFramePair & pair) {
-		changeSceneFrame(scene, data, pair.frame, pair.subframe);
+		const FrameExportManager::BlenderFramePair sceneFramePair(scene.frame_current(), scene.frame_subframe());
+		if (sceneFramePair != pair) {
+			scene.frame_set(data.ptr.data, pair.frame, pair.subframe);
+		}
 	}
 
 private:
@@ -334,6 +337,11 @@ public:
 	virtual void         sync_object(BL::Object ob, const int &check_updated = false, const ObjectOverridesAttrs & = ObjectOverridesAttrs());
 	virtual void         sync_object_modiefiers(BL::Object ob, const int &check_updated);
 	virtual void         sync_dupli(BL::Object ob, const int &check_updated=false);
+
+	/// Check if the given duplicator object can be exported, useful to avoid building view/render mesh
+	/// @param ob - the object, assumed to be duplicator
+	/// @return true if ob will be exported, false otherwise (e.g on hidden layer)
+	bool                 canExportDupli(BL::Object ob);
 
 	void                 sync_array_mod(BL::Object ob, const int &check_updated);
 

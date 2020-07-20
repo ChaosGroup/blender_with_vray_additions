@@ -460,6 +460,8 @@ static PyObject* vfb_render(PyObject*, PyObject *value)
 static PyObject* vfb_view_update(PyObject*, PyObject *value)
 {
 	getLog().info("vfb_view_update()");
+	// view_update is called when anything changes while viewport renderer is active
+	// whole scene must be synced
 
 	VRayForBlender::SceneExporter *exporter = vfb_cast_exporter(value);
 	if (exporter) {

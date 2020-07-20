@@ -209,17 +209,10 @@ AttrValue DataExporter::exportObject(BL::Object ob, bool check_updated, const Ob
 		if ((!is_data_updated && !m_layer_changed) || !m_settings.export_meshes) {
 			// nothing changed just get the name
 			geom = AttrPlugin(getMeshName(ob));
-		} else if (is_data_updated) {
+		} else if (is_data_updated || m_layer_changed) {
 			// data was updated - must export mesh
+			// or layer changed, maybe this object's geom is still not exported
 			geom = exportGeomStaticMesh(ob, override);
-		} else if (m_layer_changed) {
-			// changed layer, maybe this object's geom is still not exported
-			const auto name = getMeshName(ob);
-			if (m_exporter->getPluginManager().inCache(name)) {
-				geom = AttrPlugin(name);
-			} else {
-				geom = exportGeomStaticMesh(ob, override);
-			}
 		}
 
 		// changing to Edit Mode causes data update
@@ -468,6 +461,9 @@ AttrValue DataExporter::exportVRayClipper(BL::Object ob, bool check_updated, con
 	} else {
 		nodeDesc.add("clip_mesh", AttrPlugin("NULL"));
 	}
+
+	// not VRayClipper param
+	nodeDesc.del("use_obj_mesh");
 
 	nodeDesc.add("object_id", ob.pass_index());
 	if (overrideAttrs) {

@@ -650,6 +650,9 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			propertyGroup = settingsCM;
 		}
 	} else if (pluginId == "SettingsImageSampler") {
+		// set so VRay 3.6 will have Denoiser enabled
+		pluginDesc.add("dmc_adaptive_method", 1);
+
 		if (get<bool>(propertyGroup, "use_dmc_treshhold")) {
 			PointerRNA dmcSampler = get<PointerRNA>(vrayScene, "SettingsDMCSampler");
 			pluginDesc.add("dmc_threshold", AttrValue(get<float>(dmcSampler, "adaptive_threshold")));
@@ -749,7 +752,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			if (canSaveFile) {
 				fs::path dirPath = savePath;
 				dirPath.remove_filename();
-				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+				boost::system::error_code code;
+				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath, code))) {
 					getLog().warning("Unable to save Irradiance map file to \"%s\"", savePath.c_str());
 				}
 			}
@@ -777,7 +781,8 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			if (canSaveFile) {
 				fs::path dirPath = savePath;
 				dirPath.remove_filename();
-				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath))) {
+				boost::system::error_code code;
+				if (canSaveFile && (!fs::exists(dirPath) && !fs::create_directories(dirPath, code))) {
 					getLog().warning("Unable to save Light Cache file to \"%s\"", savePath.c_str());
 				}
 			}
@@ -840,6 +845,14 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 				const ImageFormat format = static_cast<ImageFormat>(RNA_enum_ext_get(&propertyGroup, "img_format"));
 				const char *extensions[] = {".png", ".jpg", ".tiff", ".tga", ".sgi", ".exr", ".vrimg"};
 
+				// Frame by frame animation runs V-Ray seperatelly and it won't append frame number so do it manually
+				if (settings.settings_animation.mode == SettingsAnimation::AnimationModeFrameByFrame) {
+					const int frameNum = frameExporter.getCurrentRenderFrame();
+					char frameBuff[32] = {0,};
+					snprintf(frameBuff, sizeof(frameBuff), ".%04d", frameNum);
+					imgFile += frameBuff;
+				}
+
 				if (format >= PNG && format <= VRIMG) {
 					imgFile += extensions[format];
 				} else {
@@ -856,12 +869,14 @@ bool VRaySettingsExporter::checkPluginOverrides(const std::string &pluginId, Poi
 			}
 
 			// make sure the directory exists
-			fs::create_directories(imgDir);
-
-			renderedImagePath = imgDir + imgFile;
-
-			pluginDesc.add("img_dir", imgDir);
-			pluginDesc.add("img_file", imgFile);
+			boost::system::error_code code;
+			if (!fs::exists(imgDir) && !fs::create_directories(imgDir, code)) {
+				const auto & str = code.message();
+				getLog().error("Failed to create Output directory \"%s\" : %s", imgDir.c_str(), str.c_str());
+			} else {
+				pluginDesc.add("img_dir", imgDir);
+				pluginDesc.add("img_file", imgFile);
+			}
 		}
 
 		pluginDesc.add("anim_start", frameExporter.getFirstFrame());

@@ -34,6 +34,8 @@
 #include <Python.h>
 #include "BKE_global.h"
 
+namespace fs = boost::filesystem;
+
 using namespace std;
 using namespace std::chrono;
 
@@ -119,13 +121,8 @@ void ProductionExporter::for_each_exported_frame(FrameExportManager & frameExp, 
 		if (!isFileExport) {
 			std::lock(uLock, lock);
 		}
-
-		const FrameExportManager::BlenderFramePair sceneFramePair(m_scene.frame_current(), m_scene.frame_subframe());
-		const auto setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
-
-		if (sceneFramePair != setFramePair) {
-			FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
-		}
+		const FrameExportManager::BlenderFramePair & setFramePair = FrameExportManager::floatFrameToBlender(frameExp.getCurrentFrame());
+		FrameExportManager::changeSceneFrame(m_scene, m_data, setFramePair);
 
 		if (aMode == AnimMode::AnimationModeCameraLoop) {
 			m_active_camera = frameExp.getActiveCamera();
@@ -258,27 +255,44 @@ bool ProductionExporter::export_scene(const bool)
 	if (m_settings.work_mode == ExporterSettings::WorkMode::WorkModeExportOnly ||
 		m_settings.work_mode == ExporterSettings::WorkMode::WorkModeRenderAndExport) {
 		// TODO: handle this per frame for FrameByFrame
-		std::string vrsceneDest;
-		const std::string & blendPath = m_data.filepath();
+		fs::path vrsceneDest;
+		fs::path blendFilePath(m_data.filepath());
+		bool usingScenePath = false;
+		fs::path sceneFileName("scene.vrscene");
+
+		if (m_settings.settings_files.output_unique) {
+			usingScenePath = true;
+			if (blendFilePath.empty()) {
+				getLog().error("Scene name is empty - can't be used as unique .vrscene name!");
+			} else {
+				sceneFileName = blendFilePath.filename().replace_extension(".vrscene");
+			}
+		}
 
 		switch (m_settings.settings_files.output_type) {
 		case SettingsFiles::OutputDirType::OutputDirTypeTmp:
-			vrsceneDest = (boost::filesystem::temp_directory_path() / "appsdk.vrscene").string();
+			vrsceneDest = (boost::filesystem::temp_directory_path() / sceneFileName).string();
 			break;
 		case SettingsFiles::OutputDirType::OutputDirTypeUser:
-			vrsceneDest = VRayForBlender::String::AbsFilePath(m_settings.settings_files.output_dir, blendPath) + "/appsdk.vrscene";
+			usingScenePath = true;
+			vrsceneDest = VRayForBlender::String::AbsFilePath(m_settings.settings_files.output_dir, fs::basename(blendFilePath)) / sceneFileName;
 			break;
 		case SettingsFiles::OutputDirType::OutputDirTypeScene:
 		default:
 			if (!m_data.filepath().empty()) {
-				vrsceneDest = boost::filesystem::path(m_data.filepath()).replace_extension(".vrscene").string();
+				usingScenePath = true;
+				vrsceneDest = fs::change_extension(blendFilePath, ".vrscene");
 			} else {
-				vrsceneDest = (boost::filesystem::temp_directory_path() / "appsdk.vrscene").string();
+				vrsceneDest = fs::temp_directory_path() / sceneFileName;
 			}
 			break;
 		}
 
-		m_exporter->export_vrscene(vrsceneDest);
+		if (usingScenePath && !blendFilePath.is_absolute()) {
+			getLog().warning("Using Scene file path which is not absolute! \"%s\"", blendFilePath.string().c_str());
+		}
+
+		m_exporter->export_vrscene(vrsceneDest.string());
 	}
 
 	if (actualRendering) {
@@ -475,6 +489,10 @@ void ProductionExporter::cb_on_bucket_ready(const VRayBaseTypes::AttrImage & img
 void ProductionExporter::cb_on_rt_image_updated()
 {
 	std::lock_guard<std::mutex> l(m_callback_mtx);
+
+	if (is_interrupted()) {
+		return;
+	}
 
 	if (!m_exporter) {
 		return;
